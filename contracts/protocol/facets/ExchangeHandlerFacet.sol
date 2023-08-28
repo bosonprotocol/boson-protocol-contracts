@@ -898,7 +898,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         bytes memory result;
                         (success, result) = twinM.tokenAddress.call{ gas: gasleft() - reservedGas }(data);
 
-                        success = success && (result.length == 0 || abi.decode(result, (bool)));
+                        // Check if result is empty or if result is a boolean and is true
+                        success =
+                            success &&
+                            (result.length == 0 || (result.length == 32 && abi.decode(result, (uint256)) == 1));
                     }
                 }
 

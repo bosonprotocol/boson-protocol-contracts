@@ -38,3 +38,38 @@ contract Foreign1155GasTheft is Foreign1155 {
         }
     }
 }
+
+/*
+ * @title Foreign1155 that succeeds, but the data cannot be decoded into a boolean
+ *
+ * @notice Mock ERC-(1155) for Unit Testing
+ */
+contract Foreign1155MalformedReturn is Foreign1155 {
+    enum AttackType {
+        ReturnTooShort,
+        ReturnTooLong,
+        ReturnInvalid
+    }
+
+    AttackType public attackType;
+
+    function setAttackType(AttackType _attackType) external {
+        attackType = _attackType;
+    }
+
+    function safeTransferFrom(address, address, uint256, uint256, bytes memory) public virtual override {
+        if (attackType == AttackType.ReturnTooShort) {
+            assembly {
+                return(0, 31) // return too short data
+            }
+        } else if (attackType == AttackType.ReturnTooLong) {
+            assembly {
+                return(0, 33) // return too long data
+            }
+        } else if (attackType == AttackType.ReturnInvalid) {
+            assembly {
+                return(0x40, 32) // return a value that is not 0 or 1
+            }
+        }
+    }
+}
