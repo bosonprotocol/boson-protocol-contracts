@@ -3621,6 +3621,65 @@ describe("IBosonExchangeHandler", function () {
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
+          it("If multiple transfers fail, a dispute is raised only once", async function () {
+            const [foreign20, foreign20_2] = await deployMockTokens(["Foreign20", "Foreign20"]);
+
+            // Approve the protocol diamond to transfer seller's tokens
+            await foreign20.connect(assistant).approve(protocolDiamondAddress, "100");
+            await foreign20_2.connect(assistant).approve(protocolDiamondAddress, "100");
+
+            // Create two ERC20 twins that will consume all available gas
+            twin20 = mockTwin(await foreign20.getAddress());
+            twin20.amount = "1";
+            twin20.supplyAvailable = "100";
+            twin20.id = "4";
+
+            await twinHandler.connect(assistant).createTwin(twin20.toStruct());
+
+            const twin20_2 = twin20.clone();
+            twin20_2.id = "5";
+            twin20_2.tokenAddress = await foreign20_2.getAddress();
+            await twinHandler.connect(assistant).createTwin(twin20_2.toStruct());
+
+            // Create a new offer and bundle
+            await offerHandler
+              .connect(assistant)
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+            bundle = new Bundle("2", seller.id, [`${++offerId}`], [twin20.id, twin20_2.id]);
+            await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
+
+            // Commit to offer
+            const buyerAddress = await buyer.getAddress();
+            await exchangeHandler.connect(buyer).commitToOffer(buyerAddress, offerId, { value: price });
+
+            exchange.id = Number(exchange.id) + 1;
+
+            await foreign20.connect(assistant).approve(protocolDiamondAddress, "0");
+            await foreign20_2.connect(assistant).approve(protocolDiamondAddress, "0");
+
+            // Redeem the voucher
+            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 1000000 }); // limit gas to speed up test
+
+            const DisputeRaisedTopic = id("DisputeRaised(uint256,uint256,uint256,address)");
+            const TwinTransferFailedTopic = id("TwinTransferFailed(uint256,address,uint256,uint256,uint256,address)");
+
+            const logs = (await tx.wait()).logs;
+            let eventCountDR = 0;
+            let eventCountTTF = 0;
+            for (const l of logs) {
+              const topic = l.topics[0];
+              if (topic === DisputeRaisedTopic) {
+                eventCountDR++;
+              } else if (topic === TwinTransferFailedTopic) {
+                eventCountTTF++;
+              }
+            }
+
+            // There should be 1 DisputeRaised and 2 TwinTransferFailed events
+            expect(eventCountDR).to.equal(1, "DisputeRaised event count is incorrect");
+            expect(eventCountTTF).to.equal(2, "TwinTransferFailed event count is incorrect");
+          });
+
           it("should raise a dispute if ERC20 does not exist anymore", async function () {
             // Destruct the ERC20
             await foreign20.destruct();
