@@ -828,7 +828,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             // Handle overall outcome: up to 200,000 gas
             // Next line would overflow if twinCount > (type(uint256).max - MINIMAL_RESIDUAL_GAS)/SINGLE_TWIN_RESERVED_GAS
             // Oveflow happens for twinCount ~ 9.6x10^71, which is impossible to achieve
-            uint256 reservedGas = twinCount * SINGLE_TWIN_RESERVED_GAS + MINIMAL_RESIDUAL_GAS;
+            uint256 reservedGas = (twinCount - 1) * SINGLE_TWIN_RESERVED_GAS + MINIMAL_RESIDUAL_GAS;
 
             // Visit the twins
             for (uint256 i = 0; i < twinCount; ) {
