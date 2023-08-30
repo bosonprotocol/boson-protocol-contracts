@@ -19,8 +19,6 @@ const Role = require("../../scripts/domain/Role");
 const DisputeState = require("../../scripts/domain/DisputeState");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
-const TokenType = require("../../scripts/domain/TokenType");
-const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -58,7 +56,7 @@ const {
 describe("IBosonMetaTransactionsHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, pauser, rando, assistant, buyer, admin, clerk, treasury, assistantDR, adminDR, clerkDR, treasuryDR, other;
+  let deployer, pauser, rando, assistant, buyer, admin, clerk, treasury, assistantDR, adminDR, clerkDR, treasuryDR;
   let erc165,
     accessController,
     accountHandler,
