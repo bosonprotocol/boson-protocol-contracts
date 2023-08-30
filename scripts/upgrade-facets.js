@@ -24,7 +24,6 @@ const {
   getInitializeCalldata,
 } = require("./util/diamond-utils.js");
 const { getInterfaceIds, interfaceImplementers } = require("./config/supported-interfaces.js");
-const Role = require("./domain/Role");
 const packageFile = require("../package.json");
 const readline = require("readline");
 const FacetCut = require("./domain/FacetCut");
@@ -111,7 +110,7 @@ async function main(env, facetConfig, version, functionNamesToSelector) {
   const protocolAddress = contracts.find((c) => c.name === "ProtocolDiamond")?.address;
 
   // Check if admin has UPGRADER role
-  checkRole(contracts, Role.UPGRADER, adminAddress);
+  checkRole(contracts, "UPGRADER", adminAddress);
 
   if (!protocolAddress) {
     return addressNotFound("ProtocolDiamond");

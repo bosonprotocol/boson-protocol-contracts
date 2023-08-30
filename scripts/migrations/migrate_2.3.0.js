@@ -1,13 +1,12 @@
 const shell = require("shelljs");
 
 const { getStateModifyingFunctionsHashes, getSelectors } = require("../../scripts/util/diamond-utils.js");
-const axios = require("axios");
 const environments = require("../../environments");
 const Role = require("../domain/Role");
 const tipMultiplier = BigInt(environments.tipMultiplier);
 const tipSuggestion = 1500000000n; // js always returns this constant, it does not vary per block
 const maxPriorityFeePerGas = tipSuggestion + tipMultiplier;
-const { readContracts, getFees } = require("../util/utils.js");
+const { readContracts, getFees, checkRole } = require("../util/utils.js");
 const hre = require("hardhat");
 const { oneWeek } = require("../../test/util/constants.js");
 const PausableRegion = require("../domain/PausableRegion.js");
@@ -47,7 +46,7 @@ const config = {
   initializationData: abiCoder.encode(["uint256", "uint256[]", "address[]"], [oneWeek, [], []]),
 };
 
-async function migrate(env, sellerCreators) {
+async function migrate(env) {
   console.log(`Migration ${tag} started`);
   try {
     if (env != "upgrade-test") {
@@ -74,10 +73,12 @@ async function migrate(env, sellerCreators) {
 
     const accessController = await getContractAt("AccessController", accessControllerAddress);
 
+    const signer = (await getSigners())[0].address;
     if (env == "upgrade-test") {
-      const signer = (await getSigners())[0].address;
       // Grant PAUSER role to the deployer
       await accessController.grantRole(Role.PAUSER, signer);
+    } else {
+      checkRole(contracts, "PAUSER", signer);
     }
 
     const protocolAddress = contracts.find((c) => c.name === "ProtocolDiamond")?.address;
@@ -102,10 +103,9 @@ async function migrate(env, sellerCreators) {
     }
 
     // Get the list of creators and their ids
-    sellerCreators = sellerCreators || (await fetchSellerCreators(env));
     config.initializationData = abiCoder.encode(
-      ["uint256", "uint256[]", "address[]"],
-      [oneWeek, sellerCreators.map((c) => c.id), sellerCreators.map((c) => c.creator)]
+      ["uint256"],
+      [oneWeek] // ToDo <- from config?
     );
     console.log("Initialization data: ", config.initializationData);
 
@@ -249,51 +249,6 @@ async function migrate(env, sellerCreators) {
     shell.exec(`git checkout HEAD`);
     throw `Migration failed with: ${e}`;
   }
-}
-
-async function fetchSellerCreators(env) {
-  let network;
-  if (env.includes("prod")) {
-    network = "polygon";
-  } else if (env.includes("staging")) {
-    network = "mumbai-staging";
-  } else if (env.includes("test")) {
-    network = "mumbai-testing";
-  } else {
-    throw new Error("There is no subgraph for this chain");
-  }
-
-  const url = `https://api.thegraph.com/subgraphs/name/bosonprotocol/${network}`;
-
-  const data = {
-    query: `query GetSellers {
-    sellers(first: 500, orderBy: sellerId, orderDirection: desc) {
-      assistant
-      sellerId
-      logs(where: {type: SELLER_CREATED}) {
-        type
-        executedBy
-      }
-    }
-  }`,
-    variables: null,
-    operationName: "GetSellers",
-    extensions: {
-      headers: null,
-    },
-  };
-
-  const headers = {
-    Accept: "application/json, multipart/mixed",
-  };
-  const {
-    data: {
-      data: { sellers },
-    },
-  } = await axios.post(url, data, { headers });
-  return sellers.map((s) => {
-    return { id: s.sellerId, creator: s.logs[0].executedBy };
-  });
 }
 
 exports.migrate = migrate;

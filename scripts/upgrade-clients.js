@@ -15,7 +15,6 @@ const {
   listAccounts,
 } = require("./util/utils.js");
 const { deployProtocolClientImpls } = requireUncached("./util/deploy-protocol-client-impls.js");
-const Role = require("./domain/Role");
 
 /**
  * Upgrades clients
@@ -67,7 +66,7 @@ async function main(env, clientConfig, version) {
   }
 
   // Validate that admin has UPGRADER role
-  checkRole(contracts, Role.UPGRADER, adminAddress);
+  checkRole(contracts, "UPGRADER", adminAddress);
 
   clientConfig = (clientConfig && JSON.parse(clientConfig)) || require("./config/client-upgrade");
 

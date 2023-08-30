@@ -19,6 +19,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      *
      * Reverts if:
      * - Caller is not the supplied admin or does not own supplied auth token
+     * - Caller is not the supplied assistant
      * - Supplied clerk is not a zero address
      * - The sellers region of protocol is paused
      * - Address values are zero address

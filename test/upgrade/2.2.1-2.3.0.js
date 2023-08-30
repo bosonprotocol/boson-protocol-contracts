@@ -89,7 +89,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   let preUpgradeEntities;
 
   before(async function () {
-    //try {
     // Make accounts available
     [deployer, rando, clerk, pauser, assistant] = await ethers.getSigners();
 
@@ -185,9 +184,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
     // prepare seller creators
     const { sellers } = preUpgradeEntities;
-    const sellerCreators = sellers.map((seller) => {
-      return { id: seller.id, creator: seller.seller.assistant };
-    });
 
     // Start a seller update (finished in tests)
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamondAddress);
@@ -212,7 +208,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     disputeResolver.assistant = rando.address;
     await accountHandler.connect(wallet).updateDisputeResolver(disputeResolver);
 
-    await migrate("upgrade-test", sellerCreators);
+    await migrate("upgrade-test");
 
     // Cast to updated interface
     let newHandlers = {
