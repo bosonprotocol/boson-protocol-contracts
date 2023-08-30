@@ -5,6 +5,7 @@ const decache = require("decache");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 let Offer = require("../../scripts/domain/Offer");
+const GatingType = require("../../scripts/domain/GatingType");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferFees = require("../../scripts/domain/OfferFees");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
@@ -26,6 +27,7 @@ const { applyPercentage } = require("../../test/util/utils.js");
 const { oneWeek, oneMonth } = require("./constants.js");
 let DisputeResolver = require("../../scripts/domain/DisputeResolver.js");
 let Seller = require("../../scripts/domain/Seller");
+const { ZeroHash } = require("ethers");
 
 function* incrementer() {
   let i = 0;
@@ -181,7 +183,8 @@ function mockOfferFees(protocolFee, agentFee) {
 function mockVoucherInitValues() {
   const contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
   const royaltyPercentage = "0"; // 0%
-  return new VoucherInitValues(contractURI, royaltyPercentage);
+  const collectionSalt = ZeroHash;
+  return new VoucherInitValues(contractURI, royaltyPercentage, collectionSalt);
 }
 
 function mockAuthToken() {
@@ -233,6 +236,7 @@ async function mockReceipt() {
   const sellerId = "2";
   const agentId = "3";
   const twinReceipt = mockTwinReceipt(ZeroAddress);
+  const condition = mockCondition();
 
   return new Receipt(
     exchange.id,
@@ -246,7 +250,7 @@ async function mockReceipt() {
     agentId,
     offer.exchangeToken,
     exchange.finalizedDate,
-    undefined,
+    condition,
     voucher.committedDate,
     voucher.redeemedDate,
     voucher.expired,
@@ -258,15 +262,25 @@ async function mockReceipt() {
   );
 }
 
-function mockCondition({ method, tokenType, tokenAddress, tokenId, threshold, maxCommits, length } = {}) {
+function mockCondition({
+  method,
+  tokenType,
+  tokenAddress,
+  gating,
+  minTokenId,
+  threshold,
+  maxCommits,
+  maxTokenId,
+} = {}) {
   return new Condition(
     method ?? EvaluationMethod.Threshold,
     tokenType ?? TokenType.FungibleToken,
     tokenAddress ?? ZeroAddress,
-    tokenId ?? "0",
+    gating ?? GatingType.PerAddress,
+    minTokenId ?? "0",
     threshold ?? "1",
     maxCommits ?? "1",
-    length ?? "0"
+    maxTokenId ?? "0"
   );
 }
 

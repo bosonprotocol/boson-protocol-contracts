@@ -1,7 +1,7 @@
 import "./BosonTypes.sol";
 
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 // Access Control Roles
 bytes32 constant ADMIN = keccak256("ADMIN"); // Role Admin
@@ -74,6 +74,8 @@ string constant INVALID_AGENT_FEE_PERCENTAGE = "Sum of agent fee percentage and 
 string constant NO_PENDING_UPDATE_FOR_ACCOUNT = "No pending updates for the given account";
 string constant UNAUTHORIZED_CALLER_UPDATE = "Caller has no permission to approve this update";
 string constant NO_UPDATE_APPLIED = "No update applied or requested approval";
+string constant CLONE_CREATION_FAILED = "Clone creation failed";
+string constant SELLER_SALT_NOT_UNIQUE = "Seller salt not unique";
 
 // Revert Reasons: Offer related
 string constant NO_SUCH_OFFER = "No such offer";
@@ -104,8 +106,7 @@ string constant NOTHING_UPDATED = "Nothing updated";
 string constant INVALID_CONDITION_PARAMETERS = "Invalid condition parameters";
 string constant GROUP_HAS_NO_CONDITION = "Offer belongs to a group without a condition. Use commitToOffer instead";
 string constant GROUP_HAS_CONDITION = "Offer belongs to a group with a condition. Use commitToConditionalOffer instead";
-string constant MAX_COMMITS_ADDRESS_REACHED = "Max commits per address reached";
-string constant MAX_COMMITS_TOKEN_REACHED = "Max commits per token id reached";
+string constant MAX_COMMITS_REACHED = "Max commits reached";
 string constant TOKEN_ID_NOT_IN_CONDITION_RANGE = "Token id not in condition range";
 string constant INVALID_TOKEN_ID = "ERC721 and ERC20 require zero tokenId";
 
@@ -121,8 +122,8 @@ string constant EXCHANGE_ALREADY_EXISTS = "Exchange already exists";
 string constant INVALID_RANGE_LENGTH = "Range length is too large or zero";
 
 // Revert Reasons: Twin related
-uint256 constant SINGLE_TWIN_RESERVED_GAS = 140000;
-uint256 constant MINIMAL_RESIDUAL_GAS = 180000;
+uint256 constant SINGLE_TWIN_RESERVED_GAS = 160000;
+uint256 constant MINIMAL_RESIDUAL_GAS = 230000;
 string constant NO_SUCH_TWIN = "No such twin";
 string constant NO_TRANSFER_APPROVED = "No transfer approved";
 string constant TWIN_TRANSFER_FAILED = "Twin could not be transferred";
@@ -203,6 +204,7 @@ string constant NOT_COMMITTABLE = "Token not committable";
 string constant INVALID_TO_ADDRESS = "Tokens can only be pre-mined to the contract or contract owner address";
 string constant EXTERNAL_CALL_FAILED = "External call failed";
 string constant ERC721_INVALID_TOKEN_ID = "ERC721: invalid token ID";
+string constant INTERACTION_NOT_ALLOWED = "Interaction not allowed";
 
 // Meta Transactions - Structs
 bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(

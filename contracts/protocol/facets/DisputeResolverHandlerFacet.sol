@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents.sol";
@@ -110,7 +110,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             _disputeResolver.id
         ];
 
-        for (uint256 i = 0; i < _disputeResolverFees.length; i++) {
+        for (uint256 i = 0; i < _disputeResolverFees.length; ) {
             require(
                 disputeResolverFeeTokens[_disputeResolverFees[i].tokenAddress] == 0,
                 DUPLICATE_DISPUTE_RESOLVER_FEES
@@ -123,6 +123,10 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
 
             // Set index mapping. Should be index in disputeResolverFees array + 1
             disputeResolverFeeTokens[_disputeResolverFees[i].tokenAddress] = disputeResolverFees.length;
+
+            unchecked {
+                i++;
+            }
         }
 
         storeDisputeResolver(_disputeResolver);
@@ -302,7 +306,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         // Get storage location for disputeResolver
         (, DisputeResolver storage disputeResolver, ) = fetchDisputeResolver(_disputeResolverId);
 
-        for (uint256 i = 0; i < _fieldsToUpdate.length; i++) {
+        for (uint256 i = 0; i < _fieldsToUpdate.length; ) {
             DisputeResolverUpdateFields role = _fieldsToUpdate[i];
 
             if (role == DisputeResolverUpdateFields.Admin && disputeResolverPendingUpdate.admin != address(0)) {
@@ -347,6 +351,10 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
                 updateApplied = true;
             } else if (role == DisputeResolverUpdateFields.Clerk) {
                 revert(CLERK_DEPRECATED);
+            }
+
+            unchecked {
+                i++;
             }
         }
 
@@ -405,7 +413,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         require(_disputeResolverFees.length > 0, INEXISTENT_DISPUTE_RESOLVER_FEES);
 
         // Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
-        for (uint256 i = 0; i < _disputeResolverFees.length; i++) {
+        for (uint256 i = 0; i < _disputeResolverFees.length; ) {
             require(
                 lookups.disputeResolverFeeTokenIndex[_disputeResolverId][_disputeResolverFees[i].tokenAddress] == 0,
                 DUPLICATE_DISPUTE_RESOLVER_FEES
@@ -417,6 +425,10 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             lookups.disputeResolverFeeTokenIndex[_disputeResolverId][
                 _disputeResolverFees[i].tokenAddress
             ] = disputeResolverFees.length; // Set index mapping. Should be index in disputeResolverFees array + 1
+
+            unchecked {
+                i++;
+            }
         }
 
         emit DisputeResolverFeesAdded(_disputeResolverId, _disputeResolverFees, sender);
@@ -464,7 +476,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         require(_feeTokenAddresses.length > 0, INEXISTENT_DISPUTE_RESOLVER_FEES);
 
         // Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
-        for (uint256 i = 0; i < _feeTokenAddresses.length; i++) {
+        for (uint256 i = 0; i < _feeTokenAddresses.length; ) {
             require(
                 lookups.disputeResolverFeeTokenIndex[_disputeResolverId][_feeTokenAddresses[i]] != 0,
                 DISPUTE_RESOLVER_FEE_NOT_FOUND
@@ -485,6 +497,10 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             }
             disputeResolverFees.pop(); // Delete last DisputeResolverFee struct in the array, which was just moved to fill the gap
             delete lookups.disputeResolverFeeTokenIndex[_disputeResolverId][_feeTokenAddresses[i]]; // Delete from index mapping
+
+            unchecked {
+                i++;
+            }
         }
 
         emit DisputeResolverFeesRemoved(_disputeResolverId, _feeTokenAddresses, sender);
@@ -572,7 +588,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         // Check that msg.sender is the admin address for this dispute resolver
         require(disputeResolver.admin == sender, NOT_ADMIN);
 
-        for (uint256 i = 0; i < _sellerAllowList.length; i++) {
+        for (uint256 i = 0; i < _sellerAllowList.length; ) {
             uint256 sellerToRemoveIndex = lookups.allowedSellerIndex[_disputeResolverId][_sellerAllowList[i]];
             require(sellerToRemoveIndex > 0, SELLER_NOT_APPROVED);
 
@@ -593,6 +609,10 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
 
             // remove last element
             lookups.allowedSellers[_disputeResolverId].pop();
+
+            unchecked {
+                i++;
+            }
         }
 
         emit AllowedSellersRemoved(_disputeResolverId, _sellerAllowList, sender);
@@ -684,14 +704,22 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         if (exists) {
             if (lookups.allowedSellers[_disputeResolverId].length == 0) {
                 // DR allows everyone, just make sure ids really belong to the sellers
-                for (uint256 i = 0; i < _sellerIds.length; i++) {
+                for (uint256 i = 0; i < _sellerIds.length; ) {
                     (exists, , ) = fetchSeller(_sellerIds[i]);
                     sellerAllowed[i] = exists;
+
+                    unchecked {
+                        i++;
+                    }
                 }
             } else {
                 // DR is selective. Check for every seller if they are allowed for given _disputeResolverId
-                for (uint256 i = 0; i < _sellerIds.length; i++) {
+                for (uint256 i = 0; i < _sellerIds.length; ) {
                     sellerAllowed[i] = lookups.allowedSellerIndex[_disputeResolverId][_sellerIds[i]] > 0; // true if on the list, false otherwise
+
+                    unchecked {
+                        i++;
+                    }
                 }
             }
         }
@@ -738,7 +766,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // Loop over incoming seller ids and store them to the mapping
-        for (uint256 i = 0; i < _sellerAllowList.length; i++) {
+        for (uint256 i = 0; i < _sellerAllowList.length; ) {
             uint256 sellerId = _sellerAllowList[i];
             // Check Seller exists in sellers mapping
             (bool exists, , ) = fetchSeller(sellerId);
@@ -754,6 +782,10 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             lookups.allowedSellerIndex[_disputeResolverId][sellerId] = lookups
                 .allowedSellers[_disputeResolverId]
                 .length; //Set index mapping. Should be index in allowedSellers array + 1
+
+            unchecked {
+                i++;
+            }
         }
     }
 

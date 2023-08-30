@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
@@ -30,7 +30,6 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
      *
      * Reverts if:
      * - Caller does not have PAUSER role
-     * - A region is specified more than once
      *
      * @param _regions - an array of regions to pause. See: {BosonTypes.PausableRegion}
      */
@@ -49,7 +48,6 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
      * Reverts if:
      * - Caller does not have PAUSER role
      * - Protocol is not currently paused
-     * - A region is specified more than once
      */
     function unpause(BosonTypes.PausableRegion[] calldata _regions) external onlyRole(PAUSER) nonReentrant {
         // Cache protocol status for reference
@@ -78,18 +76,26 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
 
         // Return all regions if all are paused.
         if (status.pauseScenario == ALL_REGIONS_MASK) {
-            for (uint256 i = 0; i < totalRegions; i++) {
+            for (uint256 i = 0; i < totalRegions; ) {
                 regions[i] = BosonTypes.PausableRegion(i);
+
+                unchecked {
+                    i++;
+                }
             }
         } else {
             uint256 count = 0;
 
-            for (uint256 i = 0; i < totalRegions; i++) {
+            for (uint256 i = 0; i < totalRegions; ) {
                 // Check if the region is paused by bitwise AND operation with shifted 1
-                if ((status.pauseScenario & (1 << i)) != 0) {
+                if (status.pauseScenario & (1 << i) != 0) {
                     regions[count] = BosonTypes.PausableRegion(i);
 
                     count++;
+                }
+
+                unchecked {
+                    i++;
                 }
             }
 
@@ -104,9 +110,6 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
      * @notice Toggles pause/unpause for some or all of the protocol.
      *
      * Toggle all regions if none are specified.
-     *
-     * Reverts if:
-     * - A region is specified more than once
      *
      * @param _regions - an array of regions to pause/unpause. See: {BosonTypes.PausableRegion}
      * @param _pause - a boolean indicating whether to pause (true) or unpause (false)
@@ -127,10 +130,14 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
 
         // Calculate the incoming scenario as the sum of individual regions
         // Use "or" to get the correct value even if the same region is specified more than once
-        for (uint256 i = 0; i < _regions.length; i++) {
+        for (uint256 i = 0; i < _regions.length; ) {
             // Get enum value as power of 2
             region = 1 << uint256(_regions[i]);
             incomingScenario |= region;
+
+            unchecked {
+                i++;
+            }
         }
 
         // Store the toggle scenario

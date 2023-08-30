@@ -86,8 +86,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       expectedCloneAddress = calculateCloneAddress(
         await accountHandler.getAddress(),
         beaconProxyAddress,
-        admin.address,
-        ""
+        admin.address
       );
       emptyAuthToken = mockAuthToken();
       expect(emptyAuthToken.isValid()).is.true;
