@@ -19,6 +19,8 @@ const Role = require("../../scripts/domain/Role");
 const DisputeState = require("../../scripts/domain/DisputeState");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
+const TokenType = require("../../scripts/domain/TokenType");
+const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -40,6 +42,7 @@ const {
   mockAuthToken,
   accountId,
   mockExchange,
+  mockCondition,
 } = require("../util/mock");
 const { oneMonth } = require("../util/constants");
 const {
@@ -55,7 +58,7 @@ const {
 describe("IBosonMetaTransactionsHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, pauser, rando, assistant, buyer, admin, clerk, treasury, assistantDR, adminDR, clerkDR, treasuryDR;
+  let deployer, pauser, rando, assistant, buyer, admin, clerk, treasury, assistantDR, adminDR, clerkDR, treasuryDR, other;
   let erc165,
     accessController,
     accountHandler,
@@ -68,7 +71,8 @@ describe("IBosonMetaTransactionsHandler", function () {
     bosonToken,
     support,
     result,
-    mockMetaTransactionsHandler;
+    mockMetaTransactionsHandler,
+    orchestrationHandler;
   let metaTransactionsHandler, nonce, functionSignature;
   let seller, offerId, buyerId;
   let validOfferDetails,
@@ -79,7 +83,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     validExchangeDetails,
     exchangeType,
     message;
-  let offer, offerDates, offerDurations;
+  let offer, offerDates, offerDurations, condition;
   let sellerDeposit, price;
   let voucherRedeemableFrom;
   let exchange;
@@ -140,10 +144,11 @@ describe("IBosonMetaTransactionsHandler", function () {
       disputeHandler: "IBosonDisputeHandler",
       metaTransactionsHandler: "IBosonMetaTransactionsHandler",
       pauseHandler: "IBosonPauseHandler",
+      orchestrationHandler: "IBosonOrchestrationHandler",
     };
 
     ({
-      signers: [pauser, buyer, rando, admin, treasury, adminDR, treasuryDR],
+      signers: [pauser, buyer, rando, admin, treasury, adminDR, treasuryDR, other],
       contractInstances: {
         erc165,
         accountHandler,
@@ -154,6 +159,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         disputeHandler,
         metaTransactionsHandler,
         pauseHandler,
+        orchestrationHandler,
       },
       extraReturnValues: { accessController },
       diamondAddress: protocolDiamondAddress,
@@ -1767,6 +1773,231 @@ describe("IBosonMetaTransactionsHandler", function () {
                 "commitToOffer",
                 Object.values(validOfferDetails)
               );
+            });
+
+            it("Should fail when replay transaction", async function () {
+              // Collect the signature components
+              let { r, s, v } = await prepareDataSignatureParameters(
+                buyer,
+                customTransactionType,
+                "MetaTxCommitToOffer",
+                message,
+                await metaTransactionsHandler.getAddress()
+              );
+
+              // Execute the meta transaction.
+              await metaTransactionsHandler.executeMetaTransaction(
+                await buyer.getAddress(),
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              );
+
+              // Execute meta transaction again with the same nonce, expecting revert.
+              await expect(
+                metaTransactionsHandler.executeMetaTransaction(
+                  await buyer.getAddress(),
+                  message.functionName,
+                  functionSignature,
+                  nonce,
+                  r,
+                  s,
+                  v
+                )
+              ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
+            });
+
+            it("Should fail when Signer and Signature do not match", async function () {
+              // Prepare the message
+              message.from = await rando.getAddress();
+
+              // Collect the signature components
+              let { r, s, v } = await prepareDataSignatureParameters(
+                rando, // Different user, not buyer.
+                customTransactionType,
+                "MetaTxCommitToOffer",
+                message,
+                await metaTransactionsHandler.getAddress()
+              );
+
+              // Execute meta transaction, expecting revert.
+              await expect(
+                metaTransactionsHandler.executeMetaTransaction(
+                  await buyer.getAddress(),
+                  message.functionName,
+                  functionSignature,
+                  nonce,
+                  r,
+                  s,
+                  v
+                )
+              ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+            });
+          });
+        });
+
+        context("👉 ExchangeHandlerFacet 👉 commitToConditionalOffer()", async function () {
+          beforeEach(async function () {
+            message.functionName = "commitToConditionalOffer(address,uint256,uint256)";
+
+            offer.exchangeToken = await mockToken.getAddress();
+
+            // Check if domains are valid
+            expect(offer.isValid()).is.true;
+            expect(offerDates.isValid()).is.true;
+            expect(offerDurations.isValid()).is.true;
+
+            // top up seller's and buyer's account
+            await mockToken.mint(await assistant.getAddress(), sellerDeposit);
+            await mockToken.mint(await buyer.getAddress(), price);
+
+            // approve protocol to transfer the tokens
+            await mockToken.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
+            await mockToken.connect(buyer).approve(protocolDiamondAddress, price);
+
+            // deposit to seller's pool
+            await fundsHandler.connect(assistant).depositFunds(seller.id, await mockToken.getAddress(), sellerDeposit);
+
+            condition = mockCondition({
+              tokenAddress: await mockToken.getAddress()
+            });
+            expect(condition.isValid()).to.be.true;
+    
+            // Create the offer
+            await orchestrationHandler
+              .connect(assistant)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId);
+
+            // Set the offer Type
+            offerType = [
+              { name: "buyer", type: "address" },
+              { name: "offerId", type: "uint256" },
+            ];
+
+            // Set the message Type
+            metaTransactionType = [
+              { name: "nonce", type: "uint256" },
+              { name: "from", type: "address" },
+              { name: "contractAddress", type: "address" },
+              { name: "functionName", type: "string" },
+            ];
+
+            metaTransactionType.push({ name: "offerDetails", type: "MetaTxOfferDetails" });
+
+            customTransactionType = {
+              MetaTxCommitToOffer: metaTransactionType,
+              MetaTxOfferDetails: offerType,
+            };
+
+            // prepare validOfferDetails
+            validOfferDetails = {
+              buyer: await buyer.getAddress(),
+              offerId: offer.id,
+            };
+
+            // Prepare the message
+            message.offerDetails = validOfferDetails;
+
+            // Deposit native currency to the same seller id
+            await fundsHandler
+              .connect(rando)
+              .depositFunds(seller.id, ZeroAddress, sellerDeposit, { value: sellerDeposit });
+          });
+
+          it("Should emit MetaTransactionExecuted event and update state", async () => {
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              buyer,
+              customTransactionType,
+              "MetaTxCommitToOffer",
+              message,
+              await metaTransactionsHandler.getAddress()
+            );
+
+            // Prepare the function signature
+            functionSignature = exchangeHandler.interface.encodeFunctionData(
+              "commitToConditionalOffer",
+              [...Object.values(validOfferDetails), "0"]
+            );
+
+            // Expect that buyer has token balance matching the offer price.
+            const buyerBalanceBefore = await mockToken.balanceOf(await buyer.getAddress());
+            assert.equal(buyerBalanceBefore, price, "Buyer initial token balance mismatch");
+
+            // send a meta transaction, check for event
+            await expect(
+              metaTransactionsHandler.executeMetaTransaction(
+                await buyer.getAddress(),
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              )
+            )
+              .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
+              .withArgs(await buyer.getAddress(), await deployer.getAddress(), message.functionName, nonce);
+
+            // Expect that buyer (meta tx signer) has paid the tokens to commit to an offer.
+            const buyerBalanceAfter = await mockToken.balanceOf(await buyer.getAddress());
+            assert.equal(buyerBalanceAfter, "0", "Buyer final token balance mismatch");
+
+            // Verify that nonce is used. Expect true.
+            let expectedResult = true;
+            result = await metaTransactionsHandler.connect(buyer).isUsedNonce(await buyer.getAddress(), nonce);
+            assert.equal(result, expectedResult, "Nonce is unused");
+          });
+
+          it("does not modify revert reasons", async function () {
+            // An invalid offer id
+            offerId = "666";
+
+            // prepare validOfferDetails
+            validOfferDetails.offerId = offerId;
+
+            // Prepare the message
+            message.offerDetails = validOfferDetails;
+
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              buyer,
+              customTransactionType,
+              "MetaTxCommitToOffer",
+              message,
+              await metaTransactionsHandler.getAddress()
+            );
+
+            // Prepare the function signature
+            functionSignature = exchangeHandler.interface.encodeFunctionData(
+              "commitToConditionalOffer",
+              [...Object.values(validOfferDetails), "0"]
+            );
+
+            // Execute meta transaction, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTransaction(
+                await buyer.getAddress(),
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              )
+            ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+          });
+
+          context("💔 Revert Reasons", async function () {
+            beforeEach(async function () {
+              // Prepare the function signature
+              functionSignature = exchangeHandler.interface.encodeFunctionData(
+                "commitToConditionalOffer",
+                [...Object.values(validOfferDetails), "0"]
+                );
             });
 
             it("Should fail when replay transaction", async function () {

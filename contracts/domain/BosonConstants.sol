@@ -235,6 +235,7 @@ bytes32 constant META_TX_DISPUTE_RESOLUTIONS_TYPEHASH = keccak256(
 
 // Function names
 string constant COMMIT_TO_OFFER = "commitToOffer(address,uint256)";
+string constant COMMIT_TO_CONDITIONAL_OFFER = "commitToConditionalOffer(address,uint256,uint256)";
 string constant CANCEL_VOUCHER = "cancelVoucher(uint256)";
 string constant REDEEM_VOUCHER = "redeemVoucher(uint256)";
 string constant COMPLETE_EXCHANGE = "completeExchange(uint256)";

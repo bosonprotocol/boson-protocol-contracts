@@ -31,6 +31,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
 
         // Set input type for the function name
         pmti.inputType[COMMIT_TO_OFFER] = MetaTxInputType.CommitToOffer;
+        pmti.inputType[COMMIT_TO_CONDITIONAL_OFFER] = MetaTxInputType.CommitToOffer;
         pmti.inputType[WITHDRAW_FUNDS] = MetaTxInputType.Funds;
         pmti.inputType[RESOLVE_DISPUTE] = MetaTxInputType.ResolveDispute;
         pmti.inputType[CANCEL_VOUCHER] = MetaTxInputType.Exchange;
