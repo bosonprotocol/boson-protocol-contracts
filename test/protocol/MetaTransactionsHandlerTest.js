@@ -146,7 +146,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     };
 
     ({
-      signers: [pauser, buyer, rando, admin, treasury, adminDR, treasuryDR, other],
+      signers: [pauser, buyer, rando, admin, treasury, adminDR, treasuryDR],
       contractInstances: {
         erc165,
         accountHandler,
