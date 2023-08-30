@@ -1860,10 +1860,10 @@ describe("IBosonMetaTransactionsHandler", function () {
             await fundsHandler.connect(assistant).depositFunds(seller.id, await mockToken.getAddress(), sellerDeposit);
 
             condition = mockCondition({
-              tokenAddress: await mockToken.getAddress()
+              tokenAddress: await mockToken.getAddress(),
             });
             expect(condition.isValid()).to.be.true;
-    
+
             // Create the offer
             await orchestrationHandler
               .connect(assistant)
@@ -1916,10 +1916,10 @@ describe("IBosonMetaTransactionsHandler", function () {
             );
 
             // Prepare the function signature
-            functionSignature = exchangeHandler.interface.encodeFunctionData(
-              "commitToConditionalOffer",
-              [...Object.values(validOfferDetails), "0"]
-            );
+            functionSignature = exchangeHandler.interface.encodeFunctionData("commitToConditionalOffer", [
+              ...Object.values(validOfferDetails),
+              "0",
+            ]);
 
             // Expect that buyer has token balance matching the offer price.
             const buyerBalanceBefore = await mockToken.balanceOf(await buyer.getAddress());
@@ -1970,10 +1970,10 @@ describe("IBosonMetaTransactionsHandler", function () {
             );
 
             // Prepare the function signature
-            functionSignature = exchangeHandler.interface.encodeFunctionData(
-              "commitToConditionalOffer",
-              [...Object.values(validOfferDetails), "0"]
-            );
+            functionSignature = exchangeHandler.interface.encodeFunctionData("commitToConditionalOffer", [
+              ...Object.values(validOfferDetails),
+              "0",
+            ]);
 
             // Execute meta transaction, expecting revert.
             await expect(
@@ -1992,10 +1992,10 @@ describe("IBosonMetaTransactionsHandler", function () {
           context("💔 Revert Reasons", async function () {
             beforeEach(async function () {
               // Prepare the function signature
-              functionSignature = exchangeHandler.interface.encodeFunctionData(
-                "commitToConditionalOffer",
-                [...Object.values(validOfferDetails), "0"]
-                );
+              functionSignature = exchangeHandler.interface.encodeFunctionData("commitToConditionalOffer", [
+                ...Object.values(validOfferDetails),
+                "0",
+              ]);
             });
 
             it("Should fail when replay transaction", async function () {
