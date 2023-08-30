@@ -1,6 +1,6 @@
 const shell = require("shelljs");
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ZeroAddress, provider } = hre.ethers;
 const { assert, expect } = require("chai");
 const { mockOffer, mockVoucher, mockExchange } = require("../util/mock");
 const { getEvent, calculateVoucherExpiry, getSnapshot, revertToSnapshot } = require("../util/utils.js");
@@ -19,20 +19,7 @@ function getGenericContext(
   protocolContractStateAfterUpgrade,
   preUpgradeEntities,
   snapshot,
-  includeTests = [
-    "accountContractState",
-    "offerContractState",
-    "exchangeContractState",
-    "bundleContractState",
-    "configContractState",
-    "disputeContractState",
-    "fundsContractState",
-    "groupContractState",
-    "twinContractState",
-    "metaTxPrivateContractState",
-    "protocolStatusPrivateContractState",
-    "protocolLookupsPrivateContractState",
-  ]
+  includeTests
 ) {
   let postUpgradeEntities;
   let { exchangeHandler, offerHandler, fundsHandler, disputeHandler } = contractsBefore;
@@ -41,7 +28,7 @@ function getGenericContext(
   const genericContextFunction = async function () {
     afterEach(async function () {
       // Revert to state right after the upgrade.
-      // This is used so the lengthly setup (deploy+upgrade) is done only once.
+      // This is used so the lengthy setup (deploy+upgrade) is done only once.
       await revertToSnapshot(snapshot);
       snapshot = await getSnapshot();
     });
@@ -55,7 +42,7 @@ function getGenericContext(
 
     // Protocol state
     context("📋 Right After upgrade", async function () {
-      for (const test in includeTests) {
+      for (const test of includeTests) {
         it(`State of ${test} is not affected`, async function () {
           assert.deepEqual(protocolContractState[test], protocolContractStateAfterUpgrade[test]);
         });
@@ -153,26 +140,26 @@ function getGenericContext(
         const offerPrice = offer.price;
         const buyer = preUpgradeEntities.buyers[1];
         let msgValue;
-        if (offer.exchangeToken == ethers.constants.AddressZero) {
+        if (offer.exchangeToken == ZeroAddress) {
           msgValue = offerPrice;
         } else {
           // approve token transfer
           msgValue = 0;
           await mockToken.connect(buyer.wallet).approve(protocolDiamondAddress, offerPrice);
-          await mockToken.mint(buyer.wallet.address, offerPrice);
+          await mockToken.mint(buyer.wallet, offerPrice);
         }
 
         // Commit to offer
         const exchangeId = await exchangeHandler.getNextExchangeId();
         const tx = await exchangeHandler
           .connect(buyer.wallet)
-          .commitToOffer(buyer.wallet.address, offer.id, { value: msgValue });
+          .commitToOffer(buyer.wallet, offer.id, { value: msgValue });
         const txReceipt = await tx.wait();
         const event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
         // Get the block timestamp of the confirmed tx
         const blockNumber = tx.blockNumber;
-        const block = await ethers.provider.getBlock(blockNumber);
+        const block = await provider.getBlock(blockNumber);
 
         // Set expected voucher values
         const voucher = mockVoucher({
@@ -210,7 +197,7 @@ function getGenericContext(
         const buyerWallet = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
         await expect(exchangeHandler.connect(buyerWallet).redeemVoucher(exchange.exchangeId))
           .to.emit(exchangeHandler, "VoucherRedeemed")
-          .withArgs(exchange.offerId, exchange.exchangeId, buyerWallet.address);
+          .withArgs(exchange.offerId, exchange.exchangeId, await buyerWallet.getAddress());
       });
 
       it("Cancel old voucher", async function () {
@@ -218,7 +205,7 @@ function getGenericContext(
         const buyerWallet = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
         await expect(exchangeHandler.connect(buyerWallet).cancelVoucher(exchange.exchangeId))
           .to.emit(exchangeHandler, "VoucherCanceled")
-          .withArgs(exchange.offerId, exchange.exchangeId, buyerWallet.address);
+          .withArgs(exchange.offerId, exchange.exchangeId, await buyerWallet.getAddress());
       });
 
       it("Revoke old voucher", async function () {
@@ -237,7 +224,7 @@ function getGenericContext(
         const offer = preUpgradeEntities.offers.find((o) => o.offer.id == exchange.offerId);
         await expect(disputeHandler.connect(buyerWallet).escalateDispute(exchange.exchangeId))
           .to.emit(disputeHandler, "DisputeEscalated")
-          .withArgs(exchange.exchangeId, offer.disputeResolverId, buyerWallet.address);
+          .withArgs(exchange.exchangeId, offer.disputeResolverId, await buyerWallet.getAddress());
       });
 
       it("Old buyer commits to new offer", async function () {
@@ -251,6 +238,8 @@ function getGenericContext(
         const disputeResolverId = preUpgradeEntities.DRs[0].disputeResolver.id;
         const agentId = preUpgradeEntities.agents[0].agent.id;
         const seller = preUpgradeEntities.sellers[2];
+
+        offerHandler = contractsAfter.offerHandler;
         await offerHandler
           .connect(seller.wallet)
           .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
@@ -264,13 +253,13 @@ function getGenericContext(
         const offerPrice = offer.price;
         const tx = await exchangeHandler
           .connect(buyer.wallet)
-          .commitToOffer(buyer.wallet.address, offer.id, { value: offerPrice });
+          .commitToOffer(buyer.wallet, offer.id, { value: offerPrice });
         const txReceipt = await tx.wait();
         const event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
         // Get the block timestamp of the confirmed tx
         const blockNumber = tx.blockNumber;
-        const block = await ethers.provider.getBlock(blockNumber);
+        const block = await provider.getBlock(blockNumber);
 
         // Set expected voucher values
         const voucher = mockVoucher({

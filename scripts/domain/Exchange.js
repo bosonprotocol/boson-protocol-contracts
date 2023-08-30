@@ -51,7 +51,7 @@ class Exchange {
       offerId: offerId.toString(),
       buyerId: buyerId.toString(),
       finalizedDate: finalizedDate.toString(),
-      state,
+      state: Number(state),
     });
   }
 

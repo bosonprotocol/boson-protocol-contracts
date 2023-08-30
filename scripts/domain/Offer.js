@@ -18,6 +18,7 @@ class Offer {
             string metadataUri;
             string metadataHash;
             bool voided;
+            uint256 collectionIndex;
         }
     */
 
@@ -31,7 +32,8 @@ class Offer {
     exchangeToken,
     metadataUri,
     metadataHash,
-    voided
+    voided,
+    collectionIndex
   ) {
     this.id = id;
     this.sellerId = sellerId;
@@ -43,6 +45,7 @@ class Offer {
     this.metadataUri = metadataUri;
     this.metadataHash = metadataHash;
     this.voided = voided;
+    this.collectionIndex = collectionIndex;
   }
 
   /**
@@ -62,6 +65,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      collectionIndex,
     } = o;
 
     return new Offer(
@@ -74,7 +78,8 @@ class Offer {
       exchangeToken,
       metadataUri,
       metadataHash,
-      voided
+      voided,
+      collectionIndex
     );
   }
 
@@ -93,7 +98,8 @@ class Offer {
       exchangeToken,
       metadataUri,
       metadataHash,
-      voided;
+      voided,
+      collectionIndex;
 
     // destructure struct
     [
@@ -107,7 +113,11 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      collectionIndex,
     ] = struct;
+    if (!collectionIndex) {
+      collectionIndex = 0;
+    }
 
     return Offer.fromObject({
       id: id.toString(),
@@ -120,6 +130,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      collectionIndex: collectionIndex.toString(),
     });
   }
 
@@ -155,6 +166,7 @@ class Offer {
       this.metadataUri,
       this.metadataHash,
       this.voided,
+      this.collectionIndex,
     ];
   }
 
@@ -260,6 +272,15 @@ class Offer {
   }
 
   /**
+   * Is this Offer instance's collectionIndex field valid?
+   * Must be a string representation of a big number
+   * @returns {boolean}
+   */
+  collectionIndexIsValid() {
+    return bigNumberIsValid(this.collectionIndex);
+  }
+
+  /**
    * Is this Offer instance valid?
    * @returns {boolean}
    */
@@ -274,7 +295,8 @@ class Offer {
       this.exchangeTokenIsValid() &&
       this.metadataUriIsValid() &&
       this.metadataHashIsValid() &&
-      this.voidedIsValid()
+      this.voidedIsValid() &&
+      this.collectionIndexIsValid()
     );
   }
 }

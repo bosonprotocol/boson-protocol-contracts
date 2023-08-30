@@ -53,11 +53,12 @@ task(
 task("upgrade-facets", "Upgrade existing facets, add new facets or remove existing facets")
   .addParam("newVersion", "The version of the protocol to upgrade to")
   .addParam("env", "The deployment environment")
+  .addParam("functionNamesToSelector", "JSON list of function names to selectors")
   .addOptionalParam("facetConfig", "JSON list of facets to upgrade")
-  .setAction(async ({ env, facetConfig, newVersion }) => {
+  .setAction(async ({ env, facetConfig, newVersion, functionNamesToSelector }) => {
     const { upgradeFacets } = await lazyImport("./scripts/upgrade-facets.js");
 
-    await upgradeFacets(env, facetConfig, newVersion);
+    await upgradeFacets(env, facetConfig, newVersion, functionNamesToSelector);
   });
 
 task("upgrade-clients", "Upgrade existing clients")
@@ -101,10 +102,25 @@ task("split-unit-tests-into-chunks", "Splits unit tests into chunks")
 task("migrate", "Migrates the protocol to a new version")
   .addPositionalParam("newVersion", "The version to migrate to")
   .addParam("env", "The deployment environment")
-  .setAction(async ({ newVersion, env }) => {
-    const { migrate } = await lazyImport(`./scripts/migrations/migrate_${newVersion}.js`);
+  .addFlag("dryRun", "Test the migration without deploying")
+  .setAction(async ({ newVersion, env, dryRun }) => {
+    let balanceBefore, getBalance;
+    if (dryRun) {
+      let setupDryRun;
+      ({ setupDryRun, getBalance } = await lazyImport(`./scripts/migrations/dry-run.js`));
+      ({ env, upgraderBalance: balanceBefore } = await setupDryRun(env));
+    }
 
+    const { migrate } = await lazyImport(`./scripts/migrations/migrate_${newVersion}.js`);
     await migrate(env);
+
+    if (dryRun) {
+      const balanceAfter = await getBalance();
+      const etherSpent = balanceBefore - balanceAfter;
+
+      const formatUnits = require("ethers").formatUnits;
+      console.log("Ether spent: ", formatUnits(etherSpent, "ether"));
+    }
   });
 
 module.exports = {

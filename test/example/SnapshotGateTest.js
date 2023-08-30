@@ -1,7 +1,8 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getContractAt, parseUnits, ZeroAddress, getSigners } = hre.ethers;
 const { expect } = require("chai");
 
+const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const Role = require("../../scripts/domain/Role");
 const TokenType = require("../../scripts/domain/TokenType");
 const Group = require("../../scripts/domain/Group");
@@ -63,6 +64,9 @@ describe("SnapshotGate", function () {
   let snapshot, snapshotTokenSupplies, snapshotTokenCount, holders, holderByAddress;
 
   beforeEach(async function () {
+    // Reset the accountId iterator
+    accountId.next(true);
+
     // Make accounts available
     [
       deployer,
@@ -80,44 +84,44 @@ describe("SnapshotGate", function () {
       holder3,
       holder4,
       holder5,
-    ] = await ethers.getSigners();
+    ] = await getSigners();
 
     // make all account the same
     assistant = admin;
     assistantDR = adminDR;
-    clerk = clerkDR = { address: ethers.constants.AddressZero };
+    clerk = clerkDR = { address: ZeroAddress };
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
 
     // Temporarily grant UPGRADER role to deployer account
-    await accessController.grantRole(Role.UPGRADER, deployer.address);
+    await accessController.grantRole(Role.UPGRADER, await deployer.getAddress());
 
     // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
-    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+    await accessController.grantRole(Role.PROTOCOL, await protocolDiamond.getAddress());
 
     // Temporarily grant PAUSER role to pauser account
-    await accessController.grantRole(Role.PAUSER, pauser.address);
+    await accessController.grantRole(Role.PAUSER, await pauser.getAddress());
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
-    const protocolClientArgs = [protocolDiamond.address];
+    const protocolClientArgs = [await protocolDiamond.getAddress()];
     const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
     const [beacon] = beacons;
     const [proxy] = proxies;
 
     // Set protocolFees
     protocolFeePercentage = "200"; // 2 %
-    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    protocolFeeFlatBoson = parseUnits("0.01", "ether").toString();
     buyerEscalationDepositPercentage = "1000"; // 10%
 
     // Add config Handler, so ids start at 1, and so voucher address can be found
     const protocolConfig = [
       // Protocol addresses
       {
-        treasury: protocolTreasury.address,
-        token: bosonToken.address,
-        voucherBeacon: beacon.address,
-        beaconProxy: proxy.address,
+        treasury: await protocolTreasury.getAddress(),
+        token: await bosonToken.getAddress(),
+        voucherBeacon: await beacon.getAddress(),
+        beaconProxy: await proxy.getAddress(),
       },
       // Protocol limits
       {
@@ -133,6 +137,7 @@ describe("SnapshotGate", function () {
         maxAllowedSellers: 100,
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
+        minResolutionPeriod: oneWeek,
         maxResolutionPeriod: oneMonth,
         minDisputePeriod: oneWeek,
         maxPremintedVouchers: 10000,
@@ -159,23 +164,28 @@ describe("SnapshotGate", function () {
     const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
 
     // Cut the protocol handler facets into the Diamond
-    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
+    await deployAndCutFacets(await protocolDiamond.getAddress(), facetsToDeploy, maxPriorityFeePerGas);
 
     // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
-    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
+    accountHandler = await getContractAt("IBosonAccountHandler", await protocolDiamond.getAddress());
 
     // Cast Diamond to IBosonOfferHandler
-    offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
+    offerHandler = await getContractAt("IBosonOfferHandler", await protocolDiamond.getAddress());
 
     // Cast Diamond to IGroupHandler
-    groupHandler = await ethers.getContractAt("IBosonGroupHandler", protocolDiamond.address);
+    groupHandler = await getContractAt("IBosonGroupHandler", await protocolDiamond.getAddress());
 
     // Cast Diamond to IBosonExchangeHandler
-    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
+    exchangeHandler = await getContractAt("IBosonExchangeHandler", await protocolDiamond.getAddress());
+
+    accountId.next(true);
 
     // Deploy the SnapshotGate example
     sellerId = "1";
-    [snapshotGate] = await deploySnapshotGateExample(["SnapshotGateToken", "SGT", protocolDiamond.address, sellerId]);
+    [snapshotGate] = await deploySnapshotGateExample(
+      ["SnapshotGateToken", "SGT", await protocolDiamond.getAddress(), sellerId],
+      maxPriorityFeePerGas
+    );
 
     // Deploy the mock tokens
     [foreign20] = await deployMockTokens(["Foreign20"]);
@@ -186,11 +196,21 @@ describe("SnapshotGate", function () {
     agentId = "0"; // agent id is optional while creating an offer
 
     // Create a valid seller
-    seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
+    seller = mockSeller(
+      await assistant.getAddress(),
+      await admin.getAddress(),
+      clerk.address,
+      await treasury.getAddress()
+    );
     expect(seller.isValid()).is.true;
 
     // Create a second seller
-    seller2 = mockSeller(assistant2.address, assistant2.address, ethers.constants.AddressZero, assistant2.address);
+    seller2 = mockSeller(
+      await assistant2.getAddress(),
+      await assistant2.getAddress(),
+      ZeroAddress,
+      await assistant2.getAddress()
+    );
     expect(seller2.isValid()).is.true;
 
     // AuthToken
@@ -209,18 +229,19 @@ describe("SnapshotGate", function () {
 
     // Create a valid dispute resolver
     disputeResolver = mockDisputeResolver(
-      assistantDR.address,
-      adminDR.address,
+      await assistantDR.getAddress(),
+      await adminDR.getAddress(),
       clerkDR.address,
-      treasuryDR.address,
+      await treasuryDR.getAddress(),
       true
     );
+
     expect(disputeResolver.isValid()).is.true;
 
     // Create DisputeResolverFee array so offer creation will succeed
     disputeResolverFees = [
-      new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
-      new DisputeResolverFee(foreign20.address, "Foriegn20", "0"),
+      new DisputeResolverFee(ZeroAddress, "Native", "0"),
+      new DisputeResolverFee(await foreign20.getAddress(), "Foriegn20", "0"),
     ];
 
     // Make empty seller list, so every seller is allowed
@@ -243,19 +264,19 @@ describe("SnapshotGate", function () {
     ];
 
     holderByAddress = {
-      [holder1.address]: holder1,
-      [holder2.address]: holder2,
-      [holder3.address]: holder3,
-      [holder4.address]: holder4,
-      [holder5.address]: holder5,
+      [await holder1.getAddress()]: holder1,
+      [await holder2.getAddress()]: holder2,
+      [await holder3.getAddress()]: holder3,
+      [await holder4.getAddress()]: holder4,
+      [await holder5.getAddress()]: holder5,
     };
 
     // Each holder will have a random amount of each token
     for (let holder of holders) {
       // Mint a bunch of exchange tokens for the holder and approve the gate to transfer them
       const amountToMint = "15000000000000000000";
-      await foreign20.connect(holder).mint(holder.address, amountToMint);
-      await foreign20.connect(holder).approve(snapshotGate.address, amountToMint);
+      await foreign20.connect(holder).mint(await holder.getAddress(), amountToMint);
+      await foreign20.connect(holder).approve(await snapshotGate.getAddress(), amountToMint);
 
       // Create snapshot entry for holder / token
       for (let i = 1; i <= snapshotTokenCount; i++) {
@@ -270,7 +291,7 @@ describe("SnapshotGate", function () {
 
         // Add snapshot entry
         snapshot.push({
-          owner: holder.address,
+          owner: await holder.getAddress(),
           tokenId: i.toString(),
           amount: balance.toString(),
         });
@@ -301,7 +322,7 @@ describe("SnapshotGate", function () {
 
         // Set price in ERC-20 token if on second pass
         if (j > 0) {
-          offer.exchangeToken = foreign20.address;
+          offer.exchangeToken = await foreign20.getAddress();
           offer.buyerCancelPenalty = "0";
         }
 
@@ -325,13 +346,15 @@ describe("SnapshotGate", function () {
 
         // Create Condition
         condition = mockCondition({
-          tokenAddress: snapshotGate.address,
+          tokenAddress: await snapshotGate.getAddress(),
           threshold: "0",
           maxCommits: tokenSupply,
           tokenType: TokenType.NonFungibleToken,
           tokenId: tokenId,
           method: EvaluationMethod.SpecificToken,
+          length: "3",
         });
+
         expect(condition.isValid()).to.be.true;
 
         // Create Group
@@ -387,7 +410,7 @@ describe("SnapshotGate", function () {
         const event = getEvent(txReceipt, snapshotGate, "SnapshotAppended");
 
         // Check executedBy
-        expect(event.executedBy.toString()).to.equal(deployer.address.toString());
+        expect(event.executedBy.toString()).to.equal((await deployer.getAddress()).toString());
 
         // Verify batch contents emitted match what was sent
         for (let i = 0; i < batch.length; i++) {
@@ -410,7 +433,7 @@ describe("SnapshotGate", function () {
         let event = getEvent(txReceipt, snapshotGate, "SnapshotAppended");
 
         // Check executedBy
-        expect(event.executedBy.toString()).to.equal(deployer.address.toString());
+        expect(event.executedBy.toString()).to.equal((await deployer.getAddress()).toString());
 
         // Verify batch contents emitted match what was sent
         for (let i = 0; i < batch1.length; i++) {
@@ -426,7 +449,7 @@ describe("SnapshotGate", function () {
         event = getEvent(txReceipt, snapshotGate, "SnapshotAppended");
 
         // Check executedBy
-        expect(event.executedBy.toString()).to.equal(deployer.address.toString());
+        expect(event.executedBy.toString()).to.equal((await deployer.getAddress()).toString());
 
         // Verify batch contents emitted match what was sent
         for (let i = 0; i < batch2.length; i++) {
@@ -446,7 +469,7 @@ describe("SnapshotGate", function () {
         for (let i = 1; i <= snapshotTokenCount; i++) {
           const tokenId = i.toString();
           const owner = await snapshotGate.ownerOf(tokenId);
-          expect(owner).to.equal(snapshotGate.address);
+          expect(owner).to.equal(await snapshotGate.getAddress());
         }
       });
 
@@ -459,7 +482,7 @@ describe("SnapshotGate", function () {
         for (let i = 1; i <= snapshotTokenCount; i++) {
           const tokenId = i.toString();
           const owner = await snapshotGate.ownerOf(tokenId);
-          expect(owner).to.equal(snapshotGate.address);
+          expect(owner).to.equal(await snapshotGate.getAddress());
         }
       });
 
@@ -496,7 +519,7 @@ describe("SnapshotGate", function () {
       it("should emit a SnapshotFrozen event", async function () {
         await expect(snapshotGate.connect(deployer).freezeSnapshot())
           .to.emit(snapshotGate, "SnapshotFrozen")
-          .withArgs(deployer.address);
+          .withArgs(await deployer.getAddress());
       });
 
       it("should store true value for snapshotFrozen", async function () {
@@ -548,7 +571,7 @@ describe("SnapshotGate", function () {
           snapshotGate.connect(holder).commitToGatedOffer(entry.owner, offerId, entry.tokenId, { value: price })
         )
           .to.emit(snapshotGate, "SnapshotTokenCommitted")
-          .withArgs(entry.owner, offerId, entry.tokenId, holder.address);
+          .withArgs(entry.owner, offerId, entry.tokenId, await holder.getAddress());
       });
 
       it("should emit a SnapshotTokenCommitted event when price is in ERC20 token", async function () {
@@ -570,7 +593,7 @@ describe("SnapshotGate", function () {
         // Commit to the offer
         await expect(snapshotGate.connect(holder).commitToGatedOffer(entry.owner, offerId, entry.tokenId))
           .to.emit(snapshotGate, "SnapshotTokenCommitted")
-          .withArgs(entry.owner, offerId, entry.tokenId, holder.address);
+          .withArgs(entry.owner, offerId, entry.tokenId, await holder.getAddress());
       });
 
       context("💔 Revert Reasons", async function () {
@@ -592,7 +615,9 @@ describe("SnapshotGate", function () {
 
           // Commit to the offer
           await expect(
-            snapshotGate.connect(caller).commitToGatedOffer(caller.address, offerId, entry.tokenId, { value: price })
+            snapshotGate
+              .connect(caller)
+              .commitToGatedOffer(await caller.getAddress(), offerId, entry.tokenId, { value: price })
           ).to.revertedWith("Invalid offer id");
         });
 
@@ -611,7 +636,9 @@ describe("SnapshotGate", function () {
 
           // Commit to the offer
           await expect(
-            snapshotGate.connect(caller).commitToGatedOffer(caller.address, offerId, entry.tokenId, { value: price })
+            snapshotGate
+              .connect(caller)
+              .commitToGatedOffer(await caller.getAddress(), offerId, entry.tokenId, { value: price })
           ).to.revertedWith("Snapshot is not frozen");
         });
 
@@ -633,7 +660,9 @@ describe("SnapshotGate", function () {
 
           // Commit to the offer
           await expect(
-            snapshotGate.connect(caller).commitToGatedOffer(caller.address, offerId, entry.tokenId, { value: price })
+            snapshotGate
+              .connect(caller)
+              .commitToGatedOffer(await caller.getAddress(), offerId, entry.tokenId, { value: price })
           ).to.revertedWith("Buyer held no balance of the given token id at time of snapshot");
         });
 
@@ -688,7 +717,7 @@ describe("SnapshotGate", function () {
           // Commit to the offer
           await expect(
             snapshotGate.connect(holder).commitToGatedOffer(entry.owner, offerId, entry.tokenId, { value: price })
-          ).to.revertedWith("Condition specifies a different tokenId from the one given");
+          ).to.revertedWith(RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
         });
 
         it("offer is from another seller", async function () {
@@ -711,7 +740,7 @@ describe("SnapshotGate", function () {
           await expect(
             snapshotGate
               .connect(caller)
-              .commitToGatedOffer(caller.address, otherSellerOfferId, entry.tokenId, { value: price })
+              .commitToGatedOffer(await caller.getAddress(), otherSellerOfferId, entry.tokenId, { value: price })
           ).to.revertedWith("Offer is from another seller");
         });
 
@@ -732,7 +761,7 @@ describe("SnapshotGate", function () {
           let holder = holderByAddress[entry.owner];
 
           // Wrong price
-          const halfPrice = ethers.BigNumber.from(price).div(ethers.BigNumber.from(2)).toString();
+          const halfPrice = (BigInt(price) / BigInt(2)).toString();
 
           // Commit to the offer
           await expect(
@@ -757,7 +786,7 @@ describe("SnapshotGate", function () {
           let holder = holderByAddress[entry.owner];
 
           // Zero out the gate's approval to transfer the holder's payment ERC20 tokens
-          await foreign20.connect(holder).approve(snapshotGate.address, "0");
+          await foreign20.connect(holder).approve(await snapshotGate.getAddress(), "0");
 
           // Commit to the offer
           await expect(
@@ -850,7 +879,7 @@ describe("SnapshotGate", function () {
         for (let i = 1; i <= snapshotTokenCount; i++) {
           const tokenId = i.toString();
           const owner = await snapshotGate.connect(rando).ownerOf(tokenId);
-          expect(owner).to.equal(snapshotGate.address);
+          expect(owner).to.equal(await snapshotGate.getAddress());
         }
       });
 
@@ -871,7 +900,7 @@ describe("SnapshotGate", function () {
 
   // Relevant Boson Protocol methods
   context("📋 Protocol Methods", async function () {
-    context("👉 commitToOffer()", async function () {
+    context("👉 commitToConditionalOffer()", async function () {
       context("💔 Revert Reasons", async function () {
         it("buyer is in snapshot but attempts to commit directly on protocol", async function () {
           // Upload the snapshot
@@ -890,9 +919,9 @@ describe("SnapshotGate", function () {
           let holder = holderByAddress[entry.owner];
 
           // Check that holder cannot commit directly to the offer on the protocol itself
-          await expect(exchangeHandler.connect(holder).commitToOffer(holder.address, offerId)).to.revertedWith(
-            "Caller cannot commit"
-          );
+          await expect(
+            exchangeHandler.connect(holder).commitToConditionalOffer(await holder.getAddress(), offerId, entry.tokenId)
+          ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
         });
       });
     });
