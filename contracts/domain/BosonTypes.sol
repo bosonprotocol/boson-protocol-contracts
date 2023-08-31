@@ -64,7 +64,7 @@ contract BosonTypes {
         CommitToOffer,
         Exchange,
         Funds,
-        RaiseDispute,
+        CommitToConditionalOffer,
         ResolveDispute
     }
 
