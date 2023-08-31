@@ -65,7 +65,8 @@ contract BosonTypes {
         Exchange,
         Funds,
         RaiseDispute,
-        ResolveDispute
+        ResolveDispute,
+        CommitToConditionalOffer
     }
 
     enum AuthTokenType {

@@ -1873,6 +1873,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             offerType = [
               { name: "buyer", type: "address" },
               { name: "offerId", type: "uint256" },
+              { name: "tokenId", type: "uint256" },
             ];
 
             // Set the message Type
@@ -1883,17 +1884,18 @@ describe("IBosonMetaTransactionsHandler", function () {
               { name: "functionName", type: "string" },
             ];
 
-            metaTransactionType.push({ name: "offerDetails", type: "MetaTxOfferDetails" });
+            metaTransactionType.push({ name: "offerDetails", type: "MetaTxConditionalOfferDetails" });
 
             customTransactionType = {
-              MetaTxCommitToOffer: metaTransactionType,
-              MetaTxOfferDetails: offerType,
+              MetaTxCommitToConditionalOffer: metaTransactionType,
+              MetaTxConditionalOfferDetails: offerType,
             };
 
             // prepare validOfferDetails
             validOfferDetails = {
               buyer: await buyer.getAddress(),
               offerId: offer.id,
+              tokenId: "0",
             };
 
             // Prepare the message
@@ -1910,16 +1912,16 @@ describe("IBosonMetaTransactionsHandler", function () {
             let { r, s, v } = await prepareDataSignatureParameters(
               buyer,
               customTransactionType,
-              "MetaTxCommitToOffer",
+              "MetaTxCommitToConditionalOffer",
               message,
               await metaTransactionsHandler.getAddress()
             );
 
             // Prepare the function signature
-            functionSignature = exchangeHandler.interface.encodeFunctionData("commitToConditionalOffer", [
-              ...Object.values(validOfferDetails),
-              "0",
-            ]);
+            functionSignature = exchangeHandler.interface.encodeFunctionData(
+              "commitToConditionalOffer",
+              Object.values(validOfferDetails)
+            );
 
             // Expect that buyer has token balance matching the offer price.
             const buyerBalanceBefore = await mockToken.balanceOf(await buyer.getAddress());
@@ -1950,7 +1952,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             assert.equal(result, expectedResult, "Nonce is unused");
           });
 
-          it("does not modify revert reasons", async function () {
+          it("does not modify revert reasons - invalid offerId", async function () {
             // An invalid offer id
             offerId = "666";
 
@@ -1964,16 +1966,16 @@ describe("IBosonMetaTransactionsHandler", function () {
             let { r, s, v } = await prepareDataSignatureParameters(
               buyer,
               customTransactionType,
-              "MetaTxCommitToOffer",
+              "MetaTxCommitToConditionalOffer",
               message,
               await metaTransactionsHandler.getAddress()
             );
 
             // Prepare the function signature
-            functionSignature = exchangeHandler.interface.encodeFunctionData("commitToConditionalOffer", [
-              ...Object.values(validOfferDetails),
-              "0",
-            ]);
+            functionSignature = exchangeHandler.interface.encodeFunctionData(
+              "commitToConditionalOffer",
+              Object.values(validOfferDetails)
+            );
 
             // Execute meta transaction, expecting revert.
             await expect(
@@ -1989,13 +1991,52 @@ describe("IBosonMetaTransactionsHandler", function () {
             ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
           });
 
+          it("does not modify revert reasons - invalid tokenId", async function () {
+            // An invalid token id
+            const tokenId = "666";
+
+            // prepare validOfferDetails
+            validOfferDetails.tokenId = tokenId;
+
+            // Prepare the message
+            message.offerDetails = validOfferDetails;
+
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              buyer,
+              customTransactionType,
+              "MetaTxCommitToConditionalOffer",
+              message,
+              await metaTransactionsHandler.getAddress()
+            );
+
+            // Prepare the function signature
+            functionSignature = exchangeHandler.interface.encodeFunctionData(
+              "commitToConditionalOffer",
+              Object.values(validOfferDetails)
+            );
+
+            // Execute meta transaction, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTransaction(
+                await buyer.getAddress(),
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              )
+            ).to.revertedWith(RevertReasons.INVALID_TOKEN_ID);
+          });
+
           context("💔 Revert Reasons", async function () {
             beforeEach(async function () {
               // Prepare the function signature
-              functionSignature = exchangeHandler.interface.encodeFunctionData("commitToConditionalOffer", [
-                ...Object.values(validOfferDetails),
-                "0",
-              ]);
+              functionSignature = exchangeHandler.interface.encodeFunctionData(
+                "commitToConditionalOffer",
+                Object.values(validOfferDetails)
+              );
             });
 
             it("Should fail when replay transaction", async function () {
@@ -2003,7 +2044,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               let { r, s, v } = await prepareDataSignatureParameters(
                 buyer,
                 customTransactionType,
-                "MetaTxCommitToOffer",
+                "MetaTxCommitToConditionalOffer",
                 message,
                 await metaTransactionsHandler.getAddress()
               );
@@ -2041,7 +2082,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               let { r, s, v } = await prepareDataSignatureParameters(
                 rando, // Different user, not buyer.
                 customTransactionType,
-                "MetaTxCommitToOffer",
+                "MetaTxCommitToConditionalOffer",
                 message,
                 await metaTransactionsHandler.getAddress()
               );
