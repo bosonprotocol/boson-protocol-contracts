@@ -1166,6 +1166,7 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
   // input type
   const inputTypeKeys = [
     "commitToOffer(address,uint256)",
+    "commitToConditionalOffer(address,uint256,uint256)",
     "cancelVoucher(uint256)",
     "redeemVoucher(uint256)",
     "completeExchange(uint256)",
@@ -1188,7 +1189,7 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
     CommitToOffer: 1,
     Exchange: 2,
     Funds: 3,
-    RaiseDispute: 4,
+    CommitToConditionalOffer: 4,
     ResolveDispute: 5,
   };
 
