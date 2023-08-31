@@ -17,7 +17,8 @@ function getGenericContext(
   voucherContractState,
   preUpgradeEntities,
   preUpgradeStorageLayout,
-  snapshot
+  snapshot,
+  equalCustomTypes
 ) {
   const genericContextFunction = async function () {
     afterEach(async function () {
@@ -42,9 +43,8 @@ function getGenericContext(
       it("Old storage layout should be unaffected", async function () {
         const postUpgradeStorageLayout = await getStorageLayout("BosonVoucher");
 
-        console.log("preUpgradeStorageLayout", preUpgradeStorageLayout);
         assert(
-          compareStorageLayouts(preUpgradeStorageLayout, postUpgradeStorageLayout),
+          compareStorageLayouts(preUpgradeStorageLayout, postUpgradeStorageLayout, equalCustomTypes),
           "Upgrade breaks storage layout"
         );
       });
@@ -72,7 +72,7 @@ function getGenericContext(
         // Get protocol state after the upgrade. Get the data that should be in location of old data.
         const voucherContractStateAfterUpgradeAndActions = await getVoucherContractState(preUpgradeEntities);
 
-        // The only thing that should change are buyers's balances, since they comitted to new offers and they got vouchers for them.
+        // The only thing that should change are buyers's balances, since they committed to new offers and they got vouchers for them.
         // Modify the post upgrade state to reflect the expected changes
         const { buyers, sellers } = preUpgradeEntities;
         const entities = [...sellers, ...buyers];

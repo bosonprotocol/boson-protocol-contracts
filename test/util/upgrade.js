@@ -15,6 +15,7 @@ const {
   toUtf8Bytes,
   getContractFactory,
   getSigners,
+  ZeroHash,
 } = hre.ethers;
 const AuthToken = require("../../scripts/domain/AuthToken");
 const { getMetaTransactionsHandlerFacetInitArgs } = require("../../scripts/config/facet-deploy.js");
@@ -53,7 +54,7 @@ const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Agent = require("../../scripts/domain/Agent");
 const Buyer = require("../../scripts/domain/Buyer");
 const { tagsByVersion } = require("../upgrade/00_config");
-const Condition = require("../../scripts/domain/Condition");
+let Condition = require("../../scripts/domain/Condition");
 
 // Common vars
 const versionsWithActivateDRFunction = ["v2.0.0", "v2.1.0"];
@@ -85,7 +86,7 @@ async function deploySuite(deployer, newVersion) {
   facets = await getFacets();
 
   // checkout old version
-  const { oldVersion: tag, deployScript: scriptsTag } = versionTags;
+  const { oldVersion: tag, deployScript: scriptsTag, updateDomain } = versionTags;
   console.log(`Fetching tags`);
   shell.exec(`git fetch --force --tags origin`);
 
@@ -97,6 +98,12 @@ async function deploySuite(deployer, newVersion) {
     console.log(`Checking out scripts on version ${scriptsTag}`);
     shell.exec(`rm -rf scripts/*`);
     shell.exec(`git checkout ${scriptsTag} scripts/**`);
+  }
+
+  if (updateDomain) {
+    console.log(`Updating the domain definitions to ${tag}`);
+    const filesToUpdate = updateDomain.map((file) => `scripts/domain/${file}.js`).join(" ");
+    shell.exec(`git checkout ${tag} ${filesToUpdate}`);
   }
 
   const isOldOZVersion = ["v2.0", "v2.1", "v2.2"].some((v) => tag.startsWith(v));
@@ -210,7 +217,7 @@ async function upgradeSuite(protocolDiamondAddress, upgradedInterfaces, override
   if (!versionTags) {
     throw new Error("Version tags not cached");
   }
-  const { newVersion: tag, upgradeScript: scriptsTag } = versionTags;
+  const { newVersion: tag, upgradeScript: scriptsTag, updateDomain } = versionTags;
 
   shell.exec(`rm -rf contracts/*`);
   shell.exec(`rm -rf scripts/*`);
@@ -231,6 +238,12 @@ async function upgradeSuite(protocolDiamondAddress, upgradedInterfaces, override
     // if tag was not created yet, use the latest code
     console.log(`Checking out latest code`);
     shell.exec(`git checkout HEAD contracts`);
+  }
+
+  if (updateDomain) {
+    console.log(`Updating the domain definitions to ${tag || "HEAD"}`);
+    const filesToUpdate = updateDomain.map((file) => `scripts/domain/${file}.js`).join(" ");
+    shell.exec(`git checkout ${tag || "HEAD"} ${filesToUpdate}`);
   }
 
   if (!facets) facets = await getFacets();
@@ -353,7 +366,6 @@ async function populateProtocolContract(
   ];
 
   let nextAccountId = Number(await accountHandler.getNextAccountId());
-
   for (const entity of entities) {
     const wallet = Wallet.createRandom();
     const connectedWallet = wallet.connect(provider);
@@ -364,7 +376,6 @@ async function populateProtocolContract(
       value: parseEther("10"),
     };
     await deployer.sendTransaction(tx);
-
     // create entities
     switch (entity) {
       case entityType.DR: {
@@ -380,12 +391,14 @@ async function populateProtocolContract(
           true,
           true
         );
+
         const disputeResolverFees = [
           new DisputeResolverFee(ZeroAddress, "Native", "0"),
           new DisputeResolverFee(await mockToken.getAddress(), "MockToken", "0"),
         ];
         const sellerAllowList = [];
         disputeResolver.id = nextAccountId.toString();
+
         await accountHandler
           .connect(connectedWallet)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -401,6 +414,7 @@ async function populateProtocolContract(
           //ADMIN role activates Dispute Resolver
           await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
         }
+
         break;
       }
 
@@ -423,8 +437,11 @@ async function populateProtocolContract(
           await mockAuthERC721Contract.connect(connectedWallet).mint(101 * id, 1);
           authToken = new AuthToken(`${101 * id}`, AuthTokenType.Lens);
         }
+
         // set unique new voucherInitValues
-        const voucherInitValues = new VoucherInitValues(`http://seller${id}.com/uri`, id * 10);
+        const voucherInitValues = versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)
+          ? new VoucherInitValues(`http://seller${id}.com/uri`, id * 10)
+          : new VoucherInitValues(`http://seller${id}.com/uri`, id * 10, ZeroHash);
         const tx = await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
 
         const receipt = await tx.wait();
@@ -446,6 +463,7 @@ async function populateProtocolContract(
         // mint mock token to sellers just in case they need them
         await mockToken.mint(await connectedWallet.getAddress(), "10000000000");
         await mockToken.connect(connectedWallet).approve(protocolDiamondAddress, "10000000000");
+
         break;
       }
       case entityType.AGENT: {
@@ -465,6 +483,7 @@ async function populateProtocolContract(
 
         // mint them conditional token in case they need it
         await mockConditionalToken.mint(await wallet.getAddress(), "10");
+
         break;
       }
     }
@@ -539,10 +558,16 @@ async function populateProtocolContract(
     const seller = sellers[i];
     const { offerIds } = seller;
     const group = new Group(groupId, seller.seller.id, offerIds); // group all seller's offers
-    const condition = mockCondition({
-      tokenAddress: await mockConditionalToken.getAddress(),
-      maxCommits: "10",
-    });
+    const condition = mockCondition(
+      {
+        tokenAddress: await mockConditionalToken.getAddress(),
+        maxCommits: "10",
+      },
+      {
+        refreshModule: true,
+        legacyCondition: versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion),
+      }
+    );
     await groupHandler.connect(seller.wallet).createGroup(group, condition);
 
     groups.push(group);
@@ -584,7 +609,16 @@ async function populateProtocolContract(
         twin721.id = twinId;
 
         // mint tokens to be transferred on redeem
-        await mockTwinTokens[j % 2].connect(seller.wallet).mint(twin721.tokenId, twin721.supplyAvailable);
+        // ToDo: for the future, change this to shorten the test
+        let tokensToMint = BigInt(minSupplyAvailable);
+        let tokenIdToMint = BigInt(twin721.tokenId);
+        while (tokensToMint > 500n) {
+          await mockTwinTokens[j % 2].connect(seller.wallet).mint(tokenIdToMint, 500n);
+          tokensToMint -= 500n;
+          tokenIdToMint += 500n;
+        }
+
+        await mockTwinTokens[j % 2].connect(seller.wallet).mint(tokenIdToMint, tokensToMint);
         await twinHandler.connect(seller.wallet).createTwin(twin721);
 
         twins.push(twin721);
@@ -595,8 +629,6 @@ async function populateProtocolContract(
 
       // fungible
       const twin20 = mockTwin(await mockTwin20.getAddress(), TokenType.FungibleToken);
-      twin20.id = twinId;
-
       twin20.id = twinId;
       twin20.amount = sellerId;
       twin20.supplyAvailable = twin20.amount * 100000000;
@@ -662,12 +694,16 @@ async function populateProtocolContract(
       if (groupId && isAfterV2_3_0) {
         // get condition
         let [, , condition] = await groupHandler.getGroup(groupId);
+        decache("../../scripts/domain/Condition.js");
+        Condition = require("../../scripts/domain/Condition.js");
         condition = Condition.fromStruct(condition);
 
         // commit to conditional offer
         await exchangeHandler
           .connect(buyerWallet)
-          .commitToConditionalOffer(await buyerWallet.getAddress(), offer.id, condition.tokenId, { value: msgValue });
+          .commitToConditionalOffer(await buyerWallet.getAddress(), offer.id, condition.minTokenId, {
+            value: msgValue,
+          });
       } else {
         await exchangeHandler
           .connect(buyerWallet)
@@ -692,6 +728,7 @@ async function populateProtocolContract(
     const exchange = exchanges[id - 1];
     await exchangeHandler.connect(buyers[exchange.buyerIndex].wallet).cancelVoucher(exchange.exchangeId);
   }
+
   // revoke some vouchers #2
   for (const id of [4, 6]) {
     const exchange = exchanges[id - 1];
@@ -703,8 +740,11 @@ async function populateProtocolContract(
   // raise dispute on some exchanges #1
   const id = 5; // must be one of redeemed ones
   const exchange = exchanges[id - 1];
+  const offer = offers.find((o) => o.offer.id == exchange.offerId);
+  const seller = sellers.find((s) => s.seller.id == offer.offer.sellerId);
 
   await disputeHandler.connect(buyers[exchange.buyerIndex].wallet).raiseDispute(exchange.exchangeId);
+  await disputeHandler.connect(seller.wallet).extendDisputeTimeout(exchange.exchangeId, 4000000000n);
 
   return { DRs, sellers, buyers, agents, offers, exchanges, bundles, groups, twins, bosonVouchers };
 }
@@ -1586,7 +1626,7 @@ async function getStorageLayout(contractName) {
   return storage;
 }
 
-function compareStorageLayouts(storageBefore, storageAfter) {
+function compareStorageLayouts(storageBefore, storageAfter, equalCustomTypes) {
   // All old variables must be present in new layout in the same slots
   // New variables can be added if they don't affect the layout
   let storageOk = true;
@@ -1602,15 +1642,28 @@ function compareStorageLayouts(storageBefore, storageAfter) {
       !stateVariableAfter ||
       stateVariableAfter.slot != stateVariableBefore.slot ||
       stateVariableAfter.offset != stateVariableBefore.offset ||
-      stateVariableAfter.type != stateVariableBefore.type
+      compareTypes(stateVariableAfter.type, stateVariableBefore.type, equalCustomTypes)
     ) {
       storageOk = false;
       console.error("Storage layout mismatch");
       console.log("State variable before", stateVariableBefore);
+      console.log("State variable after", stateVariableAfter);
     }
   }
 
   return storageOk;
+}
+
+// Sometimes struct labels change even if the structs are the same
+// In those cases, manually add the new label to the equalCustomTypes object
+function compareTypes(variableTypeAfter, variableTypeBefore, equalCustomTypes) {
+  if (variableTypeBefore == variableTypeAfter) return false;
+
+  for (const [oldLabel, newLabel] of Object.entries(equalCustomTypes)) {
+    variableTypeBefore = variableTypeBefore.replaceAll(oldLabel, newLabel);
+  }
+
+  return variableTypeAfter != variableTypeBefore;
 }
 
 async function populateVoucherContract(
@@ -1722,7 +1775,11 @@ async function populateVoucherContract(
           let authToken = mockAuthToken();
 
           // set unique new voucherInitValues
-          const voucherInitValues = new VoucherInitValues(`http://seller${id}.com/uri`, id * 10);
+          const voucherInitValues = versionsBelowV2_3.includes(
+            isBefore ? versionTags.oldVersion : versionTags.newVersion
+          )
+            ? new VoucherInitValues(`http://seller${id}.com/uri`, id * 10)
+            : new VoucherInitValues(`http://seller${id}.com/uri`, id * 10, ZeroHash);
           const tx = await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
           const receipt = await tx.wait();
           const [, , voucherContractAddress] = receipt.logs.find((e) => e?.fragment?.name === "SellerCreated").args;
@@ -1832,13 +1889,17 @@ async function populateVoucherContract(
       const isAfterV2_3_0 = !versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion);
       if (groupId && isAfterV2_3_0) {
         // get condition
+        decache("../../scripts/domain/Condition.js");
+        Condition = require("../../scripts/domain/Condition.js");
         let [, , condition] = await groupHandler.getGroup(groupId);
         condition = Condition.fromStruct(condition);
 
         // commit to conditional offer
         await exchangeHandler
           .connect(buyerWallet)
-          .commitToConditionalOffer(await buyerWallet.getAddress(), offer.id, condition.tokenId, { value: msgValue });
+          .commitToConditionalOffer(await buyerWallet.getAddress(), offer.id, condition.minTokenId, {
+            value: msgValue,
+          });
       } else {
         await exchangeHandler
           .connect(buyerWallet)

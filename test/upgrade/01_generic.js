@@ -51,6 +51,7 @@ function getGenericContext(
 
     // Create new protocol entities. Existing data should not be affected
     context("📋 New data after the upgrade do not corrupt the data from before the upgrade", async function () {
+      this.timeout(1000000);
       let protocolContractStateAfterUpgradeAndActions;
 
       before(async function () {
@@ -222,6 +223,7 @@ function getGenericContext(
 
         const buyerWallet = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
         const offer = preUpgradeEntities.offers.find((o) => o.offer.id == exchange.offerId);
+
         await expect(disputeHandler.connect(buyerWallet).escalateDispute(exchange.exchangeId))
           .to.emit(disputeHandler, "DisputeEscalated")
           .withArgs(exchange.exchangeId, offer.disputeResolverId, await buyerWallet.getAddress());

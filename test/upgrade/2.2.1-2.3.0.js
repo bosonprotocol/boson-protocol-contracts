@@ -1,6 +1,7 @@
+const shell = require("shelljs");
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { ZeroAddress, parseEther, Wallet, provider, getContractFactory, getContractAt } = ethers;
+const { ZeroAddress, parseEther, Wallet, provider, getContractFactory, getContractAt, encodeBytes32String } = ethers;
 const { assert, expect } = require("chai");
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
@@ -56,6 +57,7 @@ const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { getGenericContext } = require("./01_generic");
 const { getGenericContext: getGenericContextVoucher } = require("./clients/01_generic");
 const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
+const GatingType = require("../../scripts/domain/GatingType.js");
 
 const version = "2.3.0";
 const { migrate } = require(`../../scripts/migrations/migrate_${version}.js`);
@@ -89,33 +91,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   let preUpgradeEntities;
 
   before(async function () {
-    // Make accounts available
-    [deployer, rando, clerk, pauser, assistant] = await ethers.getSigners();
-
-    let contractsBefore;
-
-    ({
-      protocolDiamondAddress,
-      protocolContracts: contractsBefore,
-      mockContracts,
-      accessController,
-    } = await deploySuite(deployer, version));
-
-    twinHandler = contractsBefore.twinHandler;
-    delete contractsBefore.twinHandler;
-
-    // Populate protocol with data
-    preUpgradeEntities = await populateProtocolContract(
-      deployer,
-      protocolDiamondAddress,
-      contractsBefore,
-      mockContracts,
-      true
-    );
-
-    // Add twin handler back
-    contractsBefore.twinHandler = twinHandler;
-
     // temporary update config, so compiler outputs storage layout
     for (const compiler of hre.config.solidity.compilers) {
       if (compiler.settings.outputSelection["*"]["BosonVoucher"]) {
@@ -125,222 +100,238 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       }
     }
 
-    const preUpgradeStorageLayout = await getStorageLayout("BosonVoucher");
-    const preUpgradeEntitiesVoucher = await populateVoucherContract(
-      deployer,
-      protocolDiamondAddress,
-      contractsBefore,
-      mockContracts,
-      preUpgradeEntities,
-      true
-    );
+    try {
+      // Make accounts available
+      [deployer, rando, clerk, pauser, assistant] = await ethers.getSigners();
 
-    // Get current protocol state, which serves as the reference
-    // We assume that this state is a true one, relying on our unit and integration tests
-    protocolContractStateBefore = await getProtocolContractState(
-      protocolDiamondAddress,
-      contractsBefore,
-      mockContracts,
-      preUpgradeEntities,
-      true
-    );
+      let contractsBefore;
 
-    const voucherContractState = await getVoucherContractState(preUpgradeEntitiesVoucher);
+      ({
+        protocolDiamondAddress,
+        protocolContracts: contractsBefore,
+        mockContracts,
+        accessController,
+      } = await deploySuite(deployer, version));
 
-    ({ bundleHandler, exchangeHandler, twinHandler, disputeHandler } = contractsBefore);
+      twinHandler = contractsBefore.twinHandler;
+      delete contractsBefore.twinHandler;
 
-    let getFunctionHashesClosure = getStateModifyingFunctionsHashes(
-      [
-        "SellerHandlerFacet",
-        "OfferHandlerFacet",
-        "ConfigHandlerFacet",
-        "PauseHandlerFacet",
-        "GroupHandlerFacet",
-        "OrchestrationHandlerFacet1",
-      ],
-      undefined,
-      [
-        "createSellerAndOffer",
-        "createSellerAndPremintedOffer",
-        "createOffer",
-        "createPremintedOffer",
-        "MaxAllowedSellers",
-        "MaxDisputesPerBatch",
-        "MaxExchangesPerBatch",
-        "MaxFeesPerDisputeResolver",
-        "MaxOffersPerBatch",
-        "MaxOffersPerGroup",
-        "MaxPremintedVouchers",
-        "MaxTokensPerWithdrawl",
-        "MaxTwinsPerBundle",
-        "getAvailableFunds",
-        "unpause",
-        "createGroup",
-        "setGroupCondition",
-      ]
-    );
-
-    removedFunctionHashes = await getFunctionHashesClosure();
-
-    // prepare seller creators
-    const { sellers } = preUpgradeEntities;
-
-    // Start a seller update (finished in tests)
-    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamondAddress);
-    let { wallet, id, seller, authToken } = sellers[0];
-    seller.clerk = rando.address;
-    await accountHandler.connect(wallet).updateSeller(seller, authToken);
-    ({ wallet, id, seller, authToken } = sellers[1]);
-    seller.clerk = rando.address;
-    seller.assistant = rando.address;
-    await accountHandler.connect(wallet).updateSeller(seller, authToken);
-    ({ wallet, id, seller, authToken } = sellers[2]);
-    seller.clerk = clerk.address;
-    await accountHandler.connect(wallet).updateSeller(seller, authToken);
-    await accountHandler.connect(clerk).optInToSellerUpdate(id, [SellerUpdateFields.Clerk]);
-    const { DRs } = preUpgradeEntities;
-    let disputeResolver;
-    ({ wallet, disputeResolver } = DRs[0]);
-    disputeResolver.clerk = rando.address;
-    await accountHandler.connect(wallet).updateDisputeResolver(disputeResolver);
-    ({ wallet, disputeResolver } = DRs[1]);
-    disputeResolver.clerk = rando.address;
-    disputeResolver.assistant = rando.address;
-    await accountHandler.connect(wallet).updateDisputeResolver(disputeResolver);
-
-    await migrate("upgrade-test");
-
-    // Cast to updated interface
-    let newHandlers = {
-      accountHandler: "IBosonAccountHandler",
-      pauseHandler: "IBosonPauseHandler",
-      configHandler: "IBosonConfigHandler",
-      offerHandler: "IBosonOfferHandler",
-      groupHandler: "IBosonGroupHandler",
-      orchestrationHandler: "IBosonOrchestrationHandler",
-      fundsHandler: "IBosonFundsHandler",
-      exchangeHandler: "IBosonExchangeHandler",
-    };
-
-    contractsAfter = { ...contractsBefore };
-
-    for (const [handlerName, interfaceName] of Object.entries(newHandlers)) {
-      contractsAfter[handlerName] = await ethers.getContractAt(interfaceName, protocolDiamondAddress);
-    }
-
-    ({
-      accountHandler,
-      pauseHandler,
-      configHandler,
-      offerHandler,
-      groupHandler,
-      orchestrationHandler,
-      fundsHandler,
-      exchangeHandler,
-    } = contractsAfter);
-
-    getFunctionHashesClosure = getStateModifyingFunctionsHashes(
-      [
-        "SellerHandlerFacet",
-        "OfferHandlerFacet",
-        "ConfigHandlerFacet",
-        "PauseHandlerFacet",
-        "GroupHandlerFacet",
-        "OrchestrationHandlerFacet1",
-        "ExchangeHandlerFacet",
-      ],
-      undefined,
-      [
-        "createSellerAndOffer",
-        "createSellerAndPremintedOffer",
-        "createOffer",
-        "createPremintedOffer",
-        "MaxAllowedSellers",
-        "MaxDisputesPerBatch",
-        "MaxExchangesPerBatch",
-        "MaxFeesPerDisputeResolver",
-        "MaxOffersPerBatch",
-        "MaxOffersPerGroup",
-        "MaxPremintedVouchers",
-        "MaxTokensPerWithdrawl",
-        "MaxTwinsPerBundle",
-        "getAvailableFunds",
-        "unpause",
-        "getPausedRegions",
-        "createGroup",
-        "setGroupCondition",
-        "createNewCollection",
-        "MinResolutionPeriod",
-        "commitToConditionalOffer",
-        "getAllAvailableFunds",
-        "getTokenList",
-        "getTokenListPaginated",
-      ]
-    );
-
-    addedFunctionHashes = await getFunctionHashesClosure();
-
-    snapshot = await getSnapshot();
-
-    // Get protocol state after the upgrade
-    protocolContractStateAfter = await getProtocolContractState(
-      protocolDiamondAddress,
-      contractsAfter,
-      mockContracts,
-      preUpgradeEntities
-    );
-
-    const includeTests = [
-      "offerContractState",
-      "bundleContractState",
-      "disputeContractState",
-      "fundsContractState",
-      "twinContractState",
-      "protocolStatusPrivateContractState",
-    ];
-
-    // This context is placed in an uncommon place due to order of test execution.
-    // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
-    // and those values are undefined if this is placed outside "before".
-    // Normally, this would be solved with mocha's --delay option, but it does not behave as expected when running with hardhat.
-    context(
-      "Generic tests",
-      getGenericContext(
+      // Populate protocol with data
+      preUpgradeEntities = await populateProtocolContract(
         deployer,
         protocolDiamondAddress,
         contractsBefore,
-        contractsAfter,
         mockContracts,
-        protocolContractStateBefore,
-        protocolContractStateAfter,
-        preUpgradeEntities,
-        snapshot,
-        includeTests
-      )
-    );
+        true
+      );
 
-    console.log("2.2.1-2.2.3 preUpgradeStorageLayout", preUpgradeStorageLayout);
+      // Add twin handler back
+      contractsBefore.twinHandler = twinHandler;
 
-    context(
-      "Generic tests on Voucher",
-      getGenericContextVoucher(
+      const preUpgradeStorageLayout = await getStorageLayout("BosonVoucher");
+      const preUpgradeEntitiesVoucher = await populateVoucherContract(
         deployer,
+        protocolDiamondAddress,
+        contractsBefore,
+        mockContracts,
+        preUpgradeEntities,
+        true
+      );
+
+      // Get current protocol state, which serves as the reference
+      // We assume that this state is a true one, relying on our unit and integration tests
+      protocolContractStateBefore = await getProtocolContractState(
+        protocolDiamondAddress,
+        contractsBefore,
+        mockContracts,
+        preUpgradeEntities,
+        true
+      );
+
+      const voucherContractState = await getVoucherContractState(preUpgradeEntitiesVoucher);
+
+      ({ bundleHandler, exchangeHandler, twinHandler, disputeHandler } = contractsBefore);
+
+      let getFunctionHashesClosure = getStateModifyingFunctionsHashes(
+        [
+          "SellerHandlerFacet",
+          "OfferHandlerFacet",
+          "ConfigHandlerFacet",
+          "PauseHandlerFacet",
+          "GroupHandlerFacet",
+          "OrchestrationHandlerFacet1",
+        ],
+        undefined,
+        [
+          "createSeller",
+          "createOffer",
+          "createPremintedOffer",
+          "unpause",
+          "createGroup",
+          "setGroupCondition",
+          "setMaxOffersPerBatch",
+          "setMaxOffersPerGroup",
+          "setMaxTwinsPerBundle",
+          "setMaxOffersPerBundle",
+          "setMaxTokensPerWithdrawal",
+          "setMaxFeesPerDisputeResolver",
+          "setMaxDisputesPerBatch",
+          "setMaxAllowedSellers",
+          "setMaxExchangesPerBatch",
+          "setMaxPremintedVouchers",
+        ]
+      );
+
+      removedFunctionHashes = await getFunctionHashesClosure();
+
+      // prepare seller creators
+      const { sellers } = preUpgradeEntities;
+
+      // Start a seller update (finished in tests)
+      accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamondAddress);
+      let { wallet, id, seller, authToken } = sellers[0];
+      seller.clerk = rando.address;
+      await accountHandler.connect(wallet).updateSeller(seller, authToken);
+      ({ wallet, id, seller, authToken } = sellers[1]);
+      seller.clerk = rando.address;
+      seller.assistant = rando.address;
+      await accountHandler.connect(wallet).updateSeller(seller, authToken);
+      ({ wallet, id, seller, authToken } = sellers[2]);
+      seller.clerk = clerk.address;
+      await accountHandler.connect(wallet).updateSeller(seller, authToken);
+      await accountHandler.connect(clerk).optInToSellerUpdate(id, [SellerUpdateFields.Clerk]);
+      const { DRs } = preUpgradeEntities;
+      let disputeResolver;
+      ({ wallet, disputeResolver } = DRs[0]);
+      disputeResolver.clerk = rando.address;
+      await accountHandler.connect(wallet).updateDisputeResolver(disputeResolver);
+      ({ wallet, disputeResolver } = DRs[1]);
+      disputeResolver.clerk = rando.address;
+      disputeResolver.assistant = rando.address;
+      await accountHandler.connect(wallet).updateDisputeResolver(disputeResolver);
+
+      shell.exec(`git checkout HEAD scripts`);
+      await migrate("upgrade-test");
+
+      // Cast to updated interface
+      let newHandlers = {
+        accountHandler: "IBosonAccountHandler",
+        pauseHandler: "IBosonPauseHandler",
+        configHandler: "IBosonConfigHandler",
+        offerHandler: "IBosonOfferHandler",
+        groupHandler: "IBosonGroupHandler",
+        orchestrationHandler: "IBosonOrchestrationHandler",
+        fundsHandler: "IBosonFundsHandler",
+        exchangeHandler: "IBosonExchangeHandler",
+      };
+
+      contractsAfter = { ...contractsBefore };
+
+      for (const [handlerName, interfaceName] of Object.entries(newHandlers)) {
+        contractsAfter[handlerName] = await ethers.getContractAt(interfaceName, protocolDiamondAddress);
+      }
+
+      ({
+        accountHandler,
+        pauseHandler,
+        configHandler,
+        offerHandler,
+        groupHandler,
+        orchestrationHandler,
+        fundsHandler,
+        exchangeHandler,
+      } = contractsAfter);
+
+      getFunctionHashesClosure = getStateModifyingFunctionsHashes(
+        [
+          "SellerHandlerFacet",
+          "OfferHandlerFacet",
+          "ConfigHandlerFacet",
+          "PauseHandlerFacet",
+          "GroupHandlerFacet",
+          "OrchestrationHandlerFacet1",
+          "ExchangeHandlerFacet",
+        ],
+        undefined,
+        [
+          "createSeller",
+          "createOffer",
+          "createPremintedOffer",
+          "unpause",
+          "createGroup",
+          "setGroupCondition",
+          "createNewCollection",
+          "setMinResolutionPeriod",
+          "commitToConditionalOffer",
+          "updateSellerSalt",
+        ]
+      );
+
+      addedFunctionHashes = await getFunctionHashesClosure();
+
+      snapshot = await getSnapshot();
+
+      // Get protocol state after the upgrade
+      protocolContractStateAfter = await getProtocolContractState(
         protocolDiamondAddress,
         contractsAfter,
         mockContracts,
-        voucherContractState,
-        preUpgradeEntitiesVoucher,
-        preUpgradeStorageLayout,
-        snapshot
-      )
-    );
+        preUpgradeEntities
+      );
 
-    //   } catch (err) {
-    //     // revert to latest version of scripts and contracts
-    //     revertState();
-    //     // stop execution
-    //     assert(false, `Before all reverts with: ${err}`);
-    //   }
+      const includeTests = [
+        "offerContractState",
+        "bundleContractState",
+        "disputeContractState",
+        "fundsContractState",
+        "twinContractState",
+        "protocolStatusPrivateContractState",
+      ];
+
+      // This context is placed in an uncommon place due to order of test execution.
+      // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
+      // and those values are undefined if this is placed outside "before".
+      // Normally, this would be solved with mocha's --delay option, but it does not behave as expected when running with hardhat.
+      context(
+        "Generic tests",
+        getGenericContext(
+          deployer,
+          protocolDiamondAddress,
+          contractsBefore,
+          contractsAfter,
+          mockContracts,
+          protocolContractStateBefore,
+          protocolContractStateAfter,
+          preUpgradeEntities,
+          snapshot,
+          includeTests
+        )
+      );
+
+      const equalCustomTypes = {
+        "t_struct(Range)12648_storage": "t_struct(Range)14241_storage",
+      };
+
+      context(
+        "Generic tests on Voucher",
+        getGenericContextVoucher(
+          deployer,
+          protocolDiamondAddress,
+          contractsAfter,
+          mockContracts,
+          voucherContractState,
+          preUpgradeEntitiesVoucher,
+          preUpgradeStorageLayout,
+          snapshot,
+          equalCustomTypes
+        )
+      );
+    } catch (err) {
+      // revert to latest version of scripts and contracts
+      revertState();
+      // stop execution
+      assert(false, `Before all reverts with: ${err}`);
+    }
   });
 
   afterEach(async function () {
@@ -877,18 +868,18 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
             const externalId = "new-collection";
+            voucherInitValues.collectionSalt = encodeBytes32String(externalId);
 
             const expectedDefaultAddress = calculateCloneAddress(
               await accountHandler.getAddress(),
               beaconProxyAddress,
-              seller.admin,
-              ""
+              seller.admin
             ); // default
             const expectedCollectionAddress = calculateCloneAddress(
               await accountHandler.getAddress(),
               beaconProxyAddress,
               seller.admin,
-              externalId
+              voucherInitValues.collectionSalt
             );
             const tx = await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
 
@@ -916,11 +907,11 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
             expect(await bosonVoucher.contractURI()).to.equal(voucherInitValues.contractURI, "Wrong contract URI");
             expect(await bosonVoucher.name()).to.equal(
-              VOUCHER_NAME + " " + seller.id + "_1",
+              VOUCHER_NAME + " S" + seller.id + "_C1",
               "Wrong voucher client name"
             );
             expect(await bosonVoucher.symbol()).to.equal(
-              VOUCHER_SYMBOL + "_" + seller.id + "_1",
+              VOUCHER_SYMBOL + "_S" + seller.id + "_C1",
               "Wrong voucher client symbol"
             );
           });
@@ -935,12 +926,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               voucherContractAddress: expectedDefaultAddress,
             } = sellers[0];
             const externalId = "new-collection";
-
+            voucherInitValues.collectionSalt = encodeBytes32String(externalId);
+            beaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
             const expectedCollectionAddress = calculateCloneAddress(
               await accountHandler.getAddress(),
               beaconProxyAddress,
               seller.admin,
-              externalId
+              voucherInitValues.collectionSalt,
+              voucherInitValues.collectionSalt
             );
 
             await expect(accountHandler.connect(sellerWallet).createNewCollection(externalId, voucherInitValues))
@@ -967,11 +960,11 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCollectionAddress);
             expect(await bosonVoucher.contractURI()).to.equal(voucherInitValues.contractURI, "Wrong contract URI");
             expect(await bosonVoucher.name()).to.equal(
-              VOUCHER_NAME + " " + sellerId + "_1",
+              VOUCHER_NAME + " S" + sellerId + "_C1",
               "Wrong voucher client name"
             );
             expect(await bosonVoucher.symbol()).to.equal(
-              VOUCHER_SYMBOL + "_" + sellerId + "_1",
+              VOUCHER_SYMBOL + "_S" + sellerId + "_C1",
               "Wrong voucher client symbol"
             );
           });
@@ -989,7 +982,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             await accountHandler.getAddress(),
             beaconProxyAddress,
             seller.admin,
-            ""
+            voucherInitValues.collectionSalt,
+            voucherInitValues.collectionSalt
           );
 
           const tx = await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -1157,6 +1151,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           const { disputeResolver } = DRs[0];
           const { wallet: buyerWallet } = buyers[0];
           const externalId = "new-collection";
+          voucherInitValues.collectionSalt = encodeBytes32String(externalId);
 
           // Get next ids
           const offerId = await offerHandler.getNextOfferId();
@@ -1186,7 +1181,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             await accountHandler.getAddress(),
             beaconProxyAddress,
             seller.admin,
-            externalId
+            voucherInitValues.collectionSalt,
+            voucherInitValues.collectionSalt
           );
 
           const bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCollectionAddress);
@@ -1306,7 +1302,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             const { wallet, id: sellerId, offerIds } = sellers[1]; // first seller has condition to all offers
             const offerId = offerIds[offerIds.length - 1];
             const {
-              offer: { price, quantityAvailable },
+              offer: { price, quantityAvailable, exchangeToken },
             } = offers[offerId - 1];
             const { wallet: buyer, id: buyerId } = buyers[0];
 
@@ -1333,16 +1329,20 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             const bundle = new Bundle("2", sellerId, [offerId], [twin20.id, twin20_2.id]);
             await bundleHandler.connect(wallet).createBundle(bundle.toStruct());
 
-            // mint exchange tokens for the buyer
-            const { mockToken } = mockContracts;
-            await mockToken.mint(buyer.address, price);
-
-            // approve token transfer
-            await mockToken.connect(buyer).approve(protocolDiamondAddress, price);
+            let msgValue;
+            if (exchangeToken == ZeroAddress) {
+              msgValue = price;
+            } else {
+              // approve token transfer
+              msgValue = 0;
+              const { mockToken } = mockContracts;
+              await mockToken.mint(buyer.address, price);
+              await mockToken.connect(buyer).approve(protocolDiamondAddress, price);
+            }
 
             // Commit to offer
             const exchangeId = await exchangeHandler.getNextExchangeId();
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: msgValue });
 
             // Redeem the voucher
             const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId, { gasLimit: 1000000 }); // limit gas to speed up test
@@ -1413,14 +1413,18 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         it("it's possible to create a group with new token gating", async function () {
           const [conditionToken1155] = await deployMockTokens(["Foreign1155"]);
           // create a condition that was not possible before
-          const condition = mockCondition({
-            tokenType: TokenType.MultiToken,
-            tokenAddress: await conditionToken1155.getAddress(),
-            length: "10",
-            tokenId: "5",
-            method: EvaluationMethod.SpecificToken,
-            threshold: "2",
-          });
+          const condition = mockCondition(
+            {
+              tokenType: TokenType.MultiToken,
+              tokenAddress: await conditionToken1155.getAddress(),
+              maxTokenId: "15",
+              minTokenId: "5",
+              method: EvaluationMethod.Threshold,
+              threshold: "2",
+              gating: GatingType.PerAddress,
+            },
+            { refreshModule: true }
+          );
 
           const seller = preUpgradeEntities.sellers[1]; // seller does not have any group
           const group = new Group(1, seller.seller.id, seller.offerIds); // group all seller's offers
@@ -1445,8 +1449,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             const tokenList = await fundsHandler.getTokenList(id);
             const tokenListSet = new Set(tokenList);
 
-            if (seller.id == 10) {
-              // last seller has only 1 offer with native token
+            if (seller.id == 1) {
+              // first seller has only 1 offer with native token
               expect(tokenListSet).to.deep.equal(new Set([ZeroAddress]));
             } else {
               expect(tokenListSet).to.deep.equal(expectedTokenListSet);
@@ -1503,8 +1507,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           const expectedCloneAddress = calculateCloneAddress(
             await orchestrationHandler.getAddress(),
             beaconProxyAddress,
-            assistant.address,
-            ""
+            assistant.address
           );
 
           let bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
@@ -1579,8 +1582,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           const expectedDefaultAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            seller.admin,
-            ""
+            seller.admin
           ); // default
           bosonVoucher = await getContractAt("BosonVoucher", expectedDefaultAddress);
         });

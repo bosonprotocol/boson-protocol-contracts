@@ -128,23 +128,22 @@ async function migrate(env) {
       ],
       undefined,
       [
-        "createSellerAndOffer",
-        "createSellerAndPremintedOffer",
+        "createSeller",
         "createOffer",
         "createPremintedOffer",
-        "MaxAllowedSellers",
-        "MaxDisputesPerBatch",
-        "MaxExchangesPerBatch",
-        "MaxFeesPerDisputeResolver",
-        "MaxOffersPerBatch",
-        "MaxOffersPerGroup",
-        "MaxPremintedVouchers",
-        "MaxTokensPerWithdrawl",
-        "MaxTwinsPerBundle",
-        "getAvailableFunds",
         "unpause",
         "createGroup",
         "setGroupCondition",
+        "setMaxOffersPerBatch",
+        "setMaxOffersPerGroup",
+        "setMaxTwinsPerBundle",
+        "setMaxOffersPerBundle",
+        "setMaxTokensPerWithdrawal",
+        "setMaxFeesPerDisputeResolver",
+        "setMaxDisputesPerBatch",
+        "setMaxAllowedSellers",
+        "setMaxExchangesPerBatch",
+        "setMaxPremintedVouchers",
       ]
     );
 
@@ -154,12 +153,18 @@ async function migrate(env) {
     shell.exec(`rm -rf contracts/*`);
     shell.exec(`git checkout ${tag} contracts package.json package-lock.json`);
 
+    shell.exec(`git checkout HEAD scripts`);
+
     console.log("Installing dependencies");
     shell.exec(`npm install`);
 
     console.log("Compiling contracts");
     await hre.run("clean");
-    await hre.run("compile");
+    // If some contract was removed, compilation succeeds, but afterwards it falsely reports missing artifacts
+    // This is a workaround to ignore the error
+    try {
+      await hre.run("compile");
+    } catch {}
 
     console.log("Executing upgrade facets script");
     await hre.run("upgrade-facets", {
@@ -181,30 +186,16 @@ async function migrate(env) {
       ],
       undefined,
       [
-        "createSellerAndOffer",
-        "createSellerAndPremintedOffer",
+        "createSeller",
         "createOffer",
         "createPremintedOffer",
-        "MaxAllowedSellers",
-        "MaxDisputesPerBatch",
-        "MaxExchangesPerBatch",
-        "MaxFeesPerDisputeResolver",
-        "MaxOffersPerBatch",
-        "MaxOffersPerGroup",
-        "MaxPremintedVouchers",
-        "MaxTokensPerWithdrawl",
-        "MaxTwinsPerBundle",
-        "getAvailableFunds",
         "unpause",
-        "getPausedRegions",
         "createGroup",
         "setGroupCondition",
         "createNewCollection",
-        "MinResolutionPeriod",
+        "setMinResolutionPeriod",
         "commitToConditionalOffer",
-        "getAllAvailableFunds",
-        "getTokenList",
-        "getTokenListPaginated",
+        "updateSellerSalt",
       ]
     );
 

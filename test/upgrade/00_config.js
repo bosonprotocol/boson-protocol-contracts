@@ -217,6 +217,7 @@ const tagsByVersion = {
   "2.3.0": {
     oldVersion: "v2.2.1",
     newVersion: "v2.3.0",
+    updateDomain: ["Condition"],
   },
 };
 

@@ -2,7 +2,7 @@ const hre = require("hardhat");
 const { ZeroAddress, provider, parseUnits } = hre.ethers;
 
 const decache = require("decache");
-const Condition = require("../../scripts/domain/Condition");
+let Condition = require("../../scripts/domain/Condition.js");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 let Offer = require("../../scripts/domain/Offer");
 const GatingType = require("../../scripts/domain/GatingType");
@@ -262,16 +262,27 @@ async function mockReceipt() {
   );
 }
 
-function mockCondition({
-  method,
-  tokenType,
-  tokenAddress,
-  gating,
-  minTokenId,
-  threshold,
-  maxCommits,
-  maxTokenId,
-} = {}) {
+function mockCondition(
+  { method, tokenType, tokenAddress, gating, minTokenId, threshold, maxCommits, maxTokenId } = {},
+  { refreshModule, legacyCondition } = {}
+) {
+  if (refreshModule) {
+    decache("../../scripts/domain/Condition.js");
+    Condition = require("../../scripts/domain/Condition.js");
+  }
+
+  if (legacyCondition) {
+    const tokenId = minTokenId;
+    return new Condition(
+      method ?? EvaluationMethod.Threshold,
+      tokenType ?? TokenType.FungibleToken,
+      tokenAddress ?? ZeroAddress,
+      tokenId ?? "0",
+      threshold ?? "1",
+      maxCommits ?? "1"
+    );
+  }
+
   return new Condition(
     method ?? EvaluationMethod.Threshold,
     tokenType ?? TokenType.FungibleToken,
