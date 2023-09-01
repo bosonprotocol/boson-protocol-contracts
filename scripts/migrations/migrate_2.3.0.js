@@ -228,10 +228,12 @@ async function migrate(env) {
     await pauseHandler.unpause([], await getFees(maxPriorityFeePerGas));
 
     shell.exec(`git checkout HEAD`);
+    shell.exec(`git reset HEAD`);
     console.log(`Migration ${tag} completed`);
   } catch (e) {
     console.error(e);
     shell.exec(`git checkout HEAD`);
+    shell.exec(`git reset HEAD`);
     throw `Migration failed with: ${e}`;
   }
 }
