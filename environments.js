@@ -67,6 +67,13 @@ module.exports = {
     adminAddress: process.env.ADMIN_ADDRESS_MAINNET,
   },
 
+  // Ethereum testnet Goerli
+  goerli: {
+    txNode: process.env.DEPLOYER_GOERLI_TXNODE,
+    keys: [process.env.DEPLOYER_GOERLI_KEY],
+    adminAddress: process.env.ADMIN_ADDRESS_MAINNET,
+  },
+
   // Polygon Mumbai testnet
   mumbai: {
     txNode: process.env.DEPLOYER_MUMBAI_TXNODE,

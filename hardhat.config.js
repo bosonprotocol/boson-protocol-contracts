@@ -143,6 +143,10 @@ module.exports = {
       url: environments.mainnet.txNode,
       accounts: environments.mainnet.keys,
     },
+    goerli: {
+      url: environments.goerli.txNode,
+      accounts: environments.goerli.keys,
+    },
     mumbai: {
       url: environments.mumbai.txNode,
       accounts: environments.mumbai.keys,

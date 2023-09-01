@@ -53,6 +53,19 @@ exports.RoleAssignments = {
     },
   },
 
+  goerli: {
+    AdminAddress: {
+      // do not change name
+      roles: [Role.ADMIN, Role.UPGRADER],
+    },
+
+    // For minting vouchers
+    ProtocolDiamond: {
+      // contract name must match name in /addresses/<chainId>-<network>.json
+      roles: [Role.PROTOCOL],
+    },
+  },
+
   test: {
     AdminAddress: {
       // do not change name
