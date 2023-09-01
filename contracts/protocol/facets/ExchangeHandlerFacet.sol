@@ -142,26 +142,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         // Get the condition
         Condition storage condition = fetchCondition(groupId);
-        EvaluationMethod method = condition.method;
-        bool isMultitoken = condition.tokenType == TokenType.MultiToken;
 
-        require(method != EvaluationMethod.None, GROUP_HAS_NO_CONDITION);
+        // Make sure the tokenId is in range
+        validateConditionRange(condition, _tokenId);
 
-        if (method == EvaluationMethod.SpecificToken || isMultitoken) {
-            // In this cases, the token id is specified by the caller must be within the range of the condition
-            uint256 minTokenId = condition.minTokenId;
-            uint256 maxTokenId = condition.maxTokenId;
-            if (maxTokenId == 0) maxTokenId = minTokenId; // legacy conditions have maxTokenId == 0
-
-            require(_tokenId >= minTokenId && _tokenId <= maxTokenId, TOKEN_ID_NOT_IN_CONDITION_RANGE);
-        }
-
-        // ERC20 and ERC721 threshold does not require a token id
-        if (method == EvaluationMethod.Threshold && !isMultitoken) {
-            require(_tokenId == 0, INVALID_TOKEN_ID);
-        }
-
-        authorizeCommit(_buyer, condition, groupId, _tokenId);
+        authorizeCommit(_buyer, condition, groupId, _tokenId, _offerId);
 
         uint256 exchangeId = commitToOfferInternal(_buyer, offer, 0, false);
 
@@ -228,7 +213,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     tokenId = minTokenId;
                 }
 
-                authorizeCommit(_buyer, condition, groupId, tokenId);
+                authorizeCommit(_buyer, condition, groupId, tokenId, _offerId);
 
                 // Store the condition to be returned afterward on getReceipt function
                 lookups.exchangeCondition[_exchangeId] = condition;
@@ -728,6 +713,67 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
+     * @notice Tells if buyer is elligible to commit to conditional
+     * Returns the eligibility status, the number of used commits and the maximal number of commits to the conditional offer.
+     *
+     * Unconditional offers do not have maximal number of commits, so the returned value will always be 0.
+     *
+     * This method does not check if the timestamp is within the offer's validity period or if the quantity available is greater than 0.
+     *
+     * N.B. Unmined transaction might affect the eligibility status.
+     *
+     * Reverts if:
+     * - The offer does not exist
+     * - The offer is voided
+     * - The external call to condition contract reverts
+     *
+     * @param _buyer buyer address
+     * @param _offerId - the id of the offer
+     * @param _tokenId - the id of conditional token
+     * @return isEligible - true if buyer is eligible to commit
+     * @return commitCount - the current number of commits to the conditional offer
+     * @return maxCommits - the maximal number of commits to the conditional offer
+     */
+    function isEligibleToCommit(
+        address _buyer,
+        uint256 _offerId,
+        uint256 _tokenId
+    ) external view override returns (bool isEligible, uint256 commitCount, uint256 maxCommits) {
+        Offer storage offer = getValidOffer(_offerId);
+
+        (bool exists, uint256 groupId) = getGroupIdByOffer(offer.id);
+        if (exists) {
+            // Get the condition
+            Condition storage condition = fetchCondition(groupId);
+            if (condition.method == EvaluationMethod.None) return (true, 0, 0);
+
+            // Make sure the tokenId is in range
+            validateConditionRange(condition, _tokenId);
+
+            // Cache protocol lookups for reference
+            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+            mapping(uint256 => uint256) storage conditionalCommits = condition.gating == GatingType.PerTokenId
+                ? lookups.conditionalCommitsByTokenId[_tokenId]
+                : lookups.conditionalCommitsByAddress[_buyer];
+
+            // How many times has been committed to offers in the group?
+            commitCount = conditionalCommits[groupId];
+            maxCommits = condition.maxCommits;
+
+            if (commitCount >= maxCommits) return (false, commitCount, maxCommits);
+
+            isEligible = condition.method == EvaluationMethod.Threshold
+                ? holdsThreshold(_buyer, condition, _tokenId)
+                : holdsSpecificToken(_buyer, condition, _tokenId);
+
+            return (isEligible, commitCount, maxCommits);
+        }
+
+        return (true, 0, 0);
+    }
+
+    /**
      * @notice Transitions exchange to a "finalized" state
      *
      * Target state must be Completed, Revoked, or Canceled.
@@ -1033,25 +1079,28 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _condition - the condition to check
      * @param _groupId - the group id
      * @param _tokenId - the token id
-     *
+     * @param _offerId - the offer id
      */
     function authorizeCommit(
         address _buyer,
         Condition storage _condition,
         uint256 _groupId,
-        uint256 _tokenId
+        uint256 _tokenId,
+        uint256 _offerId
     ) internal {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-        mapping(uint256 => uint256) storage conditionalCommits = _condition.gating == GatingType.PerTokenId
+        GatingType gating = _condition.gating;
+        mapping(uint256 => uint256) storage conditionalCommits = gating == GatingType.PerTokenId
             ? lookups.conditionalCommitsByTokenId[_tokenId]
             : lookups.conditionalCommitsByAddress[_buyer];
 
         // How many times has been committed to offers in the group?
         uint256 commitCount = conditionalCommits[_groupId];
+        uint256 maxCommits = _condition.maxCommits;
 
-        require(commitCount < _condition.maxCommits, MAX_COMMITS_REACHED);
+        require(commitCount < maxCommits, MAX_COMMITS_REACHED);
 
         bool allow = _condition.method == EvaluationMethod.Threshold
             ? holdsThreshold(_buyer, _condition, _tokenId)
@@ -1061,6 +1110,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         // Increment number of commits to the group
         conditionalCommits[_groupId] = ++commitCount;
+
+        emit ConditionalCommitAuthorized(_offerId, gating, _buyer, _tokenId, commitCount, maxCommits);
     }
 
     /**
@@ -1224,6 +1275,38 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             _lookups.rangeIdByTwin[_twin.id] = 0;
         } else {
             unlimitedSupply ? range.start++ : range.end--;
+        }
+    }
+
+    /**
+     * @notice Checks if the token id is inside condition range.
+     *
+     * Reverts if:
+     * - Evaluation method is none
+     * - Evaluation method is specific token or multitoken and token id is not in range
+     * - Evaluation method is threshold, token type is not a multitoken and token id is not zero
+     *
+     * @param _condition - storage pointer to the condition
+     * @param _tokenId - the id of the conditional token
+     */
+    function validateConditionRange(Condition storage _condition, uint256 _tokenId) internal view {
+        EvaluationMethod method = _condition.method;
+        bool isMultitoken = _condition.tokenType == TokenType.MultiToken;
+
+        require(method != EvaluationMethod.None, GROUP_HAS_NO_CONDITION);
+
+        if (method == EvaluationMethod.SpecificToken || isMultitoken) {
+            // In this cases, the token id is specified by the caller must be within the range of the condition
+            uint256 minTokenId = _condition.minTokenId;
+            uint256 maxTokenId = _condition.maxTokenId;
+            if (maxTokenId == 0) maxTokenId = minTokenId; // legacy conditions have maxTokenId == 0
+
+            require(_tokenId >= minTokenId && _tokenId <= maxTokenId, TOKEN_ID_NOT_IN_CONDITION_RANGE);
+        }
+
+        // ERC20 and ERC721 threshold does not require a token id
+        if (method == EvaluationMethod.Threshold && !isMultitoken) {
+            require(_tokenId == 0, INVALID_TOKEN_ID);
         }
     }
 }
