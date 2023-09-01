@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
@@ -116,9 +116,13 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
             ARRAY_LENGTH_MISMATCH
         );
 
-        for (uint256 i = 0; i < _offers.length; i++) {
+        for (uint256 i = 0; i < _offers.length; ) {
             // Create offer and update structs values to represent true state
             createOfferInternal(_offers[i], _offerDates[i], _offerDurations[i], _disputeResolverIds[i], _agentIds[i]);
+
+            unchecked {
+                i++;
+            }
         }
     }
 
@@ -188,8 +192,12 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @param _offerIds - list of ids of offers to void
      */
     function voidOfferBatch(uint256[] calldata _offerIds) external override offersNotPaused {
-        for (uint256 i = 0; i < _offerIds.length; i++) {
+        for (uint256 i = 0; i < _offerIds.length; ) {
             voidOffer(_offerIds[i]);
+
+            unchecked {
+                i++;
+            }
         }
     }
 
@@ -247,8 +255,12 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *  @param _validUntilDate - new valid until date
      */
     function extendOfferBatch(uint256[] calldata _offerIds, uint256 _validUntilDate) external override offersNotPaused {
-        for (uint256 i = 0; i < _offerIds.length; i++) {
+        for (uint256 i = 0; i < _offerIds.length; ) {
             extendOffer(_offerIds[i], _validUntilDate);
+
+            unchecked {
+                i++;
+            }
         }
     }
 

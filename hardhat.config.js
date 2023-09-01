@@ -53,11 +53,12 @@ task(
 task("upgrade-facets", "Upgrade existing facets, add new facets or remove existing facets")
   .addParam("newVersion", "The version of the protocol to upgrade to")
   .addParam("env", "The deployment environment")
+  .addParam("functionNamesToSelector", "JSON list of function names to selectors")
   .addOptionalParam("facetConfig", "JSON list of facets to upgrade")
-  .setAction(async ({ env, facetConfig, newVersion }) => {
+  .setAction(async ({ env, facetConfig, newVersion, functionNamesToSelector }) => {
     const { upgradeFacets } = await lazyImport("./scripts/upgrade-facets.js");
 
-    await upgradeFacets(env, facetConfig, newVersion);
+    await upgradeFacets(env, facetConfig, newVersion, functionNamesToSelector);
   });
 
 task("upgrade-clients", "Upgrade existing clients")
@@ -115,9 +116,9 @@ task("migrate", "Migrates the protocol to a new version")
 
     if (dryRun) {
       const balanceAfter = await getBalance();
-      const etherSpent = balanceBefore.sub(balanceAfter);
+      const etherSpent = balanceBefore - balanceAfter;
 
-      const formatUnits = require("ethers").utils.formatUnits;
+      const formatUnits = require("ethers").formatUnits;
       console.log("Ether spent: ", formatUnits(etherSpent, "ether"));
     }
   });
@@ -173,7 +174,7 @@ module.exports = {
         },
       },
       {
-        version: "0.8.18",
+        version: "0.8.21",
         settings: {
           optimizer: {
             enabled: true,
@@ -186,6 +187,9 @@ module.exports = {
       },
       {
         version: "0.8.17",
+      },
+      {
+        version: "0.4.17",
       },
     ],
   },

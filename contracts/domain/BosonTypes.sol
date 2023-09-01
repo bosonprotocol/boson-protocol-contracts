@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 /**
  * @title BosonTypes
@@ -28,6 +28,11 @@ contract BosonTypes {
         None, // None should always be at index 0. Never change this value.
         Threshold,
         SpecificToken
+    }
+
+    enum GatingType {
+        PerAddress,
+        PerTokenId
     }
 
     enum ExchangeState {
@@ -59,7 +64,7 @@ contract BosonTypes {
         CommitToOffer,
         Exchange,
         Funds,
-        RaiseDispute,
+        CommitToConditionalOffer,
         ResolveDispute
     }
 
@@ -172,10 +177,11 @@ contract BosonTypes {
         EvaluationMethod method;
         TokenType tokenType;
         address tokenAddress;
-        uint256 tokenId;
+        GatingType gating; // added in v2.3.0. All conditions created before that have a default value of "PerAddress"
+        uint256 minTokenId;
         uint256 threshold;
         uint256 maxCommits;
-        uint256 length;
+        uint256 maxTokenId;
     }
 
     struct Exchange {
@@ -286,6 +292,7 @@ contract BosonTypes {
     struct VoucherInitValues {
         string contractURI;
         uint256 royaltyPercentage;
+        bytes32 collectionSalt;
     }
 
     struct Collection {

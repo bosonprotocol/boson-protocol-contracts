@@ -1,4 +1,6 @@
 const eip55 = require("eip55");
+const { ethers } = require("hardhat");
+const { MaxUint256 } = ethers;
 
 /**
  * Must be a string representation of a big number
@@ -105,6 +107,14 @@ function bytes4IsValid(bytes4) {
   return valid;
 }
 
+function bytes32IsValid(bytes32) {
+  let valid = false;
+  try {
+    valid = BigInt(bytes32) >= 0n && BigInt(bytes32) <= MaxUint256; // max bytes32 value is equal to MaxUint256
+  } catch (e) {}
+  return valid;
+}
+
 function bytes4ArrayIsValid(bytes4Array) {
   let valid = false;
   try {
@@ -123,3 +133,4 @@ exports.booleanIsValid = booleanIsValid;
 exports.bigNumberArrayIsValid = bigNumberArrayIsValid;
 exports.stringIsValid = stringIsValid;
 exports.bytes4ArrayIsValid = bytes4ArrayIsValid;
+exports.bytes32IsValid = bytes32IsValid;

@@ -115,6 +115,9 @@ class Offer {
       voided,
       collectionIndex,
     ] = struct;
+    if (!collectionIndex) {
+      collectionIndex = 0;
+    }
 
     return Offer.fromObject({
       id: id.toString(),
