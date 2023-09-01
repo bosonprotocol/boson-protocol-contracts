@@ -73,8 +73,8 @@ module.exports = {
 
   EXCHANGE_ID_2_2_0: {
     hardhat: 1,
-    mumbai: 1, // TODO: adjust for actual deployment
-    polygon: 2, // TODO: adjust for actual deployment
+    mumbai: 1, // test: 1, staging: 1
+    polygon: 413,
     localhost: 1,
   },
 };

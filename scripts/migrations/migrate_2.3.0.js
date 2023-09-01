@@ -21,29 +21,30 @@ const { META_TRANSACTION_FORWARDER } = require("../config/client-upgrade");
 const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
 
 const config = {
-  // status at 451dc3d. ToDo: update this to the latest commit
+  // status at v2.3.0-rc.3
   addOrUpgrade: [
+    "AccountHandlerFacet",
+    "BundleHandlerFacet",
     "ConfigHandlerFacet",
+    "DisputeHandlerFacet",
     "DisputeResolverHandlerFacet",
     "ExchangeHandlerFacet",
     "FundsHandlerFacet",
+    "GroupHandlerFacet",
     "MetaTransactionsHandlerFacet",
     "OfferHandlerFacet",
     "OrchestrationHandlerFacet1",
     "PauseHandlerFacet",
-    "DisputeHandlerFacet",
     "ProtocolInitializationHandlerFacet",
     "SellerHandlerFacet",
-    "BundleHandlerFacet",
     "TwinHandlerFacet",
-    "GroupHandlerFacet",
   ],
   remove: [],
   skipSelectors: {},
   facetsToInit: {
     ExchangeHandlerFacet: { init: [], constructorArgs: [EXCHANGE_ID_2_2_0[network]] },
   }, // must match nextExchangeId at the time of the upgrade
-  initializationData: abiCoder.encode(["uint256", "uint256[]", "address[]"], [oneWeek, [], []]),
+  initializationData: abiCoder.encode(["uint256"], [oneWeek]),
 };
 
 async function migrate(env) {
@@ -101,13 +102,6 @@ async function migrate(env) {
       await hre.run("clean");
       await hre.run("compile");
     }
-
-    // Get the list of creators and their ids
-    config.initializationData = abiCoder.encode(
-      ["uint256"],
-      [oneWeek] // ToDo <- from config?
-    );
-    console.log("Initialization data: ", config.initializationData);
 
     let functionNamesToSelector = {};
 
