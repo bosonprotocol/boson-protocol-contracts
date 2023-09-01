@@ -183,6 +183,7 @@ module.exports = {
               yul: true,
             },
           },
+          evmVersion: "london", // for ethereum mainnet, use shanghai
         },
       },
       {
