@@ -39,4 +39,12 @@ interface IBosonExchangeEvents {
         uint256 indexed newBuyerId,
         address executedBy
     );
+    event ConditionalCommitAuthorized(
+        uint256 indexed offerId,
+        BosonTypes.GatingType gating,
+        address indexed buyerAddress,
+        uint256 indexed tokenId,
+        uint256 commitCount,
+        uint256 maxCommits
+    );
 }
