@@ -369,6 +369,9 @@ describe("IBosonExchangeHandler", function () {
 
         // Examine the voucher struct
         assert.equal(Voucher.fromStruct(event.voucher).toString(), voucher.toString(), "Voucher struct is incorrect");
+
+        // Unconditional offer should not emit a ConditionalCommitAuthorized event
+        await expect(tx).to.not.emit(exchangeHandler, "ConditionalCommitAuthorized");
       });
 
       it("should increment the next exchange id counter", async function () {
@@ -1079,11 +1082,12 @@ describe("IBosonExchangeHandler", function () {
 
           await foreign721.connect(buyer).mint("123", 1);
 
-          await expect(
-            bosonVoucher
-              .connect(assistant)
-              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.emit(exchangeHandler, "BuyerCommitted");
+          const tx = bosonVoucher
+            .connect(assistant)
+            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+          await expect(tx).to.not.emit(exchangeHandler, "ConditionalCommitAuthorized");
         });
 
         it("Offer is part of a group with condition [ERC20, gating per address]", async function () {
@@ -1100,11 +1104,14 @@ describe("IBosonExchangeHandler", function () {
           // mint enough tokens for the buyer
           await foreign20.connect(buyer).mint(await buyer.getAddress(), condition.threshold);
 
-          await expect(
-            bosonVoucher
-              .connect(assistant)
-              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.emit(exchangeHandler, "BuyerCommitted");
+          const tx = bosonVoucher
+            .connect(assistant)
+            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+            .withArgs(offerId, condition.gating, buyer.address, 0, 1, condition.maxCommits);
         });
 
         it("Offer is part of a group with condition [ERC721, threshold, gating per address]", async function () {
@@ -1126,11 +1133,15 @@ describe("IBosonExchangeHandler", function () {
 
           await foreign721.connect(buyer).mint("123", 1);
 
-          await expect(
-            bosonVoucher
-              .connect(assistant)
-              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.emit(exchangeHandler, "BuyerCommitted");
+          const tx = bosonVoucher
+            .connect(assistant)
+            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+
+          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+            .withArgs(offerId, condition.gating, buyer.address, condition.minTokenId, 1, condition.maxCommits);
         });
 
         it("Offer is part of a group with condition [ERC721, specificToken, gating per address] with range length == 1", async function () {
@@ -1158,11 +1169,15 @@ describe("IBosonExchangeHandler", function () {
           // mint enough tokens for the buyer
           await foreign721.connect(buyer).mint(condition.minTokenId, 1);
 
-          await expect(
-            bosonVoucher
-              .connect(assistant)
-              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.emit(exchangeHandler, "BuyerCommitted");
+          const tx = bosonVoucher
+            .connect(assistant)
+            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+
+          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+            .withArgs(offerId, condition.gating, buyer.address, condition.minTokenId, 1, condition.maxCommits);
         });
 
         it("Offer is part of a group with condition [ERC721, specificToken, gating per tokenid] with range length == 1", async function () {
@@ -1190,11 +1205,15 @@ describe("IBosonExchangeHandler", function () {
           // mint enough tokens for the buyer
           await foreign721.connect(buyer).mint(condition.minTokenId, 1);
 
-          await expect(
-            bosonVoucher
-              .connect(assistant)
-              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.emit(exchangeHandler, "BuyerCommitted");
+          const tx = bosonVoucher
+            .connect(assistant)
+            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+
+          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+            .withArgs(offerId, condition.gating, buyer.address, condition.minTokenId, 1, condition.maxCommits);
         });
 
         it("Offer is part of a group with condition [ERC1155, gating per address] with range length == 1", async function () {
@@ -1219,11 +1238,14 @@ describe("IBosonExchangeHandler", function () {
 
           await foreign1155.connect(buyer).mint(condition.minTokenId, condition.threshold);
 
-          await expect(
-            bosonVoucher
-              .connect(assistant)
-              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.emit(exchangeHandler, "BuyerCommitted");
+          const tx = bosonVoucher
+            .connect(assistant)
+            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+            .withArgs(offerId, condition.gating, buyer.address, condition.minTokenId, 1, condition.maxCommits);
         });
 
         it("Offer is part of a group with condition [ERC1155, gating per tokenId] with range length == 1", async function () {
@@ -1248,11 +1270,14 @@ describe("IBosonExchangeHandler", function () {
 
           await foreign1155.connect(buyer).mint(condition.minTokenId, condition.threshold);
 
-          await expect(
-            bosonVoucher
-              .connect(assistant)
-              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.emit(exchangeHandler, "BuyerCommitted");
+          const tx = bosonVoucher
+            .connect(assistant)
+            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+            .withArgs(offerId, condition.gating, buyer.address, condition.minTokenId, 1, condition.maxCommits);
         });
       });
 
@@ -1613,17 +1638,20 @@ describe("IBosonExchangeHandler", function () {
           await groupHandler.connect(assistant).createGroup(group, condition);
         });
 
-        it("should emit a BuyerCommitted event if user meets condition", async function () {
+        it("should emit BuyerCommitted and ConditionalCommitAuthorized events if user meets condition", async function () {
           // mint enough tokens for the buyer
           await foreign20.connect(buyer).mint(await buyer.getAddress(), condition.threshold);
 
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
-          await expect(
-            exchangeHandler
-              .connect(buyer)
-              .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
-          ).to.emit(exchangeHandler, "BuyerCommitted");
+          const tx = exchangeHandler
+            .connect(buyer)
+            .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price });
+          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+            .withArgs(offerId, condition.gating, buyer.address, 0, 1, condition.maxCommits);
         });
 
         it("should allow buyer to commit up to the max times for the group", async function () {
@@ -1633,11 +1661,14 @@ describe("IBosonExchangeHandler", function () {
           // Commit to offer the maximum number of times
           for (let i = 0; i < Number(condition.maxCommits); i++) {
             // We're only concerned that the event is emitted, indicating the commit was allowed
-            await expect(
-              exchangeHandler
-                .connect(buyer)
-                .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
-            ).to.emit(exchangeHandler, "BuyerCommitted");
+            const tx = exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price });
+            await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+              .withArgs(offerId, condition.gating, buyer.address, 0, i + 1, condition.maxCommits);
           }
         });
 
@@ -1714,17 +1745,20 @@ describe("IBosonExchangeHandler", function () {
           await groupHandler.connect(assistant).createGroup(group, condition);
         });
 
-        it("should emit a BuyerCommitted event if user meets condition", async function () {
+        it("should emit BuyerCommitted and ConditionalCommitAuthorized events if user meets condition", async function () {
           // mint enough tokens for the buyer
           await foreign721.connect(buyer).mint(condition.minTokenId, condition.threshold);
 
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
-          await expect(
-            exchangeHandler
-              .connect(buyer)
-              .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
-          ).to.emit(exchangeHandler, "BuyerCommitted");
+          const tx = exchangeHandler
+            .connect(buyer)
+            .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price });
+          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+            .withArgs(offerId, condition.gating, buyer.address, 0, 1, condition.maxCommits);
         });
 
         it("should allow buyer to commit up to the max times for the group", async function () {
@@ -1734,11 +1768,14 @@ describe("IBosonExchangeHandler", function () {
           // Commit to offer the maximum number of times
           for (let i = 0; i < Number(condition.maxCommits); i++) {
             // We're only concerned that the event is emitted, indicating the commit was allowed
-            await expect(
-              exchangeHandler
-                .connect(buyer)
-                .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
-            ).to.emit(exchangeHandler, "BuyerCommitted");
+            const tx = exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price });
+            await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+              .withArgs(offerId, condition.gating, buyer.address, 0, i + 1, condition.maxCommits);
           }
         });
 
@@ -1811,25 +1848,31 @@ describe("IBosonExchangeHandler", function () {
           await foreign721.connect(buyer).mint(tokenId, "1");
         });
 
-        it("should emit a BuyerCommitted event if user meets condition", async function () {
+        it("should emit BuyerCommitted and ConditionalCommitAuthorized event if user meets condition", async function () {
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
-          await expect(
-            exchangeHandler
-              .connect(buyer)
-              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-          ).to.emit(exchangeHandler, "BuyerCommitted");
+          const tx = exchangeHandler
+            .connect(buyer)
+            .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price });
+          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+            .withArgs(offerId, condition.gating, buyer.address, tokenId, 1, condition.maxCommits);
         });
 
         it("should allow buyer to commit up to the max times for the group", async function () {
           // Commit to offer the maximum number of times
           for (let i = 0; i < Number(condition.maxCommits); i++) {
             // We're only concerned that the event is emitted, indicating the commit was allowed
-            await expect(
-              exchangeHandler
-                .connect(buyer)
-                .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-            ).to.emit(exchangeHandler, "BuyerCommitted");
+            const tx = exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price });
+            await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+              .withArgs(offerId, condition.gating, buyer.address, tokenId, i + 1, condition.maxCommits);
           }
         });
 
@@ -1932,25 +1975,32 @@ describe("IBosonExchangeHandler", function () {
           await foreign721.connect(buyer).mint(tokenId, "1");
         });
 
-        it("should emit a BuyerCommitted event if user meets condition", async function () {
+        it("should emit BuyerCommitted and ConditionalCommitAuthorized event if user meets condition", async function () {
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
-          await expect(
-            exchangeHandler
-              .connect(buyer)
-              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-          ).to.emit(exchangeHandler, "BuyerCommitted");
+          const tx = exchangeHandler
+            .connect(buyer)
+            .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price });
+
+          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+            .withArgs(offerId, condition.gating, buyer.address, tokenId, 1, condition.maxCommits);
         });
 
         it("should allow buyer to commit up to the max times for the group", async function () {
           // Commit to offer the maximum number of times
           for (let i = 0; i < Number(condition.maxCommits); i++) {
             // We're only concerned that the event is emitted, indicating the commit was allowed
-            await expect(
-              exchangeHandler
-                .connect(buyer)
-                .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-            ).to.emit(exchangeHandler, "BuyerCommitted");
+            const tx = exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price });
+            await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+              .withArgs(offerId, condition.gating, buyer.address, tokenId, i + 1, condition.maxCommits);
           }
         });
 
@@ -2053,17 +2103,20 @@ describe("IBosonExchangeHandler", function () {
           tokenId = "123";
         });
 
-        it("should emit a BuyerCommitted event if user meets condition", async function () {
+        it("should emit BuyerCommitted and ConditionalCommitAuthorized events if user meets condition", async function () {
           // mint enough tokens for the buyer
           await foreign1155.connect(buyer).mint(tokenId, condition.threshold);
 
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
-          await expect(
-            exchangeHandler
-              .connect(buyer)
-              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-          ).to.emit(exchangeHandler, "BuyerCommitted");
+          const tx = exchangeHandler
+            .connect(buyer)
+            .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price });
+          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+            .withArgs(offerId, condition.gating, buyer.address, tokenId, 1, condition.maxCommits);
         });
 
         it("should allow buyer to commit up to the max times for the group", async function () {
@@ -2073,11 +2126,15 @@ describe("IBosonExchangeHandler", function () {
           // Commit to offer the maximum number of times
           for (let i = 0; i < Number(condition.maxCommits); i++) {
             // We're only concerned that the event is emitted, indicating the commit was allowed
-            await expect(
-              exchangeHandler
-                .connect(buyer)
-                .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-            ).to.emit(exchangeHandler, "BuyerCommitted");
+            const tx = exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price });
+
+            await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+              .withArgs(offerId, condition.gating, buyer.address, tokenId, i + 1, condition.maxCommits);
           }
         });
 
@@ -2142,25 +2199,31 @@ describe("IBosonExchangeHandler", function () {
           await foreign1155.connect(buyer).mint(tokenId, "1");
         });
 
-        it("should emit a BuyerCommitted event if user meets condition", async function () {
+        it("should emit BuyerCommitted and ConditionalCommitAuthorized events if user meets condition", async function () {
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
-          await expect(
-            exchangeHandler
-              .connect(buyer)
-              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-          ).to.emit(exchangeHandler, "BuyerCommitted");
+          const tx = exchangeHandler
+            .connect(buyer)
+            .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price });
+          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+            .withArgs(offerId, condition.gating, buyer.address, tokenId, 1, condition.maxCommits);
         });
 
         it("should allow buyer to commit up to the max times for the group", async function () {
           // Commit to offer the maximum number of times
           for (let i = 0; i < Number(condition.maxCommits); i++) {
             // We're only concerned that the event is emitted, indicating the commit was allowed
-            await expect(
-              exchangeHandler
-                .connect(buyer)
-                .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-            ).to.emit(exchangeHandler, "BuyerCommitted");
+            const tx = exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price });
+            await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+              .withArgs(offerId, condition.gating, buyer.address, tokenId, i + 1, condition.maxCommits);
           }
         });
 

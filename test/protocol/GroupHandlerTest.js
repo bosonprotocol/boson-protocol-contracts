@@ -524,7 +524,7 @@ describe("IBosonGroupHandler", function () {
           });
 
           it("Condition 'Threshold' with non-fungible token has per token id gating", async function () {
-            condition.tokenType = TokenType.FungibleToken;
+            condition.tokenType = TokenType.NonFungibleToken;
             condition.gating = GatingType.PerTokenId;
 
             // Attempt to create the group, expecting revert

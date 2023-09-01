@@ -98,7 +98,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     /**
      * @notice Commits to an conditional offer (first step of an exchange).
      *
-     * Emits a BuyerCommitted event if successful.
+     * Emits BuyerCommitted and ConditionalCommitAuthorized events if successful.
      * Issues a voucher to the buyer address.
      *
      * Reverts if:
@@ -157,7 +157,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     /**
      * @notice Commits to a preminted offer (first step of an exchange).
      *
-     * Emits a BuyerCommitted event if successful.
+     * Emits BuyerCommitted and ConditionalCommitAuthorized events if successful.
      *
      * Reverts if:
      * - The exchanges region of protocol is paused
@@ -1070,6 +1070,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *     group, the buyer can't commit again to any of its offers.
      *
      * The buyer is allowed to commit if no group or condition is set for this offer.
+     *
+     * Emits ConditionalCommitAuthorized if successful.
      *
      * Reverts if:
      * - Allowable commits to the group are exhausted
