@@ -6833,5 +6833,641 @@ describe("IBosonExchangeHandler", function () {
         });
       });
     });
+
+    context("👉 isEligibleToCommit()", async function () {
+      context("✋ No condition", async function () {
+        it("buyer is eligible, no commits yet", async function () {
+          const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+            buyer.address,
+            offerId,
+            0
+          );
+
+          expect(isEligible).to.be.true;
+          expect(commitCount).to.equal(0);
+          expect(maxCommits).to.equal(0);
+        });
+
+        it("buyer is eligible, with existing commits", async function () {
+          // Commit to offer the maximum a few times
+          for (let i = 0; i < Number(3); i++) {
+            // Commit to offer.
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+
+            const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+              buyer.address,
+              offerId,
+              0
+            );
+
+            expect(isEligible).to.be.true;
+            expect(commitCount).to.equal(0);
+            expect(maxCommits).to.equal(0);
+          }
+        });
+      });
+
+      context("✋ Threshold ERC20", async function () {
+        beforeEach(async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+
+          // Create Condition
+          condition = mockCondition({ tokenAddress: await foreign20.getAddress(), threshold: "50", maxCommits: "3" });
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+          await groupHandler.connect(assistant).createGroup(group, condition);
+        });
+
+        it("buyer is eligible, no commits yet", async function () {
+          // mint enough tokens for the buyer
+          await foreign20.connect(buyer).mint(await buyer.getAddress(), condition.threshold);
+
+          const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+            buyer.address,
+            offerId,
+            0
+          );
+
+          expect(isEligible).to.be.true;
+          expect(commitCount).to.equal(0);
+          expect(maxCommits).to.equal(condition.maxCommits);
+        });
+
+        it("buyer is eligible, with existing commits", async function () {
+          // mint enough tokens for the buyer
+          await foreign20.connect(buyer).mint(await buyer.getAddress(), condition.threshold);
+
+          // Commit to offer the maximum number of times
+          for (let i = 0; i < Number(condition.maxCommits); i++) {
+            // Commit to offer.
+            await exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price });
+
+            const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+              buyer.address,
+              offerId,
+              0
+            );
+
+            expect(isEligible).to.equal(i + 1 < Number(condition.maxCommits));
+            expect(commitCount).to.equal(i + 1);
+            expect(maxCommits).to.equal(condition.maxCommits);
+          }
+        });
+
+        it("buyer does not meet condition for commit", async function () {
+          // Buyer does not have tokens
+          const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+            buyer.address,
+            offerId,
+            0
+          );
+
+          expect(isEligible).to.be.false;
+          expect(commitCount).to.equal(0);
+          expect(maxCommits).to.equal(condition.maxCommits);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("Caller sends non-zero tokenId", async function () {});
+          await expect(exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, 1)).to.revertedWith(
+            RevertReasons.INVALID_TOKEN_ID
+          );
+        });
+      });
+
+      context("✋ Threshold ERC721", async function () {
+        beforeEach(async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+
+          // Create Condition
+          condition = mockCondition({
+            method: EvaluationMethod.Threshold,
+            tokenAddress: await foreign721.getAddress(),
+            threshold: "5",
+            maxCommits: "3",
+            tokenType: TokenType.NonFungibleToken,
+          });
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+          await groupHandler.connect(assistant).createGroup(group, condition);
+        });
+
+        it("buyer is eligible, no commits yet", async function () {
+          // mint enough tokens for the buyer
+          await foreign721.connect(buyer).mint(condition.minTokenId, condition.threshold);
+
+          const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+            buyer.address,
+            offerId,
+            0
+          );
+
+          expect(isEligible).to.be.true;
+          expect(commitCount).to.equal(0);
+          expect(maxCommits).to.equal(condition.maxCommits);
+        });
+
+        it("should allow buyer to commit up to the max times for the group", async function () {
+          // mint enough tokens for the buyer
+          await foreign721.connect(buyer).mint(condition.minTokenId, condition.threshold);
+
+          // Commit to offer the maximum number of times
+          for (let i = 0; i < Number(condition.maxCommits); i++) {
+            // Commit to offer.
+            await exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price });
+
+            const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+              buyer.address,
+              offerId,
+              0
+            );
+
+            expect(isEligible).to.equal(i + 1 < Number(condition.maxCommits));
+            expect(commitCount).to.equal(i + 1);
+            expect(maxCommits).to.equal(condition.maxCommits);
+          }
+        });
+
+        it("buyer does not meet condition for commit", async function () {
+          // Buyer does not have tokens
+          const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+            buyer.address,
+            offerId,
+            0
+          );
+
+          expect(isEligible).to.be.false;
+          expect(commitCount).to.equal(0);
+          expect(maxCommits).to.equal(condition.maxCommits);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("Caller sends non-zero tokenId", async function () {
+            await expect(exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, 1)).to.revertedWith(
+              RevertReasons.INVALID_TOKEN_ID
+            );
+          });
+        });
+      });
+
+      context("✋ SpecificToken ERC721 per address", async function () {
+        let tokenId;
+        beforeEach(async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+          tokenId = "12";
+
+          // Create Condition
+          condition = mockCondition({
+            tokenAddress: await foreign721.getAddress(),
+            threshold: "0",
+            maxCommits: "3",
+            tokenType: TokenType.NonFungibleToken,
+            minTokenId: tokenId,
+            method: EvaluationMethod.SpecificToken,
+            maxTokenId: "22",
+            gating: GatingType.PerAddress,
+          });
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          // mint correct token for the buyer
+          await foreign721.connect(buyer).mint(tokenId, "1");
+        });
+
+        it("buyer is eligible, no commits yet", async function () {
+          const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+            buyer.address,
+            offerId,
+            tokenId
+          );
+
+          expect(isEligible).to.be.true;
+          expect(commitCount).to.equal(0);
+          expect(maxCommits).to.equal(condition.maxCommits);
+        });
+
+        it("buyer is eligible, with existing commits", async function () {
+          // Commit to offer the maximum number of times
+          for (let i = 0; i < Number(condition.maxCommits); i++) {
+            // Commit to offer.
+            await exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price });
+
+            const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+              buyer.address,
+              offerId,
+              tokenId
+            );
+
+            expect(isEligible).to.equal(i + 1 < Number(condition.maxCommits));
+            expect(commitCount).to.equal(i + 1);
+            expect(maxCommits).to.equal(condition.maxCommits);
+          }
+        });
+
+        it("Allow any token from collection", async function () {
+          condition.minTokenId = "0";
+          condition.maxTokenId = MaxUint256.toString();
+
+          await groupHandler.connect(assistant).setGroupCondition(group.id, condition);
+
+          // mint any token for buyer
+          tokenId = "123";
+          await foreign721.connect(buyer).mint(tokenId, "1");
+
+          // buyer can commit
+          const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+            buyer.address,
+            offerId,
+            tokenId
+          );
+
+          expect(isEligible).to.be.true;
+          expect(commitCount).to.equal(0);
+          expect(maxCommits).to.equal(condition.maxCommits);
+        });
+
+        it("buyer does not meet condition for commit", async function () {
+          // Send token to another user
+          await foreign721.connect(buyer).transferFrom(await buyer.getAddress(), rando.address, tokenId);
+
+          // Buyer does not have tokens
+          const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+            buyer.address,
+            offerId,
+            tokenId
+          );
+
+          expect(isEligible).to.be.false;
+          expect(commitCount).to.equal(0);
+          expect(maxCommits).to.equal(condition.maxCommits);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("token id does not exist", async function () {
+            tokenId = "13";
+
+            await expect(
+              exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, tokenId)
+            ).to.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
+          });
+
+          it("token id not in condition range", async function () {
+            tokenId = "666";
+            await expect(
+              exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, tokenId)
+            ).to.revertedWith(RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
+          });
+        });
+      });
+
+      context("✋ SpecificToken ERC721 per token id", async function () {
+        let tokenId;
+        beforeEach(async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+          tokenId = "12";
+
+          // Create Condition
+          condition = mockCondition({
+            tokenAddress: await foreign721.getAddress(),
+            threshold: "0",
+            maxCommits: "3",
+            tokenType: TokenType.NonFungibleToken,
+            minTokenId: tokenId,
+            method: EvaluationMethod.SpecificToken,
+            maxTokenId: "22",
+            gating: GatingType.PerTokenId,
+          });
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          // mint correct token for the buyer
+          await foreign721.connect(buyer).mint(tokenId, "1");
+        });
+
+        it("buyer is eligible, no commits yet", async function () {
+          // Commit to offer.
+          const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+            buyer.address,
+            offerId,
+            tokenId
+          );
+
+          expect(isEligible).to.be.true;
+          expect(commitCount).to.equal(0);
+          expect(maxCommits).to.equal(condition.maxCommits);
+        });
+
+        it("buyer is eligible, with existing commits", async function () {
+          // Commit to offer the maximum number of times
+          for (let i = 0; i < Number(condition.maxCommits); i++) {
+            await exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price });
+
+            const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+              buyer.address,
+              offerId,
+              tokenId
+            );
+
+            expect(isEligible).to.equal(i + 1 < Number(condition.maxCommits));
+            expect(commitCount).to.equal(i + 1);
+            expect(maxCommits).to.equal(condition.maxCommits);
+          }
+        });
+
+        it("Allow any token from collection", async function () {
+          condition.minTokenId = "0";
+          condition.maxTokenId = MaxUint256.toString();
+
+          await groupHandler.connect(assistant).setGroupCondition(group.id, condition);
+
+          // mint any token for buyer
+          tokenId = "123";
+          await foreign721.connect(buyer).mint(tokenId, "1");
+
+          // buyer can commit
+          const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+            buyer.address,
+            offerId,
+            tokenId
+          );
+
+          expect(isEligible).to.be.true;
+          expect(commitCount).to.equal(0);
+          expect(maxCommits).to.equal(condition.maxCommits);
+        });
+
+        it("buyer does not meet condition for commit", async function () {
+          // Send token to another user
+          await foreign721.connect(buyer).transferFrom(await buyer.getAddress(), rando.address, tokenId);
+
+          // Buyer does not have tokens
+          const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+            buyer.address,
+            offerId,
+            tokenId
+          );
+
+          expect(isEligible).to.be.false;
+          expect(commitCount).to.equal(0);
+          expect(maxCommits).to.equal(condition.maxCommits);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("token id does not exist", async function () {
+            tokenId = "13";
+
+            await expect(
+              exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, tokenId)
+            ).to.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
+          });
+
+          it("token id not in condition range", async function () {
+            tokenId = "666";
+
+            await expect(
+              exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, tokenId)
+            ).to.revertedWith(RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
+          });
+        });
+      });
+
+      context("✋ Threshold ERC1155 per address", async function () {
+        let tokenId;
+        beforeEach(async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+
+          // Create Condition
+          condition = mockCondition({
+            tokenAddress: await foreign1155.getAddress(),
+            threshold: "20",
+            maxCommits: "3",
+            tokenType: TokenType.MultiToken,
+            method: EvaluationMethod.Threshold,
+            minTokenId: "123",
+            maxTokenId: "128",
+            gating: GatingType.PerAddress,
+          });
+
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          // Set random token id
+          tokenId = "123";
+        });
+
+        it("buyer is eligible, no commits yet", async function () {
+          // mint enough tokens for the buyer
+          await foreign1155.connect(buyer).mint(tokenId, condition.threshold);
+
+          const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+            buyer.address,
+            offerId,
+            tokenId
+          );
+
+          expect(isEligible).to.be.true;
+          expect(commitCount).to.equal(0);
+          expect(maxCommits).to.equal(condition.maxCommits);
+        });
+
+        it("buyer is eligible, with existing commits", async function () {
+          // mint enough tokens for the buyer
+          await foreign1155.connect(buyer).mint(tokenId, condition.threshold);
+
+          // Commit to offer the maximum number of times
+          for (let i = 0; i < Number(condition.maxCommits); i++) {
+            // We're only concerned that the event is emitted, indicating the commit was allowed
+            await exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price });
+
+            const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+              buyer.address,
+              offerId,
+              tokenId
+            );
+
+            expect(isEligible).to.equal(i + 1 < Number(condition.maxCommits));
+            expect(commitCount).to.equal(i + 1);
+            expect(maxCommits).to.equal(condition.maxCommits);
+          }
+        });
+
+        it("buyer does not meet condition for commit", async function () {
+          // Buyer does not have tokens
+          const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+            buyer.address,
+            offerId,
+            tokenId
+          );
+
+          expect(isEligible).to.be.false;
+          expect(commitCount).to.equal(0);
+          expect(maxCommits).to.equal(condition.maxCommits);
+        });
+      });
+
+      context("✋ Threshold ERC1155 per token id", async function () {
+        let tokenId;
+        beforeEach(async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+          tokenId = "12";
+
+          // Create Condition
+          condition = mockCondition({
+            tokenAddress: await foreign1155.getAddress(),
+            threshold: "1",
+            maxCommits: "3",
+            tokenType: TokenType.MultiToken,
+            minTokenId: tokenId,
+            method: EvaluationMethod.Threshold,
+            maxTokenId: "22",
+          });
+
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          // mint correct token for the buyer
+          await foreign1155.connect(buyer).mint(tokenId, "1");
+        });
+
+        it("buyer is eligible, no commits yet", async function () {
+          const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+            buyer.address,
+            offerId,
+            tokenId
+          );
+
+          expect(isEligible).to.be.true;
+          expect(commitCount).to.equal(0);
+          expect(maxCommits).to.equal(condition.maxCommits);
+        });
+
+        it("buyer is eligible, with existing commits", async function () {
+          // Commit to offer the maximum number of times
+          for (let i = 0; i < Number(condition.maxCommits); i++) {
+            await exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price });
+
+            const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+              buyer.address,
+              offerId,
+              tokenId
+            );
+
+            expect(isEligible).to.equal(i + 1 < Number(condition.maxCommits));
+            expect(commitCount).to.equal(i + 1);
+            expect(maxCommits).to.equal(condition.maxCommits);
+          }
+        });
+
+        it("Allow any token from collection", async function () {
+          condition.minTokenId = "0";
+          condition.maxTokenId = MaxUint256.toString();
+
+          await groupHandler.connect(assistant).setGroupCondition(group.id, condition);
+
+          // mint any token for buyer
+          tokenId = "123";
+          await foreign1155.connect(buyer).mint(tokenId, "1");
+
+          // buyer can commit
+          const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+            buyer.address,
+            offerId,
+            tokenId
+          );
+
+          expect(isEligible).to.be.true;
+          expect(commitCount).to.equal(0);
+          expect(maxCommits).to.equal(condition.maxCommits);
+        });
+
+        it("buyer does not meet condition for commit", async function () {
+          await foreign1155.connect(buyer).safeTransferFrom(buyer.address, rando.address, tokenId, "1", "0x");
+          // Buyer does not have tokens
+          const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+            buyer.address,
+            offerId,
+            tokenId
+          );
+
+          expect(isEligible).to.be.false;
+          expect(commitCount).to.equal(0);
+          expect(maxCommits).to.equal(condition.maxCommits);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("token id not in condition range", async function () {
+            tokenId = "666";
+            // Attempt to commit, expecting revert
+            await expect(
+              exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, tokenId)
+            ).to.revertedWith(RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
+          });
+        });
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("offer does not exist", async function () {
+          offerId = "999";
+
+          await expect(exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, 0)).to.revertedWith(
+            RevertReasons.NO_SUCH_OFFER
+          );
+        });
+
+        it("offer is voided", async function () {
+          await offerHandler.connect(assistant).voidOffer(offerId);
+
+          await expect(exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, 0)).to.revertedWith(
+            RevertReasons.OFFER_HAS_BEEN_VOIDED
+          );
+        });
+      });
+    });
   });
 });
