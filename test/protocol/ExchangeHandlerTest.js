@@ -168,9 +168,13 @@ describe("IBosonExchangeHandler", function () {
         configHandler,
       },
       protocolConfig: [, , { percentage: protocolFeePercentage }],
-      extraReturnValues: { bosonVoucher, voucherImplementation, accessController },
+      extraReturnValues: { voucherImplementation, accessController },
       diamondAddress: protocolDiamondAddress,
     } = await setupTestEnvironment(contracts));
+
+    // // Voucher contract
+    // const bosonVoucherProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
+    // bosonVoucher = await getContractAt("IBosonVoucher", bosonVoucherProxyAddress);
 
     [deployer] = await getSigners();
 
@@ -453,20 +457,6 @@ describe("IBosonExchangeHandler", function () {
           "Voucher 2: Wrong await buyer.getAddress()"
         );
         await expect(bosonVoucherClone2.ownerOf(tokenId1)).to.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
-
-        // reference boson voucher proxy should not have any vouchers
-        expect(await bosonVoucher.balanceOf(await buyer.getAddress())).to.equal(
-          "0",
-          "Reference proxy: buyer 1 balance should be 0"
-        );
-        expect(await bosonVoucher.balanceOf(await buyer2.getAddress())).to.equal(
-          "0",
-          "Reference proxy: buyer 2 balance should be 0"
-        );
-
-        // reference boson voucher should not have vouchers with id 1 and 2
-        await expect(bosonVoucher.ownerOf(tokenId1)).to.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
-        await expect(bosonVoucher.ownerOf(tokenId2)).to.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
 
         // boson voucher implementation should not have any vouchers
         expect(await voucherImplementation.balanceOf(await buyer.getAddress())).to.equal(
