@@ -307,6 +307,7 @@ const paddingType = {
 
 function getMappingStoragePosition(slot, key, padding = paddingType.NONE) {
   let keyBuffer;
+
   let keyHex = String(key).startsWith("0x") ? String(key) : toHexString(key);
 
   switch (padding) {
@@ -401,13 +402,12 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
 
   // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
   const protocolClientArgs = [await protocolDiamond.getAddress()];
-  const [implementations, beacons, , clients] = await deployProtocolClients(
+  const [implementations, beacons] = await deployProtocolClients(
     protocolClientArgs,
     maxPriorityFeePerGas,
     forwarderAddress
   );
   const [beacon] = beacons;
-  const [bosonVoucher] = clients;
   const [voucherImplementation] = implementations;
 
   // set protocolFees
@@ -461,7 +461,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
     contractInstances[contract] = await getContractAt(contracts[contract], await protocolDiamond.getAddress());
   }
 
-  const extraReturnValues = { accessController, bosonVoucher, voucherImplementation, beacon };
+  const extraReturnValues = { accessController, voucherImplementation, beacon };
 
   return {
     signers: signers.slice(3),
@@ -502,3 +502,4 @@ exports.setupTestEnvironment = setupTestEnvironment;
 exports.getSnapshot = getSnapshot;
 exports.revertToSnapshot = revertToSnapshot;
 exports.deriveTokenId = deriveTokenId;
+exports.getSellerSalt = getSellerSalt;

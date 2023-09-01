@@ -105,9 +105,8 @@ describe("SnapshotGate", function () {
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [await protocolDiamond.getAddress()];
-    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
+    const [, beacons] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
     const [beacon] = beacons;
-    const [proxy] = proxies;
 
     // Set protocolFees
     protocolFeePercentage = "200"; // 2 %
@@ -121,7 +120,7 @@ describe("SnapshotGate", function () {
         treasury: await protocolTreasury.getAddress(),
         token: await bosonToken.getAddress(),
         voucherBeacon: await beacon.getAddress(),
-        beaconProxy: await proxy.getAddress(),
+        beaconProxy: ZeroAddress,
       },
       // Protocol limits
       {
@@ -350,9 +349,9 @@ describe("SnapshotGate", function () {
           threshold: "0",
           maxCommits: tokenSupply,
           tokenType: TokenType.NonFungibleToken,
-          tokenId: tokenId,
+          minTokenId: tokenId,
           method: EvaluationMethod.SpecificToken,
-          length: "3",
+          maxTokenId: tokenId,
         });
 
         expect(condition.isValid()).to.be.true;

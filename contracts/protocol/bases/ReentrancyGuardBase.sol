@@ -3,7 +3,7 @@
 import "../../domain/BosonConstants.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 /**
  * @notice Contract module that helps prevent reentrant calls to a function.

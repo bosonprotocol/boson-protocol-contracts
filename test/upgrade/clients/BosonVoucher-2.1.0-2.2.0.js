@@ -11,6 +11,7 @@ const {
   getVoucherContractState,
   revertState,
 } = require("../../util/upgrade");
+
 const {
   mockDisputeResolver,
   mockSeller,
@@ -88,7 +89,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
         protocolContracts,
         mockContracts,
         undefined, // no existing entities
-        oldVersion
+        true
       );
       voucherContractState = await getVoucherContractState(preUpgradeEntities);
 
@@ -340,7 +341,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
       // Deploy a random contract
       const MockSimpleContract = await getContractFactory("MockSimpleContract");
       const mockSimpleContract = await MockSimpleContract.deploy();
-      await mockSimpleContract.deployed();
+      await mockSimpleContract.waitForDeployment();
 
       // Generate calldata
       const calldata = mockSimpleContract.interface.encodeFunctionData("testEvent");

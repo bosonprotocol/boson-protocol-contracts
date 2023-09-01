@@ -2,9 +2,10 @@ const hre = require("hardhat");
 const { ZeroAddress, provider, parseUnits } = hre.ethers;
 
 const decache = require("decache");
-const Condition = require("../../scripts/domain/Condition");
+let Condition = require("../../scripts/domain/Condition.js");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
-const Offer = require("../../scripts/domain/Offer");
+let Offer = require("../../scripts/domain/Offer");
+const GatingType = require("../../scripts/domain/GatingType");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferFees = require("../../scripts/domain/OfferFees");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
@@ -64,7 +65,12 @@ async function mockOfferDates() {
 }
 
 // Returns a mock offer with price in native token
-async function mockOffer() {
+async function mockOffer({ refreshModule } = {}) {
+  if (refreshModule) {
+    decache("../../scripts/domain/Offer.js");
+    Offer = require("../../scripts/domain/Offer.js");
+  }
+
   const id = "1";
   const sellerId = "1"; // argument sent to contract for createOffer will be ignored
   const price = parseUnits("1.5", "ether").toString();
@@ -112,12 +118,18 @@ function mockTwin(tokenAddress, tokenType) {
   return new Twin(id, sellerId, amount, supplyAvailable, tokenId, tokenAddress, tokenType);
 }
 
-function mockDisputeResolver(assistantAddress, adminAddress, clerkAddress, treasuryAddress, active, refreshModule) {
+function mockDisputeResolver(
+  assistantAddress,
+  adminAddress,
+  clerkAddress = ZeroAddress,
+  treasuryAddress,
+  active,
+  refreshModule
+) {
   if (refreshModule) {
     decache("../../scripts/domain/DisputeResolver.js");
     DisputeResolver = require("../../scripts/domain/DisputeResolver.js");
   }
-
   const metadataUriDR = `https://ipfs.io/ipfs/disputeResolver1`;
   return new DisputeResolver(
     accountId.next().value,
@@ -224,6 +236,7 @@ async function mockReceipt() {
   const sellerId = "2";
   const agentId = "3";
   const twinReceipt = mockTwinReceipt(ZeroAddress);
+  const condition = mockCondition();
 
   return new Receipt(
     exchange.id,
@@ -237,7 +250,7 @@ async function mockReceipt() {
     agentId,
     offer.exchangeToken,
     exchange.finalizedDate,
-    undefined,
+    condition,
     voucher.committedDate,
     voucher.redeemedDate,
     voucher.expired,
@@ -249,15 +262,36 @@ async function mockReceipt() {
   );
 }
 
-function mockCondition({ method, tokenType, tokenAddress, tokenId, threshold, maxCommits, length } = {}) {
+function mockCondition(
+  { method, tokenType, tokenAddress, gating, minTokenId, threshold, maxCommits, maxTokenId } = {},
+  { refreshModule, legacyCondition } = {}
+) {
+  if (refreshModule) {
+    decache("../../scripts/domain/Condition.js");
+    Condition = require("../../scripts/domain/Condition.js");
+  }
+
+  if (legacyCondition) {
+    const tokenId = minTokenId;
+    return new Condition(
+      method ?? EvaluationMethod.Threshold,
+      tokenType ?? TokenType.FungibleToken,
+      tokenAddress ?? ZeroAddress,
+      tokenId ?? "0",
+      threshold ?? "1",
+      maxCommits ?? "1"
+    );
+  }
+
   return new Condition(
     method ?? EvaluationMethod.Threshold,
     tokenType ?? TokenType.FungibleToken,
     tokenAddress ?? ZeroAddress,
-    tokenId ?? "0",
+    gating ?? GatingType.PerAddress,
+    minTokenId ?? "0",
     threshold ?? "1",
     maxCommits ?? "1",
-    length ?? "0"
+    maxTokenId ?? "0"
   );
 }
 

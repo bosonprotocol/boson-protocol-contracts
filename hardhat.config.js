@@ -68,11 +68,12 @@ task(
 task("upgrade-facets", "Upgrade existing facets, add new facets or remove existing facets")
   .addParam("newVersion", "The version of the protocol to upgrade to")
   .addParam("env", "The deployment environment")
+  .addParam("functionNamesToSelector", "JSON list of function names to selectors")
   .addOptionalParam("facetConfig", "JSON list of facets to upgrade")
-  .setAction(async ({ env, facetConfig, newVersion }) => {
+  .setAction(async ({ env, facetConfig, newVersion, functionNamesToSelector }) => {
     const { upgradeFacets } = await lazyImport("./scripts/upgrade-facets.js");
 
-    await upgradeFacets(env, facetConfig, newVersion);
+    await upgradeFacets(env, facetConfig, newVersion, functionNamesToSelector);
   });
 
 task("upgrade-clients", "Upgrade existing clients")
@@ -188,7 +189,7 @@ module.exports = {
         },
       },
       {
-        version: "0.8.18",
+        version: "0.8.21",
         settings: {
           optimizer: {
             enabled: true,

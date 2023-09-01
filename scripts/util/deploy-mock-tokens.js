@@ -1,9 +1,10 @@
 const hre = require("hardhat");
 const { expect } = require("chai");
 const environments = require("../../environments");
-const { getContractFactory, provider, ZeroAddress, getAddress } = hre.ethers;
+const { getContractFactory, ZeroAddress, getAddress } = hre.ethers;
 const network = hre.network.name;
 const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
+const { listAccounts } = require("./utils");
 
 /**
  * Deploy mock tokens for unit tests
@@ -57,7 +58,7 @@ async function deployAndMintMockNFTAuthTokens() {
       console.log("\n Tokens will be minted to addresses ", addresses);
     }
   } else if (network == "hardhat") {
-    [...addresses] = await provider.listAccounts();
+    addresses = await listAccounts();
 
     //We only need auth tokens for 3 addresses
     addresses.splice(3, 18);

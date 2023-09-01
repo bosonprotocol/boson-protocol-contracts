@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonProtocolInitializationHandler } from "../../interfaces/handlers/IBosonProtocolInitializationHandler.sol";
@@ -73,7 +73,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         require(_addresses.length == _calldata.length, ADDRESSES_AND_CALLDATA_LENGTH_MISMATCH);
 
         // Delegate call to initialize methods of facets declared in _addresses
-        for (uint256 i = 0; i < _addresses.length; i++) {
+        for (uint256 i = 0; i < _addresses.length; ) {
             (bool success, bytes memory error) = _addresses[i].delegatecall(_calldata[i]);
 
             // Handle result
@@ -87,6 +87,10 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
                     // Reverts with default message
                     revert(PROTOCOL_INITIALIZATION_FAILED);
                 }
+            }
+
+            unchecked {
+                i++;
             }
         }
 
@@ -151,6 +155,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
     function initV2_3_0(bytes calldata _initializationData) internal {
         // Current version must be 2.2.1
         require(protocolStatus().version == bytes32("2.2.1"), WRONG_CURRENT_VERSION);
+
         require(protocolCounters().nextTwinId == 1, TWINS_ALREADY_EXIST);
 
         // Decode initialization data
@@ -181,14 +186,22 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
     }
 
     function addInterfaces(bytes4[] calldata _interfaces) internal {
-        for (uint256 i = 0; i < _interfaces.length; i++) {
+        for (uint256 i = 0; i < _interfaces.length; ) {
             DiamondLib.addSupportedInterface(_interfaces[i]);
+
+            unchecked {
+                i++;
+            }
         }
     }
 
     function removeInterfaces(bytes4[] calldata _interfaces) internal {
-        for (uint256 i = 0; i < _interfaces.length; i++) {
+        for (uint256 i = 0; i < _interfaces.length; ) {
             DiamondLib.removeSupportedInterface(_interfaces[i]);
+
+            unchecked {
+                i++;
+            }
         }
     }
 }

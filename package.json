@@ -31,7 +31,7 @@
     "tidy:contracts": "solhint --fix contracts/**/*.sol && prettier --write contracts/**",
     "tidy:scripts": "eslint --fix test/** scripts/** '*.js' && prettier --write test/** scripts/** '*.js'",
     "size": "npx hardhat size-contracts",
-    "coverage": "npx hardhat clean && npx hardhat coverage",
+    "coverage": "npx hardhat clean && npx hardhat coverage --testfiles '{test/access/*.js,test/protocol/*.js,test/protocol/clients/*.js}'",
     "deploy-suite:hardhat": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-suite --network hardhat",
     "deploy-suite:local": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-suite --network localhost",
     "deploy-suite:test": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-suite --network test --env test >> logs/test.deploy.contracts.txt",
@@ -52,6 +52,7 @@
     "upgrade-facets:polygon:mumbai-test": "npx hardhat clean && npx hardhat compile && npx hardhat upgrade-facets --network mumbai --env test >> logs/mumbai-test.upgrade.contracts.txt",
     "upgrade-facets:polygon:mumbai-staging": "npx hardhat clean && npx hardhat compile && npx hardhat upgrade-facets --network mumbai --env staging >> logs/mumbai-staging.upgrade.contracts.txt",
     "upgrade-facets:polygon:mainnet": "npx hardhat clean && npx hardhat compile && npx hardhat upgrade-facets --network polygon --env prod >> logs/polygon.upgrade.contracts.txt",
+    "migrate": "npx hardhat clean && npx hardhat compile && npx hardhat migrate >> logs/${npm_config_env}-migrate.contracts.txt",
     "upgrade-clients:local": "npx hardhat clean && npx hardhat compile && npx hardhat upgrade-clients --network localhost --env ''",
     "upgrade-clients:test": "npx hardhat clean && npx hardhat compile && npx hardhat upgrade-clients --network test --env test >> logs/test.upgrade.contracts.txt",
     "upgrade-clients:ethereum:mainnet": "npx hardhat clean && npx hardhat compile && npx hardhat upgrade-clients --network mainnet --env prod >> logs/mainnet.upgrade.contracts.txt",
@@ -70,7 +71,7 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.9.0",
-    "@openzeppelin/contracts-upgradeable": "4.9.0"
+    "@openzeppelin/contracts-upgradeable": "4.9.3"
   },
   "devDependencies": {
     "@bosonprotocol/solidoc": "3.0.3",
@@ -89,7 +90,7 @@
     "ethereum-input-data-decoder": "^0.4.2",
     "ethers": "^6.6.0",
     "glob": "^10.2.7",
-    "hardhat": "^2.14.1",
+    "hardhat": "^2.17.1",
     "hardhat-contract-sizer": "^2.7.0",
     "hardhat-preprocessor": "^0.1.5",
     "husky": "^8.0.3",

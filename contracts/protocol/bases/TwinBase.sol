@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonTwinEvents } from "../../interfaces/events/IBosonTwinEvents.sol";
@@ -77,11 +77,15 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
 
             uint256 twinRangesLength = twinRanges.length;
             // Checks if token range isn't being used in any other twin of seller
-            for (uint256 i = 0; i < twinRangesLength; i++) {
+            for (uint256 i = 0; i < twinRangesLength; ) {
                 // A valid range has:
                 // - the first id of range greater than the last token id (tokenId + initialSupply - 1) of the looped twin or
                 // - the last id of range lower than the looped twin tokenId (beginning of range)
                 require(tokenId > twinRanges[i].end || lastTokenId < twinRanges[i].start, INVALID_TWIN_TOKEN_RANGE);
+
+                unchecked {
+                    i++;
+                }
             }
 
             // Add range to twinRangesBySeller mapping

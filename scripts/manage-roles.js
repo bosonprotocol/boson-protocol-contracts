@@ -2,7 +2,7 @@ const hre = require("hardhat");
 const { getContractAt, provider } = hre.ethers;
 const network = hre.network.name;
 const { RoleAssignments } = require("./config/role-assignments");
-const { readContracts } = require("./util/utils");
+const { readContracts, listAccounts } = require("./util/utils");
 const environments = require("../environments");
 const Role = require("./domain/Role");
 
@@ -39,7 +39,7 @@ async function main(env) {
   console.log(`⛓  Network: ${hre.network.name}\n📅 ${new Date()}`);
 
   // Get the accounts
-  const accounts = await provider.listAccounts();
+  const accounts = await listAccounts();
   const admin = accounts[0];
   console.log("🔱 Admin account: ", admin ? admin : "not found" && process.exit());
   console.log(divider);

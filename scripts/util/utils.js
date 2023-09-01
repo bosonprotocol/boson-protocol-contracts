@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const { provider, getContractAt } = hre.ethers;
 const fs = require("fs");
 const addressesDirPath = __dirname + `/../../addresses`;
+const Role = require("./../domain/Role");
 
 function getAddressesFilePath(chainId, network, env) {
   return `${addressesDirPath}/${chainId}${network ? `-${network.toLowerCase()}` : ""}${env ? `-${env}` : ""}.json`;
@@ -66,10 +67,10 @@ async function checkRole(contracts, role, address) {
   // Get AccessController abstraction
   const accessController = await getContractAt("AccessController", accessControllerAddress);
 
-  // Check that caller has upgrader role.
-  const hasRole = await accessController.hasRole(role, address);
+  // Check that caller has specified role.
+  const hasRole = await accessController.hasRole(Role[role], address);
   if (!hasRole) {
-    console.log("Admin address does not have UPGRADER role");
+    console.log(`Admin address does not have ${role} role`);
     process.exit(1);
   }
 }
@@ -82,6 +83,11 @@ function toHexString(bigNumber, { startPad } = { startPad: 8 }) {
   return "0x" + (startPad ? bigNumber.toString(16).padStart(startPad, "0") : bigNumber.toString(16));
 }
 
+// Workaround since hardhat provider doesn't support listAccounts yet (this may be a hardhat bug after ether v6 migration)
+async function listAccounts() {
+  return await provider.send("eth_accounts", []);
+}
+
 exports.getAddressesFilePath = getAddressesFilePath;
 exports.writeContracts = writeContracts;
 exports.readContracts = readContracts;
@@ -91,3 +97,4 @@ exports.getFees = getFees;
 exports.checkRole = checkRole;
 exports.addressNotFound = addressNotFound;
 exports.toHexString = toHexString;
+exports.listAccounts = listAccounts;

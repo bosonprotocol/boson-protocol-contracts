@@ -3,8 +3,8 @@ const { provider, ZeroAddress, getSigners, getSigner, getContractAt } = hre.ethe
 const network = hre.network.name;
 const environments = require("../environments");
 const tipMultiplier = BigInt(environments.tipMultiplier);
-const tipSuggestion = "1500000000"; // js always returns this constant, it does not vary per block
-const maxPriorityFeePerGas = BigInt(tipSuggestion).mul(tipMultiplier);
+const tipSuggestion = 1500000000n; // js always returns this constant, it does not vary per block
+const maxPriorityFeePerGas = tipSuggestion * tipMultiplier;
 const {
   deploymentComplete,
   getFees,
@@ -12,9 +12,9 @@ const {
   writeContracts,
   checkRole,
   addressNotFound,
+  listAccounts,
 } = require("./util/utils.js");
 const { deployProtocolClientImpls } = requireUncached("./util/deploy-protocol-client-impls.js");
-const Role = require("./domain/Role");
 
 /**
  * Upgrades clients
@@ -27,7 +27,7 @@ const Role = require("./domain/Role");
  */
 async function main(env, clientConfig, version) {
   // Bail now if hardhat network, unless the upgrade is tested
-  if (network === "hardhat" && env !== "upgrade-test") process.exit();
+  if (network === "hardhat" && env !== "upgrade-test" && !env.includes("dry-run")) process.exit();
 
   const { chainId } = await provider.getNetwork();
   let { contracts } = readContracts(chainId, network, env);
@@ -46,7 +46,7 @@ async function main(env, clientConfig, version) {
   }
 
   // Get list of accounts managed by node
-  const nodeAccountList = (await provider.listAccounts()).map((address) => address.toLowerCase());
+  const nodeAccountList = (await listAccounts()).map((address) => address.toLowerCase());
 
   if (nodeAccountList.includes(adminAddress.toLowerCase())) {
     console.log("🔱 Admin account: ", adminAddress);
@@ -66,7 +66,7 @@ async function main(env, clientConfig, version) {
   }
 
   // Validate that admin has UPGRADER role
-  checkRole(contracts, Role.UPGRADER, adminAddress);
+  checkRole(contracts, "UPGRADER", adminAddress);
 
   clientConfig = (clientConfig && JSON.parse(clientConfig)) || require("./config/client-upgrade");
 

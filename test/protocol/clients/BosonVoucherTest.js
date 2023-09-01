@@ -80,10 +80,11 @@ describe("IBosonVoucher", function () {
       fundsHandler: "IBosonFundsHandler",
     };
 
+    let bosonClientBeacon;
     ({
       signers: [protocol, buyer, rando, rando2, admin, treasury, adminDR, treasuryDR],
       contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler },
-      extraReturnValues: { bosonVoucher, accessController },
+      extraReturnValues: { accessController, beacon: bosonClientBeacon },
     } = await setupTestEnvironment(contracts, {
       forwarderAddress: [await forwarder.getAddress()],
     }));
@@ -97,12 +98,16 @@ describe("IBosonVoucher", function () {
     await accessController.grantRole(Role.PROTOCOL, await protocol.getAddress());
 
     // Initialize voucher contract
-    const sellerId = 1;
+    const bosonVoucherProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
+    bosonVoucher = await getContractAt("IBosonVoucher", bosonVoucherProxyAddress);
+
+    const clientProxy = await getContractAt("BeaconClientProxy", bosonVoucherProxyAddress);
+    await clientProxy.initialize(await bosonClientBeacon.getAddress());
 
     // prepare the VoucherInitValues
+    const sellerId = 1;
     voucherInitValues = mockVoucherInitValues();
-    const bosonVoucherInit = await getContractAt("BosonVoucher", await bosonVoucher.getAddress());
-
+    const bosonVoucherInit = await getContractAt("BosonVoucher", bosonVoucherProxyAddress);
     await bosonVoucherInit.initializeVoucher(sellerId, "1", await assistant.getAddress(), voucherInitValues);
 
     [foreign20] = await deployMockTokens(["Foreign20", "BosonToken"]);

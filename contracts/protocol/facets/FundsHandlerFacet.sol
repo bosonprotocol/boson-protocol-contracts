@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonFundsHandler } from "../../interfaces/handlers/IBosonFundsHandler.sol";
@@ -183,8 +183,12 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
 
         tokenList = new address[](_limit);
 
-        for (uint i = 0; i < _limit; i++) {
+        for (uint i = 0; i < _limit; ) {
             tokenList[i] = tokens[_offset++];
+
+            unchecked {
+                i++;
+            }
         }
 
         return tokenList;
@@ -221,7 +225,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         // Get entity's availableFunds storage pointer
         mapping(address => uint256) storage entityFunds = protocolLookups().availableFunds[_entityId];
 
-        for (uint256 i = 0; i < _tokenList.length; i++) {
+        for (uint256 i = 0; i < _tokenList.length; ) {
             address tokenAddress = _tokenList[i];
             string memory tokenName;
 
@@ -241,6 +245,10 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             availableFunds[i].tokenAddress = tokenAddress;
             availableFunds[i].tokenName = tokenName;
             availableFunds[i].availableAmount = entityFunds[tokenAddress];
+
+            unchecked {
+                i++;
+            }
         }
     }
 
@@ -287,18 +295,26 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             mapping(address => uint256) storage entityFunds = lookups.availableFunds[_entityId];
 
             // Transfer funds
-            for (uint256 i = 0; i < tokenList.length; i++) {
+            for (uint256 i = 0; i < tokenList.length; ) {
                 // Get available funds from storage
                 uint256 availableFunds = entityFunds[tokenList[i]];
                 FundsLib.transferFundsFromProtocol(_entityId, tokenList[i], _destinationAddress, availableFunds);
+
+                unchecked {
+                    i++;
+                }
             }
         } else {
-            for (uint256 i = 0; i < _tokenList.length; i++) {
+            for (uint256 i = 0; i < _tokenList.length; ) {
                 // Make sure that at least something will be withdrawn
                 require(_tokenAmounts[i] > 0, NOTHING_TO_WITHDRAW);
 
                 // Transfer funds
                 FundsLib.transferFundsFromProtocol(_entityId, _tokenList[i], _destinationAddress, _tokenAmounts[i]);
+
+                unchecked {
+                    i++;
+                }
             }
         }
     }

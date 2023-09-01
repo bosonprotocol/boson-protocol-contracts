@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 import "../../../domain/BosonConstants.sol";
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
@@ -235,10 +235,14 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
 
         // Pre-mint the range
         uint256 tokenId;
-        for (uint256 i = 0; i < _amount; i++) {
+        for (uint256 i = 0; i < _amount; ) {
             tokenId = start + i;
 
             emit Transfer(address(0), to, tokenId);
+
+            unchecked {
+                i++;
+            }
         }
 
         // Bump the minted count
@@ -770,7 +774,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
         uint256 sellerId = getSellerId();
 
-        for (uint256 i = 0; i < _tokenList.length; i++) {
+        for (uint256 i = 0; i < _tokenList.length; ) {
             address token = _tokenList[i];
             if (token == address(0)) {
                 uint256 balance = address(this).balance;
@@ -788,6 +792,10 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
                     }
                     IBosonFundsHandler(protocolDiamond).depositFunds(sellerId, token, balance);
                 }
+            }
+
+            unchecked {
+                i++;
             }
         }
     }

@@ -149,14 +149,13 @@ async function main(env, facetConfig) {
   const clientImplementationArgs = Object.values(clientConfig).map(
     (config) => process.env.FORWARDER_ADDRESS || config[network]
   );
-  const [impls, beacons, proxies] = await deployProtocolClients(
+  const [impls, beacons] = await deployProtocolClients(
     protocolClientArgs,
     maxPriorityFeePerGas,
     clientImplementationArgs
   );
   const [bosonVoucherImpl] = impls;
   const [bosonClientBeacon] = beacons;
-  const [bosonVoucherProxy] = proxies;
 
   // Gather the complete args that were used to create the proxies
   const bosonVoucherProxyArgs = [...protocolClientArgs, await bosonVoucherImpl.getAddress()];
@@ -164,7 +163,6 @@ async function main(env, facetConfig) {
   // Report and prepare for verification
   deploymentComplete("BosonVoucher Logic", await bosonVoucherImpl.getAddress(), [], "", contracts);
   deploymentComplete("BosonVoucher Beacon", await bosonClientBeacon.getAddress(), bosonVoucherProxyArgs, "", contracts);
-  deploymentComplete("BosonVoucher Proxy", await bosonVoucherProxy.getAddress(), [], "", contracts);
 
   console.log(`\n🌐️Configuring and granting roles...`);
 
