@@ -799,7 +799,8 @@ async function getProtocolContractState(
     getProtocolLookupsPrivateContractState(
       protocolDiamondAddress,
       { mockToken, mockTwinTokens },
-      { sellers, DRs, agents, buyers, offers, groups, twins }
+      { sellers, DRs, agents, buyers, offers, groups, twins },
+      groupHandler
     ),
   ]);
 
@@ -1282,7 +1283,8 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
 async function getProtocolLookupsPrivateContractState(
   protocolDiamondAddress,
   { mockToken, mockTwinTokens },
-  { sellers, DRs, agents, buyers, offers, groups, twins }
+  { sellers, DRs, agents, buyers, offers, groups, twins },
+  groupHandler
 ) {
   /*
         ProtocolLookups storage layout
@@ -1320,8 +1322,11 @@ async function getProtocolLookupsPrivateContractState(
         #29 [ ] // placeholder for pendingAddressUpdatesBySeller
         #30 [ ] // placeholder for pendingAuthTokenUpdatesBySeller
         #31 [ ] // placeholder for pendingAddressUpdatesByDisputeResolver
-        #32 [X] // placeholder for additionalCollections
-        #33 [ ] // placeholder for rangeIdByTwin
+        #32 [ ] // placeholder for rangeIdByTwin
+        #33 [ ] // placeholder for conditionalCommitsByTokenId
+        #34 [X] // placeholder for additionalCollections
+        #35 [ ] // placeholder for sellerSalt
+        #36 [ ] // placeholder for isUsedSellerSalt
         */
 
   // starting slot
@@ -1519,10 +1524,16 @@ async function getProtocolLookupsPrivateContractState(
     allowedSellerIndex.push(sellerStatus);
   }
 
-  // offerIdIndexByGroup
+  // offerIdIndexByGroup, conditionalCommitsByTokenId
   let offerIdIndexByGroup = [];
+  let conditionalCommitsByTokenId = [];
+  decache("../../scripts/domain/Condition.js");
+  Condition = require("../../scripts/domain/Condition.js");
+
   for (const group of groups) {
     const id = group.id;
+
+    // offerIdIndexByGroup
     const firstMappingStorageSlot = BigInt(
       getMappingStoragePosition(protocolLookupsSlotNumber + 28n, id, paddingType.START)
     );
@@ -1537,6 +1548,26 @@ async function getProtocolLookupsPrivateContractState(
       );
     }
     offerIdIndexByGroup.push(offerIndices);
+
+    // conditionalCommitsByTokenId
+    // get condition
+    let [, , condition] = await groupHandler.getGroup(id);
+    condition = Condition.fromStruct(condition);
+    let commitsPerTokenId = [];
+    for (let tokenId = condition.minTokenId; tokenId <= condition.maxTokenId; tokenId++) {
+      const firstMappingStorageSlot = BigInt(
+        getMappingStoragePosition(protocolLookupsSlotNumber + 33n, tokenId, paddingType.START)
+      );
+
+      commitsPerTokenId.push(
+        await getStorageAt(
+          protocolDiamondAddress,
+          getMappingStoragePosition(firstMappingStorageSlot, id, paddingType.START)
+        )
+      );
+    }
+
+    conditionalCommitsByTokenId.push(commitsPerTokenId);
   }
 
   // pendingAddressUpdatesBySeller, pendingAuthTokenUpdatesBySeller, pendingAddressUpdatesByDisputeResolver
@@ -1580,7 +1611,7 @@ async function getProtocolLookupsPrivateContractState(
       // BosonTypes.DisputeResolver has 8 fields
       structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot + i));
     }
-    structFields[6] = await getStorageAt(protocolDiamondAddress, keccak256(ethersId(structStorageSlot + 6n))); // represents field string metadataUri. Technically this value represents the length of the string, but since it should be 0, we don't do further decoding
+    structFields[6] = await getStorageAt(protocolDiamondAddress, ethersId(structStorageSlot + 6n)); // represents field string metadataUri. Technically this value represents the length of the string, but since it should be 0, we don't do further decoding
     pendingAddressUpdatesByDisputeResolver.push(structFields);
   }
 
@@ -1591,8 +1622,27 @@ async function getProtocolLookupsPrivateContractState(
     rangeIdByTwin.push(
       await getStorageAt(
         protocolDiamondAddress,
-        getMappingStoragePosition(protocolLookupsSlotNumber + 33n, id, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber + 32n, id, paddingType.START)
       )
+    );
+  }
+
+  // sellerSalt, isUsedSellerSalt
+  let sellerSalt = [];
+  let isUsedSellerSalt = {};
+  for (const seller of sellers) {
+    // sellerSalt
+    const { id } = seller;
+    const salt = await getStorageAt(
+      protocolDiamondAddress,
+      getMappingStoragePosition(protocolLookupsSlotNumber + 35n, id, paddingType.START)
+    );
+    sellerSalt.push(salt);
+
+    // isUsedSellerSalt
+    isUsedSellerSalt[salt] = await getStorageAt(
+      protocolDiamondAddress,
+      getMappingStoragePosition(protocolLookupsSlotNumber + 36n, salt, paddingType.START)
     );
   }
 
@@ -1614,6 +1664,9 @@ async function getProtocolLookupsPrivateContractState(
     pendingAuthTokenUpdatesBySeller,
     pendingAddressUpdatesByDisputeResolver,
     rangeIdByTwin,
+    conditionalCommitsByTokenId,
+    sellerSalt,
+    isUsedSellerSalt,
   };
 }
 
