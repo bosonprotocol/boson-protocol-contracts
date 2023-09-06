@@ -610,15 +610,15 @@ async function populateProtocolContract(
 
         // mint tokens to be transferred on redeem
         // ToDo: for the future, change this to shorten the test
-        let tokensToMint = BigInt(minSupplyAvailable);
-        let tokenIdToMint = BigInt(twin721.tokenId);
-        while (tokensToMint > 500n) {
-          await mockTwinTokens[j % 2].connect(seller.wallet).mint(tokenIdToMint, 500n);
-          tokensToMint -= 500n;
-          tokenIdToMint += 500n;
-        }
+        // let tokensToMint = BigInt(minSupplyAvailable);
+        // let tokenIdToMint = BigInt(twin721.tokenId);
+        // while (tokensToMint > 500n) {
+        //   await mockTwinTokens[j % 2].connect(seller.wallet).mint(tokenIdToMint, 500n);
+        //   tokensToMint -= 500n;
+        //   tokenIdToMint += 500n;
+        // }
 
-        await mockTwinTokens[j % 2].connect(seller.wallet).mint(tokenIdToMint, tokensToMint);
+        // await mockTwinTokens[j % 2].connect(seller.wallet).mint(tokenIdToMint, tokensToMint);
         await twinHandler.connect(seller.wallet).createTwin(twin721);
 
         twins.push(twin721);
@@ -655,7 +655,6 @@ async function populateProtocolContract(
         twin1155.id = twinId;
 
         // mint tokens to be transferred on redeem
-        await mockTwin1155.connect(seller.wallet).mint(twin1155.tokenId, twin1155.supplyAvailable);
         await twinHandler.connect(seller.wallet).createTwin(twin1155);
 
         twins.push(twin1155);
@@ -718,6 +717,29 @@ async function populateProtocolContract(
   // redeem some vouchers #4
   for (const id of [2, 5, 11, 8]) {
     const exchange = exchanges[id - 1];
+
+    // If exchange has twins, mint them so the transfer can succeed
+    // const offer = offers[Number(exchange.offerId) - 1];
+    const offer = offers.find((o) => o.offer.id == exchange.offerId);
+    const seller = sellers.find((s) => s.seller.id == offer.offer.sellerId);
+    if (twinHandler && Number(seller.id) % 2 == 1) {
+      const bundle = bundles.find((b) => b.sellerId == seller.id);
+      const twinsIds = bundle.twinIds;
+      for (const twinId of twinsIds) {
+        const [, twin] = await twinHandler.getTwin(twinId);
+        if (twin.tokenType == TokenType.NonFungibleToken) {
+          await mockTwinTokens[0]
+            .connect(seller.wallet)
+            .mint(BigInt(twin.tokenId) + BigInt(twin.supplyAvailable) - 1n, 1);
+          await mockTwinTokens[1]
+            .connect(seller.wallet)
+            .mint(BigInt(twin.tokenId) + BigInt(twin.supplyAvailable) - 1n, 1);
+        } else if (twin.tokenType == TokenType.MultiToken) {
+          await mockTwin1155.connect(seller.wallet).mint(twin.tokenId, twin.supplyAvailable);
+        }
+      }
+    }
+
     await exchangeHandler
       .connect(buyers[exchange.buyerIndex].wallet)
       .redeemVoucher(exchange.exchangeId, { gasLimit: 10000000 });
