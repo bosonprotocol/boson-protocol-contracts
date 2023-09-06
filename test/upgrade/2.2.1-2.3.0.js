@@ -412,7 +412,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         });
       });
 
-      context.skip("Protocol limits", async function () {
+      context("Protocol limits", async function () {
         let wallets;
         let sellers, DRs, sellerWallet;
 
@@ -527,25 +527,31 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         });
 
         it("can create a bundle with more offers than maxOffersPerBundle", async function () {
-          const { maxOffersPerBundle } = protocolLimits;
+          const { maxOffersPerBundle, maxOffersPerBatch } = protocolLimits;
           const offerCount = Number(maxOffersPerBundle) + 1;
           const twinId = await twinHandler.getNextTwinId();
           const startingOfferId = await offerHandler.getNextOfferId();
           const offerIds = [...Array(offerCount).keys()].map((i) => startingOfferId + BigInt(i));
 
           const { offer, offerDates, offerDurations } = await mockOffer({ refreshModule: true });
-          const offers = new Array(offerCount).fill(offer);
-          const offerDatesList = new Array(offerCount).fill(offerDates);
-          const offerDurationsList = new Array(offerCount).fill(offerDurations);
-          const disputeResolverIds = new Array(offerCount).fill(DRs[0].id);
-          const agentIds = new Array(offerCount).fill("0");
+          const maxOffersPerBatchInt = Number(maxOffersPerBatch);
+          const offers = new Array(maxOffersPerBatchInt).fill(offer);
+          const offerDatesList = new Array(maxOffersPerBatchInt).fill(offerDates);
+          const offerDurationsList = new Array(maxOffersPerBatchInt).fill(offerDurations);
+          const disputeResolverIds = new Array(maxOffersPerBatchInt).fill(DRs[0].id);
+          const agentIds = new Array(maxOffersPerBatchInt).fill("0");
 
           // Create offers in batch
+          let offersToCreate = offerCount;
+          while (offersToCreate > maxOffersPerBatchInt) {
+            await offerHandler
+              .connect(sellerWallet)
+              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds);
+            offersToCreate -= maxOffersPerBatchInt;
+          }
           await offerHandler
             .connect(sellerWallet)
-            .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds, {
-              gasLimit: 100000000, // increase gas limit to avoid out of gas error
-            });
+            .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds);
 
           // At list one twin is needed to create a bundle
           const [twinContract] = await deployMockTokens(["Foreign721"]);
@@ -560,18 +566,26 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         });
 
         it("can add more offers to a group than maxOffersPerGroup", async function () {
-          const { maxOffersPerBundle } = protocolLimits;
+          const { maxOffersPerBundle, maxOffersPerBatch } = protocolLimits;
           const offerCount = Number(maxOffersPerBundle) + 1;
           const startingOfferId = await offerHandler.getNextOfferId();
           const offerIds = [...Array(offerCount).keys()].map((i) => startingOfferId + BigInt(i));
           const { offer, offerDates, offerDurations } = await mockOffer();
-          const offers = new Array(offerCount).fill(offer);
-          const offerDatesList = new Array(offerCount).fill(offerDates);
-          const offerDurationsList = new Array(offerCount).fill(offerDurations);
-          const disputeResolverIds = new Array(offerCount).fill(DRs[0].id);
-          const agentIds = new Array(offerCount).fill("0");
+          const maxOffersPerBatchInt = Number(maxOffersPerBatch);
+          const offers = new Array(maxOffersPerBatchInt).fill(offer);
+          const offerDatesList = new Array(maxOffersPerBatchInt).fill(offerDates);
+          const offerDurationsList = new Array(maxOffersPerBatchInt).fill(offerDurations);
+          const disputeResolverIds = new Array(maxOffersPerBatchInt).fill(DRs[0].id);
+          const agentIds = new Array(maxOffersPerBatchInt).fill("0");
 
           // Create offers in batch
+          let offersToCreate = offerCount;
+          while (offersToCreate > maxOffersPerBatchInt) {
+            await offerHandler
+              .connect(sellerWallet)
+              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds);
+            offersToCreate -= maxOffersPerBatchInt;
+          }
           await offerHandler
             .connect(sellerWallet)
             .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds);
@@ -579,10 +593,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // Create a group with more offers than maxOffersPerGroup
           const group = new Group("1", sellers[0].seller.id, offerIds);
           const { mockConditionalToken } = mockContracts;
-          const condition = mockCondition({
-            tokenAddress: await mockConditionalToken.getAddress(),
-            maxCommits: "10",
-          });
+          const condition = mockCondition(
+            {
+              tokenAddress: await mockConditionalToken.getAddress(),
+              maxCommits: "10",
+            },
+            { refreshModule: true }
+          );
           await expect(groupHandler.connect(sellerWallet).createGroup(group, condition)).to.not.be.reverted;
         });
 
@@ -640,17 +657,19 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           const emptyAuthToken = mockAuthToken();
           const voucherInitValues = mockVoucherInitValues();
 
-          await Promise.all(
-            wallets.slice(0, sellerCount).map(async (wallet) => {
-              const walletAddress = await wallet.getAddress();
-              const seller = mockSeller(walletAddress, walletAddress, ZeroAddress, walletAddress, true);
-              await provider.send("hardhat_setBalance", [walletAddress, toHexString(parseEther("10"))]);
-              return accountHandler.connect(wallet).createSeller(seller, emptyAuthToken, voucherInitValues);
-            })
-          );
+          for (const wallet of wallets.slice(0, sellerCount)) {
+            const walletAddress = await wallet.getAddress();
+            const seller = mockSeller(walletAddress, walletAddress, ZeroAddress, walletAddress, true, "", {
+              refreshModule: true,
+            });
+            await provider.send("hardhat_setBalance", [walletAddress, toHexString(parseEther("10"))]);
+            await accountHandler.connect(wallet).createSeller(seller, emptyAuthToken, voucherInitValues);
+          }
 
           const disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", "0")];
           const disputeResolver = mockDisputeResolver(rando.address, rando.address, ZeroAddress, rando.address);
+
+          console.log("we here");
 
           await expect(
             accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
