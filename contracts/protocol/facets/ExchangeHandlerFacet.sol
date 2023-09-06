@@ -1256,7 +1256,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     ) internal {
         // Get all ranges of twins that belong to the seller and to the same token address.
         TokenRange[] storage twinRanges = _lookups.twinRangesBySeller[_sellerId][_twin.tokenAddress];
-
         bool unlimitedSupply = _twin.supplyAvailable == type(uint256).max;
 
         uint256 rangeIndex = _lookups.rangeIdByTwin[_twin.id] - 1;
@@ -1264,10 +1263,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         if (unlimitedSupply ? range.end == _twin.tokenId : range.start == _twin.tokenId) {
             uint256 lastIndex = twinRanges.length - 1;
-
             if (rangeIndex != lastIndex) {
                 // Replace range with last range
-                twinRanges[rangeIndex] = twinRanges[lastIndex];
+                range = twinRanges[lastIndex];
+                _lookups.rangeIdByTwin[range.twinId] = rangeIndex;
             }
 
             // Remove from ranges mapping
