@@ -1265,8 +1265,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             uint256 lastIndex = twinRanges.length - 1;
             if (rangeIndex != lastIndex) {
                 // Replace range with last range
-                range = twinRanges[lastIndex];
-                _lookups.rangeIdByTwin[range.twinId] = rangeIndex;
+                twinRanges[rangeIndex] = twinRanges[lastIndex];
+                _lookups.rangeIdByTwin[range.twinId] = rangeIndex + 1;
             }
 
             // Remove from ranges mapping
