@@ -669,8 +669,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           const disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", "0")];
           const disputeResolver = mockDisputeResolver(rando.address, rando.address, ZeroAddress, rando.address);
 
-          console.log("we here");
-
           await expect(
             accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
           ).to.not.be.reverted;

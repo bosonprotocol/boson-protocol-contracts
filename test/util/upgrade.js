@@ -608,17 +608,6 @@ async function populateProtocolContract(
         twin721.tokenAddress = await mockTwinTokens[j % 2].getAddress(); // oscilate between twins
         twin721.id = twinId;
 
-        // mint tokens to be transferred on redeem
-        // ToDo: for the future, change this to shorten the test
-        // let tokensToMint = BigInt(minSupplyAvailable);
-        // let tokenIdToMint = BigInt(twin721.tokenId);
-        // while (tokensToMint > 500n) {
-        //   await mockTwinTokens[j % 2].connect(seller.wallet).mint(tokenIdToMint, 500n);
-        //   tokensToMint -= 500n;
-        //   tokenIdToMint += 500n;
-        // }
-
-        // await mockTwinTokens[j % 2].connect(seller.wallet).mint(tokenIdToMint, tokensToMint);
         await twinHandler.connect(seller.wallet).createTwin(twin721);
 
         twins.push(twin721);
