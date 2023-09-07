@@ -4040,7 +4040,7 @@ describe("IBosonExchangeHandler", function () {
             }
           });
 
-          it("Should remove rangeIdByTwin when transfering last token from range", async () => {
+          it("Should remove rangeIdByTwin when transferring last token from range", async () => {
             const rangeIdByTwinMappingSlot = BigInt(
               getMappingStoragePosition(protocolLookupsSlotNumber + 32n, Number(twin721.id), paddingType.START)
             );
@@ -4095,14 +4095,30 @@ describe("IBosonExchangeHandler", function () {
             let expectedRange1End = zeroPadValue(toHexString(BigInt("10")), 32);
             expect(range1End).to.equal(expectedRange1End);
 
+            let range1twinId = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 2n);
+            let expectedRange1twinId = zeroPadValue(toHexString(BigInt("2")), 32); // first 721 twin has id 2
+            expect(range1twinId).to.equal(expectedRange1twinId);
+
+            let rangeIdByTwin1Slot = getMappingStoragePosition(protocolLookupsSlotNumber + 32n, "2", paddingType.START);
+            let rangeIdByTwin1 = await getStorageAt(protocolDiamondAddress, rangeIdByTwin1Slot);
+            expect(rangeIdByTwin1).to.equal(1n); // rangeIdByTwin maps to index + 1
+
             // Second range
-            let range2Start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 2n);
+            let range2Start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 3n);
             let expectedRange2Start = zeroPadValue(toHexString(BigInt("11")), 32);
             expect(range2Start).to.equal(expectedRange2Start);
 
-            let range2End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 3n);
+            let range2End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 4n);
             let expectedRange2End = zeroPadValue(toHexString(BigInt("20")), 32);
             expect(range2End).to.equal(expectedRange2End);
+
+            let range2twinId = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 5n);
+            let expectedRange2twinId = zeroPadValue(toHexString(BigInt("4")), 32); // second 721 twin has id 4
+            expect(range2twinId).to.equal(expectedRange2twinId);
+
+            let rangeIdByTwin2Slot = getMappingStoragePosition(protocolLookupsSlotNumber + 32n, "4", paddingType.START);
+            let rangeIdByTwin2 = await getStorageAt(protocolDiamondAddress, rangeIdByTwin2Slot);
+            expect(rangeIdByTwin2).to.equal(2n);
 
             // Set time forward to the offer's voucherRedeemableFrom
             voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
@@ -4128,13 +4144,25 @@ describe("IBosonExchangeHandler", function () {
             expect(range1Start).to.equal(expectedRange2Start);
             range1End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 1n);
             expect(range1End).to.equal(expectedRange2End);
+            range1twinId = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 2n);
+            expect(range1twinId).to.equal(expectedRange2twinId);
 
             // Second range should be empty
             const slotEmpty = zeroPadBytes(toHexString(BigInt("0")), 32);
-            range2Start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 2n);
+            range2Start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 3n);
             expect(range2Start).to.equal(slotEmpty);
-            range2End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 3n);
+            range2End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 4n);
             expect(range2End).to.equal(slotEmpty);
+            range2twinId = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 5n);
+            expect(range2twinId).to.equal(slotEmpty);
+
+            // First twin should map to zero index
+            rangeIdByTwin1 = await getStorageAt(protocolDiamondAddress, rangeIdByTwin1Slot);
+            expect(rangeIdByTwin1).to.equal(0n); // zero indicates no range
+
+            // Second twin should map to first range
+            rangeIdByTwin2 = await getStorageAt(protocolDiamondAddress, rangeIdByTwin2Slot);
+            expect(rangeIdByTwin2).to.equal(1n);
           });
         });
 

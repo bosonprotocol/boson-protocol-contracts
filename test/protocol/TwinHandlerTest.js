@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { ZeroAddress, MaxUint256 } = ethers;
+const { ZeroAddress, MaxUint256, id: ethersId } = ethers;
 const { expect, assert } = require("chai");
 const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
@@ -7,9 +7,17 @@ const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const TokenType = require("../../scripts/domain/TokenType.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const { getEvent, setupTestEnvironment, getSnapshot, revertToSnapshot } = require("../util/utils.js");
+const {
+  getEvent,
+  setupTestEnvironment,
+  getSnapshot,
+  revertToSnapshot,
+  getMappingStoragePosition,
+  paddingType,
+} = require("../util/utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { mockOffer, mockSeller, mockTwin, mockAuthToken, mockVoucherInitValues, accountId } = require("../util/mock");
+const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 
 /**
  *  Test the Boson Twin Handler interface
@@ -653,13 +661,30 @@ describe("IBosonTwinHandler", function () {
         // Create a twin with range: [5000,6499]
         let twin3 = twin1.clone();
         twin3.tokenId = "5000";
-        twin3.id = "3";
+        twin3.id = "4";
 
-        await foreign721.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
+        const protocolDiamondAddress = await twinHandler.getAddress();
+        await foreign721.connect(assistant).setApprovalForAll(protocolDiamondAddress, true);
 
         await twinHandler.connect(assistant).createTwin(twin1);
         await twinHandler.connect(assistant).createTwin(twin2);
         await twinHandler.connect(assistant).createTwin(twin3);
+
+        // Check range by id mappings
+        const protocolLookupsSlot = ethersId("boson.protocol.lookups");
+        const protocolLookupsSlotNumber = BigInt(protocolLookupsSlot);
+
+        let rangeIdByTwin1Slot = getMappingStoragePosition(protocolLookupsSlotNumber + 32n, "2", paddingType.START);
+        let rangeIdByTwin1 = await getStorageAt(protocolDiamondAddress, rangeIdByTwin1Slot);
+        expect(rangeIdByTwin1).to.equal(1n);
+
+        let rangeIdByTwin2Slot = getMappingStoragePosition(protocolLookupsSlotNumber + 32n, "3", paddingType.START);
+        let rangeIdByTwin2 = await getStorageAt(protocolDiamondAddress, rangeIdByTwin2Slot);
+        expect(rangeIdByTwin2).to.equal(2n);
+
+        let rangeIdByTwin3Slot = getMappingStoragePosition(protocolLookupsSlotNumber + 32n, "4", paddingType.START);
+        let rangeIdByTwin3 = await getStorageAt(protocolDiamondAddress, rangeIdByTwin3Slot);
+        expect(rangeIdByTwin3).to.equal(3n);
 
         // Remove twin
         await twinHandler.connect(assistant).removeTwin(twin2.id);
@@ -674,6 +699,16 @@ describe("IBosonTwinHandler", function () {
         );
         // Twin2 was removed, therefore it should be possible to be added again
         await expect(twinHandler.connect(assistant).createTwin(twin2)).to.not.reverted;
+
+        // Check range by id mappings
+        rangeIdByTwin1 = await getStorageAt(protocolDiamondAddress, rangeIdByTwin1Slot);
+        expect(rangeIdByTwin1).to.equal(1n);
+
+        rangeIdByTwin2 = await getStorageAt(protocolDiamondAddress, rangeIdByTwin2Slot);
+        expect(rangeIdByTwin2).to.equal(0n);
+
+        rangeIdByTwin3 = await getStorageAt(protocolDiamondAddress, rangeIdByTwin3Slot);
+        expect(rangeIdByTwin3).to.equal(2n);
       });
 
       context("💔 Revert Reasons", async function () {
