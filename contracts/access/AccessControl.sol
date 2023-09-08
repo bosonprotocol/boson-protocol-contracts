@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.7.0) (access/AccessControl.sol)
 
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 import "../interfaces/IAccessControl.sol";
-import "../ext_libs/Strings.sol";
 import "../interfaces/IERC165.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
  * @dev Contract module that allows children to implement role-based access

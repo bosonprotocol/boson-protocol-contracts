@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
@@ -8,7 +8,7 @@ import { IWETH9Like } from "../../interfaces/IWETH9Like.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
-import { Address } from "../../ext_libs/Address.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @title PriceDiscoveryBase

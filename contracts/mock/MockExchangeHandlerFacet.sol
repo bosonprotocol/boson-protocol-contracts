@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 import { IBosonVoucher } from "../interfaces/clients/IBosonVoucher.sol";
 import { BuyerBase } from "../protocol/bases/BuyerBase.sol";
 import { DisputeBase } from "../protocol/bases/DisputeBase.sol";
 import { FundsLib } from "../protocol/libs/FundsLib.sol";
 import "../domain/BosonConstants.sol";
-import { Address } from "../ext_libs/Address.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @title MockExchangeHandlerFacet
@@ -108,9 +108,13 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
      * @param _exchangeIds - the array of exchanges ids
      */
     function completeExchangeBatch(uint256[] calldata _exchangeIds) external exchangesNotPaused {
-        for (uint256 i = 0; i < _exchangeIds.length; i++) {
+        for (uint256 i = 0; i < _exchangeIds.length; ) {
             // complete the exchange
             completeExchange(_exchangeIds[i]);
+
+            unchecked {
+                i++;
+            }
         }
     }
 
@@ -403,7 +407,7 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
             uint256 exchangeId = _exchange.id;
 
             // Visit the twins
-            for (uint256 i = 0; i < twinIds.length; i++) {
+            for (uint256 i = 0; i < twinIds.length; ) {
                 // Get the twin
                 (, Twin storage twin) = fetchTwin(twinIds[i]);
 
@@ -475,6 +479,10 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
                     );
 
                     emit TwinTransferred2(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
+                }
+
+                unchecked {
+                    i++;
                 }
             }
 

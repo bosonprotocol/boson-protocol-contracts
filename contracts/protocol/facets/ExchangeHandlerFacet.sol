@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
@@ -10,10 +10,10 @@ import { DisputeBase } from "../bases/DisputeBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import "../../domain/BosonConstants.sol";
-import { IERC1155 } from "../../interfaces/IERC1155.sol";
-import { IERC721 } from "../../interfaces/IERC721.sol";
-import { IERC20 } from "../../interfaces/IERC20.sol";
-import { Address } from "../../ext_libs/Address.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @title ExchangeHandlerFacet
@@ -97,7 +97,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     /**
      * @notice Commits to an conditional offer (first step of an exchange).
      *
-     * Emits a BuyerCommitted event if successful.
+     * Emits BuyerCommitted and ConditionalCommitAuthorized events if successful.
      * Issues a voucher to the buyer address.
      *
      * Reverts if:
@@ -142,32 +142,21 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Get the condition
         Condition storage condition = fetchCondition(groupId);
 
-        require(condition.method != EvaluationMethod.None, GROUP_HAS_NO_CONDITION);
+        // Make sure the tokenId is in range
+        validateConditionRange(condition, _tokenId);
 
-        if (condition.length >= 1) {
-            // If condition has length >= 1, check that the token id is in range
-            require(
-                _tokenId >= condition.tokenId && _tokenId < condition.tokenId + condition.length,
-                TOKEN_ID_NOT_IN_CONDITION_RANGE
-            );
-        }
-
-        if (condition.method == EvaluationMethod.Threshold && condition.tokenType != TokenType.MultiToken) {
-            require(_tokenId == 0, INVALID_TOKEN_ID);
-        }
-
-        bool allow = authorizeCommit(_buyer, condition, groupId, _tokenId);
-        require(allow, CANNOT_COMMIT);
+        authorizeCommit(_buyer, condition, groupId, _tokenId, _offerId);
 
         uint256 exchangeId = commitToOfferInternal(_buyer, offer, 0, false);
 
+        // Store the condition to be returned afterward on getReceipt function
         protocolLookups().exchangeCondition[exchangeId] = condition;
     }
 
     /**
      * @notice Commits to a preminted offer (first step of an exchange).
      *
-     * Emits a BuyerCommitted event if successful.
+     * Emits BuyerCommitted and ConditionalCommitAuthorized events if successful.
      *
      * Reverts if:
      * - The exchanges region of protocol is paused
@@ -192,9 +181,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         uint256 _exchangeId
     ) external exchangesNotPaused buyersNotPaused nonReentrant {
         Offer storage offer = getValidOffer(_offerId);
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // Make sure that the voucher was issued on the clone that is making a call
-        require(msg.sender == getCloneAddress(protocolLookups(), offer.sellerId, offer.collectionIndex), ACCESS_DENIED);
+        require(msg.sender == getCloneAddress(lookups, offer.sellerId, offer.collectionIndex), ACCESS_DENIED);
 
         // Exchange must not exist already
         (bool exists, ) = fetchExchange(_exchangeId);
@@ -206,22 +196,27 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         if (exists) {
             // Get the condition
             Condition storage condition = fetchCondition(groupId);
+            EvaluationMethod method = condition.method;
 
-            uint256 tokenId = 0;
+            if (method != EvaluationMethod.None) {
+                uint256 tokenId = 0;
 
-            // If is a per-token condition or a per-address condition gated with a 1155 token, make sure the condition is not a range since caller (Boson Voucher) cannot specify the token id
-            if (
-                condition.method == EvaluationMethod.SpecificToken ||
-                (condition.method == EvaluationMethod.Threshold && condition.tokenType == TokenType.MultiToken)
-            ) {
-                require(condition.length == 1, CANNOT_COMMIT);
+                // Allow commiting only to unambigous conditions, i.e. conditions with a single token id
+                if (condition.method == EvaluationMethod.SpecificToken || condition.tokenType == TokenType.MultiToken) {
+                    uint256 minTokenId = condition.minTokenId;
+                    uint256 maxTokenId = condition.maxTokenId;
 
-                // Uses token id from the condition
-                tokenId = condition.tokenId;
+                    require(minTokenId == maxTokenId || maxTokenId == 0, CANNOT_COMMIT); // legacy conditions have maxTokenId == 0
+
+                    // Uses token id from the condition
+                    tokenId = minTokenId;
+                }
+
+                authorizeCommit(_buyer, condition, groupId, tokenId, _offerId);
+
+                // Store the condition to be returned afterward on getReceipt function
+                lookups.exchangeCondition[_exchangeId] = condition;
             }
-
-            bool allow = authorizeCommit(_buyer, condition, groupId, tokenId);
-            require(allow, CANNOT_COMMIT);
         }
 
         commitToOfferInternal(_buyer, offer, _exchangeId, true);
@@ -394,9 +389,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchangeIds - the array of exchanges ids
      */
     function completeExchangeBatch(uint256[] calldata _exchangeIds) external override exchangesNotPaused {
-        for (uint256 i = 0; i < _exchangeIds.length; i++) {
+        for (uint256 i = 0; i < _exchangeIds.length; ) {
             // complete the exchange
             completeExchange(_exchangeIds[i]);
+
+            unchecked {
+                i++;
+            }
         }
     }
 
@@ -710,6 +709,67 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
+     * @notice Tells if buyer is elligible to commit to conditional
+     * Returns the eligibility status, the number of used commits and the maximal number of commits to the conditional offer.
+     *
+     * Unconditional offers do not have maximal number of commits, so the returned value will always be 0.
+     *
+     * This method does not check if the timestamp is within the offer's validity period or if the quantity available is greater than 0.
+     *
+     * N.B. Unmined transaction might affect the eligibility status.
+     *
+     * Reverts if:
+     * - The offer does not exist
+     * - The offer is voided
+     * - The external call to condition contract reverts
+     *
+     * @param _buyer buyer address
+     * @param _offerId - the id of the offer
+     * @param _tokenId - the id of conditional token
+     * @return isEligible - true if buyer is eligible to commit
+     * @return commitCount - the current number of commits to the conditional offer
+     * @return maxCommits - the maximal number of commits to the conditional offer
+     */
+    function isEligibleToCommit(
+        address _buyer,
+        uint256 _offerId,
+        uint256 _tokenId
+    ) external view override returns (bool isEligible, uint256 commitCount, uint256 maxCommits) {
+        Offer storage offer = getValidOffer(_offerId);
+
+        (bool exists, uint256 groupId) = getGroupIdByOffer(offer.id);
+        if (exists) {
+            // Get the condition
+            Condition storage condition = fetchCondition(groupId);
+            if (condition.method == EvaluationMethod.None) return (true, 0, 0);
+
+            // Make sure the tokenId is in range
+            validateConditionRange(condition, _tokenId);
+
+            // Cache protocol lookups for reference
+            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+            mapping(uint256 => uint256) storage conditionalCommits = condition.gating == GatingType.PerTokenId
+                ? lookups.conditionalCommitsByTokenId[_tokenId]
+                : lookups.conditionalCommitsByAddress[_buyer];
+
+            // How many times has been committed to offers in the group?
+            commitCount = conditionalCommits[groupId];
+            maxCommits = condition.maxCommits;
+
+            if (commitCount >= maxCommits) return (false, commitCount, maxCommits);
+
+            isEligible = condition.method == EvaluationMethod.Threshold
+                ? holdsThreshold(_buyer, condition, _tokenId)
+                : holdsSpecificToken(_buyer, condition, _tokenId);
+
+            return (isEligible, commitCount, maxCommits);
+        }
+
+        return (true, 0, 0);
+    }
+
+    /**
      * @notice Transitions exchange to a "finalized" state
      *
      * Target state must be Completed, Revoked, or Canceled.
@@ -776,24 +836,33 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchange - the exchange for which twins should be transferred
      */
     function transferTwins(Exchange storage _exchange, Voucher storage _voucher) internal {
-        // See if there is an associated bundle
-        (bool exists, uint256 bundleId) = fetchBundleIdByOffer(_exchange.offerId);
+        uint256[] storage twinIds;
+        address assistant;
+        uint256 sellerId;
 
-        // Transfer the twins
-        if (exists) {
+        // See if there is an associated bundle
+        {
+            (bool exists, uint256 bundleId) = fetchBundleIdByOffer(_exchange.offerId);
+            if (!exists) return;
+
             // Get storage location for bundle
             (, Bundle storage bundle) = fetchBundle(bundleId);
 
             // Get the twin Ids in the bundle
-            uint256[] storage twinIds = bundle.twinIds;
+            twinIds = bundle.twinIds;
 
             // Get seller account
             (, Seller storage seller, ) = fetchSeller(bundle.sellerId);
+            sellerId = seller.id;
+            assistant = seller.assistant;
+        }
 
-            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+        bool transferFailed; // Flag to indicate if some twin transfer failed and a dispute should be raised
 
+        // Transfer the twins
+        {
+            // Cache values
             address sender = msgSender();
-
             uint256 twinCount = twinIds.length;
 
             // Fetch twin: up to 20,000 gas
@@ -801,122 +870,152 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             // Handle overall outcome: up to 200,000 gas
             // Next line would overflow if twinCount > (type(uint256).max - MINIMAL_RESIDUAL_GAS)/SINGLE_TWIN_RESERVED_GAS
             // Oveflow happens for twinCount ~ 9.6x10^71, which is impossible to achieve
-            uint256 reservedGas = twinCount * SINGLE_TWIN_RESERVED_GAS + MINIMAL_RESIDUAL_GAS;
+            uint256 reservedGas = (twinCount - 1) * SINGLE_TWIN_RESERVED_GAS + MINIMAL_RESIDUAL_GAS;
 
             // Visit the twins
-            for (uint256 i = 0; i < twinCount; i++) {
+            for (uint256 i = 0; i < twinCount; ) {
                 // Get the twin
-                (, Twin storage twin) = fetchTwin(twinIds[i]);
+                (, Twin storage twinS) = fetchTwin(twinIds[i]);
+
+                // Use twin struct instead of individual variables to avoid stack too deep error
+                // Don't copy the whole twin to memory immediately, only the fields that are needed
+                Twin memory twinM;
+                twinM.tokenId = twinS.tokenId;
+                twinM.amount = twinS.amount;
 
                 bool success;
-
-                uint256 tokenId = twin.tokenId;
-
                 {
-                    TokenType tokenType = twin.tokenType;
+                    twinM.tokenType = twinS.tokenType;
 
                     // Shouldn't decrement supply if twin supply is unlimited
-                    if (twin.supplyAvailable != type(uint256).max) {
+                    twinM.supplyAvailable = twinS.supplyAvailable;
+                    if (twinM.supplyAvailable != type(uint256).max) {
                         // Decrement by 1 if token type is NonFungible otherwise decrement amount (i.e, tokenType is MultiToken or FungibleToken)
-                        twin.supplyAvailable = tokenType == TokenType.NonFungibleToken
-                            ? twin.supplyAvailable - 1
-                            : twin.supplyAvailable - twin.amount;
+                        twinM.supplyAvailable = twinM.tokenType == TokenType.NonFungibleToken
+                            ? twinM.supplyAvailable - 1
+                            : twinM.supplyAvailable - twinM.amount;
+
+                        twinS.supplyAvailable = twinM.supplyAvailable;
                     }
 
                     // Transfer the token from the seller's assistant to the buyer
                     bytes memory data; // Calldata to transfer the twin
 
-                    if (tokenType == TokenType.FungibleToken) {
+                    if (twinM.tokenType == TokenType.FungibleToken) {
                         // ERC-20 style transfer
-                        data = abi.encodeCall(IERC20.transferFrom, (seller.assistant, sender, twin.amount));
-                    } else if (tokenType == TokenType.NonFungibleToken) {
+                        data = abi.encodeCall(IERC20.transferFrom, (assistant, sender, twinM.amount));
+                    } else if (twinM.tokenType == TokenType.NonFungibleToken) {
                         // Token transfer order is ascending to avoid overflow when twin supply is unlimited
-                        if (twin.supplyAvailable == type(uint256).max) {
-                            twin.tokenId++;
+                        if (twinM.supplyAvailable == type(uint256).max) {
+                            twinS.tokenId++;
                         } else {
                             // Token transfer order is descending
-                            tokenId += twin.supplyAvailable;
+                            twinM.tokenId += twinM.supplyAvailable;
                         }
-
                         // ERC-721 style transfer
                         data = abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,bytes)",
-                            seller.assistant,
+                            assistant,
                             sender,
-                            tokenId,
+                            twinM.tokenId,
                             ""
                         );
-                    } else if (tokenType == TokenType.MultiToken) {
+                    } else if (twinM.tokenType == TokenType.MultiToken) {
                         // ERC-1155 style transfer
                         data = abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,uint256,bytes)",
-                            seller.assistant,
+                            assistant,
                             sender,
-                            tokenId,
-                            twin.amount,
+                            twinM.tokenId,
+                            twinM.amount,
                             ""
                         );
                     }
-
                     // Make call only if there is enough gas and code at address exists.
                     // If not, skip the call and mark the transfer as failed
-                    if (gasleft() > reservedGas && twin.tokenAddress.isContract()) {
-                        bytes memory result;
-                        (success, result) = twin.tokenAddress.call{ gas: gasleft() - reservedGas }(data);
+                    twinM.tokenAddress = twinS.tokenAddress;
+                    uint256 gasLeft = gasleft();
+                    if (gasLeft > reservedGas && twinM.tokenAddress.isContract()) {
+                        address to = twinM.tokenAddress;
 
-                        success = success && (result.length == 0 || abi.decode(result, (bool)));
+                        // Handle the return value with assembly to avoid return bomb attack
+                        bytes memory result;
+                        assembly {
+                            success := call(
+                                sub(gasLeft, reservedGas), // gasleft()-reservedGas
+                                to, // twin contract
+                                0, // ether value
+                                add(data, 0x20), // invocation calldata
+                                mload(data), // calldata length
+                                add(result, 0x20), // store return data at result
+                                0x20 // store at most 32 bytes
+                            )
+
+                            let returndataSize := returndatasize()
+
+                            switch gt(returndataSize, 0x20)
+                            case 0 {
+                                // Adjust result length in case it's shorter than 32 bytes
+                                mstore(result, returndataSize)
+                            }
+                            case 1 {
+                                // If return data is longer than 32 bytes, consider transfer unsuccesful
+                                success := false
+                            }
+                        }
+
+                        // Check if result is empty or if result is a boolean and is true
+                        success =
+                            success &&
+                            (result.length == 0 || (result.length == 32 && abi.decode(result, (uint256)) == 1));
                     }
+                }
+
+                twinM.id = twinS.id;
+
+                // If token transfer failed
+                if (!success) {
+                    transferFailed = true;
+
+                    emit TwinTransferFailed(
+                        twinM.id,
+                        twinM.tokenAddress,
+                        _exchange.id,
+                        twinM.tokenId,
+                        twinM.amount,
+                        sender
+                    );
+                } else {
+                    ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+                    uint256 exchangeId = _exchange.id;
+
+                    {
+                        // Store twin receipt on twinReceiptsByExchange
+                        TwinReceipt storage twinReceipt = lookups.twinReceiptsByExchange[exchangeId].push();
+                        twinReceipt.twinId = twinM.id;
+                        twinReceipt.tokenAddress = twinM.tokenAddress;
+                        twinReceipt.tokenId = twinM.tokenId;
+                        twinReceipt.amount = twinM.amount;
+                        twinReceipt.tokenType = twinM.tokenType;
+                    }
+                    if (twinM.tokenType == TokenType.NonFungibleToken) {
+                        updateNFTRanges(lookups, twinM, sellerId);
+                    }
+                    emit TwinTransferred(twinM.id, twinM.tokenAddress, exchangeId, twinM.tokenId, twinM.amount, sender);
                 }
 
                 // Reduce minimum gas required for succesful execution
                 reservedGas -= SINGLE_TWIN_RESERVED_GAS;
 
-                // If token transfer failed
-                if (!success) {
-                    raiseDisputeInternal(_exchange, _voucher, seller.id);
-
-                    emit TwinTransferFailed(twin.id, twin.tokenAddress, _exchange.id, tokenId, twin.amount, sender);
-                } else {
-                    uint256 exchangeId = _exchange.id;
-                    uint256 twinId = twin.id;
-                    {
-                        // Store twin receipt on twinReceiptsByExchange
-                        TwinReceipt storage twinReceipt = lookups.twinReceiptsByExchange[exchangeId].push();
-                        twinReceipt.twinId = twinId;
-                        twinReceipt.tokenAddress = twin.tokenAddress;
-                        twinReceipt.tokenId = tokenId;
-                        twinReceipt.amount = twin.amount;
-                        twinReceipt.tokenType = twin.tokenType;
-                    }
-                    if (twin.tokenType == TokenType.NonFungibleToken) {
-                        // Get all ranges of twins that belong to the seller and to the same token address of the new twin to validate if range is available
-                        TokenRange[] storage twinRanges = lookups.twinRangesBySeller[seller.id][twin.tokenAddress];
-
-                        bool unlimitedSupply = twin.supplyAvailable == type(uint256).max;
-
-                        uint256 rangeIndex = lookups.rangeIdByTwin[twinId] - 1;
-                        TokenRange storage range = twinRanges[rangeIndex];
-
-                        if (unlimitedSupply ? range.end == tokenId : range.start == tokenId) {
-                            uint256 lastIndex = twinRanges.length - 1;
-
-                            if (rangeIndex != lastIndex) {
-                                // Replace range with last range
-                                twinRanges[rangeIndex] = twinRanges[lastIndex];
-                            }
-
-                            // Remove from ranges mapping
-                            twinRanges.pop();
-
-                            // Delete rangeId from rangeIdByTwin mapping
-                            lookups.rangeIdByTwin[twinId] = 0;
-                        } else {
-                            unlimitedSupply ? range.start++ : range.end--;
-                        }
-                    }
-                    emit TwinTransferred(twinId, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
+                unchecked {
+                    i++;
                 }
             }
+        }
+
+        // Some twin transfer was not successful, raise dispute
+        if (transferFailed) {
+            raiseDisputeInternal(_exchange, _voucher, sellerId);
         }
     }
 
@@ -968,49 +1067,49 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * The buyer is allowed to commit if no group or condition is set for this offer.
      *
+     * Emits ConditionalCommitAuthorized if successful.
+     *
+     * Reverts if:
+     * - Allowable commits to the group are exhausted
+     * - Buyer does not meet the condition
+     *
      * @param _buyer buyer address
      * @param _condition - the condition to check
      * @param _groupId - the group id
      * @param _tokenId - the token id
-     *
-     * @return allow - true if buyer is authorized to commit
+     * @param _offerId - the offer id
      */
     function authorizeCommit(
         address _buyer,
         Condition storage _condition,
         uint256 _groupId,
-        uint256 _tokenId
-    ) internal returns (bool allow) {
+        uint256 _tokenId,
+        uint256 _offerId
+    ) internal {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-        if (_condition.method == EvaluationMethod.SpecificToken) {
-            // How many times has this token id been used to commit to offers in the group?
-            uint256 commitCount = lookups.conditionalCommitsByTokenId[_tokenId][_groupId];
+        GatingType gating = _condition.gating;
+        mapping(uint256 => uint256) storage conditionalCommits = gating == GatingType.PerTokenId
+            ? lookups.conditionalCommitsByTokenId[_tokenId]
+            : lookups.conditionalCommitsByAddress[_buyer];
 
-            require(commitCount < _condition.maxCommits, MAX_COMMITS_TOKEN_REACHED);
+        // How many times has been committed to offers in the group?
+        uint256 commitCount = conditionalCommits[_groupId];
+        uint256 maxCommits = _condition.maxCommits;
 
-            allow = holdsSpecificToken(_buyer, _condition, _tokenId);
+        require(commitCount < maxCommits, MAX_COMMITS_REACHED);
 
-            if (allow) {
-                // Increment number of commits to the group for this token id if they are allowed to commit
-                lookups.conditionalCommitsByTokenId[_tokenId][_groupId] = ++commitCount;
-            }
-        } else if (_condition.method == EvaluationMethod.Threshold) {
-            // How many times has this address committed to offers in the group?
-            uint256 commitCount = lookups.conditionalCommitsByAddress[_buyer][_groupId];
+        bool allow = _condition.method == EvaluationMethod.Threshold
+            ? holdsThreshold(_buyer, _condition, _tokenId)
+            : holdsSpecificToken(_buyer, _condition, _tokenId);
 
-            require(commitCount < _condition.maxCommits, MAX_COMMITS_ADDRESS_REACHED);
+        require(allow, CANNOT_COMMIT);
 
-            allow = holdsThreshold(_buyer, _condition, _tokenId);
+        // Increment number of commits to the group
+        conditionalCommits[_groupId] = ++commitCount;
 
-            if (allow) {
-                // Increment number of commits to the group for this address if they are allowed to commit
-                lookups.conditionalCommitsByAddress[_buyer][_groupId] = ++commitCount;
-            }
-        } else {
-            allow = true;
-        }
+        emit ConditionalCommitAuthorized(_offerId, gating, _buyer, _tokenId, commitCount, maxCommits);
     }
 
     /**
@@ -1054,12 +1153,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         Condition storage _condition,
         uint256 _tokenId
     ) internal view returns (bool) {
-        if (_condition.tokenType == TokenType.MultiToken) {
-            return IERC1155(_condition.tokenAddress).balanceOf(_buyer, _tokenId) >= _condition.threshold;
-        } else {
-            // no need to check if is NonFungible token there is no way to create a SpecifiedToken condition with a Fungible token
-            return (IERC721(_condition.tokenAddress).ownerOf(_tokenId) == _buyer);
-        }
+        return (IERC721(_condition.tokenAddress).ownerOf(_tokenId) == _buyer);
     }
 
     /**
@@ -1140,6 +1234,77 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Add condition to receipt if exists
         if (conditionExists) {
             receipt.condition = condition;
+        }
+    }
+
+    /**
+     * @notice Updates NFT ranges, so it's possible to reuse the tokens in other twins and to make
+     * creation of new ranges viable
+     *
+     * @param _lookups - storage pointer to the protocol lookups
+     * @param _sellerId - the seller id
+     * @param _twin - storage pointer to the twin
+     */
+    function updateNFTRanges(
+        ProtocolLib.ProtocolLookups storage _lookups,
+        Twin memory _twin,
+        uint256 _sellerId
+    ) internal {
+        // Get all ranges of twins that belong to the seller and to the same token address.
+        TokenRange[] storage twinRanges = _lookups.twinRangesBySeller[_sellerId][_twin.tokenAddress];
+
+        bool unlimitedSupply = _twin.supplyAvailable == type(uint256).max;
+
+        uint256 rangeIndex = _lookups.rangeIdByTwin[_twin.id] - 1;
+        TokenRange storage range = twinRanges[rangeIndex];
+
+        if (unlimitedSupply ? range.end == _twin.tokenId : range.start == _twin.tokenId) {
+            uint256 lastIndex = twinRanges.length - 1;
+
+            if (rangeIndex != lastIndex) {
+                // Replace range with last range
+                twinRanges[rangeIndex] = twinRanges[lastIndex];
+            }
+
+            // Remove from ranges mapping
+            twinRanges.pop();
+
+            // Delete rangeId from rangeIdByTwin mapping
+            _lookups.rangeIdByTwin[_twin.id] = 0;
+        } else {
+            unlimitedSupply ? range.start++ : range.end--;
+        }
+    }
+
+    /**
+     * @notice Checks if the token id is inside condition range.
+     *
+     * Reverts if:
+     * - Evaluation method is none
+     * - Evaluation method is specific token or multitoken and token id is not in range
+     * - Evaluation method is threshold, token type is not a multitoken and token id is not zero
+     *
+     * @param _condition - storage pointer to the condition
+     * @param _tokenId - the id of the conditional token
+     */
+    function validateConditionRange(Condition storage _condition, uint256 _tokenId) internal view {
+        EvaluationMethod method = _condition.method;
+        bool isMultitoken = _condition.tokenType == TokenType.MultiToken;
+
+        require(method != EvaluationMethod.None, GROUP_HAS_NO_CONDITION);
+
+        if (method == EvaluationMethod.SpecificToken || isMultitoken) {
+            // In this cases, the token id is specified by the caller must be within the range of the condition
+            uint256 minTokenId = _condition.minTokenId;
+            uint256 maxTokenId = _condition.maxTokenId;
+            if (maxTokenId == 0) maxTokenId = minTokenId; // legacy conditions have maxTokenId == 0
+
+            require(_tokenId >= minTokenId && _tokenId <= maxTokenId, TOKEN_ID_NOT_IN_CONDITION_RANGE);
+        }
+
+        // ERC20 and ERC721 threshold does not require a token id
+        if (method == EvaluationMethod.Threshold && !isMultitoken) {
+            require(_tokenId == 0, INVALID_TOKEN_ID);
         }
     }
 }

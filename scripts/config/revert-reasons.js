@@ -56,8 +56,7 @@ exports.RevertReasons = {
   OFFER_NOT_IN_GROUP: "Offer not part of the group",
   NOTHING_UPDATED: "Nothing updated",
   INVALID_CONDITION_PARAMETERS: "Invalid condition parameters",
-  MAX_COMMITS_ADDRESS_REACHED: "Max commits per address reached",
-  MAX_COMMITS_TOKEN_REACHED: "Max commits per token id reached",
+  MAX_COMMITS_REACHED: "Max commits reached",
   GROUP_HAS_NO_CONDITION: "Offer belongs to a group without a condition. Use commitToOffer instead",
   GROUP_HAS_CONDITION: "Offer belongs to a group with a condition. Use commitToConditionalOffer instead",
   TOKEN_ID_NOT_IN_CONDITION_RANGE: "Token id not in condition range",
@@ -96,6 +95,8 @@ exports.RevertReasons = {
   NO_PENDING_UPDATE_FOR_ACCOUNT: "No pending updates for the given account",
   UNAUTHORIZED_CALLER_UPDATE: "Caller has no permission to approve this update",
   NO_UPDATE_APPLIED: "No update applied or requested approval",
+  CLONE_CREATION_FAILED: "Clone creation failed",
+  SELLER_SALT_NOT_UNIQUE: "Seller salt not unique",
 
   // Twin related
   NO_SUCH_TWIN: "No such twin",
@@ -148,6 +149,7 @@ exports.RevertReasons = {
   NOT_COMMITTABLE: "Token not committable",
   INVALID_TO_ADDRESS: "Tokens can only be pre-mined to the contract or contract owner address",
   EXTERNAL_CALL_FAILED: "External call failed",
+  INTERACTION_NOT_ALLOWED: "Interaction not allowed",
 
   // Funds related
   NATIVE_WRONG_ADDRESS: "Native token address must be 0",
@@ -171,7 +173,7 @@ exports.RevertReasons = {
   OWNABLE_NOT_OWNER: "Ownable: caller is not the owner",
   OWNABLE_ZERO_ADDRESS: "Ownable: new owner is the zero address",
   SAFE_ERC20_LOW_LEVEL_CALL: "SafeERC20: low-level call failed",
-  SAFE_ERC20_NOT_SUCCEEDED: "SafeERC20: ERC20 operation did not succeed",
+  SAFE_ERC20_OPERATION_FAILED: "SafeERC20: ERC20 operation did not succeed",
   INITIALIZABLE_ALREADY_INITIALIZED: "Initializable: contract is already initialized",
 
   // Meta-Transactions related

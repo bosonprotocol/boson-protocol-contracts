@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IBosonExchangeEvents } from "../events/IBosonExchangeEvents.sol";
@@ -11,7 +11,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xc0342297
+ * The ERC-165 identifier for this interface is: 0xf34a48fa
  */
 interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents {
     /**
@@ -280,4 +280,32 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @return receipt - the receipt for the exchange. See {BosonTypes.Receipt}
      */
     function getReceipt(uint256 _exchangeId) external view returns (BosonTypes.Receipt memory receipt);
+
+    /**
+     * @notice Tells if buyer is elligible to commit to conditional
+     * Returns the eligibility status, the number of used commits and the maximal number of commits to the conditional offer.
+     *
+     * Unconditional offers do not have maximal number of commits, so the returned value will always be 0.
+     *
+     * This method does not check if the timestamp is within the offer's validity period or if the quantity available is greater than 0.
+     *
+     * N.B. Unmined transaction might affect the eligibility status.
+     *
+     * Reverts if:
+     * - The offer does not exist
+     * - The offer is voided
+     * - The external call to condition contract reverts
+     *
+     * @param _buyer buyer address
+     * @param _offerId - the id of the offer
+     * @param _tokenId - the id of conditional token
+     * @return isEligible - true if buyer is eligible to commit
+     * @return commitCount - the current number of commits to the conditional offer
+     * @return maxCommits - the maximal number of commits to the conditional offer
+     */
+    function isEligibleToCommit(
+        address _buyer,
+        uint256 _offerId,
+        uint256 _tokenId
+    ) external view returns (bool isEligible, uint256 commitCount, uint256 maxCommits);
 }

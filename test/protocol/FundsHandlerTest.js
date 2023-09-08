@@ -413,7 +413,7 @@ describe("IBosonFundsHandler", function () {
             fundsHandler
               .connect(assistant)
               .depositFunds(seller.id, await foreign20ReturnFalse.getAddress(), depositAmount)
-          ).to.revertedWith(RevertReasons.SAFE_ERC20_NOT_SUCCEEDED);
+          ).to.revertedWith(RevertReasons.SAFE_ERC20_OPERATION_FAILED);
         });
       });
     });
@@ -1013,7 +1013,7 @@ describe("IBosonFundsHandler", function () {
               fundsHandler
                 .connect(assistant)
                 .withdrawFunds(seller.id, [await foreign20ReturnFalse.getAddress()], [sellerDeposit])
-            ).to.revertedWith(RevertReasons.SAFE_ERC20_NOT_SUCCEEDED);
+            ).to.revertedWith(RevertReasons.SAFE_ERC20_OPERATION_FAILED);
           });
         });
       });
@@ -1890,8 +1890,7 @@ describe("IBosonFundsHandler", function () {
         const voucherCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
-          admin.address,
-          ""
+          admin.address
         );
         const bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherCloneAddress);
         await bosonVoucher.connect(assistant).preMint(offerToken.id, offerToken.quantityAvailable);
@@ -2085,8 +2084,7 @@ describe("IBosonFundsHandler", function () {
           const voucherCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
             beaconProxyAddress,
-            admin.address,
-            ""
+            admin.address
           );
           const bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherCloneAddress);
           await bosonVoucher.connect(assistant).preMint(offerToken.id, offerToken.quantityAvailable);

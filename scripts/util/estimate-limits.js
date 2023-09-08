@@ -27,7 +27,12 @@ const {
   mockTwin,
   accountId,
 } = require("../../test/util/mock");
-const { setNextBlockTimestamp, getFacetsWithArgs, calculateCloneAddress } = require("../../test/util/utils.js");
+const {
+  setNextBlockTimestamp,
+  getFacetsWithArgs,
+  calculateCloneAddress,
+  calculateBosonProxyAddress,
+} = require("../../test/util/utils.js");
 
 // Common vars
 let deployer,
@@ -54,7 +59,7 @@ let protocolDiamond,
   groupHandler,
   offerHandler,
   twinHandler;
-let bosonVoucher, proxy;
+let bosonVoucher;
 let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
 let handlers = {};
 let result = {};
@@ -788,8 +793,9 @@ setupEnvironment["maxPremintedVouchers"] = async function (tokenCount = 10) {
   await offerHandler.connect(sellerWallet1).reserveRange(offer.id, length);
 
   // update bosonVoucher address
+  const beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
   handlers.IBosonVoucher = bosonVoucher.attach(
-    calculateCloneAddress(await accountHandler.getAddress(), await proxy.getAddress(), seller1.admin, "")
+    calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, seller1.admin, "")
   );
 
   // make an empty array of length tokenCount
@@ -944,10 +950,8 @@ async function setupCommonEnvironment() {
 
   // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
   const protocolClientArgs = [await protocolDiamond.getAddress()];
-  const [, beacons, proxies, bv] = await deployProtocolClients(protocolClientArgs, gasLimit);
+  const [, beacons] = await deployProtocolClients(protocolClientArgs, gasLimit);
   const [beacon] = beacons;
-  [proxy] = proxies;
-  [bosonVoucher] = bv;
 
   // Set protocolFees
   protocolFeePercentage = "200"; // 2 %
@@ -961,7 +965,7 @@ async function setupCommonEnvironment() {
       treasury: await rando.getAddress(),
       token: await rando.getAddress(),
       voucherBeacon: await beacon.getAddress(),
-      beaconProxy: await proxy.getAddress(),
+      beaconProxy: ZeroAddress,
     },
     // Protocol limits
     {

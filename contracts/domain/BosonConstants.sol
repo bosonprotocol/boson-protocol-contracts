@@ -1,7 +1,7 @@
 import "./BosonTypes.sol";
 
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 // Access Control Roles
 bytes32 constant ADMIN = keccak256("ADMIN"); // Role Admin
@@ -74,6 +74,8 @@ string constant INVALID_AGENT_FEE_PERCENTAGE = "Sum of agent fee percentage and 
 string constant NO_PENDING_UPDATE_FOR_ACCOUNT = "No pending updates for the given account";
 string constant UNAUTHORIZED_CALLER_UPDATE = "Caller has no permission to approve this update";
 string constant NO_UPDATE_APPLIED = "No update applied or requested approval";
+string constant CLONE_CREATION_FAILED = "Clone creation failed";
+string constant SELLER_SALT_NOT_UNIQUE = "Seller salt not unique";
 
 // Revert Reasons: Offer related
 string constant NO_SUCH_OFFER = "No such offer";
@@ -104,8 +106,7 @@ string constant NOTHING_UPDATED = "Nothing updated";
 string constant INVALID_CONDITION_PARAMETERS = "Invalid condition parameters";
 string constant GROUP_HAS_NO_CONDITION = "Offer belongs to a group without a condition. Use commitToOffer instead";
 string constant GROUP_HAS_CONDITION = "Offer belongs to a group with a condition. Use commitToConditionalOffer instead";
-string constant MAX_COMMITS_ADDRESS_REACHED = "Max commits per address reached";
-string constant MAX_COMMITS_TOKEN_REACHED = "Max commits per token id reached";
+string constant MAX_COMMITS_REACHED = "Max commits reached";
 string constant TOKEN_ID_NOT_IN_CONDITION_RANGE = "Token id not in condition range";
 string constant INVALID_TOKEN_ID = "ERC721 and ERC20 require zero tokenId";
 
@@ -126,8 +127,8 @@ string constant FEE_AMOUNT_TOO_HIGH = "Fee amount is too high";
 string constant VOUCHER_NOT_RECEIVED = "Voucher not received";
 
 // Revert Reasons: Twin related
-uint256 constant SINGLE_TWIN_RESERVED_GAS = 140000;
-uint256 constant MINIMAL_RESIDUAL_GAS = 180000;
+uint256 constant SINGLE_TWIN_RESERVED_GAS = 160000;
+uint256 constant MINIMAL_RESIDUAL_GAS = 230000;
 string constant NO_SUCH_TWIN = "No such twin";
 string constant NO_TRANSFER_APPROVED = "No transfer approved";
 string constant TWIN_TRANSFER_FAILED = "Twin could not be transferred";
@@ -209,6 +210,7 @@ string constant NOT_COMMITTABLE = "Token not committable";
 string constant INVALID_TO_ADDRESS = "Tokens can only be pre-mined to the contract or contract owner address";
 string constant EXTERNAL_CALL_FAILED = "External call failed";
 string constant ERC721_INVALID_TOKEN_ID = "ERC721: invalid token ID";
+string constant INTERACTION_NOT_ALLOWED = "Interaction not allowed";
 
 // Meta Transactions - Structs
 bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(
@@ -219,6 +221,12 @@ bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(
 bytes32 constant OFFER_DETAILS_TYPEHASH = keccak256("MetaTxOfferDetails(address buyer,uint256 offerId)");
 bytes32 constant META_TX_COMMIT_TO_OFFER_TYPEHASH = keccak256(
     "MetaTxCommitToOffer(uint256 nonce,address from,address contractAddress,string functionName,MetaTxOfferDetails offerDetails)MetaTxOfferDetails(address buyer,uint256 offerId)"
+);
+bytes32 constant CONDITIONAL_OFFER_DETAILS_TYPEHASH = keccak256(
+    "MetaTxConditionalOfferDetails(address buyer,uint256 offerId,uint256 tokenId)"
+);
+bytes32 constant META_TX_COMMIT_TO_CONDITIONAL_OFFER_TYPEHASH = keccak256(
+    "MetaTxCommitToConditionalOffer(uint256 nonce,address from,address contractAddress,string functionName,MetaTxConditionalOfferDetails offerDetails)MetaTxConditionalOfferDetails(address buyer,uint256 offerId,uint256 tokenId)"
 );
 bytes32 constant EXCHANGE_DETAILS_TYPEHASH = keccak256("MetaTxExchangeDetails(uint256 exchangeId)");
 bytes32 constant META_TX_EXCHANGE_TYPEHASH = keccak256(
@@ -239,6 +247,7 @@ bytes32 constant META_TX_DISPUTE_RESOLUTIONS_TYPEHASH = keccak256(
 
 // Function names
 string constant COMMIT_TO_OFFER = "commitToOffer(address,uint256)";
+string constant COMMIT_TO_CONDITIONAL_OFFER = "commitToConditionalOffer(address,uint256,uint256)";
 string constant CANCEL_VOUCHER = "cancelVoucher(uint256)";
 string constant REDEEM_VOUCHER = "redeemVoucher(uint256)";
 string constant COMPLETE_EXCHANGE = "completeExchange(uint256)";

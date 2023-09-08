@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 
@@ -195,8 +195,10 @@ library ProtocolLib {
         mapping(uint256 => mapping(uint256 => uint256)) conditionalCommitsByTokenId;
         // seller id => collections
         mapping(uint256 => BosonTypes.Collection[]) additionalCollections;
-        // seller id => address that was used to create it
-        mapping(uint256 => address) sellerCreator;
+        // seller id => seller salt used to create collections
+        mapping(uint256 => bytes32) sellerSalt;
+        // seller salt => is used
+        mapping(bytes32 => bool) isUsedSellerSalt;
     }
 
     // Incrementing id counters

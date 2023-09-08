@@ -41,6 +41,7 @@ async function migrate(env) {
 
     console.log("Compiling old contracts");
     await hre.run("clean");
+
     await hre.run("compile");
 
     const { chainId } = await provider.getNetwork();

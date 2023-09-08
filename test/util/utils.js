@@ -21,6 +21,7 @@ const Role = require("../../scripts/domain/Role");
 const { toHexString } = require("../../scripts/util/utils.js");
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
+const { ZeroHash } = require("ethers");
 
 function getEvent(receipt, factory, eventName) {
   let found = false;
@@ -270,13 +271,24 @@ function getCloneByteCodeHash(beaconProxyAddress) {
   );
 }
 
-function getCloneSalt(sellerAddress, externalId) {
-  return solidityPackedKeccak256(["address", "string"], [sellerAddress, externalId]);
+function getCollectionSalt(sellerSalt, collectionSalt) {
+  return solidityPackedKeccak256(["bytes32", "bytes32"], [sellerSalt, collectionSalt]);
 }
 
-function calculateCloneAddress(voucherCreator, beaconProxyAddress, sellerAddress, externalId) {
-  const salt = getCloneSalt(sellerAddress, externalId);
+function getSellerSalt(sellerAdmin, sellerSalt) {
+  return solidityPackedKeccak256(["address", "bytes32"], [sellerAdmin, sellerSalt]);
+}
+
+function calculateCloneAddress(
+  voucherCreator,
+  beaconProxyAddress,
+  sellerAddress,
+  collectionSalt = ZeroHash,
+  creationSalt = ZeroHash
+) {
   const cloneByteCodeHash = getCloneByteCodeHash(beaconProxyAddress);
+  const sellerSalt = getSellerSalt(sellerAddress, creationSalt);
+  const salt = getCollectionSalt(sellerSalt, collectionSalt);
   return calculateContractAddress2(voucherCreator, cloneByteCodeHash, salt);
 }
 
@@ -295,6 +307,7 @@ const paddingType = {
 
 function getMappingStoragePosition(slot, key, padding = paddingType.NONE) {
   let keyBuffer;
+
   let keyHex = String(key).startsWith("0x") ? String(key) : toHexString(key);
 
   switch (padding) {
@@ -390,13 +403,12 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
 
   // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
   const protocolClientArgs = [await protocolDiamond.getAddress()];
-  const [implementations, beacons, , clients] = await deployProtocolClients(
+  const [implementations, beacons] = await deployProtocolClients(
     protocolClientArgs,
     maxPriorityFeePerGas,
     forwarderAddress
   );
   const [beacon] = beacons;
-  const [bosonVoucher] = clients;
   const [voucherImplementation] = implementations;
 
   // set protocolFees
@@ -451,7 +463,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
     contractInstances[contract] = await getContractAt(contracts[contract], await protocolDiamond.getAddress());
   }
 
-  const extraReturnValues = { accessController, bosonVoucher, voucherImplementation, beacon };
+  const extraReturnValues = { accessController, voucherImplementation, beacon };
 
   return {
     signers: signers.slice(3),
@@ -492,3 +504,4 @@ exports.setupTestEnvironment = setupTestEnvironment;
 exports.getSnapshot = getSnapshot;
 exports.revertToSnapshot = revertToSnapshot;
 exports.deriveTokenId = deriveTokenId;
+exports.getSellerSalt = getSellerSalt;
