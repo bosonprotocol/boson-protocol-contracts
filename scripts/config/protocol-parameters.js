@@ -77,4 +77,14 @@ module.exports = {
     polygon: 2, // TODO: adjust for actual deployment
     localhost: 1,
   },
+
+  WETH: {
+    mainnet: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
+    hardhat: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
+    localhost: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
+    test: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
+    mumbai: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
+    polygon: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
+    goerli: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
+  },
 };
