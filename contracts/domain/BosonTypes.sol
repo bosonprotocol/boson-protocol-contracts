@@ -238,6 +238,7 @@ contract BosonTypes {
     struct TokenRange {
         uint256 start;
         uint256 end;
+        uint256 twinId;
     }
 
     struct Twin {
