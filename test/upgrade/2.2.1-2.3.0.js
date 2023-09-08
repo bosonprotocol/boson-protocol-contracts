@@ -309,7 +309,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       );
 
       const equalCustomTypes = {
-        "t_struct(Range)12648_storage": "t_struct(Range)14241_storage",
+        "t_struct(Range)12648_storage": "t_struct(Range)14254_storage",
       };
 
       context(
@@ -939,7 +939,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               wallet: sellerWallet,
               id: sellerId,
               voucherInitValues,
-              seller,
               voucherContractAddress: expectedDefaultAddress,
             } = sellers[0];
             const externalId = "new-collection";
@@ -948,7 +947,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             const expectedCollectionAddress = calculateCloneAddress(
               await accountHandler.getAddress(),
               beaconProxyAddress,
-              seller.admin,
+              sellerWallet.address,
               voucherInitValues.collectionSalt,
               voucherInitValues.collectionSalt
             );
@@ -984,6 +983,65 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               VOUCHER_SYMBOL + "_S" + sellerId + "_C1",
               "Wrong voucher client symbol"
             );
+          });
+        });
+
+        context("Update seller salt", async function () {
+          let beaconProxyAddress;
+          before(async function () {
+            // Get the beacon proxy address
+            beaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
+          });
+
+          it("New seller can update sellers salt", async function () {
+            const seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
+            seller.id = await accountHandler.getNextAccountId();
+            const emptyAuthToken = mockAuthToken();
+            const voucherInitValues = mockVoucherInitValues();
+
+            await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+            const externalId = "new-collection";
+            voucherInitValues.collectionSalt = encodeBytes32String(externalId);
+
+            const newSellerSalt = encodeBytes32String("new-seller-salt");
+            await accountHandler.connect(assistant).updateSellerSalt(seller.id, newSellerSalt); // assistant is also the admin in this test
+
+            const expectedCollectionAddress = calculateCloneAddress(
+              await accountHandler.getAddress(),
+              beaconProxyAddress,
+              seller.admin,
+              voucherInitValues.collectionSalt,
+              newSellerSalt
+            );
+            const tx = await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
+
+            await expect(tx)
+              .to.emit(accountHandler, "CollectionCreated")
+              .withArgs(Number(seller.id), 1, expectedCollectionAddress, externalId, assistant.address);
+          });
+
+          it("old seller can create update seller salt", async function () {
+            const { sellers } = preUpgradeEntities;
+            const { wallet: sellerWallet, id: sellerId, voucherInitValues } = sellers[0];
+
+            const newSellerSalt = encodeBytes32String("new-seller-salt");
+            await accountHandler.connect(sellerWallet).updateSellerSalt(sellerId, newSellerSalt);
+
+            const externalId = "new-collection";
+            voucherInitValues.collectionSalt = encodeBytes32String(externalId);
+            beaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
+            const expectedCollectionAddress = calculateCloneAddress(
+              await accountHandler.getAddress(),
+              beaconProxyAddress,
+              sellerWallet.address,
+              voucherInitValues.collectionSalt,
+              newSellerSalt
+            );
+
+            await expect(accountHandler.connect(sellerWallet).createNewCollection(externalId, voucherInitValues))
+              .to.emit(accountHandler, "CollectionCreated")
+              .withArgs(sellerId, 1, expectedCollectionAddress, externalId, sellerWallet.address);
           });
         });
 
