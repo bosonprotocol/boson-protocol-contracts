@@ -143,6 +143,10 @@ module.exports = {
       url: environments.mainnet.txNode,
       accounts: environments.mainnet.keys,
     },
+    goerli: {
+      url: environments.goerli.txNode,
+      accounts: environments.goerli.keys,
+    },
     mumbai: {
       url: environments.mumbai.txNode,
       accounts: environments.mumbai.keys,
@@ -155,6 +159,7 @@ module.exports = {
   etherscan: {
     apiKey: {
       mainnet: environments.etherscan.apiKey,
+      goerli: environments.etherscan.apiKey,
       polygonMumbai: environments.polygonscan.apiKey,
       polygon: environments.polygonscan.apiKey,
     },
@@ -183,6 +188,7 @@ module.exports = {
               yul: true,
             },
           },
+          evmVersion: "london", // for ethereum mainnet, use shanghai
         },
       },
       {
