@@ -178,12 +178,15 @@ async function main(env, facetConfig) {
 
   // Add NFT auth token addresses to protocol config
   // LENS
-  transactionResponse = await bosonConfigHandler.setAuthTokenContract(
-    AuthTokenType.Lens,
-    authTokenContracts.lensAddress,
-    await getFees(maxPriorityFeePerGas)
-  );
-  await transactionResponse.wait(confirmations);
+  // Skip the step for ethereum networks, since LENS is not present there
+  if (!(network === "mainnet" || network === "goerli")) {
+    transactionResponse = await bosonConfigHandler.setAuthTokenContract(
+      AuthTokenType.Lens,
+      authTokenContracts.lensAddress,
+      await getFees(maxPriorityFeePerGas)
+    );
+    await transactionResponse.wait(confirmations);
+  }
 
   // ENS
   // Skip the step for polygon networks, since ENS is not present there
