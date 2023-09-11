@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonMetaTransactionsHandler } from "../../interfaces/handlers/IBosonMetaTransactionsHandler.sol";
@@ -21,10 +21,9 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @notice Initializes Facet.
      * This function is callable only once.
      */
-    function initialize(bytes32[] calldata _functionNameHashes)
-        public
-        onlyUninitialized(type(IBosonMetaTransactionsHandler).interfaceId)
-    {
+    function initialize(
+        bytes32[] calldata _functionNameHashes
+    ) public onlyUninitialized(type(IBosonMetaTransactionsHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonMetaTransactionsHandler).interfaceId);
 
         // Set types for special metatxs
@@ -32,6 +31,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
 
         // Set input type for the function name
         pmti.inputType[COMMIT_TO_OFFER] = MetaTxInputType.CommitToOffer;
+        pmti.inputType[COMMIT_TO_CONDITIONAL_OFFER] = MetaTxInputType.CommitToConditionalOffer;
         pmti.inputType[WITHDRAW_FUNDS] = MetaTxInputType.Funds;
         pmti.inputType[RESOLVE_DISPUTE] = MetaTxInputType.ResolveDispute;
         pmti.inputType[CANCEL_VOUCHER] = MetaTxInputType.Exchange;
@@ -44,6 +44,10 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         // Set the hash info to the input type
         pmti.hashInfo[MetaTxInputType.Generic] = HashInfo(META_TRANSACTION_TYPEHASH, hashGenericDetails);
         pmti.hashInfo[MetaTxInputType.CommitToOffer] = HashInfo(META_TX_COMMIT_TO_OFFER_TYPEHASH, hashOfferDetails);
+        pmti.hashInfo[MetaTxInputType.CommitToConditionalOffer] = HashInfo(
+            META_TX_COMMIT_TO_CONDITIONAL_OFFER_TYPEHASH,
+            hashConditionalOfferDetails
+        );
         pmti.hashInfo[MetaTxInputType.Funds] = HashInfo(META_TX_FUNDS_TYPEHASH, hashFundDetails);
         pmti.hashInfo[MetaTxInputType.Exchange] = HashInfo(META_TX_EXCHANGE_TYPEHASH, hashExchangeDetails);
         pmti.hashInfo[MetaTxInputType.ResolveDispute] = HashInfo(
@@ -51,7 +55,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
             hashDisputeResolutionDetails
         );
 
-        setAllowlistedFunctions(_functionNameHashes, true);
+        setAllowlistedFunctionsInternal(_functionNameHashes, true);
     }
 
     /**
@@ -110,6 +114,17 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     function hashOfferDetails(bytes memory _offerDetails) internal pure returns (bytes32) {
         (address buyer, uint256 offerId) = abi.decode(_offerDetails, (address, uint256));
         return keccak256(abi.encode(OFFER_DETAILS_TYPEHASH, buyer, offerId));
+    }
+
+    /**
+     * @notice Returns hashed representation of the conditional offer details struct.
+     *
+     * @param _offerDetails - the conditional offer details
+     * @return the hashed representation of the conditional offer details struct
+     */
+    function hashConditionalOfferDetails(bytes memory _offerDetails) internal pure returns (bytes32) {
+        (address buyer, uint256 offerId, uint256 tokenId) = abi.decode(_offerDetails, (address, uint256, uint256));
+        return keccak256(abi.encode(CONDITIONAL_OFFER_DETAILS_TYPEHASH, buyer, offerId, tokenId));
     }
 
     /**
@@ -253,8 +268,17 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         (bool success, bytes memory returnData) = address(this).call{ value: msg.value }(_functionSignature);
 
         // If error, return error message
-        string memory errorMessage = (returnData.length == 0) ? FUNCTION_CALL_NOT_SUCCESSFUL : (string(returnData));
-        require(success, errorMessage);
+        if (!success) {
+            if (returnData.length > 0) {
+                // bubble up the error
+                assembly {
+                    revert(add(32, returnData), mload(returnData))
+                }
+            } else {
+                // Reverts with default message
+                revert(FUNCTION_CALL_NOT_SUCCESSFUL);
+            }
+        }
 
         // Reset current transaction signer and transaction type.
         setCurrentSenderAddress(address(0));
@@ -328,20 +352,11 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @param _functionNameHashes - a list of hashed function names (keccak256)
      * @param _isAllowlisted - new allowlist status
      */
-    function setAllowlistedFunctions(bytes32[] calldata _functionNameHashes, bool _isAllowlisted)
-        public
-        override
-        onlyRole(ADMIN)
-    {
-        ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
-
-        // set new values
-        for (uint256 i = 0; i < _functionNameHashes.length; i++) {
-            pmti.isAllowlisted[_functionNameHashes[i]] = _isAllowlisted;
-        }
-
-        // Notify external observers
-        emit FunctionsAllowlisted(_functionNameHashes, _isAllowlisted, msgSender());
+    function setAllowlistedFunctions(
+        bytes32[] calldata _functionNameHashes,
+        bool _isAllowlisted
+    ) public override onlyRole(ADMIN) nonReentrant {
+        setAllowlistedFunctionsInternal(_functionNameHashes, _isAllowlisted);
     }
 
     /**
@@ -362,5 +377,29 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      */
     function isFunctionAllowlisted(string calldata _functionName) external view override returns (bool isAllowlisted) {
         return protocolMetaTxInfo().isAllowlisted[keccak256(abi.encodePacked(_functionName))];
+    }
+
+    /**
+     * @notice Internal function that manages allow list of functions that can be executed using metatransactions.
+     *
+     * Emits a FunctionsAllowlisted event if successful.
+     *
+     * @param _functionNameHashes - a list of hashed function names (keccak256)
+     * @param _isAllowlisted - new allowlist status
+     */
+    function setAllowlistedFunctionsInternal(bytes32[] calldata _functionNameHashes, bool _isAllowlisted) private {
+        ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
+
+        // set new values
+        for (uint256 i = 0; i < _functionNameHashes.length; ) {
+            pmti.isAllowlisted[_functionNameHashes[i]] = _isAllowlisted;
+
+            unchecked {
+                i++;
+            }
+        }
+
+        // Notify external observers
+        emit FunctionsAllowlisted(_functionNameHashes, _isAllowlisted, msgSender());
     }
 }

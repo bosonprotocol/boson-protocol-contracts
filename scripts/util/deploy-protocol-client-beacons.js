@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getContractFactory } = hre.ethers;
 const environments = require("../../environments");
 const confirmations = hre.network.name === "hardhat" ? 1 : environments.confirmations;
 const { getFees } = require("./utils");
@@ -28,13 +28,13 @@ async function deployProtocolClientBeacons(protocolClients, protocolClientArgs, 
   [bosonVoucherImpl] = protocolClients;
 
   // Deploy the ClientBeacon for BosonVoucher
-  const ClientBeacon = await ethers.getContractFactory("BosonClientBeacon");
+  const ClientBeacon = await getContractFactory("BosonClientBeacon");
   const clientBeacon = await ClientBeacon.deploy(
     ...protocolClientArgs,
-    bosonVoucherImpl.address,
+    await bosonVoucherImpl.getAddress(),
     await getFees(maxPriorityFeePerGas)
   );
-  await clientBeacon.deployTransaction.wait(confirmations);
+  await clientBeacon.waitForDeployment(confirmations);
 
   return [clientBeacon];
 }

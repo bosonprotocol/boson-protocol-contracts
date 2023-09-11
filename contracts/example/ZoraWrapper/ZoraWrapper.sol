@@ -2,14 +2,14 @@
 pragma solidity ^0.8.9;
 
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
-import { SafeERC20 } from "../../ext_libs/SafeERC20.sol";
-import { IERC20 } from "../../interfaces/IERC20.sol";
 import { ERC721 } from "./../support/ERC721.sol";
 import { IERC721Metadata } from "./../support/IERC721Metadata.sol";
 import { IERC721 } from "../../interfaces/IERC721.sol";
 import { IERC165 } from "../../interfaces/IERC165.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title ZoraWrapper
@@ -162,11 +162,7 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
      * @param _to The address of the recipient.
      * @param _tokenId The token id.
      */
-    function _beforeTokenTransfer(
-        address _from,
-        address _to,
-        uint256 _tokenId
-    ) internal virtual override(ERC721) {
+    function _beforeTokenTransfer(address _from, address _to, uint256 _tokenId) internal virtual override(ERC721) {
         if (_from == zoraAuctionHouseAddress && _to != address(this)) {
             // Auction is over, and wrapped voucher is being transferred to voucher owner
             // If recipient is address(this), it means the auction was canceled and price updating can be skipped

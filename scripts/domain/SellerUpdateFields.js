@@ -5,7 +5,7 @@ class SellerUpdateFields {}
 
 SellerUpdateFields.Admin = 0;
 SellerUpdateFields.Assistant = 1;
-SellerUpdateFields.Clerk = 2;
+SellerUpdateFields.Clerk = 2; // Deprecated
 SellerUpdateFields.AuthToken = 3;
 
 SellerUpdateFields.Types = [

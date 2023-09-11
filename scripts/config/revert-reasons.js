@@ -9,9 +9,6 @@ exports.RevertReasons = {
   CAN_ONLY_REVOKE_SELF: "AccessControl: can only renounce roles for self",
 
   // Pause related
-  NO_REGIONS_SPECIFIED: "Must specify at least one region to pause",
-  REGION_DUPLICATED: "A region may only be specified once",
-  ALREADY_PAUSED: "Protocol is already paused",
   NOT_PAUSED: "Protocol is not currently paused",
   REGION_PAUSED: "This region of the protocol is currently paused",
   ZERO_DEPOSIT_NOT_ALLOWED: "Zero deposit not allowed",
@@ -29,6 +26,7 @@ exports.RevertReasons = {
   ADDRESSES_AND_CALLDATA_MUST_BE_SAME_LENGTH: "Addresses and calldata must be same length",
   WRONG_CURRENT_VERSION: "Wrong current protocol version",
   DIRECT_INITIALIZATION_NOT_ALLOWED: "Direct initializtion is not allowed",
+  TWINS_ALREADY_EXIST: "Should not have any twins yet",
 
   // Offer related
   NOT_ASSISTANT: "Not seller's assistant",
@@ -51,13 +49,18 @@ exports.RevertReasons = {
   OFFER_NOT_AVAILABLE: "Offer is not yet available",
   OFFER_HAS_EXPIRED: "Offer has expired",
   OFFER_SOLD_OUT: "Offer has sold out",
+  NO_SUCH_COLLECTION: "No such collection",
 
   // Group related
   NO_SUCH_GROUP: "No such group",
   OFFER_NOT_IN_GROUP: "Offer not part of the group",
-  TOO_MANY_OFFERS: "Exceeded maximum offers in a single transaction",
   NOTHING_UPDATED: "Nothing updated",
   INVALID_CONDITION_PARAMETERS: "Invalid condition parameters",
+  MAX_COMMITS_REACHED: "Max commits reached",
+  GROUP_HAS_NO_CONDITION: "Offer belongs to a group without a condition. Use commitToOffer instead",
+  GROUP_HAS_CONDITION: "Offer belongs to a group with a condition. Use commitToConditionalOffer instead",
+  TOKEN_ID_NOT_IN_CONDITION_RANGE: "Token id not in condition range",
+  INVALID_TOKEN_ID: "ERC721 and ERC20 require zero tokenId",
 
   // Account-related
   MUST_BE_ACTIVE: "Account must be active",
@@ -67,8 +70,8 @@ exports.RevertReasons = {
   DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE: "Dispute resolver address cannot be assigned to another dispute resolver Id",
   AGENT_ADDRESS_MUST_BE_UNIQUE: "Agent address cannot be assigned to another agent Id",
   NOT_ADMIN: "Not admin",
-  NOT_ASSISTANT_AND_CLERK: "Not assistant and clerk",
-  NOT_ADMIN_ASSISTANT_AND_CLERK: "Not admin, assistant and clerk",
+  CLERK_DEPRECATED: "Clerk is deprecated and must be set to address 0",
+  NOT_ADMIN_AND_ASSISTANT: "Not admin and assistant",
   NOT_BUYER_WALLET: "Not buyer's wallet address",
   NOT_AGENT_WALLET: "Not agent's wallet address",
   NO_SUCH_BUYER: "No such buyer",
@@ -77,8 +80,7 @@ exports.RevertReasons = {
   NOT_DISPUTE_RESOLVER_ASSISTANT: "Not dispute resolver's assistant address",
   NO_SUCH_DISPUTE_RESOLVER: "No such dispute resolver",
   INVALID_ESCALATION_PERIOD: "Invalid escalation period",
-  INVALID_AMOUNT_DISPUTE_RESOLVER_FEES:
-    "Dispute resolver fees are not present or exceed maximum dispute resolver fees in a single transaction",
+  INEXISTENT_DISPUTE_RESOLVER_FEES: "Dispute resolver fees are not present",
   DUPLICATE_DISPUTE_RESOLVER_FEES: "Duplicate dispute resolver fee",
   DISPUTE_RESOLVER_FEE_NOT_FOUND: "Dispute resolver fee not found",
   FEE_AMOUNT_NOT_YET_SUPPORTED: "Non-zero dispute resolver fees not yet supported",
@@ -87,12 +89,14 @@ exports.RevertReasons = {
   AUTH_TOKEN_MUST_BE_UNIQUE: "Auth token cannot be assigned to another entity of the same type",
   SELLER_ALREADY_APPROVED: "Seller id is approved already",
   SELLER_NOT_APPROVED: "Seller id is not approved",
-  INVALID_AMOUNT_ALLOWED_SELLERS:
-    "Allowed sellers are not present or exceed maximum allowed sellers in a single transaction",
+  INEXISTENT_ALLOWED_SELLERS_LIST: "Allowed sellers are not present",
   INVALID_AGENT_FEE_PERCENTAGE:
     "Sum of agent fee percentage and protocol fee percentage should be <= max fee percentage limit",
   NO_PENDING_UPDATE_FOR_ACCOUNT: "No pending updates for the given account",
   UNAUTHORIZED_CALLER_UPDATE: "Caller has no permission to approve this update",
+  NO_UPDATE_APPLIED: "No update applied or requested approval",
+  CLONE_CREATION_FAILED: "Clone creation failed",
+  SELLER_SALT_NOT_UNIQUE: "Seller salt not unique",
 
   // Twin related
   NO_SUCH_TWIN: "No such twin",
@@ -109,7 +113,6 @@ exports.RevertReasons = {
   NO_SUCH_BUNDLE: "No such bundle",
   TWIN_NOT_IN_BUNDLE: "Twin not part of the bundle",
   OFFER_NOT_IN_BUNDLE: "Offer not part of the bundle",
-  TOO_MANY_TWINS: "Exceeded maximum twins in a single transaction",
   BUNDLE_OFFER_MUST_BE_UNIQUE: "Offer must be unique to a bundle",
   BUNDLE_TWIN_MUST_BE_UNIQUE: "Twin must be unique to a bundle",
   INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS:
@@ -124,7 +127,6 @@ exports.RevertReasons = {
   VOUCHER_EXTENSION_NOT_VALID: "Proposed date is not later than the current one",
   VOUCHER_STILL_VALID: "Voucher still valid",
   VOUCHER_HAS_EXPIRED: "Voucher has expired",
-  TOO_MANY_EXCHANGES: "Exceeded maximum exchanges in a single transaction",
   EXCHANGE_IS_NOT_IN_A_FINAL_STATE: "Exchange is not in a final state",
   INVALID_RANGE_LENGTH: "Range length is too large or zero",
   EXCHANGE_ALREADY_EXISTS: "Exchange already exists",
@@ -141,13 +143,13 @@ exports.RevertReasons = {
   INVALID_RANGE_START: "Range start too low",
   INVALID_AMOUNT_TO_MINT: "Amount to mint is greater than remaining un-minted in range",
   NO_SILENT_MINT_ALLOWED: "Only owner's mappings can be updated without event",
-  TOO_MANY_TO_MINT: "Exceeded maximum amount to mint in a single transaction",
   OFFER_EXPIRED_OR_VOIDED: "Offer expired or voided",
   OFFER_STILL_VALID: "Offer still valid",
-  NOTHING_TO_BURN: "Nothing to burn",
+  AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN: "Amount exceeds the range or there is nothing to burn",
   NOT_COMMITTABLE: "Token not committable",
   INVALID_TO_ADDRESS: "Tokens can only be pre-mined to the contract or contract owner address",
   EXTERNAL_CALL_FAILED: "External call failed",
+  INTERACTION_NOT_ALLOWED: "Interaction not allowed",
 
   // Funds related
   NATIVE_WRONG_ADDRESS: "Native token address must be 0",
@@ -156,7 +158,6 @@ exports.RevertReasons = {
   INSUFFICIENT_VALUE_RECEIVED: "Insufficient value received",
   INSUFFICIENT_AVAILABLE_FUNDS: "Insufficient available funds",
   NATIVE_NOT_ALLOWED: "Transfer of native currency not allowed",
-  TOO_MANY_TOKENS: "Too many tokens",
   TOKEN_AMOUNT_MISMATCH: "Number of amounts should match number of tokens",
   NOTHING_TO_WITHDRAW: "Nothing to withdraw",
   NOT_AUTHORIZED: "Not authorized to withdraw",
@@ -167,12 +168,12 @@ exports.RevertReasons = {
   ERC20_PAUSED: "ERC20Pausable: token transfer while paused",
   EOA_FUNCTION_CALL: "Transaction reverted: function call to a non-contract account",
   EOA_FUNCTION_CALL_SAFE_ERC20: "Address: call to non-contract",
-  ERC721_NON_EXISTENT: "ERC721: invalid token ID",
-  ERC721_CALLER_NOT_OWNER_OR_APPROVED: "ERC721: caller is not token owner nor approved",
+  ERC721_INVALID_TOKEN_ID: "ERC721: invalid token ID",
+  ERC721_CALLER_NOT_OWNER_OR_APPROVED: "ERC721: caller is not token owner or approved",
   OWNABLE_NOT_OWNER: "Ownable: caller is not the owner",
   OWNABLE_ZERO_ADDRESS: "Ownable: new owner is the zero address",
   SAFE_ERC20_LOW_LEVEL_CALL: "SafeERC20: low-level call failed",
-  SAFE_ERC20_NOT_SUCCEEDED: "SafeERC20: ERC20 operation did not succeed",
+  SAFE_ERC20_OPERATION_FAILED: "SafeERC20: ERC20 operation did not succeed",
   INITIALIZABLE_ALREADY_INITIALIZED: "Initializable: contract is already initialized",
 
   // Meta-Transactions related
@@ -189,7 +190,6 @@ exports.RevertReasons = {
   INVALID_BUYER_PERCENT: "Invalid buyer percent",
   DISPUTE_STILL_VALID: "Dispute still valid",
   INVALID_DISPUTE_TIMEOUT: "Invalid dispute timeout",
-  TOO_MANY_DISPUTES: "Exceeded maximum disputes in a single transaction",
   ESCALATION_NOT_ALLOWED: "Disputes without dispute resolver cannot be escalated",
 
   // Config related

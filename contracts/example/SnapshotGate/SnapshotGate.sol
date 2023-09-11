@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.9;
+pragma solidity 0.8.21;
 
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
-import { SafeERC20 } from "../../ext_libs/SafeERC20.sol";
-import { IERC20 } from "../../interfaces/IERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC721 } from "./../support/ERC721.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @title SnapshotGate
@@ -78,10 +78,10 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
     TransactionDetails private txDetails;
 
     // Address of the Boson Protocol
-    address public protocol;
+    address public immutable protocol;
 
     // Id of the seller operating the snapshot
-    uint256 public sellerId;
+    uint256 public immutable sellerId;
 
     // Is the snapshot frozen
     bool public snapshotFrozen;
@@ -118,6 +118,7 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
         address _protocol,
         uint256 _sellerId
     ) ERC721(_name, _symbol) {
+        require(_protocol != address(0), "Protocol can't be zero address");
         protocol = _protocol;
         sellerId = _sellerId;
         txStatus = TransactionStatus.NotInTransaction;
@@ -139,7 +140,7 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
         uint256 entriesLength = _holders.length;
 
         // Map all the holders, creating the conditional tokens along the way
-        for (uint256 i = 0; i < entriesLength; i++) {
+        for (uint256 i = 0; i < entriesLength; ) {
             uint256 tokenId = _holders[i].tokenId;
             uint256 amount = _holders[i].amount;
             address owner = _holders[i].owner;
@@ -150,6 +151,10 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
             // If corresponding conditional token doesn't yet exist, mint it to custody of this contract
             if (!_exists(tokenId)) {
                 _mint(address(this), tokenId);
+            }
+
+            unchecked {
+                i++;
             }
         }
 
@@ -247,13 +252,13 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
             require(msg.value == offer.price, "Incorrect payment amount");
 
             // Commit to the offer, passing the message value (native)
-            IBosonExchangeHandler(protocol).commitToOffer{ value: msg.value }(_buyer, _offerId);
+            IBosonExchangeHandler(protocol).commitToConditionalOffer{ value: msg.value }(_buyer, _offerId, _tokenId);
         } else {
             // Transfer the price into custody of this contract and approve protocol to transfer
             transferFundsToGateAndApproveProtocol(offer.exchangeToken, offer.price);
 
             // Commit to the offer on behalf of the buyer
-            IBosonExchangeHandler(protocol).commitToOffer(_buyer, _offerId);
+            IBosonExchangeHandler(protocol).commitToConditionalOffer(_buyer, _offerId, _tokenId);
         }
 
         // Remove the transaction details

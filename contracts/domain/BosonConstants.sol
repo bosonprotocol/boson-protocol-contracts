@@ -1,5 +1,7 @@
+import "./BosonTypes.sol";
+
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 // Access Control Roles
 bytes32 constant ADMIN = keccak256("ADMIN"); // Role Admin
@@ -10,11 +12,10 @@ bytes32 constant UPGRADER = keccak256("UPGRADER"); // Role for performing contra
 bytes32 constant FEE_COLLECTOR = keccak256("FEE_COLLECTOR"); // Role for collecting fees from the protocol
 
 // Revert Reasons: Pause related
-string constant NO_REGIONS_SPECIFIED = "Must specify at least one region to pause";
-string constant REGION_DUPLICATED = "A region may only be specified once";
-string constant ALREADY_PAUSED = "Protocol is already paused";
 string constant NOT_PAUSED = "Protocol is not currently paused";
 string constant REGION_PAUSED = "This region of the protocol is currently paused";
+
+uint256 constant ALL_REGIONS_MASK = (1 << (uint256(type(BosonTypes.PausableRegion).max) + 1)) - 1;
 
 // Revert Reasons: General
 string constant INVALID_ADDRESS = "Invalid address";
@@ -33,13 +34,14 @@ string constant VERSION_MUST_BE_SET = "Version cannot be empty";
 string constant ADDRESSES_AND_CALLDATA_LENGTH_MISMATCH = "Addresses and calldata must be same length";
 string constant WRONG_CURRENT_VERSION = "Wrong current protocol version";
 string constant DIRECT_INITIALIZATION_NOT_ALLOWED = "Direct initializtion is not allowed";
+string constant TWINS_ALREADY_EXIST = "Should not have any twins yet";
 
 // Revert Reasons: Access related
 string constant ACCESS_DENIED = "Access denied, caller doesn't have role";
 string constant NOT_ASSISTANT = "Not seller's assistant";
 string constant NOT_ADMIN = "Not admin";
-string constant NOT_ASSISTANT_AND_CLERK = "Not assistant and clerk";
-string constant NOT_ADMIN_ASSISTANT_AND_CLERK = "Not admin, assistant and clerk";
+string constant CLERK_DEPRECATED = "Clerk is deprecated and must be set to address 0";
+string constant NOT_ADMIN_AND_ASSISTANT = "Not admin and assistant";
 string constant NOT_BUYER_OR_SELLER = "Not buyer or seller";
 string constant NOT_VOUCHER_HOLDER = "Not current voucher holder";
 string constant NOT_BUYER_WALLET = "Not buyer's wallet address";
@@ -58,19 +60,22 @@ string constant NO_SUCH_AGENT = "No such agent";
 string constant WALLET_OWNS_VOUCHERS = "Wallet address owns vouchers";
 string constant NO_SUCH_DISPUTE_RESOLVER = "No such dispute resolver";
 string constant INVALID_ESCALATION_PERIOD = "Invalid escalation period";
-string constant INVALID_AMOUNT_DISPUTE_RESOLVER_FEES = "Dispute resolver fees are not present or exceed maximum dispute resolver fees in a single transaction";
+string constant INEXISTENT_DISPUTE_RESOLVER_FEES = "Dispute resolver fees are not present";
 string constant DUPLICATE_DISPUTE_RESOLVER_FEES = "Duplicate dispute resolver fee";
 string constant FEE_AMOUNT_NOT_YET_SUPPORTED = "Non-zero dispute resolver fees not yet supported";
 string constant DISPUTE_RESOLVER_FEE_NOT_FOUND = "Dispute resolver fee not found";
 string constant SELLER_ALREADY_APPROVED = "Seller id is approved already";
 string constant SELLER_NOT_APPROVED = "Seller id is not approved";
-string constant INVALID_AMOUNT_ALLOWED_SELLERS = "Allowed sellers are not present or exceed maximum allowed sellers in a single transaction";
+string constant INEXISTENT_ALLOWED_SELLERS_LIST = "Allowed sellers are not present";
 string constant INVALID_AUTH_TOKEN_TYPE = "Invalid AuthTokenType";
 string constant ADMIN_OR_AUTH_TOKEN = "An admin address or an auth token is required";
 string constant AUTH_TOKEN_MUST_BE_UNIQUE = "Auth token cannot be assigned to another entity of the same type";
 string constant INVALID_AGENT_FEE_PERCENTAGE = "Sum of agent fee percentage and protocol fee percentage should be <= max fee percentage limit";
 string constant NO_PENDING_UPDATE_FOR_ACCOUNT = "No pending updates for the given account";
 string constant UNAUTHORIZED_CALLER_UPDATE = "Caller has no permission to approve this update";
+string constant NO_UPDATE_APPLIED = "No update applied or requested approval";
+string constant CLONE_CREATION_FAILED = "Clone creation failed";
+string constant SELLER_SALT_NOT_UNIQUE = "Seller salt not unique";
 
 // Revert Reasons: Offer related
 string constant NO_SUCH_OFFER = "No such offer";
@@ -92,13 +97,18 @@ string constant INVALID_DISPUTE_RESOLVER = "Invalid dispute resolver";
 string constant INVALID_QUANTITY_AVAILABLE = "Invalid quantity available";
 string constant DR_UNSUPPORTED_FEE = "Dispute resolver does not accept this token";
 string constant AGENT_FEE_AMOUNT_TOO_HIGH = "Sum of agent fee amount and protocol fee amount should be <= offer fee limit";
+string constant NO_SUCH_COLLECTION = "No such collection";
 
 // Revert Reasons: Group related
 string constant NO_SUCH_GROUP = "No such group";
 string constant OFFER_NOT_IN_GROUP = "Offer not part of the group";
-string constant TOO_MANY_OFFERS = "Exceeded maximum offers in a single transaction";
 string constant NOTHING_UPDATED = "Nothing updated";
 string constant INVALID_CONDITION_PARAMETERS = "Invalid condition parameters";
+string constant GROUP_HAS_NO_CONDITION = "Offer belongs to a group without a condition. Use commitToOffer instead";
+string constant GROUP_HAS_CONDITION = "Offer belongs to a group with a condition. Use commitToConditionalOffer instead";
+string constant MAX_COMMITS_REACHED = "Max commits reached";
+string constant TOKEN_ID_NOT_IN_CONDITION_RANGE = "Token id not in condition range";
+string constant INVALID_TOKEN_ID = "ERC721 and ERC20 require zero tokenId";
 
 // Revert Reasons: Exchange related
 string constant NO_SUCH_EXCHANGE = "No such exchange";
@@ -107,7 +117,6 @@ string constant VOUCHER_NOT_REDEEMABLE = "Voucher not yet valid or already expir
 string constant VOUCHER_EXTENSION_NOT_VALID = "Proposed date is not later than the current one";
 string constant VOUCHER_STILL_VALID = "Voucher still valid";
 string constant VOUCHER_HAS_EXPIRED = "Voucher has expired";
-string constant TOO_MANY_EXCHANGES = "Exceeded maximum exchanges in a single transaction";
 string constant EXCHANGE_IS_NOT_IN_A_FINAL_STATE = "Exchange is not in a final state";
 string constant EXCHANGE_ALREADY_EXISTS = "Exchange already exists";
 string constant INVALID_RANGE_LENGTH = "Range length is too large or zero";
@@ -118,6 +127,8 @@ string constant FEE_AMOUNT_TOO_HIGH = "Fee amount is too high";
 string constant VOUCHER_NOT_RECEIVED = "Voucher not received";
 
 // Revert Reasons: Twin related
+uint256 constant SINGLE_TWIN_RESERVED_GAS = 160000;
+uint256 constant MINIMAL_RESIDUAL_GAS = 230000;
 string constant NO_SUCH_TWIN = "No such twin";
 string constant NO_TRANSFER_APPROVED = "No transfer approved";
 string constant TWIN_TRANSFER_FAILED = "Twin could not be transferred";
@@ -133,7 +144,6 @@ string constant INVALID_TOKEN_ADDRESS = "Token address is a contract that doesn'
 string constant NO_SUCH_BUNDLE = "No such bundle";
 string constant TWIN_NOT_IN_BUNDLE = "Twin not part of the bundle";
 string constant OFFER_NOT_IN_BUNDLE = "Offer not part of the bundle";
-string constant TOO_MANY_TWINS = "Exceeded maximum twins in a single transaction";
 string constant BUNDLE_OFFER_MUST_BE_UNIQUE = "Offer must be unique to a bundle";
 string constant BUNDLE_TWIN_MUST_BE_UNIQUE = "Twin must be unique to a bundle";
 string constant EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS = "Exchange for the bundled offers exists";
@@ -143,9 +153,8 @@ string constant BUNDLE_REQUIRES_AT_LEAST_ONE_TWIN_AND_ONE_OFFER = "Bundle must h
 // Revert Reasons: Funds related
 string constant NATIVE_WRONG_ADDRESS = "Native token address must be 0";
 string constant NATIVE_WRONG_AMOUNT = "Transferred value must match amount";
-string constant TOKEN_NAME_UNSPECIFIED = "Token name unspecified";
+string constant TOKEN_NAME_UNSPECIFIED = "Token name unavailable";
 string constant NATIVE_CURRENCY = "Native currency";
-string constant TOO_MANY_TOKENS = "Too many tokens";
 string constant TOKEN_AMOUNT_MISMATCH = "Number of amounts should match number of tokens";
 string constant NOTHING_TO_WITHDRAW = "Nothing to withdraw";
 string constant NOT_AUTHORIZED = "Not authorized to withdraw";
@@ -169,12 +178,12 @@ string constant DISPUTE_HAS_EXPIRED = "Dispute has expired";
 string constant INVALID_BUYER_PERCENT = "Invalid buyer percent";
 string constant DISPUTE_STILL_VALID = "Dispute still valid";
 string constant INVALID_DISPUTE_TIMEOUT = "Invalid dispute timeout";
-string constant TOO_MANY_DISPUTES = "Exceeded maximum disputes in a single transaction";
 string constant ESCALATION_NOT_ALLOWED = "Disputes without dispute resolver cannot be escalated";
 
 // Revert Reasons: Config related
 string constant FEE_PERCENTAGE_INVALID = "Percentage representation must be less than 10000";
 string constant VALUE_ZERO_NOT_ALLOWED = "Value must be greater than 0";
+bytes32 constant VOUCHER_PROXY_SALT = keccak256(abi.encodePacked("BosonVoucherProxy"));
 
 // EIP712Lib
 string constant PROTOCOL_NAME = "Boson Protocol";
@@ -192,15 +201,16 @@ string constant OFFER_RANGE_ALREADY_RESERVED = "Offer id already associated with
 string constant INVALID_RANGE_START = "Range start too low";
 string constant INVALID_AMOUNT_TO_MINT = "Amount to mint is greater than remaining un-minted in range";
 string constant NO_SILENT_MINT_ALLOWED = "Only owner's mappings can be updated without event";
-string constant TOO_MANY_TO_MINT = "Exceeded maximum amount to mint in a single transaction";
 string constant OFFER_EXPIRED_OR_VOIDED = "Offer expired or voided";
 string constant OFFER_STILL_VALID = "Offer still valid";
-string constant NOTHING_TO_BURN = "Nothing to burn";
+string constant AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN = "Amount exceeds the range or there is nothing to burn";
 string constant OWNABLE_ZERO_ADDRESS = "Ownable: new owner is the zero address";
 string constant ROYALTY_FEE_INVALID = "ERC2981: royalty fee exceeds protocol limit";
 string constant NOT_COMMITTABLE = "Token not committable";
 string constant INVALID_TO_ADDRESS = "Tokens can only be pre-mined to the contract or contract owner address";
 string constant EXTERNAL_CALL_FAILED = "External call failed";
+string constant ERC721_INVALID_TOKEN_ID = "ERC721: invalid token ID";
+string constant INTERACTION_NOT_ALLOWED = "Interaction not allowed";
 
 // Meta Transactions - Structs
 bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(
@@ -211,6 +221,12 @@ bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(
 bytes32 constant OFFER_DETAILS_TYPEHASH = keccak256("MetaTxOfferDetails(address buyer,uint256 offerId)");
 bytes32 constant META_TX_COMMIT_TO_OFFER_TYPEHASH = keccak256(
     "MetaTxCommitToOffer(uint256 nonce,address from,address contractAddress,string functionName,MetaTxOfferDetails offerDetails)MetaTxOfferDetails(address buyer,uint256 offerId)"
+);
+bytes32 constant CONDITIONAL_OFFER_DETAILS_TYPEHASH = keccak256(
+    "MetaTxConditionalOfferDetails(address buyer,uint256 offerId,uint256 tokenId)"
+);
+bytes32 constant META_TX_COMMIT_TO_CONDITIONAL_OFFER_TYPEHASH = keccak256(
+    "MetaTxCommitToConditionalOffer(uint256 nonce,address from,address contractAddress,string functionName,MetaTxConditionalOfferDetails offerDetails)MetaTxConditionalOfferDetails(address buyer,uint256 offerId,uint256 tokenId)"
 );
 bytes32 constant EXCHANGE_DETAILS_TYPEHASH = keccak256("MetaTxExchangeDetails(uint256 exchangeId)");
 bytes32 constant META_TX_EXCHANGE_TYPEHASH = keccak256(
@@ -231,6 +247,7 @@ bytes32 constant META_TX_DISPUTE_RESOLUTIONS_TYPEHASH = keccak256(
 
 // Function names
 string constant COMMIT_TO_OFFER = "commitToOffer(address,uint256)";
+string constant COMMIT_TO_CONDITIONAL_OFFER = "commitToConditionalOffer(address,uint256,uint256)";
 string constant CANCEL_VOUCHER = "cancelVoucher(uint256)";
 string constant REDEEM_VOUCHER = "redeemVoucher(uint256)";
 string constant COMPLETE_EXCHANGE = "completeExchange(uint256)";

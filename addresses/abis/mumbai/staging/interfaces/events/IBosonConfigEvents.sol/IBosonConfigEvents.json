@@ -243,6 +243,25 @@
         {
           "indexed": false,
           "internalType": "uint256",
+          "name": "maxPremintedVouchers",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "MaxPremintedVouchersChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
           "name": "maxResolutionPeriod",
           "type": "uint256"
         },

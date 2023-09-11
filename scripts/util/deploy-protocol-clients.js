@@ -1,10 +1,8 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ethers } = require("hardhat");
+const { ZeroAddress } = ethers;
 
 const { deployProtocolClientImpls } = require("./deploy-protocol-client-impls.js");
-const { deployProtocolClientProxies } = require("./deploy-protocol-client-proxies.js");
 const { deployProtocolClientBeacons } = require("./deploy-protocol-client-beacons.js");
-const { castProtocolClientProxies } = require("./cast-protocol-client-proxies.js");
 
 /**
  * Deploy the Protocol Client Implementation/Proxy pairs
@@ -22,11 +20,7 @@ const { castProtocolClientProxies } = require("./cast-protocol-client-proxies.js
  * @param implementationArgs - array of arguments to send to implementation constructor
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployProtocolClients(
-  protocolClientArgs,
-  maxPriorityFeePerGas,
-  implementationArgs = [ethers.constants.AddressZero]
-) {
+async function deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas, implementationArgs = [ZeroAddress]) {
   // Deploy Protocol Client implementation contracts
   const protocolClientImpls = await deployProtocolClientImpls(implementationArgs, maxPriorityFeePerGas);
 
@@ -37,13 +31,7 @@ async function deployProtocolClients(
     maxPriorityFeePerGas
   );
 
-  // Deploy Protocol Client proxy contracts
-  const protocolClientProxies = await deployProtocolClientProxies(protocolClientBeacons, maxPriorityFeePerGas);
-
-  // Cast the proxies to their implementation interfaces
-  const protocolClients = await castProtocolClientProxies(protocolClientProxies);
-
-  return [protocolClientImpls, protocolClientBeacons, protocolClientProxies, protocolClients];
+  return [protocolClientImpls, protocolClientBeacons];
 }
 
 exports.deployProtocolClients = deployProtocolClients;

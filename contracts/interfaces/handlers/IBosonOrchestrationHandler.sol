@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
@@ -13,7 +13,7 @@ import { IBosonBundleEvents } from "../events/IBosonBundleEvents.sol";
  *
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  *
- * The ERC-165 identifier for this interface is: 0x04a24dfd
+ * The ERC-165 identifier for this interface is: 0xb8b97453
  */
 interface IBosonOrchestrationHandler is
     IBosonAccountEvents,
@@ -67,9 +67,12 @@ interface IBosonOrchestrationHandler is
      * - The offers region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Caller is not the supplied admin or does not own supplied auth token
-     * - Caller is not the supplied assistant and clerk
+     * - Caller is not the supplied assistant
+     * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -82,7 +85,7 @@ interface IBosonOrchestrationHandler is
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -90,6 +93,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -132,13 +136,16 @@ interface IBosonOrchestrationHandler is
      * - The offers region of protocol is paused
      * - The orchestration region of protocol is paused
      * - The exchanges region of protocol is paused
-     * - Caller is not the supplied assistant and clerk
+     * - Caller is not the supplied assistant
      * - Caller is not the supplied admin or does not own supplied auth token
+     * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - Reserved range length is zero
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -151,7 +158,7 @@ interface IBosonOrchestrationHandler is
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -159,6 +166,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -208,7 +216,7 @@ interface IBosonOrchestrationHandler is
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -216,6 +224,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -259,7 +268,7 @@ interface IBosonOrchestrationHandler is
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -267,6 +276,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -313,7 +323,7 @@ interface IBosonOrchestrationHandler is
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -321,10 +331,10 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When adding to the group if:
      *   - Group does not exists
      *   - Caller is not the assistant of the group
-     *   - Current number of offers plus number of offers added exceeds maximum allowed number per group
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -367,7 +377,7 @@ interface IBosonOrchestrationHandler is
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -375,10 +385,10 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When adding to the group if:
      *   - Group does not exists
      *   - Caller is not the assistant of the group
-     *   - Current number of offers plus number of offers added exceeds maximum allowed number per group
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -425,7 +435,7 @@ interface IBosonOrchestrationHandler is
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -433,6 +443,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When creating twin if
      *   - Not approved to transfer the seller's token
      *   - SupplyAvailable is zero
@@ -484,7 +495,7 @@ interface IBosonOrchestrationHandler is
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -492,6 +503,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When creating twin if
      *   - Not approved to transfer the seller's token
      *   - SupplyAvailable is zero
@@ -548,7 +560,7 @@ interface IBosonOrchestrationHandler is
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -556,6 +568,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When creating twin if
      *   - Not approved to transfer the seller's token
@@ -612,7 +625,7 @@ interface IBosonOrchestrationHandler is
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -620,6 +633,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When creating twin if
      *   - Not approved to transfer the seller's token
@@ -678,9 +692,12 @@ interface IBosonOrchestrationHandler is
      * - The groups region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Caller is not the supplied admin or does not own supplied auth token
-     * - Caller is not the supplied assistant and clerk
+     * - Caller is not the supplied assistant
+     * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -694,7 +711,7 @@ interface IBosonOrchestrationHandler is
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -702,6 +719,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -749,13 +767,16 @@ interface IBosonOrchestrationHandler is
      * - The groups region of protocol is paused
      * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied assistant and clerk
+     * - Caller is not the supplied assistant
      * - Caller is not the supplied admin or does not own supplied auth token
+     * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - Reserved range length is zero
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -769,7 +790,7 @@ interface IBosonOrchestrationHandler is
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -777,6 +798,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
@@ -832,9 +854,12 @@ interface IBosonOrchestrationHandler is
      * - The bundles region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Caller is not the supplied admin or does not own supplied auth token
-     * - Caller is not the supplied assistant and clerk
+     * - Caller is not the supplied assistant
+     * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -848,7 +873,7 @@ interface IBosonOrchestrationHandler is
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -856,6 +881,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When creating twin if
      *   - Not approved to transfer the seller's token
      *   - SupplyAvailable is zero
@@ -911,13 +937,16 @@ interface IBosonOrchestrationHandler is
      * - The bundles region of protocol is paused
      * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied assistant and clerk
+     * - Caller is not the supplied assistant
      * - Caller is not the supplied admin or does not own supplied auth token
+     * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - Reserved range length is zero
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -931,7 +960,7 @@ interface IBosonOrchestrationHandler is
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -939,6 +968,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When creating twin if
      *   - Not approved to transfer the seller's token
      *   - SupplyAvailable is zero
@@ -1002,9 +1032,12 @@ interface IBosonOrchestrationHandler is
      * - The bundles region of protocol is paused
      * - The orchestration region of protocol is paused
      * - Caller is not the supplied admin or does not own supplied auth token
-     * - Caller is not the supplied assistant and clerk
+     * - Caller is not the supplied assistant
+     * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -1018,7 +1051,7 @@ interface IBosonOrchestrationHandler is
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -1026,6 +1059,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When creating twin if
      *   - Not approved to transfer the seller's token
@@ -1086,13 +1120,16 @@ interface IBosonOrchestrationHandler is
      * - The bundles region of protocol is paused
      * - The exchanges region of protocol is paused
      * - The orchestration region of protocol is paused
-     * - Caller is not the supplied assistant and clerk
+     * - Caller is not the supplied assistant
      * - Caller is not the supplied admin or does not own supplied auth token
+     * - Supplied clerk is not a zero address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - Reserved range length is zero
      * - Reserved range length is greater than quantity available
      * - Reserved range length is greater than maximum allowed range length
+     * - Seller salt is not unique
+     * - Clone creation fails
      * - In seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -1106,7 +1143,7 @@ interface IBosonOrchestrationHandler is
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -1114,6 +1151,7 @@ interface IBosonOrchestrationHandler is
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - Condition includes invalid combination of parameters
      * - When creating twin if
      *   - Not approved to transfer the seller's token

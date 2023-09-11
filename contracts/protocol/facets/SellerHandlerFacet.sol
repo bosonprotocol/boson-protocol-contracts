@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
-
+pragma solidity 0.8.21;
 import "../../domain/BosonConstants.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { SellerBase } from "../bases/SellerBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC721 } from "../../interfaces/IERC721.sol";
+import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @title SellerHandlerFacet
@@ -29,7 +30,8 @@ contract SellerHandlerFacet is SellerBase {
      *
      * Reverts if:
      * - Caller is not the supplied admin or does not own supplied auth token
-     * - Caller is not the supplied assistant and clerk revert reason
+     * - Caller is not the supplied assistant
+     * - Supplied clerk is not a zero address
      * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
@@ -37,6 +39,8 @@ contract SellerHandlerFacet is SellerBase {
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - AuthTokenType is Custom
+     * - Seller salt is not unique
+     * - Clone creation fails
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
@@ -52,24 +56,26 @@ contract SellerHandlerFacet is SellerBase {
     }
 
     /**
-     * @notice Updates treasury address, if changed. Puts admin, assistant, clerk and AuthToken in pending queue, if changed.
+     * @notice Updates treasury address, if changed. Puts admin, assistant and AuthToken in pending queue, if changed.
      *         Pending updates can be completed by calling the optInToSellerUpdate function.
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a SellerUpdateApplied event if the seller has changed the treasury.
-     * Emits a SellerUpdatePending event if the seller has requested an update for admin, clerk, assistant, or auth token.
-     * Holder of new auth token and/or owner(s) of new addresses for admin, clerk, assistant must opt-in to the update.
+     * Emits a SellerUpdatePending event if the seller has requested an update for admin, assistant, or auth token.
+     * Holder of new auth token and/or owner(s) of new addresses for admin, assistant must opt-in to the update.
      *
      * Reverts if:
      * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
+     * - Supplied clerk is not a zero address
      * - Caller address is not the admin address of the stored seller with no AuthToken
      * - Caller is not the owner of the seller's stored AuthToken
      * - Seller does not exist
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - AuthTokenType is Custom
+     * - No field has been updated or requested to be updated
      *
      * @param _seller - the fully populated seller struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
@@ -88,6 +94,7 @@ contract SellerHandlerFacet is SellerBase {
                 (_seller.admin != address(0) && _authToken.tokenType == AuthTokenType.None),
             ADMIN_OR_AUTH_TOKEN
         );
+        require(_seller.clerk == address(0), CLERK_DEPRECATED);
 
         require(_authToken.tokenType != AuthTokenType.Custom, INVALID_AUTH_TOKEN_TYPE);
 
@@ -101,16 +108,11 @@ contract SellerHandlerFacet is SellerBase {
         address sender = msgSender();
 
         // Check that caller is authorized to call this function
-        if (authToken.tokenType != AuthTokenType.None) {
-            address authTokenContract = lookups.authTokenContracts[authToken.tokenType];
-            address tokenIdOwner = IERC721(authTokenContract).ownerOf(authToken.tokenId);
-            require(tokenIdOwner == sender, NOT_ADMIN);
-        } else {
-            require(seller.admin == sender, NOT_ADMIN);
-        }
+        authorizeAdmin(lookups, authToken, seller.admin, sender);
 
         // Clean old seller pending update data if exists
         delete lookups.pendingAddressUpdatesBySeller[_seller.id];
+        delete lookups.pendingAuthTokenUpdatesBySeller[_seller.id];
 
         bool needsApproval;
         (, Seller storage sellerPendingUpdate, AuthToken storage authTokenPendingUpdate) = fetchSellerPendingUpdate(
@@ -145,23 +147,25 @@ contract SellerHandlerFacet is SellerBase {
             needsApproval = true;
         }
 
-        if (_seller.clerk != seller.clerk) {
-            preUpdateSellerCheck(_seller.id, _seller.clerk, lookups);
-            require(_seller.clerk != address(0), INVALID_ADDRESS);
-            // Clerk address owner must approve the update to prevent front-running
-            sellerPendingUpdate.clerk = _seller.clerk;
-            needsApproval = true;
-        }
-
-        if (needsApproval) {
-            emit SellerUpdatePending(_seller.id, sellerPendingUpdate, authTokenPendingUpdate, sender);
-        }
+        bool updateApplied;
 
         if (_seller.treasury != seller.treasury) {
             require(_seller.treasury != address(0), INVALID_ADDRESS);
+
             // Update treasury
             seller.treasury = _seller.treasury;
 
+            updateApplied = true;
+        }
+
+        if (keccak256(bytes(_seller.metadataUri)) != keccak256(bytes(seller.metadataUri))) {
+            // Update metadata URI
+            seller.metadataUri = _seller.metadataUri;
+
+            updateApplied = true;
+        }
+
+        if (updateApplied) {
             // Notify watchers of state change
             emit SellerUpdateApplied(
                 _seller.id,
@@ -172,6 +176,13 @@ contract SellerHandlerFacet is SellerBase {
                 sender
             );
         }
+
+        if (needsApproval) {
+            // Notify watchers of state change
+            emit SellerUpdatePending(_seller.id, sellerPendingUpdate, authTokenPendingUpdate, sender);
+        }
+
+        require(updateApplied || needsApproval, NO_UPDATE_APPLIED);
     }
 
     /**
@@ -186,15 +197,15 @@ contract SellerHandlerFacet is SellerBase {
      * - Caller is not the owner of the pending AuthToken being updated
      * - No pending update exists for this seller
      * - AuthTokenType is not unique to this seller
+     * - Seller tries to update the clerk
      *
      * @param _sellerId - seller id
      * @param _fieldsToUpdate - fields to update, see SellerUpdateFields enum
      */
-    function optInToSellerUpdate(uint256 _sellerId, SellerUpdateFields[] calldata _fieldsToUpdate)
-        external
-        sellersNotPaused
-        nonReentrant
-    {
+    function optInToSellerUpdate(
+        uint256 _sellerId,
+        SellerUpdateFields[] calldata _fieldsToUpdate
+    ) external sellersNotPaused nonReentrant {
         Seller storage sellerPendingUpdate;
         AuthToken storage authTokenPendingUpdate;
 
@@ -217,7 +228,7 @@ contract SellerHandlerFacet is SellerBase {
 
         address sender = msgSender();
 
-        for (uint256 i = 0; i < _fieldsToUpdate.length; i++) {
+        for (uint256 i = 0; i < _fieldsToUpdate.length; ) {
             SellerUpdateFields role = _fieldsToUpdate[i];
 
             // Approve admin update
@@ -237,8 +248,12 @@ contract SellerHandlerFacet is SellerBase {
 
                 // Delete pending update admin
                 delete sellerPendingUpdate.admin;
+
                 // Delete auth token for seller id if it exists
-                delete protocolEntities().authTokens[_sellerId];
+                if (authToken.tokenType != AuthTokenType.None) {
+                    delete lookups.sellerIdByAuthToken[authToken.tokenType][authToken.tokenId];
+                    delete protocolEntities().authTokens[_sellerId];
+                }
 
                 updateApplied = true;
             } else if (role == SellerUpdateFields.Assistant && sellerPendingUpdate.assistant != address(0)) {
@@ -254,32 +269,23 @@ contract SellerHandlerFacet is SellerBase {
                 seller.assistant = sender;
 
                 // Transfer ownership of voucher contract to new assistant
-                IBosonVoucher(lookups.cloneAddress[_sellerId]).transferOwnership(sender);
+                IBosonVoucher(lookups.cloneAddress[_sellerId]).transferOwnership(sender); // default voucher contract
+                Collection[] storage sellersAdditionalCollections = lookups.additionalCollections[_sellerId];
+                uint256 collectionCount = sellersAdditionalCollections.length;
+                for (uint256 j = 0; j < collectionCount; ) {
+                    // Additional collections (if they exist)
+                    IBosonVoucher(sellersAdditionalCollections[j].collectionAddress).transferOwnership(sender);
+
+                    unchecked {
+                        j++;
+                    }
+                }
 
                 // Store new seller id by assistant mapping
                 lookups.sellerIdByAssistant[sender] = _sellerId;
 
                 // Delete pending update assistant
                 delete sellerPendingUpdate.assistant;
-
-                updateApplied = true;
-            } else if (role == SellerUpdateFields.Clerk && sellerPendingUpdate.clerk != address(0)) {
-                // Aprove clerk update
-                require(sellerPendingUpdate.clerk == sender, UNAUTHORIZED_CALLER_UPDATE);
-
-                preUpdateSellerCheck(_sellerId, sender, lookups);
-
-                // Delete old seller id by clerk mapping
-                delete lookups.sellerIdByClerk[seller.clerk];
-
-                // Update clerk
-                seller.clerk = sender;
-
-                // Store new seller id by clerk mapping
-                lookups.sellerIdByClerk[sender] = _sellerId;
-
-                // Delete pending update clerk
-                delete sellerPendingUpdate.clerk;
 
                 updateApplied = true;
             } else if (role == SellerUpdateFields.AuthToken && authTokenPendingUpdate.tokenType != AuthTokenType.None) {
@@ -315,6 +321,12 @@ contract SellerHandlerFacet is SellerBase {
                 delete authTokenPendingUpdate.tokenId;
 
                 updateApplied = true;
+            } else if (role == SellerUpdateFields.Clerk) {
+                revert(CLERK_DEPRECATED);
+            }
+
+            unchecked {
+                i++;
             }
         }
 
@@ -332,6 +344,98 @@ contract SellerHandlerFacet is SellerBase {
     }
 
     /**
+     * @notice Creates a new seller collection.
+     *
+     * Emits a CollectionCreated event if successful.
+     *
+     * Reverts if:
+     * - The sellers region of protocol is paused
+     * - Caller is not the seller assistant
+     *
+     * @param _externalId - external collection id
+     * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
+     */
+    function createNewCollection(
+        string calldata _externalId,
+        VoucherInitValues calldata _voucherInitValues
+    ) external sellersNotPaused nonReentrant {
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+        address assistant = msgSender();
+
+        (bool exists, uint256 sellerId) = getSellerIdByAssistant(assistant);
+        require(exists, NO_SUCH_SELLER);
+
+        Collection[] storage sellersAdditionalCollections = lookups.additionalCollections[sellerId];
+        uint256 collectionIndex = sellersAdditionalCollections.length + 1; // 0 is reserved for the original collection
+
+        bytes32 sellerSalt = lookups.sellerSalt[sellerId];
+
+        // Accounts created before v2.3.0 can be missing sellerSalt, so it's created here
+        if (sellerSalt == 0) {
+            (, Seller storage seller, AuthToken storage authToken) = fetchSeller(sellerId);
+            address admin = seller.admin;
+            if (admin == address(0)) {
+                admin = IERC721(lookups.authTokenContracts[authToken.tokenType]).ownerOf(authToken.tokenId);
+            }
+            sellerSalt = keccak256(abi.encodePacked(admin, _voucherInitValues.collectionSalt));
+            require(!lookups.isUsedSellerSalt[sellerSalt], SELLER_SALT_NOT_UNIQUE);
+            lookups.sellerSalt[sellerId] = sellerSalt;
+            lookups.isUsedSellerSalt[sellerSalt] = true;
+        }
+
+        // Create clone and store its address to additionalCollections
+        address voucherCloneAddress = cloneBosonVoucher(
+            sellerId,
+            collectionIndex,
+            sellerSalt,
+            assistant,
+            _voucherInitValues
+        );
+
+        // Store collection details
+        Collection storage newCollection = sellersAdditionalCollections.push();
+        newCollection.collectionAddress = voucherCloneAddress;
+        newCollection.externalId = _externalId;
+
+        emit CollectionCreated(sellerId, collectionIndex, voucherCloneAddress, _externalId, assistant);
+    }
+
+    /**
+     * @notice Updates a salt.
+     * Use this if the admin address is updated and there exists a possibility that the old admin will try to create the vouchers
+     * with matching addresses on other chains.
+     *
+     * Reverts if:
+     * - The sellers region of protocol is paused
+     * - Caller is not the admin of any seller
+     * - Seller salt is not unique
+     *
+     * @param _sellerId - the id of the seller
+     * @param _newSalt - new salt
+     */
+    function updateSellerSalt(uint256 _sellerId, bytes32 _newSalt) external sellersNotPaused nonReentrant {
+        address admin = msgSender();
+
+        // Cache protocol lookups for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+        (bool exists, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
+
+        // Seller must already exist
+        require(exists, NO_SUCH_SELLER);
+
+        // Check that caller is authorized to call this function
+        authorizeAdmin(lookups, authToken, seller.admin, admin);
+
+        bytes32 sellerSalt = keccak256(abi.encodePacked(admin, _newSalt));
+
+        require(!lookups.isUsedSellerSalt[sellerSalt], SELLER_SALT_NOT_UNIQUE);
+        lookups.isUsedSellerSalt[lookups.sellerSalt[_sellerId]] = false;
+        lookups.sellerSalt[_sellerId] = sellerSalt;
+        lookups.isUsedSellerSalt[sellerSalt] = true;
+    }
+
+    /**
      * @notice Gets the details about a seller.
      *
      * @param _sellerId - the id of the seller to check
@@ -340,53 +444,36 @@ contract SellerHandlerFacet is SellerBase {
      * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      *                     See {BosonTypes.AuthToken}
      */
-    function getSeller(uint256 _sellerId)
-        external
-        view
-        returns (
-            bool exists,
-            Seller memory seller,
-            AuthToken memory authToken
-        )
-    {
-        return fetchSeller(_sellerId);
+    function getSeller(
+        uint256 _sellerId
+    ) external view returns (bool exists, Seller memory seller, AuthToken memory authToken) {
+        return fetchSellerWithoutClerk(_sellerId);
     }
 
     /**
-     * @notice Gets the details about a seller by an address associated with that seller: assistant, admin, or clerk address.
+     * @notice Gets the details about a seller by an address associated with that seller: assistant or admin address.
      * A seller will have either an admin address or an auth token.
      * If seller's admin uses NFT Auth the seller should call `getSellerByAuthToken` instead.
      *
-     * @param _associatedAddress - the address associated with the seller. Must be an assistant, admin, or clerk address.
+     * @param _associatedAddress - the address associated with the seller. Must be an assistant or admin address.
      * @return exists - the seller was found
      * @return seller - the seller details. See {BosonTypes.Seller}
      * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      *                     See {BosonTypes.AuthToken}
      */
-    function getSellerByAddress(address _associatedAddress)
-        external
-        view
-        returns (
-            bool exists,
-            Seller memory seller,
-            AuthToken memory authToken
-        )
-    {
+    function getSellerByAddress(
+        address _associatedAddress
+    ) external view returns (bool exists, Seller memory seller, AuthToken memory authToken) {
         uint256 sellerId;
 
         (exists, sellerId) = getSellerIdByAssistant(_associatedAddress);
         if (exists) {
-            return fetchSeller(sellerId);
+            return fetchSellerWithoutClerk(sellerId);
         }
 
         (exists, sellerId) = getSellerIdByAdmin(_associatedAddress);
         if (exists) {
-            return fetchSeller(sellerId);
-        }
-
-        (exists, sellerId) = getSellerIdByClerk(_associatedAddress);
-        if (exists) {
-            return fetchSeller(sellerId);
+            return fetchSellerWithoutClerk(sellerId);
         }
     }
 
@@ -402,28 +489,94 @@ contract SellerHandlerFacet is SellerBase {
      * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      *                     See {BosonTypes.AuthToken}
      */
-    function getSellerByAuthToken(AuthToken calldata _associatedAuthToken)
-        external
-        view
-        returns (
-            bool exists,
-            Seller memory seller,
-            AuthToken memory authToken
-        )
-    {
+    function getSellerByAuthToken(
+        AuthToken calldata _associatedAuthToken
+    ) external view returns (bool exists, Seller memory seller, AuthToken memory authToken) {
         uint256 sellerId;
 
         (exists, sellerId) = getSellerIdByAuthToken(_associatedAuthToken);
         if (exists) {
-            return fetchSeller(sellerId);
+            return fetchSellerWithoutClerk(sellerId);
         }
+    }
+
+    /**
+     * @notice Gets the details about a seller's collections.
+     *
+     * @param _sellerId - the id of the seller to check
+     * @return defaultVoucherAddress - the address of the default voucher contract for the seller
+     * @return additionalCollections - an array of additional collections that the seller has created
+     */
+    function getSellersCollections(
+        uint256 _sellerId
+    ) external view returns (address defaultVoucherAddress, Collection[] memory additionalCollections) {
+        ProtocolLib.ProtocolLookups storage pl = protocolLookups();
+        return (pl.cloneAddress[_sellerId], pl.additionalCollections[_sellerId]);
+    }
+
+    /**
+     * @notice Returns the availability of salt for a seller.
+     *
+     * @param _adminAddres - the admin address to check
+     * @param _salt - the salt to check (corresponds to `collectionSalt` when `createSeller` or `createNewCollection` is called or `newSalt` when `updateSellerSalt` is called)
+     * @return isAvailable - salt can be used
+     */
+    function isSellerSaltAvailable(address _adminAddres, bytes32 _salt) external view returns (bool isAvailable) {
+        bytes32 sellerSalt = keccak256(abi.encodePacked(_adminAddres, _salt));
+        return !protocolLookups().isUsedSellerSalt[sellerSalt];
+    }
+
+    /**
+     * @notice Calculates the expected collection address and tells if it's still available.
+     *
+     * @param _sellerId - the seller id
+     * @param _collectionSalt - the collection specific salt
+     * @return collectionAddress - the collection address
+     * @return isAvailable - whether the collection address is available
+     */
+    function calculateCollectionAddress(
+        uint256 _sellerId,
+        bytes32 _collectionSalt
+    ) external view returns (address collectionAddress, bool isAvailable) {
+        (bool exist, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
+        if (!exist) {
+            return (address(0), false);
+        }
+
+        // get seller salt
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+        bytes32 sellerSalt = lookups.sellerSalt[_sellerId];
+
+        // If seller salt is not set, calculate it
+        if (sellerSalt == 0) {
+            address admin = seller.admin;
+            if (admin == address(0)) {
+                admin = IERC721(lookups.authTokenContracts[authToken.tokenType]).ownerOf(authToken.tokenId);
+            }
+            sellerSalt = keccak256(abi.encodePacked(admin, _collectionSalt));
+        }
+
+        // Calculate collection address
+        bytes32 collectionSalt = keccak256(abi.encodePacked(sellerSalt, _collectionSalt));
+        bytes32 bytecodeHash = keccak256(
+            abi.encodePacked(
+                bytes20(hex"3d602d80600a3d3981f3363d3d373d3d3d363d73"),
+                protocolAddresses().beaconProxy,
+                bytes15(0x5af43d82803e903d91602b57fd5bf3)
+            )
+        );
+
+        collectionAddress = Create2.computeAddress(collectionSalt, bytecodeHash, address(this));
+
+        // Check if collection address is available
+        isAvailable = !Address.isContract(collectionAddress);
     }
 
     /**
      * @notice Pre update Seller checks
      *
      * Reverts if:
-     *   - Address has already been used by another seller as assistant, admin, or clerk
+     *   - Address has already been used by another seller as assistant or admin
      *
      * @param _sellerId - the id of the seller to check
      * @param _role - the address to check
@@ -437,15 +590,45 @@ contract SellerHandlerFacet is SellerBase {
         // Check that the role is unique to one seller id across all roles -- not used or is used by this seller id.
         if (_role != address(0)) {
             uint256 check1 = _lookups.sellerIdByAssistant[_role];
-            uint256 check2 = _lookups.sellerIdByClerk[_role];
-            uint256 check3 = _lookups.sellerIdByAdmin[_role];
+            uint256 check2 = _lookups.sellerIdByAdmin[_role];
 
             require(
-                (check1 == 0 || check1 == _sellerId) &&
-                    (check2 == 0 || check2 == _sellerId) &&
-                    (check3 == 0 || check3 == _sellerId),
+                (check1 == 0 || check1 == _sellerId) && (check2 == 0 || check2 == _sellerId),
                 SELLER_ADDRESS_MUST_BE_UNIQUE
             );
+        }
+    }
+
+    /**
+     * @notice Fetches a given seller from storage by id and overrides the clerk address with 0x0.
+     *
+     * @param _sellerId - the id of the seller
+     * @return exists - whether the seller exists
+     * @return seller - the seller details. See {BosonTypes.Seller}
+     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     */
+    function fetchSellerWithoutClerk(
+        uint256 _sellerId
+    ) internal view returns (bool exists, Seller memory seller, AuthToken memory authToken) {
+        (exists, seller, authToken) = fetchSeller(_sellerId);
+        seller.clerk = address(0);
+    }
+
+    /**
+     * @notice Performs a validation that the message sender is either the admin address or the owner of auth token
+     */
+    function authorizeAdmin(
+        ProtocolLib.ProtocolLookups storage _lookups,
+        AuthToken storage _authToken,
+        address _admin,
+        address _sender
+    ) internal view {
+        if (_admin != address(0)) {
+            require(_admin == _sender, NOT_ADMIN);
+        } else {
+            address authTokenContract = _lookups.authTokenContracts[_authToken.tokenType];
+            address tokenIdOwner = IERC721(authTokenContract).ownerOf(_authToken.tokenId);
+            require(tokenIdOwner == _sender, NOT_ADMIN);
         }
     }
 }

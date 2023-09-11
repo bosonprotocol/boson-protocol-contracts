@@ -1,5 +1,6 @@
 const EvaluationMethod = require("./EvaluationMethod");
 const TokenType = require("./TokenType");
+const GatingType = require("./GatingType");
 const { bigNumberIsValid, addressIsValid, enumIsValid } = require("../util/validations.js");
 
 /**
@@ -13,19 +14,22 @@ class Condition {
             EvaluationMethod method;
             TokenType tokenType;
             address tokenAddress;
-            uint256 tokenId;
+            GatingType gating;
+            uint256 minTokenId;
             uint256 threshold;
             uint256 maxCommits;
+            uint256 maxTokenId;
         }
     */
-
-  constructor(method, tokenType, tokenAddress, tokenId, threshold, maxCommits) {
+  constructor(method, tokenType, tokenAddress, gating, minTokenId, threshold, maxCommits, maxTokenId) {
     this.method = method;
     this.tokenType = tokenType;
     this.tokenAddress = tokenAddress;
-    this.tokenId = tokenId;
+    this.gating = gating;
+    this.minTokenId = minTokenId;
     this.threshold = threshold;
     this.maxCommits = maxCommits;
+    this.maxTokenId = maxTokenId;
   }
 
   /**
@@ -34,8 +38,8 @@ class Condition {
    * @returns {Condition}
    */
   static fromObject(o) {
-    const { method, tokenType, tokenAddress, tokenId, threshold, maxCommits } = o;
-    return new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+    const { method, tokenType, tokenAddress, gating, minTokenId, threshold, maxCommits, maxTokenId } = o;
+    return new Condition(method, tokenType, tokenAddress, gating, minTokenId, threshold, maxCommits, maxTokenId);
   }
 
   /**
@@ -44,18 +48,20 @@ class Condition {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let method, tokenType, tokenAddress, tokenId, threshold, maxCommits;
+    let method, tokenType, tokenAddress, gating, minTokenId, threshold, maxCommits, maxTokenId;
 
     // destructure struct
-    [method, tokenType, tokenAddress, tokenId, threshold, maxCommits] = struct;
+    [method, tokenType, tokenAddress, gating, minTokenId, threshold, maxCommits, maxTokenId] = struct;
 
     return Condition.fromObject({
       method: parseInt(method),
-      tokenType,
+      tokenType: Number(tokenType),
       tokenAddress,
-      tokenId: tokenId.toString(),
+      gating: Number(gating),
+      minTokenId: minTokenId.toString(),
       threshold: threshold.toString(),
       maxCommits: maxCommits.toString(),
+      maxTokenId: maxTokenId.toString(),
     });
   }
 
@@ -73,9 +79,10 @@ class Condition {
    */
   toString() {
     let tmp = { ...this };
-    tmp.tokenId = tmp.tokenId.toString();
+    tmp.minTokenId = tmp.minTokenId.toString();
     tmp.threshold = tmp.threshold.toString();
     tmp.maxCommits = tmp.maxCommits.toString();
+    tmp.maxTokenId = tmp.maxTokenId.toString();
     return JSON.stringify(tmp);
   }
 
@@ -84,7 +91,16 @@ class Condition {
    * @returns {string}
    */
   toStruct() {
-    return [this.method, this.tokenType, this.tokenAddress, this.tokenId, this.threshold, this.maxCommits];
+    return [
+      this.method,
+      this.tokenType,
+      this.tokenAddress,
+      this.gating,
+      this.minTokenId,
+      this.threshold,
+      this.maxCommits,
+      this.maxTokenId,
+    ];
   }
 
   /**
@@ -123,11 +139,20 @@ class Condition {
   }
 
   /**
-   * Is this Condition instance's tokenId field valid?
+   * Is this Condition instance's gating field valid?
+   * Must be a number belonging to the GatingType enum
    * @returns {boolean}
    */
-  tokenIdIsValid() {
-    return bigNumberIsValid(this.tokenId);
+  gatingIsValid() {
+    return enumIsValid(this.gating, GatingType.Types);
+  }
+
+  /**
+   * Is this Condition instance's minTokenId field valid?
+   * @returns {boolean}
+   */
+  minTokenIdIsValid() {
+    return bigNumberIsValid(this.minTokenId);
   }
 
   /**
@@ -147,6 +172,14 @@ class Condition {
   }
 
   /**
+   * Is this Condition instance's maxTokenId field valid?
+   * @returns {boolean}
+   */
+  maxTokenIdIsValid() {
+    return bigNumberIsValid(this.maxTokenId);
+  }
+
+  /**
    * Is this Condition instance valid?
    * @returns {boolean}
    */
@@ -155,9 +188,11 @@ class Condition {
       this.methodIsValid() &&
       this.tokenTypeIsValid() &&
       this.tokenAddressIsValid() &&
-      this.tokenIdIsValid() &&
+      this.gatingIsValid() &&
+      this.minTokenIdIsValid() &&
       this.thresholdIsValid() &&
-      this.maxCommitsIsValid()
+      this.maxCommitsIsValid() &&
+      this.maxTokenIdIsValid()
     );
   }
 }

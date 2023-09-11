@@ -1,0 +1,4 @@
+{
+  "filter_paths": "(contracts/mock/|contracts/ext_libs/|node_modules)",
+  "detectors_to_exclude": "uninitialized-local,timestamp, assembly,naming-convention,similar-names"
+}

@@ -1,28 +1,27 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
-
-const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
+const { ethers } = require("hardhat");
+const { getSigners, getContractFactory } = ethers;
 const { expect } = require("chai");
-const { maxPriorityFeePerGas } = require("../../util/constants");
 
 describe("BeaconClientProxy", function () {
-  let protocol, rando;
-  let proxy;
+  let clientBeacon, rando;
+  let clientProxy;
 
   beforeEach(async function () {
-    // Set signers (fake protocol address to test issue and burn voucher without protocol dependencie)
-    [protocol, rando] = await ethers.getSigners();
+    // Set signers
+    [clientBeacon, rando] = await getSigners();
 
     // deploy proxy
-    const protocolClientArgs = [protocol.address];
-    const [, , proxies] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
-    [proxy] = proxies;
+    const ClientProxy = await getContractFactory("BeaconClientProxy");
+    clientProxy = await ClientProxy.deploy();
+
+    // init instead of constructors
+    await clientProxy.initialize(clientBeacon.address);
   });
 
   context("initializable", function () {
     context("💔 Revert Reasons", async function () {
       it("should revert if trying to initialize again", async function () {
-        await expect(proxy.connect(rando).initialize(rando.address)).to.be.revertedWith(
+        await expect(clientProxy.connect(rando).initialize(await rando.getAddress())).to.be.revertedWith(
           "Initializable: contract is already initialized"
         );
       });

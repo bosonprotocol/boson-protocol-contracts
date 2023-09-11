@@ -25,6 +25,7 @@ class Offer {
             string metadataUri;
             string metadataHash;
             bool voided;
+            uint256 collectionIndex;
             PriceType priceType;
         }
     */
@@ -40,6 +41,7 @@ class Offer {
     metadataUri,
     metadataHash,
     voided,
+    collectionIndex,
     priceType
   ) {
     this.id = id;
@@ -52,6 +54,7 @@ class Offer {
     this.metadataUri = metadataUri;
     this.metadataHash = metadataHash;
     this.voided = voided;
+    this.collectionIndex = collectionIndex;
     this.priceType = priceType;
   }
 
@@ -72,6 +75,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      collectionIndex,
       priceType,
     } = o;
 
@@ -86,6 +90,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      collectionIndex,
       priceType
     );
   }
@@ -106,6 +111,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      collectionIndex,
       priceType;
 
     // destructure struct
@@ -120,8 +126,12 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      collectionIndex,
       priceType,
     ] = struct;
+    if (!collectionIndex) {
+      collectionIndex = 0;
+    }
 
     return Offer.fromObject({
       id: id.toString(),
@@ -134,6 +144,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      collectionIndex: collectionIndex.toString(),
       priceType,
     });
   }
@@ -170,6 +181,7 @@ class Offer {
       this.metadataUri,
       this.metadataHash,
       this.voided,
+      this.collectionIndex,
       this.priceType,
     ];
   }
@@ -280,6 +292,15 @@ class Offer {
   }
 
   /**
+   * Is this Offer instance's collectionIndex field valid?
+   * Must be a string representation of a big number
+   * @returns {boolean}
+   */
+  collectionIndexIsValid() {
+    return bigNumberIsValid(this.collectionIndex);
+  }
+
+  /**
    * Is this Offer instance valid?
    * @returns {boolean}
    */
@@ -295,6 +316,7 @@ class Offer {
       this.metadataUriIsValid() &&
       this.metadataHashIsValid() &&
       this.voidedIsValid() &&
+      this.collectionIndexIsValid() &&
       this.priceTypeIsValid()
     );
   }

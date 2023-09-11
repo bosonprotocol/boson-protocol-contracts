@@ -1,15 +1,15 @@
-const hre = require("hardhat");
-const { ethers } = hre;
-const { BigNumber, constants } = ethers;
+const { ethers } = require("hardhat");
+const { BigNumber, constants, ZeroAddress } = ethers;
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
 
 const {
-  calculateContractAddress,
   deriveTokenId,
   getCurrentBlockAndSetTimeForward,
   setupTestEnvironment,
   revertToSnapshot,
   getSnapshot,
+  calculateBosonProxyAddress,
+  calculateCloneAddress,
 } = require("../../util/utils");
 const { oneWeek } = require("../../util/constants");
 const {
@@ -59,13 +59,13 @@ describe("[@skip-on-coverage] auction integration", function () {
       extraReturnValues: { bosonVoucher },
     } = await setupTestEnvironment(contracts, { wethAddress: weth.address }));
 
-    seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
+    seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
 
     const emptyAuthToken = mockAuthToken();
     const voucherInitValues = mockVoucherInitValues();
     await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-    const disputeResolver = mockDisputeResolver(DR.address, DR.address, DR.address, DR.address, true);
+    const disputeResolver = mockDisputeResolver(DR.address, DR.address, ZeroAddress, DR.address, true);
 
     const disputeResolverFees = [
       new DisputeResolverFee(constants.AddressZero, "Native Currency", "0"),
@@ -85,7 +85,8 @@ describe("[@skip-on-coverage] auction integration", function () {
       .connect(assistant)
       .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, "0");
 
-    const voucherAddress = calculateContractAddress(accountHandler.address, seller.id);
+    const beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
+    const voucherAddress = calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, seller.admin);
     bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherAddress);
 
     // Pre mint range
