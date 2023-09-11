@@ -1,5 +1,5 @@
-const hre = require("hardhat");
-const { getContractAt, ZeroAddress, getSigners, MaxUint256, provider, parseUnits } = hre.ethers;
+const { ethers } = require("hardhat");
+const { getContractAt, ZeroAddress, getSigners, MaxUint256, provider, parseUnits } = ethers;
 const { assert, expect } = require("chai");
 
 const Offer = require("../../scripts/domain/Offer");

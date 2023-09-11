@@ -4550,8 +4550,7 @@ describe("IBosonFundsHandler", function () {
                 const expectedCloneAddress = calculateCloneAddress(
                   await accountHandler.getAddress(),
                   beaconProxyAddress,
-                  admin.address,
-                  ""
+                  admin.address
                 );
                 bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
@@ -6164,8 +6163,7 @@ describe("IBosonFundsHandler", function () {
               const expectedCloneAddress = calculateCloneAddress(
                 await accountHandler.getAddress(),
                 beaconProxyAddress,
-                admin.address,
-                ""
+                admin.address
               );
               const bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
               await configHandler.setProtocolFeePercentage(fee.protocol);
@@ -6182,7 +6180,9 @@ describe("IBosonFundsHandler", function () {
               await fundsHandler.connect(assistant).withdrawFunds(seller.id, [], []); // withdraw all, so it's easier to test
               await mockToken.connect(assistant).mint(assistant.address, offer.sellerDeposit);
               await mockToken.connect(assistant).approve(await fundsHandler.getAddress(), offer.sellerDeposit);
-              await fundsHandler.connect(assistant).depositFunds(seller.id, mockTokenAddress, offer.sellerDeposit);
+              await fundsHandler
+                .connect(assistant)
+                .depositFunds(seller.id, await mockToken.getAddress(), offer.sellerDeposit);
 
               await offerHandler
                 .connect(assistant)
@@ -6194,7 +6194,7 @@ describe("IBosonFundsHandler", function () {
               buyerId = 5;
 
               // Create buyer with protocol address to not mess up ids in tests
-              await accountHandler.createBuyer(mockBuyer(exchangeHandler.address));
+              await accountHandler.createBuyer(mockBuyer(await exchangeHandler.getAddress()));
 
               // commit to offer
               await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
@@ -6225,9 +6225,10 @@ describe("IBosonFundsHandler", function () {
                   order,
                 ]);
 
+                const priceDiscoveryContractAddress = await priceDiscoveryContract.getAddress();
                 const priceDiscovery = new PriceDiscovery(
                   order.price,
-                  priceDiscoveryContract.address,
+                  priceDiscoveryContractAddress,
                   priceDiscoveryData,
                   Side.Ask
                 );
@@ -6237,7 +6238,7 @@ describe("IBosonFundsHandler", function () {
                 await mockToken.connect(voucherOwner).approve(protocolDiamondAddress, order.price);
 
                 // Voucher owner approves PriceDiscovery contract to transfer the tokens
-                await bosonVoucherClone.connect(voucherOwner).setApprovalForAll(priceDiscoveryContract.address, true);
+                await bosonVoucherClone.connect(voucherOwner).setApprovalForAll(priceDiscoveryContractAddress, true);
 
                 // Buyer approves protocol to transfer the tokens
                 await mockToken.mint(trade.buyer.address, order.price);

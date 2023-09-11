@@ -1,6 +1,6 @@
-const hre = require("hardhat");
+const { ethers } = require("hardhat");
 const { expect } = require("chai");
-const { id } = hre.ethers;
+const { id } = ethers;
 const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");

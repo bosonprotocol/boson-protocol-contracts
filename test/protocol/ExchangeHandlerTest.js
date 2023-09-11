@@ -307,7 +307,7 @@ describe("IBosonExchangeHandler", function () {
       offer.quantityAvailable = "10";
       disputeResolverId = mo.disputeResolverId;
 
-      offerDurations.voucherValid = (oneMonth * 12).toString();
+      offerDurations.voucherValid = (oneMonth * 12n).toString();
 
       // Check if domains are valid
       expect(offer.isValid()).is.true;
