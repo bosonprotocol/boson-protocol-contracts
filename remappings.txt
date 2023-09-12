@@ -1,6 +1,5 @@
 ds-test/=submodules/lssvm/lib/ds-test/src/
-solmate/=submodules/seaport/lib/solmate/src/
-solmate@5.0.2/=submodules/lssvm/lib/solmate/src/
+solmate/=submodules/${submodule}/lib/solmate/src/
 @manifoldxyz/=submodules/lssvm/lib/
 manifoldxyz/=submodules/lssvm/lib/royalty-registry-solidity.git/contracts/
 @sudoswap/=submodules/lssvm/src/

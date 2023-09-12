@@ -10,7 +10,7 @@ const { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } = require("hardhat/builtin-task
 subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS, async (_, { config }, runSuper) => {
   const files = await runSuper();
 
-  const submodules = await glob(path.join(config.paths.root, "submodules/seaport/{src,contracts}/**/*.sol"), {
+  const submodules = await glob(path.join(config.paths.root, "submodules/**/{src,contracts}/**/*.sol"), {
     ignore: [
       path.join(config.paths.root, "submodules/**/node_modules/**"),
       path.join(config.paths.root, "submodules/**/test/**"),
@@ -23,15 +23,12 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS, async (_, { config }, runSuper) 
   });
 
   // Include files inside lib folder when it is inside src folder
-  const submodulesWithLib = await glob(
-    path.join(config.paths.root, "submodules/seaport/{src,contracts}/lib/**/*.sol"),
-    {
-      ignore: [
-        path.join(config.paths.root, "submodules/**/test/**"),
-        path.join(config.paths.root, "submodules/**/artifacts/**"),
-      ],
-    }
-  );
+  const submodulesWithLib = await glob(path.join(config.paths.root, "submodules/**/{src,contracts}/lib/**/*.sol"), {
+    ignore: [
+      path.join(config.paths.root, "submodules/**/test/**"),
+      path.join(config.paths.root, "submodules/**/artifacts/**"),
+    ],
+  });
 
   return [...files, ...submodules, ...submodulesWithLib].map(path.normalize);
 });
@@ -58,15 +55,19 @@ module.exports = {
   },
   preprocess: {
     eachLine: () => ({
-      transform: (line) => {
-        if (line.match(/^\s*import /i)) {
-          for (const [from, to] of getRemappings()) {
-            if (line.includes(from)) {
-              line = line.replace(from, to);
-              break;
+      transform: (line, { absolutePath }) => {
+        if (absolutePath.includes("submodules")) {
+          const submodule = absolutePath.split("submodules/")[1].split("/")[0];
+          if (line.match(/^\s*import /i)) {
+            for (const [from, to] of getRemappings()) {
+              if (line.includes(from)) {
+                line = line.replace(from, to.replace("${submodule}", submodule));
+                break;
+              }
             }
           }
         }
+
         return line;
       },
     }),

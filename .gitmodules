@@ -4,4 +4,3 @@
 [submodule "submodules/lssvm"]
 	path = submodules/lssvm
 	url = https://github.com/sudoswap/lssvm
-

@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { ZeroAddress, MaxUint256, getContractFactory, getContractAt, parseUnits, provider } = ethers;
+const { ZeroAddress, MaxUint256, getContractFactory, getContractAt, parseUnits, provider, id } = ethers;
 const {
   mockSeller,
   mockAuthToken,
@@ -9,7 +9,12 @@ const {
   accountId,
 } = require("../../util/mock");
 const { expect } = require("chai");
-const { calculateContractAddress, deriveTokenId, setupTestEnvironment } = require("../../util/utils");
+const {
+  calculateBosonProxyAddress,
+  calculateCloneAddress,
+  deriveTokenId,
+  setupTestEnvironment,
+} = require("../../util/utils");
 
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const Side = require("../../../scripts/domain/Side");
@@ -124,14 +129,15 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
     await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
 
     // Gets boson voucher contract
-    const voucherAddress = calculateContractAddress(await accountHandler.getAddress(), seller.id);
+    const beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
+    const voucherAddress = calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, seller.admin);
     bosonVoucher = await getContractAt("BosonVoucher", voucherAddress);
 
     // Pre mint range
     await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
   });
 
-  it("Works with wrapper vouchers", async function () {
+  it("Works with wrapped vouchers", async function () {
     const poolType = 1; // NFT
     const delta = parseUnits("0.25", "ether").toString();
     const fee = "0";
@@ -145,7 +151,7 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
 
     const initialPoolBalance = parseUnits("10", "ether").toString();
     await weth.connect(assistant).deposit({ value: initialPoolBalance });
-    await weth.connect(assistant).approve(lssvmPairFactory.address, MaxUint256);
+    await weth.connect(assistant).approve(await lssvmPairFactory.getAddress(), MaxUint256);
 
     const WrappedBosonVoucherFactory = await getContractFactory("SudoswapWrapper");
     const wrappedBosonVoucher = await WrappedBosonVoucherFactory.connect(assistant).deploy(
@@ -177,9 +183,10 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
 
     let tx = await lssvmPairFactory.connect(assistant).createPairERC20(createPairERC20Parameters);
 
-    const { events } = await tx.wait();
+    const { logs } = await tx.wait();
 
-    const [poolAddress] = events.find((e) => e.event == "NewPair").args;
+    const NewPairTopic = id("NewPair(address)");
+    const [poolAddress] = logs.find((e) => e?.topics[0] === NewPairTopic).args;
 
     await wrappedBosonVoucher.connect(assistant).setPoolAddress(poolAddress);
 
@@ -187,8 +194,8 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
 
     const [, , , inputAmount] = await pool.getBuyNFTQuote(1);
 
-    await weth.connect(buyer).deposit({ value: inputAmount.mul(2) });
-    await weth.connect(buyer).approve(wrappedBosonVoucherAddress, inputAmount.mul(2));
+    await weth.connect(buyer).deposit({ value: inputAmount * 2n });
+    await weth.connect(buyer).approve(wrappedBosonVoucherAddress, inputAmount * 2n);
 
     const tokenId = deriveTokenId(offer.id, 1);
 
@@ -211,9 +218,9 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
 
     const protocolBalanceAfter = await weth.balanceOf(await exchangeHandler.getAddress());
 
-    expect(protocolBalanceAfter).to.equal(protocolBalanceBefore.add(inputAmount));
+    expect(protocolBalanceAfter).to.equal(protocolBalanceBefore + inputAmount);
 
-    const exchangeId = tokenId.and(MASK);
+    const exchangeId = tokenId & MASK;
     const [, , voucher] = await exchangeHandler.getExchange(exchangeId);
 
     expect(voucher.committedDate).to.equal(timestamp);
