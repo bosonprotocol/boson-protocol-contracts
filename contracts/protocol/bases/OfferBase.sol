@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import { IBosonOfferEvents } from "../../interfaces/events/IBosonOfferEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
@@ -27,7 +27,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Voucher redeemable period is fixed, but it ends before it starts
      * - Voucher redeemable period is fixed, but it ends before offer expires
      * - Dispute period is less than minimum dispute period
-     * - Resolution period is set to zero or above the maximum resolution period
+     * - Resolution period is not between the minimum and the maximum resolution period
      * - Voided is set to true
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -87,7 +87,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Voucher redeemable period is fixed, but it ends before it starts
      * - Voucher redeemable period is fixed, but it ends before offer expires
      * - Dispute period is less than minimum dispute period
-     * - Resolution period is set to zero or above the maximum resolution period
+     * - Resolution period is not between the minimum and the maximum resolution period
      * - Voided is set to true
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -136,9 +136,10 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             // dispute period must be greater than or equal to the minimum dispute period
             require(_offerDurations.disputePeriod >= limits.minDisputePeriod, INVALID_DISPUTE_PERIOD);
 
-            // dispute duration must be greater than zero
+            // resolution period must be between the minimum and maximum resolution periods
             require(
-                _offerDurations.resolutionPeriod > 0 && _offerDurations.resolutionPeriod <= limits.maxResolutionPeriod,
+                _offerDurations.resolutionPeriod >= limits.minResolutionPeriod &&
+                    _offerDurations.resolutionPeriod <= limits.maxResolutionPeriod,
                 INVALID_RESOLUTION_PERIOD
             );
         }
@@ -149,46 +150,59 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // quantity must be greater than zero
         require(_offer.quantityAvailable > 0, INVALID_QUANTITY_AVAILABLE);
 
-        // Specified resolver must be registered and active, except for absolute zero offers with unspecified dispute resolver.
-        // If price and sellerDeposit are 0, seller is not obliged to choose dispute resolver, which is done by setting _disputeResolverId to 0.
-        // In this case, there is no need to check the validity of the dispute resolver. However, if one (or more) of {price, sellerDeposit, _disputeResolverId}
-        // is different from 0, it must be checked that dispute resolver exists, supports the exchange token and seller is allowed to choose them.
         DisputeResolutionTerms memory disputeResolutionTerms;
-        if (_offer.price != 0 || _offer.sellerDeposit != 0 || _disputeResolverId != 0) {
-            (
-                bool exists,
-                DisputeResolver storage disputeResolver,
-                DisputeResolverFee[] storage disputeResolverFees
-            ) = fetchDisputeResolver(_disputeResolverId);
-            require(exists && disputeResolver.active, INVALID_DISPUTE_RESOLVER);
+        {
+            // Cache protocol lookups for reference
+            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-            // Operate in a block to avoid "stack too deep" error
-            {
-                // Cache protocol lookups for reference
-                ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+            // Specified resolver must be registered and active, except for absolute zero offers with unspecified dispute resolver.
+            // If price and sellerDeposit are 0, seller is not obliged to choose dispute resolver, which is done by setting _disputeResolverId to 0.
+            // In this case, there is no need to check the validity of the dispute resolver. However, if one (or more) of {price, sellerDeposit, _disputeResolverId}
+            // is different from 0, it must be checked that dispute resolver exists, supports the exchange token and seller is allowed to choose them.
+            if (_offer.price != 0 || _offer.sellerDeposit != 0 || _disputeResolverId != 0) {
+                (
+                    bool exists,
+                    DisputeResolver storage disputeResolver,
+                    DisputeResolverFee[] storage disputeResolverFees
+                ) = fetchDisputeResolver(_disputeResolverId);
+                require(exists && disputeResolver.active, INVALID_DISPUTE_RESOLVER);
 
-                // check that seller is on the DR allow list
-                if (lookups.allowedSellers[_disputeResolverId].length > 0) {
-                    // if length == 0, dispute resolver allows any seller
-                    // if length > 0, we check that it is on allow list
-                    require(lookups.allowedSellerIndex[_disputeResolverId][_offer.sellerId] > 0, SELLER_NOT_APPROVED);
+                // Operate in a block to avoid "stack too deep" error
+                {
+                    // check that seller is on the DR allow list
+                    if (lookups.allowedSellers[_disputeResolverId].length > 0) {
+                        // if length == 0, dispute resolver allows any seller
+                        // if length > 0, we check that it is on allow list
+                        require(
+                            lookups.allowedSellerIndex[_disputeResolverId][_offer.sellerId] > 0,
+                            SELLER_NOT_APPROVED
+                        );
+                    }
+
+                    // get the index of DisputeResolverFee and make sure DR supports the exchangeToken
+                    uint256 feeIndex = lookups.disputeResolverFeeTokenIndex[_disputeResolverId][_offer.exchangeToken];
+                    require(feeIndex > 0, DR_UNSUPPORTED_FEE);
+
+                    uint256 feeAmount = disputeResolverFees[feeIndex - 1].feeAmount;
+
+                    // store DR terms
+                    disputeResolutionTerms.disputeResolverId = _disputeResolverId;
+                    disputeResolutionTerms.escalationResponsePeriod = disputeResolver.escalationResponsePeriod;
+                    disputeResolutionTerms.feeAmount = feeAmount;
+                    disputeResolutionTerms.buyerEscalationDeposit =
+                        (feeAmount * protocolFees().buyerEscalationDepositPercentage) /
+                        10000;
+
+                    protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
                 }
+            }
 
-                // get the index of DisputeResolverFee and make sure DR supports the exchangeToken
-                uint256 feeIndex = lookups.disputeResolverFeeTokenIndex[_disputeResolverId][_offer.exchangeToken];
-                require(feeIndex > 0, DR_UNSUPPORTED_FEE);
-
-                uint256 feeAmount = disputeResolverFees[feeIndex - 1].feeAmount;
-
-                // store DR terms
-                disputeResolutionTerms.disputeResolverId = _disputeResolverId;
-                disputeResolutionTerms.escalationResponsePeriod = disputeResolver.escalationResponsePeriod;
-                disputeResolutionTerms.feeAmount = feeAmount;
-                disputeResolutionTerms.buyerEscalationDeposit =
-                    (feeAmount * protocolFees().buyerEscalationDepositPercentage) /
-                    10000;
-
-                protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
+            // Collection must exist. Collections with index 0 exist by default.
+            if (_offer.collectionIndex > 0) {
+                require(
+                    lookups.additionalCollections[_offer.sellerId].length >= _offer.collectionIndex,
+                    NO_SUCH_COLLECTION
+                );
             }
         }
 
@@ -241,6 +255,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         offer.exchangeToken = _offer.exchangeToken;
         offer.metadataUri = _offer.metadataUri;
         offer.metadataHash = _offer.metadataHash;
+        offer.collectionIndex = _offer.collectionIndex;
         offer.priceType = _offer.priceType;
 
         // Get storage location for offer dates
@@ -299,7 +314,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         address _to
     ) internal offersNotPaused exchangesNotPaused {
         // Get offer, make sure the caller is the assistant
-        Offer storage offer = getValidOffer(_offerId);
+        Offer storage offer = getValidOfferWithSellerCheck(_offerId);
 
         // Prevent reservation of an empty range
         require(_length > 0, INVALID_RANGE_LENGTH);
@@ -308,21 +323,20 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         require(offer.quantityAvailable >= _length, INVALID_RANGE_LENGTH);
 
         // Prevent reservation of too large range, since it affects exchangeId
-        require(_length < (1 << 64), INVALID_RANGE_LENGTH);
+        require(_length <= type(uint64).max, INVALID_RANGE_LENGTH);
 
         // Get starting token id
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
         uint256 _startId = pc.nextExchangeId;
 
-        IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
+        IBosonVoucher bosonVoucher = IBosonVoucher(
+            getCloneAddress(protocolLookups(), offer.sellerId, offer.collectionIndex)
+        );
 
         address sender = msgSender();
 
         // _to must be the contract address or the contract owner
         require(_to == address(bosonVoucher) || _to == sender, INVALID_TO_ADDRESS);
-
-        // Call reserveRange on voucher
-        bosonVoucher.reserveRange(_offerId, _startId, _length, _to);
 
         // increase exchangeIds
         pc.nextExchangeId = _startId + _length;
@@ -331,6 +345,9 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         if (offer.quantityAvailable != type(uint256).max) {
             offer.quantityAvailable -= _length;
         }
+
+        // Call reserveRange on voucher
+        bosonVoucher.reserveRange(_offerId, _startId, _length, _to);
 
         // Notify external observers
         emit RangeReserved(_offerId, offer.sellerId, _startId, _startId + _length - 1, _to, sender);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import { BuyerBase } from "../bases/BuyerBase.sol";
 import { IBosonPriceDiscoveryHandler } from "../../interfaces/handlers/IBosonPriceDiscoveryHandler.sol";
@@ -11,12 +11,12 @@ import { DisputeBase } from "../bases/DisputeBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import "../../domain/BosonConstants.sol";
-import { Address } from "../../ext_libs/Address.sol";
 import { IERC1155 } from "../../interfaces/IERC1155.sol";
 import { IERC721 } from "../../interfaces/IERC721.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
 import { IERC721Receiver } from "../../interfaces/IERC721Receiver.sol";
 import { PriceDiscoveryBase } from "../bases/PriceDiscoveryBase.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @title PriceDiscoveryHandlerFacet
@@ -39,8 +39,9 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
      * Issues a voucher to the buyer address.
      *
      * Reverts if:
-     * - Offer price type is not discovery
-     * - Price discovery argument invalid
+     * - Offer price type is not price discovery. See BosonTypes.PriceType
+     * - Price discovery contract address is zero
+     * - Price discovery calldata is empty
      * - Exchange exists already
      * - Offer has been voided
      * - Offer has expired
@@ -48,26 +49,8 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
      * - Buyer address is zero
      * - Buyer account is inactive
      * - Buyer is token-gated (conditional commit requirements not met or already used)
-     * - Offer price is in native token and caller does not send enough
-     * - Offer price is in some ERC20 token and caller also sends native currency
-     * - Contract at token address does not support ERC20 function transferFrom
-     * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
-     * - Received amount differs from the expected value set in price discovery
-     * - Seller has less funds available than sellerDeposit
-     * - Protocol does not receive the voucher when is ask side
-     * - Transfer of voucher to the buyer fails for some reasong (e.g. buyer is contract that doesn't accept voucher)
-     * - Call to price discovery contract fails
-     * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
-     * - Received ERC20 token amount differs from the expected value
-     * - Transfer of voucher to the buyer fails for some reason (e.g. buyer is contract that doesn't accept voucher)
-     * - Current owner is not price discovery contract
-     * - Last voucher owner not found
-     * - Call to price discovery contract fails
-     * - Exchange doesn't exist after the call to price discovery contract
-     * - Exchange is not in the committed state
-     * - Price received from price discovery is lower than the expected price
-     * - Reseller did not approve protocol to transfer exchange token in escrow
-     * - New voucher owner is not buyer wallet
+     * - Any reason that PriceDiscoveryBase fulfilOrder reverts. See PriceDiscoveryBase.fulfilOrder
+     * - Any reason that ExchangeHandler onPremintedVoucherTransfer reverts. See ExchangeHandler.onPremintedVoucherTransfer
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _tokenIdOrOfferId - the id of the offer to commit to or the id of the voucher (if pre-minted)
@@ -78,42 +61,53 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
         uint256 _tokenIdOrOfferId,
         PriceDiscovery calldata _priceDiscovery
     ) external payable override exchangesNotPaused buyersNotPaused {
-        bool isOfferId;
-        uint256 offerId = _tokenIdOrOfferId;
+        // Make sure caller provided price discovery data
+        require(
+            _priceDiscovery.priceDiscoveryContract != address(0) && _priceDiscovery.priceDiscoveryData.length > 0,
+            INVALID_PRICE_DISCOVERY
+        );
 
-        (bool exists, Offer storage offer) = fetchOffer(offerId);
+        bool isTokenId;
+        uint256 offerId;
 
-        if (!exists) {
+        // First try to fetch offer with _tokenIdOrOfferId
+        (bool exists, Offer storage offer) = fetchOffer(_tokenIdOrOfferId);
+
+        if (exists) {
+            // Set offer id if offer exists
+            offerId = _tokenIdOrOfferId;
+        } else {
+            // Extract offerId from _tokenIdOrOfferId
             offerId = _tokenIdOrOfferId >> 128;
 
+            // Fetch offer with offerId
             (exists, offer) = fetchOffer(offerId);
-        } else {
-            isOfferId = true;
+
+            // Make sure offer exists
+            require(exists, NO_SUCH_OFFER);
+
+            // Sinalize that _tokenIdOrOfferId is a token id
+            isTokenId = true;
         }
 
         // Make sure offer exists, is available, and isn't void, expired, or sold out
         require(exists, NO_SUCH_OFFER);
 
+        // Make sure offer type is price discovery. Otherwise, use commitToOffer
         require(offer.priceType == PriceType.Discovery, INVALID_PRICE_TYPE);
-
-        // Make sure caller provided price discovery data
-        require(
-            _priceDiscovery.price > 0 &&
-                _priceDiscovery.priceDiscoveryContract != address(0) &&
-                _priceDiscovery.priceDiscoveryData.length > 0,
-            INVALID_PRICE_DISCOVERY
-        );
 
         uint256 actualPrice;
 
-        if (isOfferId) {
-            // @TODO can't be bid here
+        // Calls price discovery contract and gets the actual price. Use token id if caller has provided one, otherwise use offer id and accepts any voucher.
+        if (!isTokenId) {
             actualPrice = fulfilOrder(0, offer, _priceDiscovery, _buyer);
         } else {
             actualPrice = fulfilOrder(_tokenIdOrOfferId, offer, _priceDiscovery, _buyer);
         }
 
+        // Fetch token id on protocol status
         uint256 tokenId = protocolStatus().incomingVoucherId;
+
         uint256 exchangeId = tokenId & type(uint128).max;
 
         // Get sequential commits for this exchange
@@ -133,6 +127,7 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
 
         uint256 buyerId = getValidBuyer(_buyer);
 
+        // Storage exchange costs so it can be released later. This is the first cost entry for this exchange.
         exchangeCosts.push(
             ExchangeCosts({
                 resellerId: buyerId,
@@ -142,6 +137,7 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
             })
         );
 
-        clearStorage(tokenId);
+        // Clear incoming voucher id and incoming voucher address
+        clearStorage();
     }
 }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 /**
  * @notice This abstract contract provides a fallback function that delegates all calls to another contract using the EVM

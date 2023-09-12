@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -95,11 +95,7 @@ contract Foreign20Malicious is Foreign20 {
         protocolAddress = _newProtocolAddress;
     }
 
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal virtual override {
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
         super._beforeTokenTransfer(from, to, amount);
 
         // When funds are transferred from protocol, reenter
@@ -147,11 +143,7 @@ contract Foreign20Malicious2 is Foreign20 {
         attacker = _attacker;
     }
 
-    function _afterTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal virtual override {
+    function _afterTokenTransfer(address from, address to, uint256 amount) internal virtual override {
         super._beforeTokenTransfer(from, to, amount);
 
         // When funds are transferred from protocol, reenter
@@ -171,6 +163,25 @@ contract Foreign20Malicious2 is Foreign20 {
 }
 
 /**
+ * @title Foreign20 that consumes all gas when name called
+ *
+ *
+ * @notice Mock ERC-(20) for Unit Testing
+ */
+contract Foreign20MaliciousName is Foreign20 {
+    function name() public pure override returns (string memory) {
+        // name consumes all gas
+        unchecked {
+            uint256 i = 0;
+            while (true) {
+                i++;
+            }
+        }
+        return "nothing";
+    }
+}
+
+/**
  * @title Foreign20 that takes a fee during the transfer
  *
  *
@@ -185,11 +196,7 @@ contract Foreign20WithFee is Foreign20 {
      * Burn part of the transferred value
      *
      */
-    function _afterTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal virtual override {
+    function _afterTokenTransfer(address from, address to, uint256 amount) internal virtual override {
         if (to != address(0) && from != address(0)) {
             uint256 _fee = (amount * fee) / 100;
             _burn(to, _fee);
@@ -221,11 +228,71 @@ contract Foreign20TransferReturnFalse is Foreign20 {
  * @notice Mock ERC-(20) for Unit Testing
  */
 contract Foreign20TransferFromReturnFalse is Foreign20 {
-    function transferFrom(
-        address,
-        address,
-        uint256
-    ) public virtual override returns (bool) {
+    function transferFrom(address, address, uint256) public virtual override returns (bool) {
         return false;
+    }
+}
+
+/*
+ * @title Foreign20 that consumes all gas when transfer is called
+ *
+ * @notice Mock ERC-(20) for Unit Testing
+ */
+contract Foreign20GasTheft is Foreign20 {
+    function transferFrom(address, address, uint256) public virtual override returns (bool) {
+        while (true) {
+            // consume all gas
+        }
+        return false;
+    }
+}
+
+/*
+ * @title Foreign20 that returns an absurdly long return data
+ *
+ * @notice Mock ERC-(20) for Unit Testing
+ */
+contract Foreign20ReturnBomb is Foreign20 {
+    function transferFrom(address, address, uint256) public virtual override returns (bool) {
+        assembly {
+            revert(0, 3000000)
+            // This is carefully chosen. If it's too low, not enough gas is consumed and contract that call it does not run out of gas.
+            // If it's too high, then this contract runs out of gas before the return data is returned.
+        }
+    }
+}
+
+/*
+ * @title Foreign20 that succeeds, but the data cannot be decoded into a boolean
+ *
+ * @notice Mock ERC-(20) for Unit Testing
+ */
+contract Foreign20MalformedReturn is Foreign20 {
+    enum AttackType {
+        ReturnTooShort,
+        ReturnTooLong,
+        ReturnInvalid
+    }
+
+    AttackType public attackType;
+
+    function setAttackType(AttackType _attackType) external {
+        attackType = _attackType;
+    }
+
+    function transferFrom(address, address, uint256) public virtual override returns (bool) {
+        if (attackType == AttackType.ReturnTooShort) {
+            assembly {
+                return(0, 31) // return too short data
+            }
+        } else if (attackType == AttackType.ReturnTooLong) {
+            assembly {
+                return(0, 33) // return too long data
+            }
+        } else if (attackType == AttackType.ReturnInvalid) {
+            assembly {
+                return(0x40, 32) // return a value that is not 0 or 1
+            }
+        }
     }
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
@@ -27,10 +27,10 @@ abstract contract BeaconClientBase is BosonTypes {
      *
      * See: {AccessController.hasRole}
      *
-     * @param role - the role to check
+     * @param _role - the role to check
      */
-    modifier onlyRole(bytes32 role) {
-        require(BeaconClientLib.hasRole(role), ACCESS_DENIED);
+    modifier onlyRole(bytes32 _role) {
+        require(BeaconClientLib.hasRole(_role), ACCESS_DENIED);
         _;
     }
 
@@ -70,14 +70,20 @@ abstract contract BeaconClientBase is BosonTypes {
         IBosonExchangeHandler(protocolDiamond).onVoucherTransferred(_tokenId, _newBuyer);
     }
 
+    /**
+     * @notice Informs protocol of a pre-minted voucher transfer
+     *
+     * @param _tokenId - the voucher id
+     * @param _to - the address of the new buyer
+     * @param _from - the address of current owner
+     */
     function onPremintedVoucherTransferred(
         uint256 _tokenId,
         address payable _to,
-        address _from,
-        address _sender
+        address _from
     ) internal returns (bool) {
         address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-        return IBosonExchangeHandler(protocolDiamond).onPremintedVoucherTransferred(_tokenId, _to, _from, _sender);
+        return IBosonExchangeHandler(protocolDiamond).onPremintedVoucherTransferred(_tokenId, _to, _from);
     }
 
     /**

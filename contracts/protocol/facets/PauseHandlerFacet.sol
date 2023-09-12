@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
+
 import "../../domain/BosonConstants.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
+import "../../domain/BosonConstants.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { ProtocolBase } from "../bases/OfferBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
@@ -28,43 +30,11 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
      *
      * Reverts if:
      * - Caller does not have PAUSER role
-     * - No regions are specified
-     * - Protocol is already paused
-     * - A region is specified more than once
      *
      * @param _regions - an array of regions to pause. See: {BosonTypes.PausableRegion}
      */
     function pause(BosonTypes.PausableRegion[] calldata _regions) external onlyRole(PAUSER) nonReentrant {
-        // Cache protocol status for reference
-        ProtocolLib.ProtocolStatus storage status = protocolStatus();
-
-        // Make sure at least one region is specified
-        require(_regions.length > 0, NO_REGIONS_SPECIFIED);
-
-        // Make sure the protocol isn't already paused
-        require(status.pauseScenario == 0, ALREADY_PAUSED);
-
-        // Build the pause scenario by summing the supplied
-        // enum values, first converted to powers of two
-        uint8 enumVal;
-        uint256 region;
-        uint256 scenario;
-        uint256[] memory used = new uint256[](20); // arbitrarily a little more than # of regions
-        for (uint256 i = 0; i < _regions.length; i++) {
-            // Get enum value as power of 2
-            enumVal = uint8(_regions[i]);
-            region = 2**uint256(enumVal);
-
-            // Prevent duplicates
-            require(used[enumVal] != region, REGION_DUPLICATED);
-            used[enumVal] = region;
-
-            // Sum maskable region representation into scenario
-            scenario += region;
-        }
-
-        // Store the pause scenario
-        status.pauseScenario = scenario;
+        togglePause(_regions, true);
 
         // Notify watchers of state change
         emit ProtocolPaused(_regions, msgSender());
@@ -79,17 +49,106 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
      * - Caller does not have PAUSER role
      * - Protocol is not currently paused
      */
-    function unpause() external onlyRole(PAUSER) nonReentrant {
+    function unpause(BosonTypes.PausableRegion[] calldata _regions) external onlyRole(PAUSER) nonReentrant {
         // Cache protocol status for reference
         ProtocolLib.ProtocolStatus storage status = protocolStatus();
 
-        // Make sure the protocol is already paused
+        // Make sure the protocol is paused
         require(status.pauseScenario > 0, NOT_PAUSED);
 
-        // Clear the pause scenario
-        status.pauseScenario = 0;
+        togglePause(_regions, false);
 
         // Notify watchers of state change
-        emit ProtocolUnpaused(msgSender());
+        emit ProtocolUnpaused(_regions, msgSender());
+    }
+
+    /**
+     * @notice Returns the regions paused
+     *
+     * @return regions - an array of regions that are currently paused. See: {BosonTypes.PausableRegion}
+     */
+    function getPausedRegions() external view returns (BosonTypes.PausableRegion[] memory regions) {
+        // Cache protocol status for reference
+        ProtocolLib.ProtocolStatus storage status = protocolStatus();
+        uint256 totalRegions = uint256(type(BosonTypes.PausableRegion).max);
+
+        regions = new BosonTypes.PausableRegion[](totalRegions);
+
+        // Return all regions if all are paused.
+        if (status.pauseScenario == ALL_REGIONS_MASK) {
+            for (uint256 i = 0; i < totalRegions; ) {
+                regions[i] = BosonTypes.PausableRegion(i);
+
+                unchecked {
+                    i++;
+                }
+            }
+        } else {
+            uint256 count = 0;
+
+            for (uint256 i = 0; i < totalRegions; ) {
+                // Check if the region is paused by bitwise AND operation with shifted 1
+                if (status.pauseScenario & (1 << i) != 0) {
+                    regions[count] = BosonTypes.PausableRegion(i);
+
+                    count++;
+                }
+
+                unchecked {
+                    i++;
+                }
+            }
+
+            // setting the correct number of regions
+            assembly {
+                mstore(regions, count)
+            }
+        }
+    }
+
+    /**
+     * @notice Toggles pause/unpause for some or all of the protocol.
+     *
+     * Toggle all regions if none are specified.
+     *
+     * @param _regions - an array of regions to pause/unpause. See: {BosonTypes.PausableRegion}
+     * @param _pause - a boolean indicating whether to pause (true) or unpause (false)
+     */
+    function togglePause(BosonTypes.PausableRegion[] calldata _regions, bool _pause) internal {
+        // Cache protocol status for reference
+        ProtocolLib.ProtocolStatus storage status = protocolStatus();
+
+        // Toggle all regions if none are specified.
+        if (_regions.length == 0) {
+            // Store the toggle scenario
+            status.pauseScenario = _pause ? ALL_REGIONS_MASK : 0;
+            return;
+        }
+
+        uint256 region;
+        uint256 incomingScenario;
+
+        // Calculate the incoming scenario as the sum of individual regions
+        // Use "or" to get the correct value even if the same region is specified more than once
+        for (uint256 i = 0; i < _regions.length; ) {
+            // Get enum value as power of 2
+            region = 1 << uint256(_regions[i]);
+            incomingScenario |= region;
+
+            unchecked {
+                i++;
+            }
+        }
+
+        // Store the toggle scenario
+        if (_pause) {
+            // for pausing, just "or" the incoming scenario with the existing one
+            // equivalent to summation
+            status.pauseScenario |= incomingScenario;
+        } else {
+            // for unpausing, "and" the inverse of the incoming scenario with the existing one
+            // equivalent to subtraction
+            status.pauseScenario &= ~incomingScenario;
+        }
     }
 }

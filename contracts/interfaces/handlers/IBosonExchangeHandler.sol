@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IBosonExchangeEvents } from "../events/IBosonExchangeEvents.sol";
@@ -11,7 +11,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x1e5578f0
+ * The ERC-165 identifier for this interface is: 0xd17e4484
  */
 interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents {
     /**
@@ -44,6 +44,61 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
     function commitToOffer(address payable _buyer, uint256 _offerId) external payable;
 
     /**
+     * @notice Commits to an conditional offer (first step of an exchange).
+     *
+     * Emits a BuyerCommitted event if successful.
+     * Issues a voucher to the buyer address.
+     *
+     * Reverts if:
+     * - The exchanges region of protocol is paused
+     * - The buyers region of protocol is paused
+     * - OfferId is invalid
+     * - Offer has been voided
+     * - Offer has expired
+     * - Offer is not yet available for commits
+     * - Offer's quantity available is zero
+     * - Buyer address is zero
+     * - Buyer account is inactive
+     * - Conditional commit requirements not met or already used
+     * - Offer price is in native token and caller does not send enough
+     * - Offer price is in some ERC20 token and caller also sends native currency
+     * - Contract at token address does not support ERC20 function transferFrom
+     * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - Received ERC20 token amount differs from the expected value
+     * - Seller has less funds available than sellerDeposit
+     * - Condition has a range and the token id is not within the range
+     *
+     * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
+     * @param _offerId - the id of the offer to commit to
+     * @param _tokenId - the id of the token to use for the conditional commit
+     */
+    function commitToConditionalOffer(address payable _buyer, uint256 _offerId, uint256 _tokenId) external payable;
+
+    /**
+     * @notice Commits to a preminted offer (first step of an exchange).
+     *
+     * Emits a BuyerCommitted event if successful.
+     *
+     * Reverts if:
+     * - The exchanges region of protocol is paused
+     * - The buyers region of protocol is paused
+     * - Caller is not the voucher contract, owned by the seller
+     * - Exchange exists already
+     * - Offer has been voided
+     * - Offer has expired
+     * - Offer is not yet available for commits
+     * - Buyer account is inactive
+     * - Buyer is token-gated (conditional commit requirements not met or already used)
+     * - Buyer is token-gated and condition has a range.
+     * - Seller has less funds available than sellerDeposit and price
+     *
+     * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
+     * @param _offerId - the id of the offer to commit to
+     * @param _exchangeId - the id of the exchange
+     */
+    function commitToPreMintedOffer(address payable _buyer, uint256 _offerId, uint256 _exchangeId) external;
+
+    /**
      * @notice Completes an exchange.
      *
      * Emits an ExchangeCompleted event if successful.
@@ -65,7 +120,6 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      *
      * Reverts if:
      * - The exchanges region of protocol is paused
-     * - Number of exchanges exceeds maximum allowed number per batch
      * - For any exchange:
      *   - Exchange does not exist
      *   - Exchange is not in Redeemed state
@@ -160,6 +214,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * Emits a VoucherTransferred event if successful.
      *
      * Reverts if
+     * - The exchanges region of protocol is paused
      * - The buyers region of protocol is paused
      * - Caller is not a clone address associated with the seller
      * - Exchange does not exist
@@ -175,30 +230,23 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
     /**
      * @notice Handle pre-minted voucher transfer
      *
-     * Reverts if
+     * Reverts if:
      * - The exchanges region of protocol is paused
      * - The buyers region of protocol is paused
-     * - Caller is not the voucher contract, owned by the seller
-     * - Exchange exists already
-     * - Offer has been voided
-     * - Offer has expired
-     * - Offer is not yet available for commits
-     * - Buyer account is inactive
-     * - Buyer is token-gated (conditional commit requirements not met or already used)
-     * - Seller has less funds available than sellerDeposit and price
-     *
+     * - Caller is not a clone address associated with the seller
+     * - Incoming voucher clone address is not the caller
+     * - Offer price is discovery, transaction is not starting from protocol nor seller is _from address
+     * - Any reason that ExchangeHandler commitToOfferInternal reverts. See ExchangeHandler.commitToOfferInternal
      *
      * @param _tokenId - the voucher id
      * @param _to - the receiver address
-     * @param _from - the sender address
-     * @param _sender - the caller address
+     * @param _from - the address of current owner
      * @return committed - true if the voucher was committed
      */
     function onPremintedVoucherTransferred(
         uint256 _tokenId,
         address payable _to,
-        address _from,
-        address _sender
+        address _from
     ) external returns (bool committed);
 
     /**
@@ -222,14 +270,9 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @return exchange - the exchange details. See {BosonTypes.Exchange}
      * @return voucher - the voucher details. See {BosonTypes.Voucher}
      */
-    function getExchange(uint256 _exchangeId)
-        external
-        view
-        returns (
-            bool exists,
-            BosonTypes.Exchange memory exchange,
-            BosonTypes.Voucher memory voucher
-        );
+    function getExchange(
+        uint256 _exchangeId
+    ) external view returns (bool exists, BosonTypes.Exchange memory exchange, BosonTypes.Voucher memory voucher);
 
     /**
      * @notice Gets the state of a given exchange.
@@ -260,4 +303,32 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @return receipt - the receipt for the exchange. See {BosonTypes.Receipt}
      */
     function getReceipt(uint256 _exchangeId) external view returns (BosonTypes.Receipt memory receipt);
+
+    /**
+     * @notice Tells if buyer is elligible to commit to conditional
+     * Returns the eligibility status, the number of used commits and the maximal number of commits to the conditional offer.
+     *
+     * Unconditional offers do not have maximal number of commits, so the returned value will always be 0.
+     *
+     * This method does not check if the timestamp is within the offer's validity period or if the quantity available is greater than 0.
+     *
+     * N.B. Unmined transaction might affect the eligibility status.
+     *
+     * Reverts if:
+     * - The offer does not exist
+     * - The offer is voided
+     * - The external call to condition contract reverts
+     *
+     * @param _buyer buyer address
+     * @param _offerId - the id of the offer
+     * @param _tokenId - the id of conditional token
+     * @return isEligible - true if buyer is eligible to commit
+     * @return commitCount - the current number of commits to the conditional offer
+     * @return maxCommits - the maximal number of commits to the conditional offer
+     */
+    function isEligibleToCommit(
+        address _buyer,
+        uint256 _offerId,
+        uint256 _tokenId
+    ) external view returns (bool isEligible, uint256 commitCount, uint256 maxCommits);
 }

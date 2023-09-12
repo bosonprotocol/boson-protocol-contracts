@@ -1,6 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
-const { constants, BigNumber } = ethers;
+const { ZeroHash, ZeroAddress } = hre.ethers;
 const { getOfferOrConsiderationItem, calculateOrderHash } = require("./utils");
 const { expect } = require("chai");
 const OrderType = require("./OrderTypeEnum");
@@ -21,7 +20,7 @@ const seaportFixtures = async (seaport) => {
   const getTestToken = function (
     itemType = ItemType.NATIVE,
     identifierOrCriteria,
-    token = constants.AddressZero,
+    token = ZeroAddress,
     startAmount = 1,
     endAmount = 1,
     recipient
@@ -38,36 +37,36 @@ const seaportFixtures = async (seaport) => {
 
   const getOrder = async function (
     offerer,
-    zone = constants.AddressZero,
+    zone = ZeroAddress,
     offer,
     consideration,
     orderType = OrderType.FULL_OPEN,
     startTime,
     endTime,
-    zoneHash = constants.HashZero,
+    zoneHash = ZeroHash,
     salt = 0,
-    conduitKey = constants.HashZero
+    conduitKey = ZeroHash
   ) {
     const parameters = {
-      offerer: offerer.address,
-      zone: zone?.address ?? constants.AddressZero,
+      offerer: await offerer.getAddress(),
+      zone: zone?.address ?? ZeroAddress,
       offer,
       consideration,
       orderType,
-      startTime: BigNumber.from(startTime),
-      endTime: BigNumber.from(endTime),
+      startTime: BigInt(startTime),
+      endTime: BigInt(endTime),
       zoneHash,
-      salt: BigNumber.from(salt),
+      salt: BigInt(salt),
       conduitKey,
-      totalOriginalConsiderationItems: BigNumber.from(consideration.length),
+      totalOriginalConsiderationItems: BigInt(consideration.length),
     };
 
-    const counter = await seaport.getCounter(offerer.address);
+    const counter = await seaport.getCounter(await offerer.getAddress());
     const orderComponents = { ...parameters, counter };
 
     const orderHash = await getAndVerifyOrderHash(orderComponents);
 
-    const signature = constants.HashZero;
+    const signature = ZeroHash;
 
     const order = {
       parameters,
@@ -75,18 +74,13 @@ const seaportFixtures = async (seaport) => {
     };
 
     // How much ether (at most) needs to be supplied when fulfilling the order
-    const value = offer
-      .map((x) =>
-        x.itemType === 0 ? (x.endAmount.gt(x.startAmount) ? x.endAmount : x.startAmount) : BigNumber.from(0)
-      )
-      .reduce((a, b) => a.add(b), BigNumber.from(0))
-      .add(
-        consideration
-          .map((x) =>
-            x.itemType === 0 ? (x.endAmount.gt(x.startAmount) ? x.endAmount : x.startAmount) : BigNumber.from(0)
-          )
-          .reduce((a, b) => a.add(b), BigNumber.from(0))
-      );
+    const value =
+      offer
+        .map((x) => (x.itemType === 0 ? (x.endAmount > x.startAmount ? x.endAmount : x.startAmount) : 0n))
+        .reduce((a, b) => a + b, 0n) +
+      consideration
+        .map((x) => (x.itemType === 0 ? (x.endAmount > x.startAmount ? x.endAmount : x.startAmount) : 0n))
+        .reduce((a, b) => a + b, 0n);
 
     return {
       order,
@@ -97,15 +91,15 @@ const seaportFixtures = async (seaport) => {
 
   const getAdvancedOrder = async function (
     offerer,
-    zone = constants.AddressZero,
+    zone = ZeroAddress,
     offer,
     consideration,
     orderType = OrderType.FULL_OPEN,
     startTime,
     endTime,
-    zoneHash = constants.HashZero,
+    zoneHash = ZeroHash,
     salt = 0,
-    conduitKey = constants.HashZero,
+    conduitKey = ZeroHash,
     numerator = 1,
     denominator = 1
   ) {
@@ -125,7 +119,7 @@ const seaportFixtures = async (seaport) => {
 
     order.numerator = numerator;
     order.denominator = denominator;
-    order.extraData = constants.HashZero;
+    order.extraData = ZeroHash;
 
     return { order, orderHash, value };
   };

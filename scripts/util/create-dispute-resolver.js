@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ZeroAddress, getContractAt, getSigner, Wallet, provider } = hre.ethers;
 const fs = require("fs").promises;
 const environments = require("../../environments");
 const network = hre.network.name;
@@ -18,7 +18,7 @@ Path should contain a JSON file with the following:
   "escalationResponsePeriod": string,
   "assistant": string,
   "admin": string,
-  "clerk": string,
+  "clerk": string, // ignored, zero address is used instead
   "treasury": string,
   "metadataUri": string,
   "active": boolean 
@@ -47,13 +47,13 @@ const createDisputeResolver = async (path) => {
   const adminAddress = environments[network].adminAddress;
 
   // If admin address is unspecified, exit the process
-  if (adminAddress == ethers.constants.AddressZero || !adminAddress) {
+  if (adminAddress == ZeroAddress || !adminAddress) {
     console.log("Admin address must not be zero address");
     process.exit(1);
   }
 
   // Find protocol diamond and accessController addresses
-  const chainId = (await hre.ethers.provider.getNetwork()).chainId;
+  const chainId = (await provider.getNetwork()).chainId;
   const addressList = require(`../../addresses/${chainId}-${network}.json`).contracts;
   const protocolAddress = addressList.find((c) => c.name === "ProtocolDiamond").address;
   const accessControllerAddress = addressList.find((c) => c.name === "AccessController").address;
@@ -67,10 +67,10 @@ const createDisputeResolver = async (path) => {
   }
 
   // Cast protocol diamond to IBosonAccountHandler
-  const accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolAddress);
+  const accountHandler = await getContractAt("IBosonAccountHandler", protocolAddress);
 
   // Get signer for admin address
-  const protocolAdminSigner = await ethers.getSigner(adminAddress);
+  const protocolAdminSigner = await getSigner(adminAddress);
 
   let tx, receipt;
   // Create dispute resolver
@@ -79,14 +79,14 @@ const createDisputeResolver = async (path) => {
   if (!privateKey) {
     disputeResolverSigner = protocolAdminSigner;
   } else {
-    disputeResolverSigner = new ethers.Wallet(privateKey, protocolAdminSigner.provider);
+    disputeResolverSigner = new Wallet(privateKey, protocolAdminSigner.provider);
   }
 
   // create dispute resolver with callers account
   let initialDisputeResolver = { ...disputeResolver };
-  initialDisputeResolver.admin = disputeResolverSigner.address;
-  initialDisputeResolver.assistant = disputeResolverSigner.address;
-  initialDisputeResolver.clerk = disputeResolverSigner.address;
+  initialDisputeResolver.admin = await disputeResolverSigner.getAddress();
+  initialDisputeResolver.assistant = await disputeResolverSigner.getAddress();
+  initialDisputeResolver.clerk = ZeroAddress;
 
   tx = await accountHandler
     .connect(disputeResolverSigner)
@@ -98,8 +98,7 @@ const createDisputeResolver = async (path) => {
   // this is primarily used when one does not have access to private key of dispute resolver or it does not exist (i.e. DR is a smart contract)
   if (
     initialDisputeResolver.admin.toLowerCase() != disputeResolver.admin.toLowerCase() ||
-    initialDisputeResolver.assistant.toLowerCase() != disputeResolver.assistant.toLowerCase() ||
-    initialDisputeResolver.clerk.toLowerCase() != disputeResolver.clerk.toLowerCase()
+    initialDisputeResolver.assistant.toLowerCase() != disputeResolver.assistant.toLowerCase()
   ) {
     disputeResolver.id = initialDisputeResolver.id;
     tx = await accountHandler.connect(disputeResolverSigner).updateDisputeResolver(disputeResolver);

@@ -55,15 +55,19 @@ module.exports = {
   },
   preprocess: {
     eachLine: () => ({
-      transform: (line) => {
-        if (line.match(/^\s*import /i)) {
-          for (const [from, to] of getRemappings()) {
-            if (line.includes(from)) {
-              line = line.replace(from, to);
-              break;
+      transform: (line, { absolutePath }) => {
+        if (absolutePath.includes("submodules")) {
+          const submodule = absolutePath.split("submodules/")[1].split("/")[0];
+          if (line.match(/^\s*import /i)) {
+            for (const [from, to] of getRemappings()) {
+              if (line.includes(from)) {
+                line = line.replace(from, to.replace("${submodule}", submodule));
+                break;
+              }
             }
           }
         }
+
         return line;
       },
     }),

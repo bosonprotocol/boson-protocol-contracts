@@ -1,17 +1,27 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.9;
-
+import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
+import { IWETH9Like as IWETH9 } from "../../interfaces/IWETH9Like.sol";
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
-import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { DAIAliases as DAI } from "../../interfaces/DAIAliases.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
-import { SafeERC20 } from "../../ext_libs/SafeERC20.sol";
-import { IERC20 } from "../../interfaces/IERC20.sol";
 import { ERC721 } from "./../support/ERC721.sol";
 import { IERC721Metadata } from "./../support/IERC721Metadata.sol";
 import { IERC165 } from "../../interfaces/IERC165.sol";
-import { LSSVMPairFactory } from "@sudoswap/LSSVMPairFactory.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+interface IPool {
+    function swapTokenForSpecificNFTs(
+        uint256[] calldata nftIds,
+        uint256 maxExpectedTokenInput,
+        address nftRecipient,
+        bool isRouter,
+        address routerCaller
+    ) external payable returns (uint256 inputAmount);
+}
 
 /**
  * @title SudoswapWrapper
@@ -53,17 +63,11 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
     address private immutable protocolAddress;
     address private immutable wethAddress;
 
-    // Token ID for which the price is not yet known
-    uint256 private pendingTokenId;
-
     // Mapping from token ID to price. If pendingTokenId == tokenId, this is not the final price.
     mapping(uint256 => uint256) private price;
 
     // Mapping to cache exchange token address, so costly call to the protocol is not needed every time.
     mapping(uint256 => address) private cachedExchangeToken;
-
-    // Mapping from token ID to wrapped by address
-    mapping(uint256 => address) private wrappedBy;
 
     /**
      * @notice Constructor
@@ -86,7 +90,6 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
 
         // Approve pool to transfer wrapped vouchers
         _setApprovalForAll(address(this), _factoryAddress, true);
-        //_setApprovalForAll(address(this), msg.sender, true); // msg.sender is the owner of this contract and must be approved to transfer wrapped vouchers to pool pair
     }
 
     /**
@@ -100,7 +103,7 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
     }
 
     /**
-     * @notice Wraps the voucher, transfer true voucher to itself and funds to the protocol.
+     * @notice Wraps the vouchers, transfer true vouchers to this contract and mint wrapped vouchers
      *
      * Reverts if:
      *  - caller is not the contract owner
@@ -110,14 +113,13 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
     function wrap(uint256[] memory _tokenIds) external onlyOwner {
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             uint256 tokenId = _tokenIds[i];
-            // Transfer voucher to this contract
+
+            // Transfer vouchers to this contract
             // Instead of msg.sender it could be voucherAddress, if vouchers were preminted to contract itself
             IERC721(voucherAddress).transferFrom(msg.sender, address(this), tokenId);
 
-            // Mint wrapper to sender, so it can be used with Sudoswap
+            // Mint to caller, so it can be used with Sudoswap
             _mint(msg.sender, tokenId);
-
-            wrappedBy[tokenId] = msg.sender;
         }
     }
 
@@ -125,37 +127,31 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
      * @notice Unwraps the voucher, transfer true voucher to owner and funds to the protocol.
      *
      * Reverts if:
-     *  - wrapped voucher is not owned by the seller and the caller is not the protocol
-     *  - wrapped voucher is owned by the seller and the caller is not the owner of this contract or protcol
+     *  - caller is neither protocol nor voucher owner
      *
      * @param _tokenId The token id.
      */
     function unwrap(uint256 _tokenId) external {
         address wrappedVoucherOwner = ownerOf(_tokenId);
-        address wrappedByAddress = wrappedBy[_tokenId];
 
         // Either contract owner or protocol can unwrap
-        // If contract owner is unwrapping, this is equivalent to canceled auction
+        // If contract owner is unwrapping, this is equivalent to removing the voucher from the pool
         require(
-            msg.sender == protocolAddress || (wrappedByAddress == msg.sender && wrappedVoucherOwner == msg.sender),
+            msg.sender == protocolAddress || wrappedVoucherOwner == msg.sender,
             "SudoswapWrapper: Only owner or protocol can unwrap"
         );
-
-        // If some token price is not know yet, update it now
-        if (pendingTokenId != 0) updatePendingTokenPrice(pendingTokenId);
 
         uint256 priceToPay = price[_tokenId];
 
         // Delete price and pendingTokenId to prevent reentrancy
         delete price[_tokenId];
-        delete pendingTokenId;
 
-        // transfer voucher to voucher owner
-        IERC721(voucherAddress).safeTransferFrom(address(this), ownerOf(_tokenId), _tokenId);
+        // transfer Boson Voucher to voucher owner
+        IERC721(voucherAddress).safeTransferFrom(address(this), wrappedVoucherOwner, _tokenId);
 
         // Transfer token to protocol
         if (priceToPay > 0) {
-            // @TODO check this No need to handle native separately, since Sudoswap always sends WETH
+            // This example only supports WETH
             IERC20(cachedExchangeToken[_tokenId]).safeTransfer(protocolAddress, priceToPay);
         }
 
@@ -166,33 +162,37 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
     }
 
     /**
-     * @notice Handle transfers out of Sudoswap.
+     * @notice Set the pool address
      *
-     * @param _from The address of the sender.
-     * @param _to The address of the recipient.
-     * @param _tokenId The token id.
+     * @param _poolAddress The pool address
      */
-    function _beforeTokenTransfer(
-        address _from,
-        address _to,
-        uint256 _tokenId
-    ) internal virtual override(ERC721) {
-        if (_from == poolAddress) {
-            // Someone is making a swap and wrapped voucher is being transferred to buyer
-
-            // If some token price is not know yet, update it now
-            if (pendingTokenId != 0) updatePendingTokenPrice(pendingTokenId);
-
-            // Store current balance and set the pending token id
-            pendingTokenId = _tokenId;
-            price[pendingTokenId] = getCurrentBalance(_tokenId);
-        }
-
-        super._beforeTokenTransfer(_from, _to, _tokenId);
+    function setPoolAddress(address _poolAddress) external onlyOwner {
+        poolAddress = _poolAddress;
     }
 
-    function updatePendingTokenPrice(uint256 _tokenId) internal {
-        price[pendingTokenId] = getCurrentBalance(_tokenId) - price[pendingTokenId];
+    /**
+     * @notice swap token for specific NFT
+     *
+     * @param _tokenId - the token id
+     * @param _maxPrice - the max price
+     */
+    function swapTokenForSpecificNFT(uint256 _tokenId, uint256 _maxPrice) external {
+        uint256 balanceBefore = getCurrentBalance(_tokenId);
+
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = _tokenId;
+
+        IWETH9(wethAddress).transferFrom(msg.sender, address(this), _maxPrice);
+        IWETH9(wethAddress).approve(poolAddress, _maxPrice);
+
+        IPool(poolAddress).swapTokenForSpecificNFTs(tokenIds, _maxPrice, msg.sender, false, address(0));
+
+        uint256 balanceAfter = getCurrentBalance(_tokenId);
+
+        uint256 actualPrice = balanceAfter - balanceBefore;
+        require(actualPrice <= _maxPrice, "SudoswapWrapper: Price too high");
+
+        price[_tokenId] = actualPrice;
     }
 
     /**
@@ -208,6 +208,16 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
         // If exchange token is not known, get it from the protocol.
         if (exchangeToken == address(0)) {
             uint256 offerId = _tokenId >> 128; // OfferId is the first 128 bits of the token ID.
+
+            if (offerId == 0) {
+                // pre v2.2.0. Token does not have offerId, so we need to get it from the protocol.
+                // Get Boson exchange. Don't explicitly check if the exchange exists, since existance of the token implies it does.
+                uint256 exchangeId = _tokenId & type(uint128).max; // ExchangeId is the last 128 bits of the token ID.
+                (, BosonTypes.Exchange memory exchange, ) = IBosonExchangeHandler(protocolAddress).getExchange(
+                    exchangeId
+                );
+                offerId = exchange.offerId;
+            }
 
             // Get Boson offer. Don't explicitly check if the offer exists, since existance of the token implies it does.
             (, BosonTypes.Offer memory offer, , , , ) = IBosonOfferHandler(protocolAddress).getOffer(offerId);
@@ -229,9 +239,8 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
      * @param _voucherAddress Boson Voucher address
      */
     function getVoucherName(address _voucherAddress) internal view returns (string memory) {
-        // TODO: use string concat when solidity version is upgraded
         string memory name = IERC721Metadata(_voucherAddress).name();
-        return string(abi.encodePacked("Wrapped ", name));
+        return string.concat("Wrapped ", name);
     }
 
     /**
@@ -242,8 +251,7 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
      * @param _voucherAddress Boson Voucher address
      */
     function getVoucherSymbol(address _voucherAddress) internal view returns (string memory) {
-        // TODO: use string concat when solidity version is upgraded
         string memory symbol = IERC721Metadata(_voucherAddress).symbol();
-        return string(abi.encodePacked("W", symbol));
+        return string.concat("W", symbol);
     }
 }

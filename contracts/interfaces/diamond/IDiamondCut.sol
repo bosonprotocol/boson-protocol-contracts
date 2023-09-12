@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 /**
  * @title IDiamondCut
@@ -41,9 +41,5 @@ interface IDiamondCut {
      * @param _init - the address of the contract or facet to execute _calldata
      * @param _calldata - a function call, including function selector and arguments
      */
-    function diamondCut(
-        FacetCut[] calldata _facetCuts,
-        address _init,
-        bytes calldata _calldata
-    ) external;
+    function diamondCut(FacetCut[] calldata _facetCuts, address _init, bytes calldata _calldata) external;
 }

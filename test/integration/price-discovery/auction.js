@@ -1,15 +1,15 @@
-const hre = require("hardhat");
-const { ethers } = hre;
-const { BigNumber, constants } = ethers;
+const { ethers } = require("hardhat");
+const { ZeroAddress, getContractFactory, getContractAt } = ethers;
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
 
 const {
-  calculateContractAddress,
   deriveTokenId,
   getCurrentBlockAndSetTimeForward,
   setupTestEnvironment,
   revertToSnapshot,
   getSnapshot,
+  calculateBosonProxyAddress,
+  calculateCloneAddress,
 } = require("../../util/utils");
 const { oneWeek } = require("../../util/constants");
 const {
@@ -26,14 +26,13 @@ const PriceType = require("../../../scripts/domain/PriceType");
 const PriceDiscovery = require("../../../scripts/domain/PriceDiscovery");
 const Side = require("../../../scripts/domain/Side");
 
-const MASK = BigNumber.from(2).pow(128).sub(1);
+const MASK = (1n << 128n) - 1n;
 
 describe("[@skip-on-coverage] auction integration", function () {
-  this.timeout(100000000);
   let bosonVoucher;
   let assistant, buyer, DR, rando;
   let offer, offerDates;
-  let exchangeHandler, priceDiscoveryHandler;
+  let exchangeHandler;
   let weth;
   let seller;
   let snapshotId;
@@ -50,29 +49,29 @@ describe("[@skip-on-coverage] auction integration", function () {
       priceDiscoveryHandler: "IBosonPriceDiscoveryHandler",
     };
 
-    const wethFactory = await ethers.getContractFactory("WETH9");
+    const wethFactory = await getContractFactory("WETH9");
     weth = await wethFactory.deploy();
-    await weth.deployed();
+    await weth.waitForDeployment();
 
     let accountHandler, offerHandler, fundsHandler;
 
     ({
       signers: [assistant, buyer, DR, rando],
-      contractInstances: { accountHandler, offerHandler, fundsHandler, exchangeHandler, priceDiscoveryHandler },
+      contractInstances: { accountHandler, offerHandler, fundsHandler, exchangeHandler },
       extraReturnValues: { bosonVoucher },
-    } = await setupTestEnvironment(contracts, { wethAddress: weth.address }));
+    } = await setupTestEnvironment(contracts, { wethAddress: await weth.getAddress() }));
 
-    seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
+    seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
 
     const emptyAuthToken = mockAuthToken();
     const voucherInitValues = mockVoucherInitValues();
     await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-    const disputeResolver = mockDisputeResolver(DR.address, DR.address, DR.address, DR.address, true);
+    const disputeResolver = mockDisputeResolver(DR.address, DR.address, ZeroAddress, DR.address, true);
 
     const disputeResolverFees = [
-      new DisputeResolverFee(constants.AddressZero, "Native Currency", "0"),
-      new DisputeResolverFee(weth.address, "WETH", "0"),
+      new DisputeResolverFee(ZeroAddress, "Native Currency", "0"),
+      new DisputeResolverFee(await weth.getAddress(), "WETH", "0"),
     ];
     const sellerAllowList = [seller.id];
 
@@ -88,8 +87,9 @@ describe("[@skip-on-coverage] auction integration", function () {
       .connect(assistant)
       .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, "0");
 
-    const voucherAddress = calculateContractAddress(accountHandler.address, seller.id);
-    bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherAddress);
+    const beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
+    const voucherAddress = calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, seller.admin);
+    bosonVoucher = await getContractAt("BosonVoucher", voucherAddress);
 
     // Pre mint range
     await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
@@ -98,7 +98,7 @@ describe("[@skip-on-coverage] auction integration", function () {
     // Deposit seller funds so the commit will succeed
     await fundsHandler
       .connect(assistant)
-      .depositFunds(seller.id, constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
+      .depositFunds(seller.id, ZeroAddress, offer.sellerDeposit, { value: offer.sellerDeposit });
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -114,18 +114,18 @@ describe("[@skip-on-coverage] auction integration", function () {
 
     beforeEach(async function () {
       // 1. Deploy Zora Auction
-      const ZoraAuctionFactory = await ethers.getContractFactory("AuctionHouse");
-      zoraAuction = await ZoraAuctionFactory.deploy(weth.address);
+      const ZoraAuctionFactory = await getContractFactory("AuctionHouse");
+      zoraAuction = await ZoraAuctionFactory.deploy(await weth.getAddress());
 
       // 2. Set approval for all
       tokenId = deriveTokenId(offer.id, 2);
-      await bosonVoucher.connect(assistant).setApprovalForAll(zoraAuction.address, true);
+      await bosonVoucher.connect(assistant).setApprovalForAll(await zoraAuction.getAddress(), true);
 
       // 3. Create an auction
-      const tokenContract = bosonVoucher.address;
+      const tokenContract = await bosonVoucher.getAddress();
       const duration = oneWeek;
       const reservePrice = 1;
-      const curator = ethers.constants.AddressZero;
+      const curator = ZeroAddress;
       const curatorFeePercentage = 0;
       const auctionCurrency = offer.exchangeToken;
 
@@ -142,33 +142,15 @@ describe("[@skip-on-coverage] auction integration", function () {
       await getCurrentBlockAndSetTimeForward(oneWeek);
 
       // Zora should be the owner of the token
-      expect(await bosonVoucher.ownerOf(tokenId)).to.equal(zoraAuction.address);
+      expect(await bosonVoucher.ownerOf(tokenId)).to.equal(await zoraAuction.getAddress());
     });
 
-    // Zora uses safeTransferFrom and WETH doesn't support it
-    it("commitToPriceDiscoveryOffer should revert when seller is not using wrappers and offer is native currency", async function () {
-      // Caller should approve WETH because price discovery bids doesn't work with native currency
-      await weth.connect(assistant).approve(exchangeHandler.address, amount);
-
-      //  Encode calldata for endAuction
-      const calldata = zoraAuction.interface.encodeFunctionData("endAuction", [auctionId]);
-      const priceDiscovery = new PriceDiscovery(amount, zoraAuction.address, calldata, Side.Bid);
-
-      //  Commit to offer, expecting revert
-      await expect(
-        priceDiscoveryHandler.connect(assistant).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
-      ).to.be.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
-    });
-
-    it("Auction is canceled if ended directly into Zora", async function () {
-      // safe transfer from will fail on onPremintedTransferredHook and auction should be canceled
-      await expect(zoraAuction.connect(rando).endAuction(auctionId)).to.emit(zoraAuction, "AuctionCanceled");
-
-      // Token is returned to the seller
-      expect(await bosonVoucher.ownerOf(tokenId)).to.equal(assistant.address);
+    it("Transfer can't happens outside protocol", async function () {
+      // safe transfer from will fail on onPremintedTransferredHook and transaction should fail
+      await expect(zoraAuction.connect(rando).endAuction(auctionId)).to.be.revertedWith(RevertReasons.ACCESS_DENIED);
 
       // Exchange doesn't exist
-      const exchangeId = tokenId.and(MASK);
+      const exchangeId = tokenId & MASK;
       const [exist, ,] = await exchangeHandler.getExchange(exchangeId);
 
       expect(exist).to.equal(false);

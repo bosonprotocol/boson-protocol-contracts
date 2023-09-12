@@ -8,7 +8,7 @@ const protocolConfig = require("./protocol-parameters");
  * @param wethAddress - address of the WETH token
  * @returns { addresses, limits, fees }
  */
-function getConfig(wethAddress) {
+function getConfigHandlerInitArgs(wethAddress) {
   return [
     {
       token: protocolConfig.TOKEN[network],
@@ -23,6 +23,17 @@ function getConfig(wethAddress) {
 }
 
 /**
+ * Get the configuration data to be passed to the MetaTransactionsHandlerFacet initializer
+ * @param facets - array of facet names
+ * @returns {Object} - array of function hashes
+ */
+async function getMetaTransactionsHandlerFacetInitArgs(facets) {
+  const getFunctionHashesClosure = getStateModifyingFunctionsHashes(facets, ["executeMetaTransaction"]);
+
+  return await getFunctionHashesClosure();
+}
+
+/**
  * Config file used to deploy the facets
  *
  * Function getFacets() returns the object that is used by the deploy script. To specify custom deployment parameters, modify return value.
@@ -33,10 +44,10 @@ function getConfig(wethAddress) {
  * 
  * Example:
  *  {
-        Facet4: ["0xb0b1d2659e8d5846432c66de8615841cc7bcaf49", 3, true],  // Facet4 expects address, uint256 and bool
-        Facet5: [[2, 3, 5, 7, 11]],                                       // Facet5 uint256 array
-        Facet6: []                                                        // Facet6 doesn't expect any argument
-    }
+         Facet4: { init:  ["0xb0b1d2659e8d5846432c66de8615841cc7bcaf49", 3, true], constructorArgs: [] },          
+         Facet5: { init: [], constructorArgs: [[2, 3, 5, 7, 11]] },                                       
+         Facet6: { init: [], constructorArgs: [] }                                                
+     }
  * 
  */
 const noArgFacetNames = [
@@ -47,7 +58,6 @@ const noArgFacetNames = [
   "AgentHandlerFacet",
   "BundleHandlerFacet",
   "DisputeHandlerFacet",
-  "ExchangeHandlerFacet",
   "FundsHandlerFacet",
   "GroupHandlerFacet",
   "OfferHandlerFacet",
@@ -61,13 +71,7 @@ const noArgFacetNames = [
 ];
 
 async function getFacets(config) {
-  const ConfigHandlerFacetInitArgs = config ?? getConfig();
-
-  // metaTransactionsHandlerFacet initializer arguments.
-  const MetaTransactionsHandlerFacetInitArgs = await getStateModifyingFunctionsHashes(
-    [...noArgFacetNames, "MetaTransactionsHandlerFacet"],
-    ["executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)"]
-  );
+  const ConfigHandlerFacetInitArgs = config ?? getConfigHandlerInitArgs();
 
   const facetArgs = noArgFacetNames.reduce((acc, facetName) => {
     acc[facetName] = { init: [] };
@@ -75,10 +79,18 @@ async function getFacets(config) {
   }, {});
 
   facetArgs["ConfigHandlerFacet"] = { init: ConfigHandlerFacetInitArgs };
-  facetArgs["MetaTransactionsHandlerFacet"] = { init: [MetaTransactionsHandlerFacetInitArgs] };
   facetArgs["ExchangeHandlerFacet"] = { init: [], constructorArgs: [protocolConfig.EXCHANGE_ID_2_2_0[network]] };
+
+  // metaTransactionsHandlerFacet initializer arguments.
+  const MetaTransactionsHandlerFacetInitArgs = await getMetaTransactionsHandlerFacetInitArgs(
+    Object.keys(facetArgs).concat(["MetaTransactionsHandlerFacet"])
+  );
+
+  facetArgs["MetaTransactionsHandlerFacet"] = { init: [MetaTransactionsHandlerFacetInitArgs] };
 
   return facetArgs;
 }
 
 exports.getFacets = getFacets;
+exports.getConfigHandlerInitArgs = getConfigHandlerInitArgs;
+exports.getMetaTransactionsHandlerFacetInitArgs = getMetaTransactionsHandlerFacetInitArgs;

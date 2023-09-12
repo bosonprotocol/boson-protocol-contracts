@@ -1,6 +1,5 @@
-const hre = require("hardhat");
-
-const ethers = hre.ethers;
+const { ethers } = require("hardhat");
+const { ZeroAddress, MaxUint256, getContractFactory, getContractAt, parseUnits, provider, id } = ethers;
 const {
   mockSeller,
   mockAuthToken,
@@ -10,13 +9,19 @@ const {
   accountId,
 } = require("../../util/mock");
 const { expect } = require("chai");
-const { calculateContractAddress, deriveTokenId, setupTestEnvironment } = require("../../util/utils");
+const {
+  calculateBosonProxyAddress,
+  calculateCloneAddress,
+  deriveTokenId,
+  setupTestEnvironment,
+} = require("../../util/utils");
 
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const Side = require("../../../scripts/domain/Side");
 const PriceDiscovery = require("../../../scripts/domain/PriceDiscovery");
-const { constants } = require("ethers");
 const PriceType = require("../../../scripts/domain/PriceType");
+
+const MASK = (1n << 128n) - 1n;
 
 describe("[@skip-on-coverage] sudoswap integration", function () {
   this.timeout(100000000);
@@ -25,7 +30,7 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
   let deployer, assistant, buyer, DR;
   let offer;
   let exchangeHandler, priceDiscoveryHandler;
-  let weth;
+  let weth, wethAddress;
   let seller;
 
   before(async function () {
@@ -40,9 +45,10 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
       priceDiscoveryHandler: "IBosonPriceDiscoveryHandler",
     };
 
-    const wethFactory = await ethers.getContractFactory("WETH9");
+    const wethFactory = await getContractFactory("WETH9");
     weth = await wethFactory.deploy();
-    await weth.deployed();
+    await weth.waitForDeployment();
+    wethAddress = await weth.getAddress();
 
     let accountHandler, offerHandler, fundsHandler;
 
@@ -50,60 +56,58 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
       signers: [deployer, assistant, buyer, DR],
       contractInstances: { accountHandler, offerHandler, fundsHandler, exchangeHandler, priceDiscoveryHandler },
       extraReturnValues: { bosonVoucher },
-    } = await setupTestEnvironment(contracts, { wethAddress: weth.address }));
+    } = await setupTestEnvironment(contracts, { wethAddress }));
 
-    const LSSVMPairEnumerableETH = await ethers.getContractFactory("LSSVMPairEnumerableETH", deployer);
+    const LSSVMPairEnumerableETH = await getContractFactory("LSSVMPairEnumerableETH", deployer);
     const lssvmPairEnumerableETH = await LSSVMPairEnumerableETH.deploy();
-    await lssvmPairEnumerableETH.deployed();
+    await lssvmPairEnumerableETH.waitForDeployment();
 
-    const LSSVMPairEnumerableERC20 = await ethers.getContractFactory("LSSVMPairEnumerableERC20", deployer);
+    const LSSVMPairEnumerableERC20 = await getContractFactory("LSSVMPairEnumerableERC20", deployer);
     const lssvmPairEnumerableERC20 = await LSSVMPairEnumerableERC20.deploy();
-    await lssvmPairEnumerableERC20.deployed();
+    await lssvmPairEnumerableERC20.waitForDeployment();
 
-    const LSSVMPairMissingEnumerableETH = await ethers.getContractFactory("LSSVMPairMissingEnumerableETH", deployer);
+    const LSSVMPairMissingEnumerableETH = await getContractFactory("LSSVMPairMissingEnumerableETH", deployer);
     const lssvmPairMissingEnumerableETH = await LSSVMPairMissingEnumerableETH.deploy();
 
-    const LSSVMPairMissingEnumerableERC20 = await ethers.getContractFactory(
-      "LSSVMPairMissingEnumerableERC20",
-      deployer
-    );
+    const LSSVMPairMissingEnumerableERC20 = await getContractFactory("LSSVMPairMissingEnumerableERC20", deployer);
     const lssvmPairMissingEnumerableERC20 = await LSSVMPairMissingEnumerableERC20.deploy();
 
-    const LSSVMPairFactory = await ethers.getContractFactory("LSSVMPairFactory", deployer);
+    const LSSVMPairFactory = await getContractFactory("LSSVMPairFactory", deployer);
 
     lssvmPairFactory = await LSSVMPairFactory.deploy(
-      lssvmPairEnumerableETH.address,
-      lssvmPairMissingEnumerableETH.address,
-      lssvmPairEnumerableERC20.address,
-      lssvmPairMissingEnumerableERC20.address,
+      await lssvmPairEnumerableETH.getAddress(),
+      await lssvmPairMissingEnumerableETH.getAddress(),
+      await lssvmPairEnumerableERC20.getAddress(),
+      await lssvmPairMissingEnumerableERC20.getAddress(),
       deployer.address,
       "0"
     );
-    await lssvmPairFactory.deployed();
+    await lssvmPairFactory.waitForDeployment();
 
     // Deploy bonding curves
-    const LinearCurve = await ethers.getContractFactory("LinearCurve", deployer);
+    const LinearCurve = await getContractFactory("LinearCurve", deployer);
     linearCurve = await LinearCurve.deploy();
-    await linearCurve.deployed();
+    await linearCurve.waitForDeployment();
 
     // Whitelist bonding curve
-    await lssvmPairFactory.setBondingCurveAllowed(linearCurve.address, true);
+    await lssvmPairFactory.setBondingCurveAllowed(await linearCurve.getAddress(), true);
 
-    seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
+    seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
 
     const emptyAuthToken = mockAuthToken();
     const voucherInitValues = mockVoucherInitValues();
     await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-    const disputeResolver = mockDisputeResolver(DR.address, DR.address, DR.address, DR.address, true);
+    const disputeResolver = mockDisputeResolver(DR.address, DR.address, ZeroAddress, DR.address, true);
 
-    const disputeResolverFees = [new DisputeResolverFee(constants.AddressZero, "Native", "0")];
+    const disputeResolverFees = [new DisputeResolverFee(wethAddress, "WETH", "0")];
     const sellerAllowList = [seller.id];
 
     await accountHandler.connect(DR).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
     let offerDates, offerDurations, disputeResolverId;
     ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+    offer.exchangeToken = wethAddress;
     offer.quantityAvailable = 10;
     offer.priceType = PriceType.Discovery;
 
@@ -111,31 +115,31 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
       .connect(assistant)
       .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, "0");
 
-    const voucherAddress = calculateContractAddress(accountHandler.address, seller.id);
-    bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherAddress);
+    const pool = BigInt(offer.sellerDeposit) * BigInt(offer.quantityAvailable);
 
-    // Pool needs to cover both seller deposit and price
-    const pool = ethers.BigNumber.from(offer.sellerDeposit).add(offer.price);
-    await fundsHandler.connect(assistant).depositFunds(seller.id, ethers.constants.AddressZero, pool, {
-      value: pool,
-    });
+    await weth.connect(assistant).deposit({ value: pool });
+
+    // Approves protocol to transfer sellers weth
+    await weth.connect(assistant).approve(await fundsHandler.getAddress(), pool);
+
+    // Deposit funds
+    await fundsHandler.connect(assistant).depositFunds(seller.id, wethAddress, pool);
+
+    // Reverse range
+    await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
+
+    // Gets boson voucher contract
+    const beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
+    const voucherAddress = calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, seller.admin);
+    bosonVoucher = await getContractAt("BosonVoucher", voucherAddress);
 
     // Pre mint range
-    await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
     await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
   });
-  // "_assetRecipient": "The address that will receive the assets traders give during trades. If set to address(0), assets will be sent to the pool address. Not available to TRADE pools. ",
-  //        "_bondingCurve": "The bonding curve for the pair to price NFTs, must be whitelisted",
-  //        "_delta": "The delta value used by the bonding curve. The meaning of delta depends on the specific curve.",
-  //        "_fee": "The fee taken by the LP in each trade. Can only be non-zero if _poolType is Trade.",
-  //        "_initialNFTIDs": "The list of IDs of NFTs to transfer from the sender to the pair",
-  //        "_nft": "The NFT contract of the collection the pair trades",
-  //        "_poolType": "TOKEN, NFT, or TRADE",
-  //        "_spotPrice": "The initial selling spot price"
 
-  it("Works with wrapper vouchers", async function () {
+  it("Works with wrapped vouchers", async function () {
     const poolType = 1; // NFT
-    const delta = ethers.utils.parseUnits("0.25", "ether").toString();
+    const delta = parseUnits("0.25", "ether").toString();
     const fee = "0";
     const spotPrice = offer.price;
     const nftIds = [];
@@ -145,29 +149,28 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
       nftIds.push(tokenId);
     }
 
-    const initialPoolBalance = ethers.utils.parseUnits("10", "ether").toString();
+    const initialPoolBalance = parseUnits("10", "ether").toString();
     await weth.connect(assistant).deposit({ value: initialPoolBalance });
-    await weth.connect(assistant).approve(lssvmPairFactory.address, ethers.constants.MaxUint256);
+    await weth.connect(assistant).approve(await lssvmPairFactory.getAddress(), MaxUint256);
 
-    const WrappedBosonVoucherFactory = await ethers.getContractFactory("SudoswapWrapper");
+    const WrappedBosonVoucherFactory = await getContractFactory("SudoswapWrapper");
     const wrappedBosonVoucher = await WrappedBosonVoucherFactory.connect(assistant).deploy(
-      bosonVoucher.address,
-      lssvmPairFactory.address,
-      exchangeHandler.address,
-      weth.address
+      await bosonVoucher.getAddress(),
+      await lssvmPairFactory.getAddress(),
+      await exchangeHandler.getAddress(),
+      wethAddress
     );
+    const wrappedBosonVoucherAddress = await wrappedBosonVoucher.getAddress();
 
-    // need to deposit NFTs
-    await bosonVoucher.connect(assistant).setApprovalForAll(wrappedBosonVoucher.address, true);
+    await bosonVoucher.connect(assistant).setApprovalForAll(wrappedBosonVoucherAddress, true);
 
-    const tokenId = deriveTokenId(offer.id, 1);
     await wrappedBosonVoucher.connect(assistant).wrap(nftIds);
 
     const createPairERC20Parameters = {
-      token: weth.address,
-      nft: wrappedBosonVoucher.address,
-      bondingCurve: linearCurve.address,
-      assetRecipient: wrappedBosonVoucher.address,
+      token: wethAddress,
+      nft: wrappedBosonVoucherAddress,
+      bondingCurve: await linearCurve.getAddress(),
+      assetRecipient: wrappedBosonVoucherAddress,
       poolType,
       delta,
       fee,
@@ -176,49 +179,50 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
       initialTokenBalance: initialPoolBalance,
     };
 
-    await wrappedBosonVoucher.connect(assistant).setApprovalForAll(lssvmPairFactory.address, true);
+    await wrappedBosonVoucher.connect(assistant).setApprovalForAll(await lssvmPairFactory.getAddress(), true);
 
     let tx = await lssvmPairFactory.connect(assistant).createPairERC20(createPairERC20Parameters);
 
-    const { events } = await tx.wait();
+    const { logs } = await tx.wait();
 
-    const [poolAddress] = events.find((e) => e.event == "NewPair").args;
+    const NewPairTopic = id("NewPair(address)");
+    const [poolAddress] = logs.find((e) => e?.topics[0] === NewPairTopic).args;
 
-    //  tx = await wrappedBosonVoucher.connect(assistant).depositNFTs(poolAddress, [tokenId]);
+    await wrappedBosonVoucher.connect(assistant).setPoolAddress(poolAddress);
 
-    const pool = await ethers.getContractAt("LSSVMPairMissingEnumerable", poolAddress);
+    const pool = await getContractAt("LSSVMPairMissingEnumerable", poolAddress);
 
     const [, , , inputAmount] = await pool.getBuyNFTQuote(1);
 
-    const swapTokenTx = await pool.swapTokenForAnyNFTs(1, inputAmount, buyer.address, false, constants.AddressZero);
+    await weth.connect(buyer).deposit({ value: inputAmount * 2n });
+    await weth.connect(buyer).approve(wrappedBosonVoucherAddress, inputAmount * 2n);
+
+    const tokenId = deriveTokenId(offer.id, 1);
+
+    const swapTokenTx = await wrappedBosonVoucher.connect(buyer).swapTokenForSpecificNFT(tokenId, inputAmount);
 
     expect(swapTokenTx).to.emit(pool, "SwapTokenForAnyNFTs");
 
     const calldata = wrappedBosonVoucher.interface.encodeFunctionData("unwrap", [tokenId]);
 
-    const priceDiscovery = new PriceDiscovery(inputAmount, pool.address, calldata, Side.Ask);
+    const priceDiscovery = new PriceDiscovery(inputAmount, wrappedBosonVoucherAddress, calldata, Side.Ask);
 
-    // see this
-    //    await fundsHandler.connect(assistant).depositFunds(seller.id, ethers.constants.AddressZero, inputAmount, {
-    //      value: inputAmount,
-    //    });
+    const protocolBalanceBefore = await weth.balanceOf(await exchangeHandler.getAddress());
 
-    // Seller needs to deposit weth in order to fill the escrow at the last step
-    // Price is theoretically the highest amount needed
-    //    await weth.connect(buyer).deposit({ value: inputAmount });
-    //   await weth.connect(buyer).approve(exchangeHandler.address, inputAmount);
+    tx = await priceDiscoveryHandler.connect(buyer).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery);
 
-    // Approve transfers
-    // Buyer does not approve, since its in ETH.
-    // Seller approves price discovery to transfer the voucher
-    // await bosonVoucher.connect(assistant).setApprovalForAll(pool.address, true);
-    tx = await priceDiscoveryHandler
-      .connect(buyer)
-      .commitToPriceDiscoveryOffer(buyer.address, offer.id, priceDiscovery, {
-        value: inputAmount,
-      });
+    await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
 
-    await expect(tx).to.not.emit(exchangeHandler, "BuyerCommitted");
-    //    await expect(tx).to.emit(pool, "SwapNFTOutPair");
+    const { timestamp } = await provider.getBlock(tx.blockNumber);
+    expect(await bosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
+
+    const protocolBalanceAfter = await weth.balanceOf(await exchangeHandler.getAddress());
+
+    expect(protocolBalanceAfter).to.equal(protocolBalanceBefore + inputAmount);
+
+    const exchangeId = tokenId & MASK;
+    const [, , voucher] = await exchangeHandler.getExchange(exchangeId);
+
+    expect(voucher.committedDate).to.equal(timestamp);
   });
 });

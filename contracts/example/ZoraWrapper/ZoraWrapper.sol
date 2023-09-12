@@ -4,12 +4,13 @@ pragma solidity ^0.8.9;
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
-import { SafeERC20 } from "../../ext_libs/SafeERC20.sol";
-import { IERC20 } from "../../interfaces/IERC20.sol";
 import { ERC721 } from "./../support/ERC721.sol";
 import { IERC721Metadata } from "./../support/IERC721Metadata.sol";
 import { IERC721 } from "../../interfaces/IERC721.sol";
 import { IERC165 } from "../../interfaces/IERC165.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title ZoraWrapper
@@ -113,8 +114,7 @@ contract ZoraWrapper is BosonTypes, ERC721 {
      * @notice Unwraps the voucher, transfer true voucher to owner and funds to the protocol.
      *
      * Reverts if:
-     *  - wrapped voucher is not owned by the seller and the caller is not the protocol
-     *  - wrapped voucher is owned by the seller and the caller is not the owner of this contract or protcol
+     *  - caller is neither protocol nor voucher owner
      *
      * @param _tokenId The token id.
      */
@@ -159,11 +159,7 @@ contract ZoraWrapper is BosonTypes, ERC721 {
      * @param _to The address of the recipient.
      * @param _tokenId The token id.
      */
-    function _beforeTokenTransfer(
-        address _from,
-        address _to,
-        uint256 _tokenId
-    ) internal virtual override(ERC721) {
+    function _beforeTokenTransfer(address _from, address _to, uint256 _tokenId) internal virtual override(ERC721) {
         if (_from == zoraAuctionHouseAddress && _to != address(this)) {
             // Auction is over, and wrapped voucher is being transferred to voucher owner
             // If recipient is address(this), it means the auction was canceled and price updating can be skipped
@@ -228,9 +224,8 @@ contract ZoraWrapper is BosonTypes, ERC721 {
      * @param _voucherAddress Boson Voucher address
      */
     function getVoucherName(address _voucherAddress) internal view returns (string memory) {
-        // TODO: use string concat when solidity version is upgraded
         string memory name = IERC721Metadata(_voucherAddress).name();
-        return string(abi.encodePacked("Wrapped ", name));
+        return string.concat("Wrapped ", name);
     }
 
     /**
@@ -241,8 +236,7 @@ contract ZoraWrapper is BosonTypes, ERC721 {
      * @param _voucherAddress Boson Voucher address
      */
     function getVoucherSymbol(address _voucherAddress) internal view returns (string memory) {
-        // TODO: use string concat when solidity version is upgraded
         string memory symbol = IERC721Metadata(_voucherAddress).symbol();
-        return string(abi.encodePacked("W", symbol));
+        return string.concat("W", symbol);
     }
 }

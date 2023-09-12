@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import { IWETH9Like } from "../../interfaces/IWETH9Like.sol";
 import { IBosonSequentialCommitHandler } from "../../interfaces/handlers/IBosonSequentialCommitHandler.sol";
@@ -9,8 +9,8 @@ import { PriceDiscoveryBase } from "../bases/PriceDiscoveryBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import "../../domain/BosonConstants.sol";
-import { Address } from "../../ext_libs/Address.sol";
-import { Math } from "../../ext_libs/Math.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
  * @title SequentialCommitHandlerFacet
@@ -167,7 +167,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
             }
         }
 
-        clearStorage(_tokenId);
+        clearStorage();
 
         // Since exchange and voucher are passed by reference, they are updated
         emit BuyerCommitted(exchange.offerId, exchange.buyerId, exchangeId, exchange, voucher, msgSender());

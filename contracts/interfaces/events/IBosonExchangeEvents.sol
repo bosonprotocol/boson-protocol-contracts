@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 
@@ -38,5 +38,13 @@ interface IBosonExchangeEvents {
         uint256 indexed exchangeId,
         uint256 indexed newBuyerId,
         address executedBy
+    );
+    event ConditionalCommitAuthorized(
+        uint256 indexed offerId,
+        BosonTypes.GatingType gating,
+        address indexed buyerAddress,
+        uint256 indexed tokenId,
+        uint256 commitCount,
+        uint256 maxCommits
     );
 }

@@ -1,5 +1,6 @@
+const shell = require("shelljs");
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ZeroAddress, provider } = hre.ethers;
 const { assert, expect } = require("chai");
 const { mockOffer, mockVoucher, mockExchange } = require("../util/mock");
 const { getEvent, calculateVoucherExpiry, getSnapshot, revertToSnapshot } = require("../util/utils.js");
@@ -11,58 +12,61 @@ const { populateProtocolContract, getProtocolContractState } = require("../util/
 function getGenericContext(
   deployer,
   protocolDiamondAddress,
-  protocolContracts,
+  contractsBefore,
+  contractsAfter,
   mockContracts,
   protocolContractState,
+  protocolContractStateAfterUpgrade,
   preUpgradeEntities,
-  snapshot
+  snapshot,
+  includeTests
 ) {
   let postUpgradeEntities;
-  let exchangeHandler, offerHandler, fundsHandler, disputeHandler;
-  let mockToken;
-
-  ({ exchangeHandler, offerHandler, fundsHandler, disputeHandler } = protocolContracts);
-  ({ mockToken } = mockContracts);
+  let { exchangeHandler, offerHandler, fundsHandler, disputeHandler } = contractsBefore;
+  let { mockToken } = mockContracts;
 
   const genericContextFunction = async function () {
     afterEach(async function () {
       // Revert to state right after the upgrade.
-      // This is used so the lengthly setup (deploy+upgrade) is done only once.
+      // This is used so the lengthy setup (deploy+upgrade) is done only once.
       await revertToSnapshot(snapshot);
       snapshot = await getSnapshot();
     });
 
+    after(async function () {
+      // revert to latest state of contracts
+      shell.exec(`rm -rf contracts scripts`);
+      shell.exec(`git checkout HEAD contracts scripts`);
+      shell.exec(`git reset HEAD contracts scripts`);
+    });
+
     // Protocol state
     context("📋 Right After upgrade", async function () {
-      it("State is not affected directly after the update", async function () {
-        // Get protocol state after the upgrade
-        const protocolContractStateAfterUpgrade = await getProtocolContractState(
-          protocolDiamondAddress,
-          protocolContracts,
-          mockContracts,
-          preUpgradeEntities
-        );
-
-        // State before and after should be equal
-        assert.deepEqual(protocolContractState, protocolContractStateAfterUpgrade, "state mismatch after upgrade");
-      });
+      for (const test of includeTests) {
+        it(`State of ${test} is not affected`, async function () {
+          assert.deepEqual(protocolContractState[test], protocolContractStateAfterUpgrade[test]);
+        });
+      }
     });
 
     // Create new protocol entities. Existing data should not be affected
     context("📋 New data after the upgrade do not corrupt the data from before the upgrade", async function () {
-      it("State is not affected", async function () {
+      this.timeout(1000000);
+      let protocolContractStateAfterUpgradeAndActions;
+
+      before(async function () {
         postUpgradeEntities = await populateProtocolContract(
           deployer,
           protocolDiamondAddress,
-          protocolContracts,
+          contractsAfter,
           mockContracts
         );
 
         // Get protocol state after the upgrade
         // First get the data that should be in location of old data
-        const protocolContractStateAfterUpgradeAndActions = await getProtocolContractState(
+        protocolContractStateAfterUpgradeAndActions = await getProtocolContractState(
           protocolDiamondAddress,
-          protocolContracts,
+          contractsAfter,
           mockContracts,
           preUpgradeEntities
         );
@@ -75,36 +79,35 @@ function getGenericContext(
           postUpgradeEntities.DRs.length +
           postUpgradeEntities.agents.length +
           postUpgradeEntities.buyers.length;
+
         assert.equal(
-          protocolContractStateAfterUpgradeAndActions.accountContractState.nextAccountId.toNumber(),
-          protocolContractState.accountContractState.nextAccountId.add(accountCount).toNumber(),
+          protocolContractStateAfterUpgradeAndActions.accountContractState.nextAccountId,
+          Number(protocolContractState.accountContractState.nextAccountId) + accountCount,
           "nextAccountId mismatch"
         );
         assert.equal(
-          protocolContractStateAfterUpgradeAndActions.exchangeContractState.nextExchangeId.toNumber(),
-          protocolContractState.exchangeContractState.nextExchangeId
-            .add(postUpgradeEntities.exchanges.length)
-            .toNumber(),
+          protocolContractStateAfterUpgradeAndActions.exchangeContractState.nextExchangeId,
+          Number(protocolContractState.exchangeContractState.nextExchangeId) + postUpgradeEntities.exchanges.length,
           "nextExchangeId mismatch"
         );
         assert.equal(
-          protocolContractStateAfterUpgradeAndActions.groupContractState.nextGroupId.toNumber(),
-          protocolContractState.groupContractState.nextGroupId.add(postUpgradeEntities.groups.length).toNumber(),
+          protocolContractStateAfterUpgradeAndActions.groupContractState.nextGroupId,
+          Number(protocolContractState.groupContractState.nextGroupId) + postUpgradeEntities.groups.length,
           "nextGroupId mismatch"
         );
         assert.equal(
-          protocolContractStateAfterUpgradeAndActions.offerContractState.nextOfferId.toNumber(),
-          protocolContractState.offerContractState.nextOfferId.add(postUpgradeEntities.offers.length).toNumber(),
+          protocolContractStateAfterUpgradeAndActions.offerContractState.nextOfferId,
+          Number(protocolContractState.offerContractState.nextOfferId) + postUpgradeEntities.offers.length,
           "nextOfferId mismatch"
         );
         assert.equal(
-          protocolContractStateAfterUpgradeAndActions.twinContractState.nextTwinId.toNumber(),
-          protocolContractState.twinContractState.nextTwinId.add(postUpgradeEntities.twins.length).toNumber(),
+          protocolContractStateAfterUpgradeAndActions.twinContractState.nextTwinId,
+          Number(protocolContractState.twinContractState.nextTwinId) + postUpgradeEntities.twins.length,
           "nextTwinId mismatch"
         );
         assert.equal(
-          protocolContractStateAfterUpgradeAndActions.bundleContractState.nextBundleId.toNumber(),
-          protocolContractState.bundleContractState.nextBundleId.add(postUpgradeEntities.bundles.length).toNumber()
+          protocolContractStateAfterUpgradeAndActions.bundleContractState.nextBundleId,
+          Number(protocolContractState.bundleContractState.nextBundleId) + postUpgradeEntities.bundles.length
         );
 
         // State before and after should be equal
@@ -121,12 +124,13 @@ function getGenericContext(
         delete protocolContractState.offerContractState.nextOfferId;
         delete protocolContractState.twinContractState.nextTwinId;
         delete protocolContractState.bundleContractState.nextBundleId;
-        assert.deepEqual(
-          protocolContractState,
-          protocolContractStateAfterUpgradeAndActions,
-          "state mismatch after upgrade"
-        );
       });
+
+      for (const test of includeTests) {
+        it(`State of ${test} is not affected`, async function () {
+          assert.deepEqual(protocolContractState[test], protocolContractStateAfterUpgradeAndActions[test]);
+        });
+      }
     });
 
     // Test that offers and exchanges from before the upgrade can normally be used
@@ -137,26 +141,26 @@ function getGenericContext(
         const offerPrice = offer.price;
         const buyer = preUpgradeEntities.buyers[1];
         let msgValue;
-        if (offer.exchangeToken == ethers.constants.AddressZero) {
+        if (offer.exchangeToken == ZeroAddress) {
           msgValue = offerPrice;
         } else {
           // approve token transfer
           msgValue = 0;
           await mockToken.connect(buyer.wallet).approve(protocolDiamondAddress, offerPrice);
-          await mockToken.mint(buyer.wallet.address, offerPrice);
+          await mockToken.mint(buyer.wallet, offerPrice);
         }
 
         // Commit to offer
         const exchangeId = await exchangeHandler.getNextExchangeId();
         const tx = await exchangeHandler
           .connect(buyer.wallet)
-          .commitToOffer(buyer.wallet.address, offer.id, { value: msgValue });
+          .commitToOffer(buyer.wallet, offer.id, { value: msgValue });
         const txReceipt = await tx.wait();
         const event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
         // Get the block timestamp of the confirmed tx
         const blockNumber = tx.blockNumber;
-        const block = await ethers.provider.getBlock(blockNumber);
+        const block = await provider.getBlock(blockNumber);
 
         // Set expected voucher values
         const voucher = mockVoucher({
@@ -194,7 +198,7 @@ function getGenericContext(
         const buyerWallet = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
         await expect(exchangeHandler.connect(buyerWallet).redeemVoucher(exchange.exchangeId))
           .to.emit(exchangeHandler, "VoucherRedeemed")
-          .withArgs(exchange.offerId, exchange.exchangeId, buyerWallet.address);
+          .withArgs(exchange.offerId, exchange.exchangeId, await buyerWallet.getAddress());
       });
 
       it("Cancel old voucher", async function () {
@@ -202,7 +206,7 @@ function getGenericContext(
         const buyerWallet = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
         await expect(exchangeHandler.connect(buyerWallet).cancelVoucher(exchange.exchangeId))
           .to.emit(exchangeHandler, "VoucherCanceled")
-          .withArgs(exchange.offerId, exchange.exchangeId, buyerWallet.address);
+          .withArgs(exchange.offerId, exchange.exchangeId, await buyerWallet.getAddress());
       });
 
       it("Revoke old voucher", async function () {
@@ -215,12 +219,14 @@ function getGenericContext(
       });
 
       it("Escalate old dispute", async function () {
-        const exchange = preUpgradeEntities.exchanges[5]; // exchange for which dispute was raised
+        const exchange = preUpgradeEntities.exchanges[5 - 1]; // exchange for which dispute was raised
+
         const buyerWallet = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
         const offer = preUpgradeEntities.offers.find((o) => o.offer.id == exchange.offerId);
+
         await expect(disputeHandler.connect(buyerWallet).escalateDispute(exchange.exchangeId))
           .to.emit(disputeHandler, "DisputeEscalated")
-          .withArgs(exchange.exchangeId, offer.disputeResolverId, buyerWallet.address);
+          .withArgs(exchange.exchangeId, offer.disputeResolverId, await buyerWallet.getAddress());
       });
 
       it("Old buyer commits to new offer", async function () {
@@ -234,6 +240,8 @@ function getGenericContext(
         const disputeResolverId = preUpgradeEntities.DRs[0].disputeResolver.id;
         const agentId = preUpgradeEntities.agents[0].agent.id;
         const seller = preUpgradeEntities.sellers[2];
+
+        offerHandler = contractsAfter.offerHandler;
         await offerHandler
           .connect(seller.wallet)
           .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
@@ -247,13 +255,13 @@ function getGenericContext(
         const offerPrice = offer.price;
         const tx = await exchangeHandler
           .connect(buyer.wallet)
-          .commitToOffer(buyer.wallet.address, offer.id, { value: offerPrice });
+          .commitToOffer(buyer.wallet, offer.id, { value: offerPrice });
         const txReceipt = await tx.wait();
         const event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
         // Get the block timestamp of the confirmed tx
         const blockNumber = tx.blockNumber;
-        const block = await ethers.provider.getBlock(blockNumber);
+        const block = await provider.getBlock(blockNumber);
 
         // Set expected voucher values
         const voucher = mockVoucher({
@@ -296,6 +304,7 @@ function getGenericContext(
       });
     });
   };
+
   return genericContextFunction;
 }
 

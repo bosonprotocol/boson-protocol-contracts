@@ -1,5 +1,5 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ethers } = require("hardhat");
+const { ZeroAddress, getContractFactory, getSigners, parseUnits, provider, getContractAt } = ethers;
 const { expect } = require("chai");
 
 const Exchange = require("../../scripts/domain/Exchange");
@@ -25,7 +25,8 @@ const {
 const {
   setNextBlockTimestamp,
   calculateVoucherExpiry,
-  calculateContractAddress,
+  calculateBosonProxyAddress,
+  calculateCloneAddress,
   applyPercentage,
   setupTestEnvironment,
   getSnapshot,
@@ -40,19 +41,7 @@ const { oneMonth } = require("../util/constants");
 describe("IBosonSequentialCommitHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer,
-    pauser,
-    assistant,
-    admin,
-    clerk,
-    treasury,
-    rando,
-    buyer,
-    buyer2,
-    assistantDR,
-    adminDR,
-    clerkDR,
-    treasuryDR;
+  let deployer, pauser, assistant, admin, treasury, rando, buyer, buyer2, assistantDR, adminDR, treasuryDR;
   let erc165,
     accountHandler,
     exchangeHandler,
@@ -91,9 +80,9 @@ describe("IBosonSequentialCommitHandler", function () {
     InterfaceIds = await getInterfaceIds();
 
     // Add WETH
-    const wethFactory = await ethers.getContractFactory("WETH9");
+    const wethFactory = await getContractFactory("WETH9");
     weth = await wethFactory.deploy();
-    await weth.deployed();
+    await weth.waitForDeployment();
 
     // Specify contracts needed for this test
     const contracts = {
@@ -121,18 +110,18 @@ describe("IBosonSequentialCommitHandler", function () {
       },
       protocolConfig: [, , { percentage: protocolFeePercentage }],
       diamondAddress: protocolDiamondAddress,
-    } = await setupTestEnvironment(contracts, { wethAddress: weth.address }));
+    } = await setupTestEnvironment(contracts, { wethAddress: await weth.getAddress() }));
 
     // make all account the same
-    assistant = clerk = admin;
-    assistantDR = clerkDR = adminDR;
+    assistant = admin;
+    assistantDR = adminDR;
 
-    [deployer] = await ethers.getSigners();
+    [deployer] = await getSigners();
 
     // Deploy PriceDiscovery contract
-    const PriceDiscoveryFactory = await ethers.getContractFactory("PriceDiscovery");
+    const PriceDiscoveryFactory = await getContractFactory("PriceDiscovery");
     priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
-    await priceDiscoveryContract.deployed();
+    await priceDiscoveryContract.waitForDeployment();
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -143,7 +132,7 @@ describe("IBosonSequentialCommitHandler", function () {
     snapshotId = await getSnapshot();
   });
 
-  // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
+  // Interface support (ERC-156 provided by ProtocolDiamond, others by waitForDeployment facets)
   context("📋 Interfaces", async function () {
     context("👉 supportsInterface()", async function () {
       it("should indicate support for IBosonSequentialCommitHandler interface", async function () {
@@ -164,7 +153,7 @@ describe("IBosonSequentialCommitHandler", function () {
       agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid seller
-      seller = mockSeller(assistant.address, admin.address, clerk.address, treasury.address);
+      seller = mockSeller(assistant.address, admin.address, ZeroAddress, treasury.address);
       expect(seller.isValid()).is.true;
 
       // AuthToken
@@ -176,20 +165,22 @@ describe("IBosonSequentialCommitHandler", function () {
       expect(voucherInitValues.isValid()).is.true;
 
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
-      expectedCloneAddress = calculateContractAddress(accountHandler.address, "1");
+
+      const beaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
+      expectedCloneAddress = calculateCloneAddress(protocolDiamondAddress, beaconProxyAddress, admin.address);
 
       // Create a valid dispute resolver
       disputeResolver = mockDisputeResolver(
         assistantDR.address,
         adminDR.address,
-        clerkDR.address,
+        ZeroAddress,
         treasuryDR.address,
         true
       );
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
-      disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
+      disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", "0")];
 
       // Make empty seller list, so every seller is allowed
       const sellerAllowList = [];
@@ -209,7 +200,7 @@ describe("IBosonSequentialCommitHandler", function () {
       offer.quantityAvailable = "10";
       disputeResolverId = mo.disputeResolverId;
 
-      offerDurations.voucherValid = (oneMonth * 12).toString();
+      offerDurations.voucherValid = (oneMonth * 12n).toString();
 
       // Check if domains are valid
       expect(offer.isValid()).is.true;
@@ -220,10 +211,10 @@ describe("IBosonSequentialCommitHandler", function () {
       await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
       // Set used variables
-      price = offer.price;
+      price = BigInt(offer.price);
       voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
       voucherValid = offerDurations.voucherValid;
-      sellerPool = ethers.utils.parseUnits("15", "ether").toString();
+      sellerPool = parseUnits("15", "ether").toString();
 
       // Required voucher constructor params
       voucher = mockVoucher();
@@ -237,9 +228,7 @@ describe("IBosonSequentialCommitHandler", function () {
       exchange.finalizedDate = "0";
 
       // Deposit seller funds so the commit will succeed
-      await fundsHandler
-        .connect(assistant)
-        .depositFunds(seller.id, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
+      await fundsHandler.connect(assistant).depositFunds(seller.id, ZeroAddress, sellerPool, { value: sellerPool });
     });
 
     afterEach(async function () {
@@ -254,9 +243,9 @@ describe("IBosonSequentialCommitHandler", function () {
 
       // before(async function () {
       //   // Deploy PriceDiscovery contract
-      //   const PriceDiscoveryFactory = await ethers.getContractFactory("PriceDiscovery");
+      //   const PriceDiscoveryFactory = await getContractFactory("PriceDiscovery");
       //   priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
-      //   await priceDiscoveryContract.deployed();
+      //   await priceDiscoveryContract.waitForDeployment();
       // });
 
       beforeEach(async function () {
@@ -265,7 +254,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
+        block = await provider.getBlock(blockNumber);
 
         // Update the committed date in the expected exchange struct with the block timestamp of the tx
         voucher.committedDate = block.timestamp.toString();
@@ -280,7 +269,7 @@ describe("IBosonSequentialCommitHandler", function () {
         context("General actions", async function () {
           beforeEach(async function () {
             // Price on secondary market
-            price2 = ethers.BigNumber.from(price).mul(11).div(10).toString(); // 10% above the original price
+            price2 = (BigInt(price) * 11n) / 10n; // 10% above the original price
 
             // Prepare calldata for PriceDiscovery contract
             let order = {
@@ -294,7 +283,12 @@ describe("IBosonSequentialCommitHandler", function () {
 
             const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
 
-            priceDiscovery = new PriceDiscovery(price2, priceDiscoveryContract.address, priceDiscoveryData, Side.Ask);
+            priceDiscovery = new PriceDiscovery(
+              price2,
+              await priceDiscoveryContract.getAddress(),
+              priceDiscoveryData,
+              Side.Ask
+            );
 
             // Seller needs to deposit weth in order to fill the escrow at the last step
             // Price2 is theoretically the highest amount needed, in practice it will be less (around price2-price)
@@ -304,8 +298,8 @@ describe("IBosonSequentialCommitHandler", function () {
             // Approve transfers
             // Buyer does not approve, since its in ETH.
             // Seller approves price discovery to transfer the voucher
-            bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
-            await bosonVoucherClone.connect(buyer).setApprovalForAll(priceDiscoveryContract.address, true);
+            bosonVoucherClone = await getContractAt("IBosonVoucher", expectedCloneAddress);
+            await bosonVoucherClone.connect(buyer).setApprovalForAll(await priceDiscoveryContract.getAddress(), true);
 
             mockBuyer(buyer.address); // call only to increment account id counter
             newBuyer = mockBuyer(buyer2.address);
@@ -325,7 +319,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
           it("should update state", async function () {
             // Escrow amount before
-            const escrowBefore = await ethers.provider.getBalance(exchangeHandler.address);
+            const escrowBefore = await provider.getBalance(await exchangeHandler.getAddress());
 
             // Sequential commit to offer
             await sequentialCommitHandler
@@ -341,8 +335,8 @@ describe("IBosonSequentialCommitHandler", function () {
             expect(returnedExchange.buyerId).to.equal(newBuyer.id);
 
             // Contract's balance should increase for minimal escrow amount
-            const escrowAfter = await ethers.provider.getBalance(exchangeHandler.address);
-            expect(escrowAfter).to.equal(escrowBefore.add(price2).sub(price));
+            const escrowAfter = await provider.getBalance(await exchangeHandler.getAddress());
+            expect(escrowAfter).to.equal(escrowBefore + price2 - price);
           });
 
           it("should transfer the voucher", async function () {
@@ -496,7 +490,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
           it("It is possible to commit even if offer has expired", async function () {
             // Advance time to after offer expiry
-            await setNextBlockTimestamp(Number(offerDates.validUntil));
+            await setNextBlockTimestamp(Number(offerDates.validUntil) + 1);
 
             // Committing directly is not possible
             await expect(
@@ -564,7 +558,7 @@ describe("IBosonSequentialCommitHandler", function () {
               await expect(
                 sequentialCommitHandler
                   .connect(buyer2)
-                  .sequentialCommitToOffer(ethers.constants.AddressZero, exchangeId, priceDiscovery, { value: price2 })
+                  .sequentialCommitToOffer(ZeroAddress, exchangeId, priceDiscovery, { value: price2 })
               ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
             });
 
@@ -582,7 +576,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
             it("voucher not valid anymore", async function () {
               // Go past offer expiration date
-              await setNextBlockTimestamp(Number(voucher.validUntilDate));
+              await setNextBlockTimestamp(Number(voucher.validUntilDate) + 1);
 
               // Attempt to sequentially commit to the expired voucher, expecting revert
               await expect(
@@ -617,9 +611,9 @@ describe("IBosonSequentialCommitHandler", function () {
 
             it("price discovery does not send the voucher to the protocol", async function () {
               // Deploy bad price discovery contract
-              const PriceDiscoveryFactory = await ethers.getContractFactory("PriceDiscoveryNoTransfer");
+              const PriceDiscoveryFactory = await getContractFactory("PriceDiscoveryNoTransfer");
               const priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
-              await priceDiscoveryContract.deployed();
+              await priceDiscoveryContract.waitForDeployment();
 
               // Prepare calldata for PriceDiscovery contract
               let order = {
@@ -633,7 +627,12 @@ describe("IBosonSequentialCommitHandler", function () {
 
               const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
 
-              priceDiscovery = new PriceDiscovery(price2, priceDiscoveryContract.address, priceDiscoveryData, Side.Ask);
+              priceDiscovery = new PriceDiscovery(
+                price2,
+                await priceDiscoveryContract.getAddress(),
+                priceDiscoveryData,
+                Side.Ask
+              );
 
               // Attempt to sequentially commit, expecting revert
               await expect(
@@ -654,21 +653,21 @@ describe("IBosonSequentialCommitHandler", function () {
 
           async function getBalances() {
             const [protocol, seller, sellerWeth, newBuyer, originalSeller] = await Promise.all([
-              ethers.provider.getBalance(exchangeHandler.address),
-              ethers.provider.getBalance(buyer.address),
+              provider.getBalance(await exchangeHandler.getAddress()),
+              provider.getBalance(buyer.address),
               weth.balanceOf(buyer.address),
-              ethers.provider.getBalance(buyer2.address),
-              ethers.provider.getBalance(treasury.address),
+              provider.getBalance(buyer2.address),
+              provider.getBalance(treasury.address),
             ]);
 
-            return { protocol, seller: seller.add(sellerWeth), newBuyer, originalSeller };
+            return { protocol, seller: seller + sellerWeth, newBuyer, originalSeller };
           }
 
           scenarios.forEach((scenario) => {
             context(scenario.case, async function () {
               beforeEach(async function () {
                 // Price on secondary market
-                price2 = ethers.BigNumber.from(price).mul(scenario.multiplier).div(10).toString();
+                price2 = (BigInt(price) * BigInt(scenario.multiplier)) / 10n;
 
                 // Prepare calldata for PriceDiscovery contract
                 let order = {
@@ -677,7 +676,7 @@ describe("IBosonSequentialCommitHandler", function () {
                   voucherContract: expectedCloneAddress,
                   tokenId: deriveTokenId(offer.id, exchangeId),
                   exchangeToken: offer.exchangeToken,
-                  price: price2,
+                  price: price2.toString(),
                 };
 
                 const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [
@@ -686,7 +685,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
                 priceDiscovery = new PriceDiscovery(
                   price2,
-                  priceDiscoveryContract.address,
+                  await priceDiscoveryContract.getAddress(),
                   priceDiscoveryData,
                   Side.Ask
                 );
@@ -699,8 +698,10 @@ describe("IBosonSequentialCommitHandler", function () {
                 // Approve transfers
                 // Buyer does not approve, since its in ETH.
                 // Seller approves price discovery to transfer the voucher
-                bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
-                await bosonVoucherClone.connect(buyer).setApprovalForAll(priceDiscoveryContract.address, true);
+                bosonVoucherClone = await getContractAt("IBosonVoucher", expectedCloneAddress);
+                await bosonVoucherClone
+                  .connect(buyer)
+                  .setApprovalForAll(await priceDiscoveryContract.getAddress(), true);
 
                 mockBuyer(buyer.address); // call only to increment account id counter
                 newBuyer = mockBuyer(buyer2.address);
@@ -749,19 +750,18 @@ describe("IBosonSequentialCommitHandler", function () {
 
                   // Expected changes
                   const expectedBuyerChange = price2;
-                  const reducedSecondaryPrice = ethers.BigNumber.from(price2)
-                    .mul(10000 - fee.protocol - fee.royalties)
-                    .div(10000);
-                  const expectedSellerChange = reducedSecondaryPrice.lte(price) ? reducedSecondaryPrice : price;
-                  const expectedProtocolChange = ethers.BigNumber.from(price2).sub(expectedSellerChange);
-                  const expectedOriginalSellerChange = 0;
+                  const reducedSecondaryPrice =
+                    (BigInt(price2) * BigInt(10000 - fee.protocol - fee.royalties)) / 10000n;
+                  const expectedSellerChange = reducedSecondaryPrice <= price ? reducedSecondaryPrice : price;
+                  const expectedProtocolChange = price2 - expectedSellerChange;
+                  const expectedOriginalSellerChange = 0n;
 
                   // Contract's balance should increase for minimal escrow amount
-                  expect(balancesAfter.protocol).to.equal(balancesBefore.protocol.add(expectedProtocolChange));
-                  expect(balancesAfter.seller).to.equal(balancesBefore.seller.add(expectedSellerChange));
-                  expect(balancesAfter.newBuyer).to.equal(balancesBefore.newBuyer.sub(expectedBuyerChange));
+                  expect(balancesAfter.protocol).to.equal(balancesBefore.protocol + expectedProtocolChange);
+                  expect(balancesAfter.seller).to.equal(balancesBefore.seller + expectedSellerChange);
+                  expect(balancesAfter.newBuyer).to.equal(balancesBefore.newBuyer - expectedBuyerChange);
                   expect(balancesAfter.originalSeller).to.equal(
-                    balancesBefore.originalSeller.add(expectedOriginalSellerChange)
+                    balancesBefore.originalSeller + expectedOriginalSellerChange
                   );
                 });
 
@@ -774,7 +774,7 @@ describe("IBosonSequentialCommitHandler", function () {
                   const balancesBefore = await getBalances();
 
                   // Sequential commit to offer. Buyer pays more than needed
-                  priceDiscovery.price = ethers.BigNumber.from(price2).mul(3).toString();
+                  priceDiscovery.price = price2 * 3n;
 
                   await sequentialCommitHandler
                     .connect(buyer2)
@@ -787,19 +787,17 @@ describe("IBosonSequentialCommitHandler", function () {
 
                   // Expected changes
                   const expectedBuyerChange = price2;
-                  const reducedSecondaryPrice = ethers.BigNumber.from(price2)
-                    .mul(10000 - fee.protocol - fee.royalties)
-                    .div(10000);
-                  const expectedSellerChange = reducedSecondaryPrice.lte(price) ? reducedSecondaryPrice : price;
-                  const expectedProtocolChange = ethers.BigNumber.from(price2).sub(expectedSellerChange);
-                  const expectedOriginalSellerChange = 0;
+                  const reducedSecondaryPrice = (price2 * BigInt(10000 - fee.protocol - fee.royalties)) / 10000n;
+                  const expectedSellerChange = reducedSecondaryPrice <= price ? reducedSecondaryPrice : price;
+                  const expectedProtocolChange = price2 - expectedSellerChange;
+                  const expectedOriginalSellerChange = 0n;
 
                   // Contract's balance should increase for minimal escrow amount
-                  expect(balancesAfter.protocol).to.equal(balancesBefore.protocol.add(expectedProtocolChange));
-                  expect(balancesAfter.seller).to.equal(balancesBefore.seller.add(expectedSellerChange));
-                  expect(balancesAfter.newBuyer).to.equal(balancesBefore.newBuyer.sub(expectedBuyerChange));
+                  expect(balancesAfter.protocol).to.equal(balancesBefore.protocol + expectedProtocolChange);
+                  expect(balancesAfter.seller).to.equal(balancesBefore.seller + expectedSellerChange);
+                  expect(balancesAfter.newBuyer).to.equal(balancesBefore.newBuyer - expectedBuyerChange);
                   expect(balancesAfter.originalSeller).to.equal(
-                    balancesBefore.originalSeller.add(expectedOriginalSellerChange)
+                    balancesBefore.originalSeller + expectedOriginalSellerChange
                   );
                 });
               });
@@ -812,30 +810,35 @@ describe("IBosonSequentialCommitHandler", function () {
         context("General actions", async function () {
           beforeEach(async function () {
             // Price on secondary market
-            price2 = ethers.BigNumber.from(price).mul(11).div(10).toString(); // 10% above the original price
+            price2 = (price * 11n) / 10n; // 10% above the original price
 
             // Prepare calldata for PriceDiscovery contract
             let order = {
-              seller: exchangeHandler.address, // since protocol owns the voucher, it acts as seller from price discovery mechanism
+              seller: await exchangeHandler.getAddress(), // since protocol owns the voucher, it acts as seller from price discovery mechanism
               buyer: buyer2.address,
               voucherContract: expectedCloneAddress,
               tokenId: deriveTokenId(offer.id, exchangeId),
-              exchangeToken: weth.address, // buyer pays in ETH, but they cannot approve ETH, so we use WETH
-              price: price2,
+              exchangeToken: await weth.getAddress(), // buyer pays in ETH, but they cannot approve ETH, so we use WETH
+              price: price2.toString(),
             };
 
             const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilSellOrder", [order]);
 
-            priceDiscovery = new PriceDiscovery(price2, priceDiscoveryContract.address, priceDiscoveryData, Side.Bid);
+            priceDiscovery = new PriceDiscovery(
+              price2,
+              await priceDiscoveryContract.getAddress(),
+              priceDiscoveryData,
+              Side.Bid
+            );
 
             // Approve transfers
             // Buyer2 needs to approve price discovery to transfer the ETH
             await weth.connect(buyer2).deposit({ value: price2 });
-            await weth.connect(buyer2).approve(priceDiscoveryContract.address, price2);
+            await weth.connect(buyer2).approve(await priceDiscoveryContract.getAddress(), price2);
 
             // Seller approves protocol to transfer the voucher
-            bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
-            await bosonVoucherClone.connect(reseller).setApprovalForAll(exchangeHandler.address, true);
+            bosonVoucherClone = await getContractAt("IBosonVoucher", expectedCloneAddress);
+            await bosonVoucherClone.connect(reseller).setApprovalForAll(await exchangeHandler.getAddress(), true);
 
             mockBuyer(reseller.address); // call only to increment account id counter
             newBuyer = mockBuyer(buyer2.address);
@@ -855,7 +858,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
           it("should update state", async function () {
             // Escrow amount before
-            const escrowBefore = await ethers.provider.getBalance(exchangeHandler.address);
+            const escrowBefore = await provider.getBalance(await exchangeHandler.getAddress());
 
             // Sequential commit to offer
             await sequentialCommitHandler
@@ -871,8 +874,8 @@ describe("IBosonSequentialCommitHandler", function () {
             expect(returnedExchange.buyerId).to.equal(newBuyer.id);
 
             // Contract's balance should increase for minimal escrow amount
-            const escrowAfter = await ethers.provider.getBalance(exchangeHandler.address);
-            expect(escrowAfter).to.equal(escrowBefore.add(price2).sub(price));
+            const escrowAfter = await provider.getBalance(await exchangeHandler.getAddress());
+            expect(escrowAfter).to.equal(escrowBefore + price2 - price);
           });
 
           it("should transfer the voucher", async function () {
@@ -1011,7 +1014,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
           it("It is possible to commit even if offer has expired", async function () {
             // Advance time to after offer expiry
-            await setNextBlockTimestamp(Number(offerDates.validUntil));
+            await setNextBlockTimestamp(Number(offerDates.validUntil) + 1);
 
             // Committing directly is not possible
             await expect(exchangeHandler.connect(buyer2).commitToOffer(buyer2.address, offerId)).to.revertedWith(
@@ -1079,7 +1082,7 @@ describe("IBosonSequentialCommitHandler", function () {
               await expect(
                 sequentialCommitHandler
                   .connect(reseller)
-                  .sequentialCommitToOffer(ethers.constants.AddressZero, exchangeId, priceDiscovery)
+                  .sequentialCommitToOffer(ZeroAddress, exchangeId, priceDiscovery)
               ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
             });
 
@@ -1097,7 +1100,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
             it("voucher not valid anymore", async function () {
               // Go past offer expiration date
-              await setNextBlockTimestamp(Number(voucher.validUntilDate));
+              await setNextBlockTimestamp(Number(voucher.validUntilDate) + 1);
 
               // Attempt to sequentially commit to the expired voucher, expecting revert
               await expect(
@@ -1123,7 +1126,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
             it("voucher transfer not approved", async function () {
               // revoke approval
-              await bosonVoucherClone.connect(reseller).setApprovalForAll(exchangeHandler.address, false);
+              await bosonVoucherClone.connect(reseller).setApprovalForAll(await exchangeHandler.getAddress(), false);
 
               // Attempt to sequentially commit to, expecting revert
               await expect(
@@ -1135,7 +1138,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
             it("price discovery sends less than expected", async function () {
               // Set higher price in price discovery
-              priceDiscovery.price = ethers.BigNumber.from(priceDiscovery.price).add(1);
+              priceDiscovery.price = BigInt(priceDiscovery.price) + 1n;
 
               // Attempt to sequentially commit to, expecting revert
               await expect(
@@ -1165,31 +1168,31 @@ describe("IBosonSequentialCommitHandler", function () {
 
           async function getBalances() {
             const [protocol, seller, sellerWeth, newBuyer, newBuyerWeth, originalSeller] = await Promise.all([
-              ethers.provider.getBalance(exchangeHandler.address),
-              ethers.provider.getBalance(reseller.address),
+              provider.getBalance(await exchangeHandler.getAddress()),
+              provider.getBalance(reseller.address),
               weth.balanceOf(reseller.address),
-              ethers.provider.getBalance(buyer2.address),
+              provider.getBalance(buyer2.address),
               weth.balanceOf(buyer2.address),
-              ethers.provider.getBalance(treasury.address),
+              provider.getBalance(treasury.address),
             ]);
 
-            return { protocol, seller: seller.add(sellerWeth), newBuyer: newBuyer.add(newBuyerWeth), originalSeller };
+            return { protocol, seller: seller + sellerWeth, newBuyer: newBuyer + newBuyerWeth, originalSeller };
           }
 
           scenarios.forEach((scenario) => {
             context(scenario.case, async function () {
               beforeEach(async function () {
                 // Price on secondary market
-                price2 = ethers.BigNumber.from(price).mul(scenario.multiplier).div(10).toString();
+                price2 = (price * BigInt(scenario.multiplier)) / 10n;
 
                 // Prepare calldata for PriceDiscovery contract
                 let order = {
-                  seller: exchangeHandler.address, // since protocol owns the voucher, it acts as seller from price discovery mechanism
+                  seller: await exchangeHandler.getAddress(), // since protocol owns the voucher, it acts as seller from price discovery mechanism
                   buyer: buyer2.address,
                   voucherContract: expectedCloneAddress,
                   tokenId: deriveTokenId(offer.id, exchangeId),
-                  exchangeToken: weth.address, // buyer pays in ETH, but they cannot approve ETH, so we use WETH
-                  price: price2,
+                  exchangeToken: await weth.getAddress(), // buyer pays in ETH, but they cannot approve ETH, so we use WETH
+                  price: price2.toString(),
                 };
 
                 const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilSellOrder", [
@@ -1198,7 +1201,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
                 priceDiscovery = new PriceDiscovery(
                   price2,
-                  priceDiscoveryContract.address,
+                  await priceDiscoveryContract.getAddress(),
                   priceDiscoveryData,
                   Side.Bid
                 );
@@ -1206,11 +1209,11 @@ describe("IBosonSequentialCommitHandler", function () {
                 // Approve transfers
                 // Buyer2 needs to approve price discovery to transfer the ETH
                 await weth.connect(buyer2).deposit({ value: price2 });
-                await weth.connect(buyer2).approve(priceDiscoveryContract.address, price2);
+                await weth.connect(buyer2).approve(await priceDiscoveryContract.getAddress(), price2);
 
                 // Seller approves protocol to transfer the voucher
-                bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
-                await bosonVoucherClone.connect(reseller).setApprovalForAll(exchangeHandler.address, true);
+                bosonVoucherClone = await getContractAt("IBosonVoucher", expectedCloneAddress);
+                await bosonVoucherClone.connect(reseller).setApprovalForAll(await exchangeHandler.getAddress(), true);
 
                 mockBuyer(buyer.address); // call only to increment account id counter
                 newBuyer = mockBuyer(buyer2.address);
@@ -1258,19 +1261,17 @@ describe("IBosonSequentialCommitHandler", function () {
 
                   // Expected changes
                   const expectedBuyerChange = price2;
-                  const reducedSecondaryPrice = ethers.BigNumber.from(price2)
-                    .mul(10000 - fee.protocol - fee.royalties)
-                    .div(10000);
-                  const expectedSellerChange = reducedSecondaryPrice.lte(price) ? reducedSecondaryPrice : price;
-                  const expectedProtocolChange = ethers.BigNumber.from(price2).sub(expectedSellerChange);
-                  const expectedOriginalSellerChange = 0;
+                  const reducedSecondaryPrice = (price2 * BigInt(10000 - fee.protocol - fee.royalties)) / 10000n;
+                  const expectedSellerChange = reducedSecondaryPrice <= price ? reducedSecondaryPrice : price;
+                  const expectedProtocolChange = price2 - expectedSellerChange;
+                  const expectedOriginalSellerChange = 0n;
 
                   // Contract's balance should increase for minimal escrow amount
-                  expect(balancesAfter.protocol).to.equal(balancesBefore.protocol.add(expectedProtocolChange));
-                  expect(balancesAfter.seller).to.equal(balancesBefore.seller.add(expectedSellerChange));
-                  expect(balancesAfter.newBuyer).to.equal(balancesBefore.newBuyer.sub(expectedBuyerChange));
+                  expect(balancesAfter.protocol).to.equal(balancesBefore.protocol + expectedProtocolChange);
+                  expect(balancesAfter.seller).to.equal(balancesBefore.seller + expectedSellerChange);
+                  expect(balancesAfter.newBuyer).to.equal(balancesBefore.newBuyer - expectedBuyerChange);
                   expect(balancesAfter.originalSeller).to.equal(
-                    balancesBefore.originalSeller.add(expectedOriginalSellerChange)
+                    balancesBefore.originalSeller + expectedOriginalSellerChange
                   );
                 });
 
@@ -1283,7 +1284,7 @@ describe("IBosonSequentialCommitHandler", function () {
                   const balancesBefore = await getBalances();
 
                   // Sequential commit to offer. Buyer pays more than needed
-                  priceDiscovery.price = ethers.BigNumber.from(price2).div(2).toString();
+                  priceDiscovery.price = price2 / 2n;
 
                   await sequentialCommitHandler
                     .connect(reseller)
@@ -1295,19 +1296,17 @@ describe("IBosonSequentialCommitHandler", function () {
 
                   // Expected changes
                   const expectedBuyerChange = price2;
-                  const reducedSecondaryPrice = ethers.BigNumber.from(price2)
-                    .mul(10000 - fee.protocol - fee.royalties)
-                    .div(10000);
-                  const expectedSellerChange = reducedSecondaryPrice.lte(price) ? reducedSecondaryPrice : price;
-                  const expectedProtocolChange = ethers.BigNumber.from(price2).sub(expectedSellerChange);
-                  const expectedOriginalSellerChange = 0;
+                  const reducedSecondaryPrice = (price2 * BigInt(10000 - fee.protocol - fee.royalties)) / 10000n;
+                  const expectedSellerChange = reducedSecondaryPrice <= price ? reducedSecondaryPrice : price;
+                  const expectedProtocolChange = price2 - expectedSellerChange;
+                  const expectedOriginalSellerChange = 0n;
 
                   // Contract's balance should increase for minimal escrow amount
-                  expect(balancesAfter.protocol).to.equal(balancesBefore.protocol.add(expectedProtocolChange));
-                  expect(balancesAfter.seller).to.equal(balancesBefore.seller.add(expectedSellerChange));
-                  expect(balancesAfter.newBuyer).to.equal(balancesBefore.newBuyer.sub(expectedBuyerChange));
+                  expect(balancesAfter.protocol).to.equal(balancesBefore.protocol + expectedProtocolChange);
+                  expect(balancesAfter.seller).to.equal(balancesBefore.seller + expectedSellerChange);
+                  expect(balancesAfter.newBuyer).to.equal(balancesBefore.newBuyer - expectedBuyerChange);
                   expect(balancesAfter.originalSeller).to.equal(
-                    balancesBefore.originalSeller.add(expectedOriginalSellerChange)
+                    balancesBefore.originalSeller + expectedOriginalSellerChange
                   );
                 });
               });
@@ -1328,7 +1327,7 @@ describe("IBosonSequentialCommitHandler", function () {
         reseller = buyer;
 
         // Price on secondary market
-        price2 = ethers.BigNumber.from(price).mul(11).div(10).toString(); // 10% above the original price
+        price2 = (price * 11n) / 10n; // 10% above the original price
 
         // Seller needs to deposit weth in order to fill the escrow at the last step
         // Price2 is theoretically the highest amount needed, in practice it will be less (around price2-price)
@@ -1338,14 +1337,14 @@ describe("IBosonSequentialCommitHandler", function () {
         // Approve transfers
         // Buyer does not approve, since its in ETH.
         // Seller approves price discovery to transfer the voucher
-        bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        bosonVoucherClone = await getContractAt("IBosonVoucher", expectedCloneAddress);
       });
 
       it("should transfer the voucher during sequential commit", async function () {
         // Deploy PriceDiscovery contract
-        const PriceDiscoveryFactory = await ethers.getContractFactory("PriceDiscovery");
+        const PriceDiscoveryFactory = await getContractFactory("PriceDiscovery");
         priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
-        await priceDiscoveryContract.deployed();
+        await priceDiscoveryContract.waitForDeployment();
 
         // Prepare calldata for PriceDiscovery contract
         let order = {
@@ -1360,9 +1359,14 @@ describe("IBosonSequentialCommitHandler", function () {
         const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
 
         // Seller approves price discovery to transfer the voucher
-        await bosonVoucherClone.connect(reseller).setApprovalForAll(priceDiscoveryContract.address, true);
+        await bosonVoucherClone.connect(reseller).setApprovalForAll(await priceDiscoveryContract.getAddress(), true);
 
-        priceDiscovery = new PriceDiscovery(price2, priceDiscoveryContract.address, priceDiscoveryData, Side.Ask);
+        priceDiscovery = new PriceDiscovery(
+          price2,
+          await priceDiscoveryContract.getAddress(),
+          priceDiscoveryData,
+          Side.Ask
+        );
 
         // buyer is owner of voucher
         const tokenId = deriveTokenId(offer.id, exchangeId);
@@ -1383,9 +1387,9 @@ describe("IBosonSequentialCommitHandler", function () {
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
           // Deploy Bad PriceDiscovery contract
-          const PriceDiscoveryFactory = await ethers.getContractFactory("PriceDiscoveryModifyTokenId");
+          const PriceDiscoveryFactory = await getContractFactory("PriceDiscoveryModifyTokenId");
           priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
-          await priceDiscoveryContract.deployed();
+          await priceDiscoveryContract.waitForDeployment();
 
           // Prepare calldata for PriceDiscovery contract
           let order = {
@@ -1400,9 +1404,14 @@ describe("IBosonSequentialCommitHandler", function () {
           const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
 
           // Seller approves price discovery to transfer the voucher
-          await bosonVoucherClone.connect(reseller).setApprovalForAll(priceDiscoveryContract.address, true);
+          await bosonVoucherClone.connect(reseller).setApprovalForAll(await priceDiscoveryContract.getAddress(), true);
 
-          priceDiscovery = new PriceDiscovery(price2, priceDiscoveryContract.address, priceDiscoveryData, Side.Ask);
+          priceDiscovery = new PriceDiscovery(
+            price2,
+            await priceDiscoveryContract.getAddress(),
+            priceDiscoveryData,
+            Side.Ask
+          );
 
           // Attempt to sequentially commit, expecting revert
           await expect(
@@ -1417,9 +1426,9 @@ describe("IBosonSequentialCommitHandler", function () {
           const [foreign721] = await deployMockTokens(["Foreign721"]);
 
           // Deploy Bad PriceDiscovery contract
-          const PriceDiscoveryFactory = await ethers.getContractFactory("PriceDiscoveryModifyVoucherContract");
-          priceDiscoveryContract = await PriceDiscoveryFactory.deploy(foreign721.address);
-          await priceDiscoveryContract.deployed();
+          const PriceDiscoveryFactory = await getContractFactory("PriceDiscoveryModifyVoucherContract");
+          priceDiscoveryContract = await PriceDiscoveryFactory.deploy(await foreign721.getAddress());
+          await priceDiscoveryContract.waitForDeployment();
 
           // Prepare calldata for PriceDiscovery contract
           let order = {
@@ -1434,9 +1443,14 @@ describe("IBosonSequentialCommitHandler", function () {
           const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
 
           // Seller approves price discovery to transfer the voucher
-          await bosonVoucherClone.connect(reseller).setApprovalForAll(priceDiscoveryContract.address, true);
+          await bosonVoucherClone.connect(reseller).setApprovalForAll(await priceDiscoveryContract.getAddress(), true);
 
-          priceDiscovery = new PriceDiscovery(price2, priceDiscoveryContract.address, priceDiscoveryData, Side.Ask);
+          priceDiscovery = new PriceDiscovery(
+            price2,
+            await priceDiscoveryContract.getAddress(),
+            priceDiscoveryData,
+            Side.Ask
+          );
 
           // Attempt to sequentially commit, expecting revert
           await expect(

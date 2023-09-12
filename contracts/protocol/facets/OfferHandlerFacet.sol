@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
@@ -35,7 +35,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * - Voucher redeemable period is fixed, but it ends before it starts
      * - Voucher redeemable period is fixed, but it ends before offer expires
      * - Dispute period is less than minimum dispute period
-     * - Resolution period is set to zero or above the maximum resolution period
+     * - Resolution period is not between the minimum and the maximum resolution period
      * - Voided is set to true
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -43,6 +43,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * - Seller is not on dispute resolver's seller allow list
      * - Dispute resolver does not accept fees in the exchange token
      * - Buyer cancel penalty is greater than price
+     * - Collection does not exist
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -70,7 +71,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *
      * Reverts if:
      * - The offers region of protocol is paused
-     * - Number of offers exceeds maximum allowed number per batch
      * - Number of elements in offers, offerDates and offerDurations do not match
      * - For any offer:
      *   - Caller is not an assistant
@@ -81,7 +81,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Dispute period is less than minimum dispute period
-     *   - Resolution period is set to zero or above the maximum resolution period
+     *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -89,6 +89,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     *   - Collection does not exist
      * - When agent ids are non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -106,8 +107,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         uint256[] calldata _disputeResolverIds,
         uint256[] calldata _agentIds
     ) external override offersNotPaused nonReentrant {
-        // Limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_offers.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
         // Number of offer dates structs, offer durations structs and _disputeResolverIds must match the number of offers
         require(
             _offers.length == _offerDates.length &&
@@ -117,9 +116,13 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
             ARRAY_LENGTH_MISMATCH
         );
 
-        for (uint256 i = 0; i < _offers.length; i++) {
+        for (uint256 i = 0; i < _offers.length; ) {
             // Create offer and update structs values to represent true state
             createOfferInternal(_offers[i], _offerDates[i], _offerDurations[i], _disputeResolverIds[i], _agentIds[i]);
+
+            unchecked {
+                i++;
+            }
         }
     }
 
@@ -143,11 +146,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @param _length - the length of the range
      * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      */
-    function reserveRange(
-        uint256 _offerId,
-        uint256 _length,
-        address _to
-    ) external override nonReentrant {
+    function reserveRange(uint256 _offerId, uint256 _length, address _to) external override nonReentrant {
         reserveRangeInternal(_offerId, _length, _to);
     }
 
@@ -167,8 +166,8 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @param _offerId - the id of the offer to void
      */
     function voidOffer(uint256 _offerId) public override offersNotPaused nonReentrant {
-        // Get offer, make sure the caller is the assistant
-        Offer storage offer = getValidOffer(_offerId);
+        // Get offer. Make sure caller is assistant
+        Offer storage offer = getValidOfferWithSellerCheck(_offerId);
 
         // Void the offer
         offer.voided = true;
@@ -186,7 +185,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *
      * Reverts if, for any offer:
      * - The offers region of protocol is paused
-     * - Number of offers exceeds maximum allowed number per batch
      * - Offer id is invalid
      * - Caller is not the assistant of the offer
      * - Offer has already been voided
@@ -194,10 +192,12 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @param _offerIds - list of ids of offers to void
      */
     function voidOfferBatch(uint256[] calldata _offerIds) external override offersNotPaused {
-        // limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_offerIds.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
-        for (uint256 i = 0; i < _offerIds.length; i++) {
+        for (uint256 i = 0; i < _offerIds.length; ) {
             voidOffer(_offerIds[i]);
+
+            unchecked {
+                i++;
+            }
         }
     }
 
@@ -218,7 +218,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      */
     function extendOffer(uint256 _offerId, uint256 _validUntilDate) public override offersNotPaused nonReentrant {
         // Make sure the caller is the assistant, offer exists and is not voided
-        Offer storage offer = getValidOffer(_offerId);
+        Offer storage offer = getValidOfferWithSellerCheck(_offerId);
 
         // Fetch the offer dates
         OfferDates storage offerDates = fetchOfferDates(_offerId);
@@ -245,7 +245,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *
      * Reverts if:
      * - The offers region of protocol is paused
-     * - Number of offers exceeds maximum allowed number per batch
      * - For any of the offers:
      *   - Offer does not exist
      *   - Caller is not the assistant of the offer
@@ -256,10 +255,12 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *  @param _validUntilDate - new valid until date
      */
     function extendOfferBatch(uint256[] calldata _offerIds, uint256 _validUntilDate) external override offersNotPaused {
-        // Limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_offerIds.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
-        for (uint256 i = 0; i < _offerIds.length; i++) {
+        for (uint256 i = 0; i < _offerIds.length; ) {
             extendOffer(_offerIds[i], _validUntilDate);
+
+            unchecked {
+                i++;
+            }
         }
     }
 
@@ -274,7 +275,9 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @return disputeResolutionTerms - the details about the dispute resolution terms. See {BosonTypes.DisputeResolutionTerms}
      * @return offerFees - the offer fees details. See {BosonTypes.OfferFees}
      */
-    function getOffer(uint256 _offerId)
+    function getOffer(
+        uint256 _offerId
+    )
         external
         view
         override

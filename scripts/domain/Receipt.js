@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ZeroAddress } = hre.ethers;
 const DisputeState = require("./DisputeState");
 const OfferFees = require("./OfferFees.js");
 const TwinReceipt = require("./TwinReceipt.js");
@@ -70,7 +70,7 @@ class Receipt {
     this.agentId = agentId ?? "0";
     this.exchangeToken = exchangeToken;
     this.finalizedDate = finalizedDate;
-    this.condition = condition ?? new Condition(0, 0, ethers.constants.AddressZero, "0", "0", "0");
+    this.condition = condition ?? new Condition(0, 0, ZeroAddress, "0", "0", "0", "0");
     this.committedDate = committedDate;
     this.redeemedDate = redeemedDate;
     this.voucherExpired = voucherExpired;
@@ -140,7 +140,7 @@ class Receipt {
       disputeResolverId: disputeResolverId.toString(),
       disputedDate: disputedDate.toString(),
       escalatedDate: escalatedDate.toString(),
-      disputeState,
+      disputeState: Number(disputeState),
       twinReceipts: twinReceipts.map((twinReceipt) => TwinReceipt.fromStruct(twinReceipt)),
     });
   }

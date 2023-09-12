@@ -7,17 +7,17 @@ const { bigNumberIsValid, stringIsValid, booleanIsValid, addressIsValid } = requ
  */
 class DisputeResolver {
   /*
-        struct DisputeResolver {
-          uint256 id;
-          uint256 escalationResponsePeriod;
-          address assistant;
-          address admin;
-          address clerk;
-          address payable treasury;
-          string metadataUri;
-          bool active;
-     }
-    */
+          struct DisputeResolver {
+            uint256 id;
+            uint256 escalationResponsePeriod;
+            address assistant;
+            address admin;
+            address clerk; // NB: deprecated, kept for backwards compatibility
+            address payable treasury;
+            string metadataUri;
+            bool active;
+       }
+      */
 
   constructor(id, escalationResponsePeriod, assistant, admin, clerk, treasury, metadataUri, active) {
     this.id = id;

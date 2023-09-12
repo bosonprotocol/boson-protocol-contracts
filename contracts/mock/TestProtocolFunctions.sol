@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import { BosonTypes } from "../domain/BosonTypes.sol";
 import { IBosonExchangeHandler } from "../interfaces/handlers/IBosonExchangeHandler.sol";

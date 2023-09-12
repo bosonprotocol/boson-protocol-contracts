@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IBosonGroupEvents } from "../events/IBosonGroupEvents.sol";
@@ -9,7 +9,7 @@ import { IBosonGroupEvents } from "../events/IBosonGroupEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of groups within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xe2bf2256
+ * The ERC-165 identifier for this interface is: 0x08ccdf47
  */
 interface IBosonGroupHandler is IBosonGroupEvents {
     /**
@@ -22,7 +22,7 @@ interface IBosonGroupHandler is IBosonGroupEvents {
      * - Any of offers belongs to different seller
      * - Any of offers does not exist
      * - Offer exists in a different group
-     * - Number of offers exceeds maximum allowed number per group
+     * - Condition fields are invalid
      *
      * @param _group - the fully populated struct with group id set to 0x0
      * @param _condition - the fully populated condition struct
@@ -37,7 +37,6 @@ interface IBosonGroupHandler is IBosonGroupEvents {
      * Reverts if:
      * - Caller is not the seller
      * - Offer ids param is an empty list
-     * - Current number of offers plus number of offers added exceeds maximum allowed number per group
      * - Group does not exist
      * - Any of offers belongs to different seller
      * - Any of offers does not exist
@@ -58,7 +57,6 @@ interface IBosonGroupHandler is IBosonGroupEvents {
      * - The groups region of protocol is paused
      * - Caller is not the seller
      * - Offer ids param is an empty list
-     * - Number of offers exceeds maximum allowed number per group
      * - Group does not exist
      * - Any offer is not part of the group
      *
@@ -92,14 +90,9 @@ interface IBosonGroupHandler is IBosonGroupEvents {
      * @return group - the group details. See {BosonTypes.Group}
      * @return condition - the group's condition details. See {BosonTypes.Condition}
      */
-    function getGroup(uint256 _groupId)
-        external
-        view
-        returns (
-            bool exists,
-            BosonTypes.Group memory group,
-            BosonTypes.Condition memory condition
-        );
+    function getGroup(
+        uint256 _groupId
+    ) external view returns (bool exists, BosonTypes.Group memory group, BosonTypes.Condition memory condition);
 
     /**
      * @notice Gets the next group id.
