@@ -239,9 +239,8 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
      * @param _voucherAddress Boson Voucher address
      */
     function getVoucherName(address _voucherAddress) internal view returns (string memory) {
-        // TODO: use string concat when solidity version is upgraded
         string memory name = IERC721Metadata(_voucherAddress).name();
-        return string(abi.encodePacked("Wrapped ", name));
+        return string.concat("Wrapped ", name);
     }
 
     /**
@@ -252,8 +251,7 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
      * @param _voucherAddress Boson Voucher address
      */
     function getVoucherSymbol(address _voucherAddress) internal view returns (string memory) {
-        // TODO: use string concat when solidity version is upgraded
         string memory symbol = IERC721Metadata(_voucherAddress).symbol();
-        return string(abi.encodePacked("W", symbol));
+        return string.concat("W", symbol);
     }
 }

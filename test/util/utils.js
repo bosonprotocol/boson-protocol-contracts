@@ -146,7 +146,7 @@ async function setNextBlockTimestamp(timestamp, mine = false) {
 async function getCurrentBlockAndSetTimeForward(seconds) {
   const blockNumber = await provider.getBlockNumber();
   const block = await provider.getBlock(blockNumber);
-  const newTime = Number(block.timestamp + BigInt(seconds));
+  const newTime = block.timestamp + Number(seconds);
   await setNextBlockTimestamp(newTime);
 }
 

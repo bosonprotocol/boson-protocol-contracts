@@ -1,7 +1,9 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ethers } = require("hardhat");
+const { ZeroHash, ZeroAddress, getContractAt, getContractFactory } = ethers;
+
 const {
-  calculateContractAddress,
+  calculateBosonProxyAddress,
+  calculateCloneAddress,
   deriveTokenId,
   getEvent,
   setupTestEnvironment,
@@ -23,7 +25,6 @@ const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverF
 const SeaportSide = require("../seaport/SideEnum");
 const Side = require("../../../scripts/domain/Side");
 const PriceDiscovery = require("../../../scripts/domain/PriceDiscovery");
-const { constants } = require("ethers");
 const PriceType = require("../../../scripts/domain/PriceType");
 const { seaportFixtures } = require("../seaport/fixtures");
 const { SEAPORT_ADDRESS } = require("../../util/constants");
@@ -52,9 +53,9 @@ describe("[@skip-on-coverage] seaport integration", function () {
       priceDiscoveryHandler: "IBosonPriceDiscoveryHandler",
     };
 
-    const wethFactory = await ethers.getContractFactory("WETH9");
+    const wethFactory = await getContractFactory("WETH9");
     weth = await wethFactory.deploy();
-    await weth.deployed();
+    await weth.waitForDeployment();
 
     let accountHandler, offerHandler, fundsHandler;
 
@@ -62,17 +63,17 @@ describe("[@skip-on-coverage] seaport integration", function () {
       signers: [, assistant, buyer, DR],
       contractInstances: { accountHandler, offerHandler, fundsHandler, exchangeHandler, priceDiscoveryHandler },
       extraReturnValues: { bosonVoucher },
-    } = await setupTestEnvironment(contracts, { wethAddress: weth.address }));
+    } = await setupTestEnvironment(contracts, { wethAddress: await weth.getAddress() }));
 
-    seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
+    seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
 
     const emptyAuthToken = mockAuthToken();
     const voucherInitValues = mockVoucherInitValues();
     await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-    const disputeResolver = mockDisputeResolver(DR.address, DR.address, DR.address, DR.address, true);
+    const disputeResolver = mockDisputeResolver(DR.address, DR.address, ZeroAddress, DR.address, true);
 
-    const disputeResolverFees = [new DisputeResolverFee(constants.AddressZero, "Native", "0")];
+    const disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", "0")];
     const sellerAllowList = [seller.id];
 
     await accountHandler.connect(DR).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -86,23 +87,24 @@ describe("[@skip-on-coverage] seaport integration", function () {
       .connect(assistant)
       .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, "0");
 
-    const voucherAddress = calculateContractAddress(accountHandler.address, seller.id);
-    bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherAddress);
+    const beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
+    const voucherAddress = calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, seller.admin);
+    bosonVoucher = await getContractAt("BosonVoucher", voucherAddress);
 
-    seaport = await ethers.getContractAt("Seaport", SEAPORT_ADDRESS);
+    seaport = await getContractAt("Seaport", SEAPORT_ADDRESS);
 
-    await bosonVoucher.connect(assistant).setApprovalForAllToContract(seaport.address, true);
+    await bosonVoucher.connect(assistant).setApprovalForAllToContract(SEAPORT_ADDRESS, true);
 
     fixtures = await seaportFixtures(seaport);
 
     // Pre mint range
-    await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, bosonVoucher.address);
+    await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, voucherAddress);
     await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
 
     // Deposit seller funds so the commit will succeed
     await fundsHandler
       .connect(assistant)
-      .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
+      .depositFunds(seller.id, ZeroAddress, offer.sellerDeposit, { value: offer.sellerDeposit });
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -115,14 +117,20 @@ describe("[@skip-on-coverage] seaport integration", function () {
 
   it("Seaport criteria-based order is used as price discovery mechanism for a BP offer", async function () {
     // Create seaport offer which tokenId 1
-    const seaportOffer = fixtures.getTestVoucher(ItemType.ERC721_WITH_CRITERIA, 0, bosonVoucher.address, 1, 1);
+    const seaportOffer = fixtures.getTestVoucher(
+      ItemType.ERC721_WITH_CRITERIA,
+      0,
+      await bosonVoucher.getAddress(),
+      1,
+      1
+    );
     const consideration = fixtures.getTestToken(
       ItemType.NATIVE,
       0,
-      constants.AddressZero,
+      ZeroAddress,
       offer.price,
       offer.price,
-      bosonVoucher.address
+      await bosonVoucher.getAddress()
     );
 
     const { order, orderHash, value } = await fixtures.getOrder(
@@ -138,14 +146,15 @@ describe("[@skip-on-coverage] seaport integration", function () {
     const orders = [objectToArray(order)];
     const calldata = seaport.interface.encodeFunctionData("validate", [orders]);
 
-    await bosonVoucher.connect(assistant).callExternalContract(seaport.address, calldata);
-    await bosonVoucher.connect(assistant).setApprovalForAllToContract(seaport.address, true);
+    const seaportAddress = await seaport.getAddress();
+    await bosonVoucher.connect(assistant).callExternalContract(seaportAddress, calldata);
+    await bosonVoucher.connect(assistant).setApprovalForAllToContract(seaportAddress, true);
 
     let totalFilled, isValidated;
 
     ({ isValidated, totalFilled } = await seaport.getOrderStatus(orderHash));
     assert(isValidated, "Order is not validated");
-    assert.equal(totalFilled.toNumber(), 0);
+    assert.equal(totalFilled, 0n);
 
     // turn order into advanced order
     order.denominator = 1;
@@ -158,15 +167,15 @@ describe("[@skip-on-coverage] seaport integration", function () {
     const priceDiscoveryData = seaport.interface.encodeFunctionData("fulfillAdvancedOrder", [
       order,
       resolvers,
-      constants.HashZero,
-      constants.AddressZero,
+      ZeroHash,
+      ZeroAddress,
     ]);
 
-    const priceDiscovery = new PriceDiscovery(value, seaport.address, priceDiscoveryData, Side.Ask);
+    const priceDiscovery = new PriceDiscovery(value, seaportAddress, priceDiscoveryData, Side.Ask);
 
     // Seller needs to deposit weth in order to fill the escrow at the last step
     await weth.connect(buyer).deposit({ value });
-    await weth.connect(buyer).approve(exchangeHandler.address, value);
+    await weth.connect(buyer).approve(await exchangeHandler.getAddress(), value);
 
     const tx = await priceDiscoveryHandler
       .connect(buyer)
@@ -177,7 +186,7 @@ describe("[@skip-on-coverage] seaport integration", function () {
     const receipt = await tx.wait();
 
     ({ totalFilled } = await seaport.getOrderStatus(orderHash));
-    assert.equal(totalFilled.toNumber(), 1);
+    assert.equal(totalFilled, 1n);
     const event = getEvent(receipt, seaport, "OrderFulfilled");
 
     assert.equal(orderHash, event[0]);

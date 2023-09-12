@@ -74,14 +74,13 @@ const seaportFixtures = async (seaport) => {
     };
 
     // How much ether (at most) needs to be supplied when fulfilling the order
-    const value = offer
-      .map((x) => (x.itemType === 0 ? (x.endAmount.gt(x.startAmount) ? x.endAmount : x.startAmount) : BigInt(0)))
-      .reduce((a, b) => a + b, BigInt(0))
-      .add(
-        consideration
-          .map((x) => (x.itemType === 0 ? (x.endAmount.gt(x.startAmount) ? x.endAmount : x.startAmount) : BigInt(0)))
-          .reduce((a, b) => a + b, BigInt(0))
-      );
+    const value =
+      offer
+        .map((x) => (x.itemType === 0 ? (x.endAmount > x.startAmount ? x.endAmount : x.startAmount) : 0n))
+        .reduce((a, b) => a + b, 0n) +
+      consideration
+        .map((x) => (x.itemType === 0 ? (x.endAmount > x.startAmount ? x.endAmount : x.startAmount) : 0n))
+        .reduce((a, b) => a + b, 0n);
 
     return {
       order,

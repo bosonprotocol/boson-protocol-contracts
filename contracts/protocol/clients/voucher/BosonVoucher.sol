@@ -373,6 +373,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
 
             if (committable) {
                 owner = _rangeByOfferId[_tokenId >> 128].owner;
+                return owner;
             }
 
             // Otherwise revert
