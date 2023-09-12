@@ -1178,7 +1178,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         Condition storage _condition,
         uint256 _tokenId
     ) internal view returns (bool) {
-        return (IERC721(_condition.tokenAddress).ownerOf(_tokenId) == _buyer);
+        return IERC721(_condition.tokenAddress).ownerOf(_tokenId) == _buyer;
     }
 
     /**
