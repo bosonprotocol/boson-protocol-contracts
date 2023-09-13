@@ -14,13 +14,13 @@ async function setupDryRun(env) {
 
   forkedEnv = env;
   const upgraderBalance = await getBalance();
-  const blockNumber = await provider.getBlockNumber();
+  // const blockNumber = await provider.getBlockNumber();
 
   // change network to hardhat with forking enabled
   hre.config.networks["hardhat"].forking = {
     url: hre.config.networks[network].url,
     enabled: true,
-    blockNumber: blockNumber.toString(), // if performance is too slow, try commenting this line out
+    // blockNumber: blockNumber.toString(), // if performance is too slow, try commenting this line out
   };
 
   hre.config.networks["hardhat"].accounts = [

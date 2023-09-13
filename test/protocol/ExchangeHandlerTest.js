@@ -3674,6 +3674,59 @@ describe("IBosonExchangeHandler", function () {
             assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
 
+          it("Too many twins", async function () {
+            await provider.send("evm_setBlockGasLimit", ["0x1c9c380"]); // 30,000,000. Need to set this limit, otherwise the coverage test will fail
+
+            const twinCount = 188;
+
+            // Approve the protocol diamond to transfer seller's tokens
+            await foreign20.connect(assistant).approve(protocolDiamondAddress, twinCount * 10, { gasLimit: 30000000 });
+
+            twin20 = mockTwin(await foreign20.getAddress());
+            twin20.amount = "1";
+            twin20.supplyAvailable = "1";
+
+            for (let i = 0; i < twinCount; i++) {
+              await twinHandler.connect(assistant).createTwin(twin20.toStruct(), { gasLimit: 30000000 });
+            }
+
+            // Create a new offer and bundle
+            const twinIds = [...Array(twinCount + 4).keys()].slice(4);
+
+            offer.quantityAvailable = 1;
+            await offerHandler
+              .connect(assistant)
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, { gasLimit: 30000000 });
+            bundle = new Bundle("2", seller.id, [`${++offerId}`], twinIds);
+            await bundleHandler.connect(assistant).createBundle(bundle.toStruct(), { gasLimit: 30000000 });
+
+            // Commit to offer
+            const buyerAddress = await buyer.getAddress();
+            await exchangeHandler
+              .connect(buyer)
+              .commitToOffer(buyerAddress, offerId, { value: price, gasLimit: 30000000 });
+
+            exchange.id = Number(exchange.id) + 1;
+
+            // Redeem the voucher
+            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 30000000 });
+
+            // Dispute should be raised and twin transfer should be skipped
+            await expect(tx)
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferSkipped")
+              .withArgs(exchange.id, twinCount, buyerAddress);
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Disputed
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+          });
+
           it("if twin returns a long return, redeem still succeeds, but exchange is disputed", async function () {
             const [foreign20rb] = await deployMockTokens(["Foreign20ReturnBomb"]);
 
@@ -4040,7 +4093,7 @@ describe("IBosonExchangeHandler", function () {
             }
           });
 
-          it("Should remove rangeIdByTwin when transfering last token from range", async () => {
+          it("Should remove rangeIdByTwin when transferring last token from range", async () => {
             const rangeIdByTwinMappingSlot = BigInt(
               getMappingStoragePosition(protocolLookupsSlotNumber + 32n, Number(twin721.id), paddingType.START)
             );
@@ -4095,14 +4148,30 @@ describe("IBosonExchangeHandler", function () {
             let expectedRange1End = zeroPadValue(toHexString(BigInt("10")), 32);
             expect(range1End).to.equal(expectedRange1End);
 
+            let range1twinId = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 2n);
+            let expectedRange1twinId = zeroPadValue(toHexString(BigInt("2")), 32); // first 721 twin has id 2
+            expect(range1twinId).to.equal(expectedRange1twinId);
+
+            let rangeIdByTwin1Slot = getMappingStoragePosition(protocolLookupsSlotNumber + 32n, "2", paddingType.START);
+            let rangeIdByTwin1 = await getStorageAt(protocolDiamondAddress, rangeIdByTwin1Slot);
+            expect(rangeIdByTwin1).to.equal(1n); // rangeIdByTwin maps to index + 1
+
             // Second range
-            let range2Start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 2n);
+            let range2Start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 3n);
             let expectedRange2Start = zeroPadValue(toHexString(BigInt("11")), 32);
             expect(range2Start).to.equal(expectedRange2Start);
 
-            let range2End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 3n);
+            let range2End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 4n);
             let expectedRange2End = zeroPadValue(toHexString(BigInt("20")), 32);
             expect(range2End).to.equal(expectedRange2End);
+
+            let range2twinId = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 5n);
+            let expectedRange2twinId = zeroPadValue(toHexString(BigInt("4")), 32); // second 721 twin has id 4
+            expect(range2twinId).to.equal(expectedRange2twinId);
+
+            let rangeIdByTwin2Slot = getMappingStoragePosition(protocolLookupsSlotNumber + 32n, "4", paddingType.START);
+            let rangeIdByTwin2 = await getStorageAt(protocolDiamondAddress, rangeIdByTwin2Slot);
+            expect(rangeIdByTwin2).to.equal(2n);
 
             // Set time forward to the offer's voucherRedeemableFrom
             voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
@@ -4128,13 +4197,25 @@ describe("IBosonExchangeHandler", function () {
             expect(range1Start).to.equal(expectedRange2Start);
             range1End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 1n);
             expect(range1End).to.equal(expectedRange2End);
+            range1twinId = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 2n);
+            expect(range1twinId).to.equal(expectedRange2twinId);
 
             // Second range should be empty
             const slotEmpty = zeroPadBytes(toHexString(BigInt("0")), 32);
-            range2Start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 2n);
+            range2Start = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 3n);
             expect(range2Start).to.equal(slotEmpty);
-            range2End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 3n);
+            range2End = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 4n);
             expect(range2End).to.equal(slotEmpty);
+            range2twinId = await getStorageAt(protocolDiamondAddress, sellerTwinRangesSlot + 5n);
+            expect(range2twinId).to.equal(slotEmpty);
+
+            // First twin should map to zero index
+            rangeIdByTwin1 = await getStorageAt(protocolDiamondAddress, rangeIdByTwin1Slot);
+            expect(rangeIdByTwin1).to.equal(0n); // zero indicates no range
+
+            // Second twin should map to first range
+            rangeIdByTwin2 = await getStorageAt(protocolDiamondAddress, rangeIdByTwin2Slot);
+            expect(rangeIdByTwin2).to.equal(1n);
           });
         });
 
@@ -4369,6 +4450,60 @@ describe("IBosonExchangeHandler", function () {
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
               .withArgs(twin721_2.id, twin721_2.tokenAddress, exchange.id, tokenId, twin721_2.amount, buyerAddress);
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Disputed
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+          });
+
+          it("Too many twins", async function () {
+            await provider.send("evm_setBlockGasLimit", ["0x1c9c380"]); // 30,000,000. Need to set this limit, otherwise the coverage test will fail
+
+            const twinCount = 188;
+            const startTokenId = 100;
+
+            // Approve the protocol diamond to transfer seller's tokens
+            await foreign721.connect(assistant).setApprovalForAll(protocolDiamondAddress, true, { gasLimit: 30000000 });
+            twin721 = mockTwin(await foreign721.getAddress(), TokenType.NonFungibleToken);
+            twin721.amount = "0";
+            twin721.supplyAvailable = "1";
+
+            for (let i = startTokenId; i < startTokenId + twinCount; i++) {
+              twin721.tokenId = i;
+              await twinHandler.connect(assistant).createTwin(twin721.toStruct(), { gasLimit: 30000000 });
+            }
+
+            // Create a new offer and bundle
+            const twinIds = [...Array(twinCount + 4).keys()].slice(4);
+
+            offer.quantityAvailable = 1;
+            await offerHandler
+              .connect(assistant)
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, { gasLimit: 30000000 });
+            bundle = new Bundle("2", seller.id, [`${++offerId}`], twinIds);
+            await bundleHandler.connect(assistant).createBundle(bundle.toStruct(), { gasLimit: 30000000 });
+
+            // Commit to offer
+            const buyerAddress = await buyer.getAddress();
+            await exchangeHandler
+              .connect(buyer)
+              .commitToOffer(buyerAddress, offerId, { value: price, gasLimit: 30000000 });
+
+            exchange.id = Number(exchange.id) + 1;
+
+            // Redeem the voucher
+            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 30000000 });
+
+            // Dispute should be raised and twin transfer should be skipped
+            await expect(tx)
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferSkipped")
+              .withArgs(exchange.id, twinCount, buyerAddress);
 
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
@@ -4765,6 +4900,61 @@ describe("IBosonExchangeHandler", function () {
                 twin1155_2.amount,
                 buyerAddress
               );
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Disputed
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+          });
+
+          it("Too many twins", async function () {
+            await provider.send("evm_setBlockGasLimit", ["0x1c9c380"]); // 30,000,000. Need to set this limit, otherwise the coverage test will fail
+
+            const twinCount = 188;
+
+            // Approve the protocol diamond to transfer seller's tokens
+            await foreign1155
+              .connect(assistant)
+              .setApprovalForAll(protocolDiamondAddress, true, { gasLimit: 30000000 });
+
+            twin1155 = mockTwin(await foreign1155.getAddress(), TokenType.MultiToken);
+            twin1155.amount = "1";
+            twin1155.supplyAvailable = "1";
+
+            for (let i = 0; i < twinCount; i++) {
+              await twinHandler.connect(assistant).createTwin(twin1155.toStruct(), { gasLimit: 30000000 });
+            }
+
+            // Create a new offer and bundle
+            const twinIds = [...Array(twinCount + 4).keys()].slice(4);
+
+            offer.quantityAvailable = 1;
+            await offerHandler
+              .connect(assistant)
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, { gasLimit: 30000000 });
+            bundle = new Bundle("2", seller.id, [`${++offerId}`], twinIds);
+            await bundleHandler.connect(assistant).createBundle(bundle.toStruct(), { gasLimit: 30000000 });
+
+            // Commit to offer
+            const buyerAddress = await buyer.getAddress();
+            await exchangeHandler
+              .connect(buyer)
+              .commitToOffer(buyerAddress, offerId, { value: price, gasLimit: 30000000 });
+
+            exchange.id = Number(exchange.id) + 1;
+
+            // Redeem the voucher
+            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 30000000 });
+
+            // Dispute should be raised and twin transfer should be skipped
+            await expect(tx)
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferSkipped")
+              .withArgs(exchange.id, twinCount, buyerAddress);
 
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
@@ -5389,6 +5579,79 @@ describe("IBosonExchangeHandler", function () {
                 twin1155.amount,
                 buyerAddress
               );
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Disputed
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+          });
+
+          it("Too many twins", async function () {
+            await provider.send("evm_setBlockGasLimit", ["0x1c9c380"]); // 30,000,000. Need to set this limit, otherwise the coverage test will fail
+
+            const twinCount = 189;
+
+            // ERC20 twins
+            await foreign20.connect(assistant).approve(protocolDiamondAddress, twinCount * 10, { gasLimit: 30000000 });
+            twin20 = mockTwin(await foreign20.getAddress());
+            twin20.amount = "1";
+            twin20.supplyAvailable = "1";
+            for (let i = 0; i < twinCount / 3; i++) {
+              await twinHandler.connect(assistant).createTwin(twin20.toStruct(), { gasLimit: 30000000 });
+            }
+
+            // ERC721 twins
+            const startTokenId = 100;
+            await foreign721.connect(assistant).setApprovalForAll(protocolDiamondAddress, true, { gasLimit: 30000000 });
+            twin721 = mockTwin(await foreign721.getAddress(), TokenType.NonFungibleToken);
+            twin721.amount = "0";
+            twin721.supplyAvailable = "1";
+            for (let i = startTokenId; i < startTokenId + twinCount / 3; i++) {
+              twin721.tokenId = i;
+              await twinHandler.connect(assistant).createTwin(twin721.toStruct(), { gasLimit: 30000000 });
+            }
+
+            // Approve the protocol diamond to transfer seller's tokens
+            await foreign1155
+              .connect(assistant)
+              .setApprovalForAll(protocolDiamondAddress, true, { gasLimit: 30000000 });
+            twin1155 = mockTwin(await foreign1155.getAddress(), TokenType.MultiToken);
+            twin1155.amount = "1";
+            twin1155.supplyAvailable = "1";
+            for (let i = 0; i < twinCount / 3; i++) {
+              await twinHandler.connect(assistant).createTwin(twin1155.toStruct(), { gasLimit: 30000000 });
+            }
+
+            // Create a new offer and bundle
+            const twinIds = [...Array(twinCount + 4).keys()].slice(4);
+
+            offer.quantityAvailable = 1;
+            await offerHandler
+              .connect(assistant)
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, { gasLimit: 30000000 });
+            bundle = new Bundle("2", seller.id, [`${++offerId}`], twinIds);
+            await bundleHandler.connect(assistant).createBundle(bundle.toStruct(), { gasLimit: 30000000 });
+
+            // Commit to offer
+            const buyerAddress = await buyer.getAddress();
+            await exchangeHandler
+              .connect(buyer)
+              .commitToOffer(buyerAddress, offerId, { value: price, gasLimit: 30000000 });
+
+            exchange.id = Number(exchange.id) + 1;
+
+            // Redeem the voucher
+            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 30000000 });
+
+            // Dispute should be raised and twin transfer should be skipped
+            await expect(tx)
+              .to.emit(disputeHandler, "DisputeRaised")
+              .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferSkipped")
+              .withArgs(exchange.id, twinCount, buyerAddress);
 
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);

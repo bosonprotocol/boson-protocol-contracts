@@ -15,12 +15,12 @@ async function verifyOnBlockExplorer(contract) {
     if (contract.name == "BosonVoucher Beacon") {
       await hre.run("verify:verify", {
         contract: "contracts/protocol/clients/proxy/BosonClientBeacon.sol:BosonClientBeacon",
-        address: await contract.getAddress(),
+        address: contract.address,
         constructorArguments: contract.args,
       });
     } else {
       await hre.run("verify:verify", {
-        address: await contract.getAddress(),
+        address: contract.address,
         constructorArguments: contract.args,
       });
     }
