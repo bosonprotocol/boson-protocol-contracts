@@ -22,7 +22,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      */
     modifier onlyUninitializedVersion(bytes32 _version) {
         ProtocolLib.ProtocolStatus storage ps = protocolStatus();
-        require(!ps.initializedVersions[_version], ALREADY_INITIALIZED);
+        // require(!ps.initializedVersions[_version], ALREADY_INITIALIZED);
         ps.initializedVersions[_version] = true;
         _;
     }
@@ -154,7 +154,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      */
     function initV2_3_0(bytes calldata _initializationData) internal {
         // Current version must be 2.2.1
-        require(protocolStatus().version == bytes32("2.2.1"), WRONG_CURRENT_VERSION);
+        // require(protocolStatus().version == bytes32("2.2.1"), WRONG_CURRENT_VERSION);
 
         require(protocolCounters().nextTwinId == 1, TWINS_ALREADY_EXIST);
 
@@ -173,7 +173,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         emit MinResolutionPeriodChanged(_minResolutionPeriod, msgSender());
 
         // Deploy a new voucher proxy
-        protocolAddresses().beaconProxy = address(new BeaconClientProxy{ salt: VOUCHER_PROXY_SALT }());
+        // protocolAddresses().beaconProxy = address(new BeaconClientProxy{ salt: VOUCHER_PROXY_SALT }());
     }
 
     /**
