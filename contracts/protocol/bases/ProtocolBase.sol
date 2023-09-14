@@ -20,7 +20,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      */
     modifier onlyUninitialized(bytes4 interfaceId) {
         ProtocolLib.ProtocolStatus storage ps = protocolStatus();
-        // require(!ps.initializedInterfaces[interfaceId], ALREADY_INITIALIZED);
+        require(!ps.initializedInterfaces[interfaceId], ALREADY_INITIALIZED);
         ps.initializedInterfaces[interfaceId] = true;
         _;
     }
