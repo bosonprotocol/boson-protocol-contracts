@@ -105,37 +105,37 @@
     },
     {
       "name": "AccountHandlerFacet",
-      "address": "0x295E367a9415D248158cA59B70ab0146D7ccf935",
+      "address": "0xFb153D3048276c6FCfF2037c78Ae3b5D49b4a57E",
       "args": [],
       "interfaceId": "0xbc1d7461"
     },
     {
       "name": "BundleHandlerFacet",
-      "address": "0x4B02fe28Ac47EF1E6B64F78191AABA43f4Ce5B23",
+      "address": "0x86f56c121Dac366847E80d4CD5C83b3F2063eB58",
       "args": [],
       "interfaceId": "0x7b53dece"
     },
     {
       "name": "ConfigHandlerFacet",
-      "address": "0x4B6108C789272341B381B103a5c32200ee772f5c",
+      "address": "0x5FF36Ee3a85883b3b6A1CCA081565814c838c41A",
       "args": [],
       "interfaceId": "0xbc28d3e6"
     },
     {
       "name": "DisputeHandlerFacet",
-      "address": "0xd7B4Bbae13A0678f367911bE84758aBd6DfF1fA0",
+      "address": "0x1728D1e9F9974689BCB5CffBe213660372e24f0f",
       "args": [],
       "interfaceId": "0xd9ea8317"
     },
     {
       "name": "DisputeResolverHandlerFacet",
-      "address": "0xB1951217991D5D6FEC83b477d8fC175dc3962279",
+      "address": "0xfcBD509B52f0aE93a182C8fa5d1E5f6a752439b0",
       "args": [],
       "interfaceId": "0xbc1d7461"
     },
     {
       "name": "ExchangeHandlerFacet",
-      "address": "0x52BFE3459E5f25b301AFAd41496Cdf328aa04c1B",
+      "address": "0x34fCfD10A8381fd13F5d6d17B876bB94f8564A61",
       "args": [
         1
       ],
@@ -143,61 +143,61 @@
     },
     {
       "name": "FundsHandlerFacet",
-      "address": "0x3512CBf24A0c2aAf1b79C1bbeAf8f720D04f098B",
+      "address": "0x363E2deB01DDe1D7efA411A9d7B856F7dcBe6420",
       "args": [],
       "interfaceId": "0x2f4a64d7"
     },
     {
       "name": "GroupHandlerFacet",
-      "address": "0x1585b19373feCa5363cfb69143f894A22995752d",
+      "address": "0xf4e888DfCBD71b08a3Aa5Cf15d5124Cfd7205433",
       "args": [],
       "interfaceId": "0x08ccdf47"
     },
     {
       "name": "MetaTransactionsHandlerFacet",
-      "address": "0xbdC7877453fc3427eD0ADF890edE67d26e401Ad1",
+      "address": "0xF71D5D2D315cb70583D5398b3313aE5aBc5E305c",
       "args": [],
       "interfaceId": "0xb3e4e803"
     },
     {
       "name": "OfferHandlerFacet",
-      "address": "0x25D86BF38A9fB5767292Bb0F0b2506FC635EB52B",
+      "address": "0x1970AD2Ef393F724758BcbfB91e6f65308699840",
       "args": [],
       "interfaceId": "0xa1e3b91c"
     },
     {
       "name": "OrchestrationHandlerFacet1",
-      "address": "0x2Cf54F72A26AD2D68E5673caA084C67c4570B330",
+      "address": "0x49F33f10E2D9850D19396e05B40fD6982aaEC524",
       "args": [],
       "interfaceId": "0x7e216084"
     },
     {
       "name": "PauseHandlerFacet",
-      "address": "0x9AE9A449bbA2A6A4fc01EC0269F6AFaf34415fD1",
+      "address": "0x72375d8f6c09Be9367B7A1629bb889A7f2a393d0",
       "args": [],
       "interfaceId": "0x770b96d0"
     },
     {
       "name": "ProtocolInitializationHandlerFacet",
-      "address": "0x830a82eB2868C9099F6ed26273F4bFb55CB9f8d7",
+      "address": "0x3c641f2206D853E87b30E5d302D39F42e9E2Bae1",
       "args": [],
       "interfaceId": "0x0d8e6e2c"
     },
     {
       "name": "SellerHandlerFacet",
-      "address": "0xee7e9342B908A57cDDD0d43FE2462688DCcAf9eA",
+      "address": "0xbb7691cBd2AE01986036e321498E2d878E2419c7",
       "args": [],
       "interfaceId": "0xbc1d7461"
     },
     {
       "name": "TwinHandlerFacet",
-      "address": "0x50B0F2BE3b5B6056eCAfcaA9551935DdF3045231",
+      "address": "0xBA09b47F123F3957352B7231B9a3850D46Da85e3",
       "args": [],
       "interfaceId": "0x60b30e70"
     },
     {
       "name": "BosonVoucher Logic",
-      "address": "0xCD1dAFB14EAeE24D2c3d9eFB7C4900d5B6838c5c",
+      "address": "0xc38532D4A2f3e321009CF42D79CA9FF586Fc952E",
       "args": [
         "0x69015912AA33720b842dCD6aC059Ed623F28d9f7"
       ],
