@@ -2,7 +2,7 @@ const shell = require("shelljs");
 const { getAddressesFilePath } = require("./utils.js");
 const hre = require("hardhat");
 const { ethers } = hre;
-const { provider, getSigners, parseEther } = hre.ethers;
+const { getSigners, parseEther } = hre.ethers;
 const network = hre.network.name;
 
 async function setupDryRun(env) {
@@ -14,7 +14,7 @@ async function setupDryRun(env) {
 
   forkedEnv = env;
   let deployerBalance = await getBalance();
-  const blockNumber = await provider.getBlockNumber();
+  // const blockNumber = await ethers.provider.getBlockNumber();
 
   // if deployerBalance is 0, set it to 10 ether
   if (deployerBalance == 0n) deployerBalance = parseEther("10", "ether");
@@ -23,7 +23,7 @@ async function setupDryRun(env) {
   hre.config.networks["hardhat"].forking = {
     url: hre.config.networks[network].url,
     enabled: true,
-    blockNumber: "0x" + blockNumber.toString(16), // if performance is too slow, try commenting this line out
+    // blockNumber: "0x" + blockNumber.toString(16), // if performance is too slow, try commenting this line out
   };
 
   hre.config.networks["hardhat"].accounts = [
