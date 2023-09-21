@@ -34,4 +34,5 @@ interface IBosonTwinEvents {
         uint256 amount,
         address executedBy
     );
+    event TwinTransferSkipped(uint256 indexed exchangeId, uint256 twinCount, address indexed executedBy);
 }

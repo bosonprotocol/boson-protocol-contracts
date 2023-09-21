@@ -195,6 +195,9 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @notice Redeems a voucher.
      *
      * Emits a VoucherRedeemed event if successful.
+     * Emits TwinTransferred if twin transfer was successfull
+     * Emits TwinTransferFailed if twin transfer failed
+     * Emits TwinTransferSkipped if twin transfer was skipped when the number of twins is too high
      *
      * Reverts if
      * - The exchanges region of protocol is paused
