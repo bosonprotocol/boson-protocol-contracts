@@ -183,7 +183,9 @@
     {
       "name": "BosonVoucher Logic",
       "address": "0xBe8D30b62d36cFD5a522900D076A1d71EAe399fa",
-      "args": [],
+      "args": [
+        "0xE041608922d06a4F26C0d4c27d8bCD01daf1f792"
+      ],
       "interfaceId": ""
     },
     {

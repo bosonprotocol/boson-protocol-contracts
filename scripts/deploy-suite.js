@@ -161,7 +161,13 @@ async function main(env, facetConfig) {
   const bosonVoucherProxyArgs = [...protocolClientArgs, await bosonVoucherImpl.getAddress()];
 
   // Report and prepare for verification
-  deploymentComplete("BosonVoucher Logic", await bosonVoucherImpl.getAddress(), [], "", contracts);
+  deploymentComplete(
+    "BosonVoucher Logic",
+    await bosonVoucherImpl.getAddress(),
+    clientImplementationArgs,
+    "",
+    contracts
+  );
   deploymentComplete("BosonVoucher Beacon", await bosonClientBeacon.getAddress(), bosonVoucherProxyArgs, "", contracts);
 
   console.log(`\n🌐️Configuring and granting roles...`);
