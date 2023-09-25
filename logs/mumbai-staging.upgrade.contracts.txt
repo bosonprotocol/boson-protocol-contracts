@@ -1020,3 +1020,305 @@ M	addresses/80001-mumbai-staging.json
 M	logs/mumbai-staging.upgrade.contracts.txt
 M	package-lock.json
 Migration HEAD completed
+Migration HEAD started
+Removing any local changes before upgrading
+Unstaged changes after reset:
+M	addresses/80001-mumbai-staging.json
+M	logs/mumbai-staging.upgrade.contracts.txt
+Pausing the Seller region...
+Checking out contracts on version 2.2.1
+Installing dependencies
+
+added 1025 packages, removed 166 packages, changed 172 packages, and audited 2477 packages in 23s
+
+234 packages are looking for funding
+  run `npm fund` for details
+
+104 vulnerabilities (1 low, 45 moderate, 31 high, 27 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+Compiling old contracts
+Compiled 154 Solidity files successfully
+Checking out contracts on version HEAD
+Installing dependencies
+
+added 166 packages, removed 1028 packages, changed 172 packages, and audited 1615 packages in 11s
+
+204 packages are looking for funding
+  run `npm fund` for details
+
+36 vulnerabilities (1 low, 29 moderate, 3 high, 3 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+Compiling contracts
+Compiled 163 Solidity files successfully
+Executing upgrade facets script
+--------------------------------------------------------------------------------
+Boson Protocol Contract Suite Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: mumbai
+📅 Mon Sep 25 2023 14:03:30 GMT+0200 (Srednjeevropski poletni čas)
+🔱 Admin account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+✅ AccountHandlerFacet deployed to: 0xD8bCFd97c0fd50c6D6CFF8DC380193F3946D21b2
+✅ BundleHandlerFacet deployed to: 0x264eaA48eC000138775bf654b5Fa09B7DB616DD6
+✅ ConfigHandlerFacet deployed to: 0x2e9c1E012d0F0f1aeB5E076e575fe2ac74Aafd51
+✅ DisputeHandlerFacet deployed to: 0xb6d9f6E61F0EDCc1444269CEc37F317FDA769696
+✅ DisputeResolverHandlerFacet deployed to: 0x385bcBC0cE9094f44CA6D030b2Ef721dc27f29a0
+✅ ExchangeHandlerFacet deployed to: 0x4b9199FF63855D7d12BEc96e5eCdA08effBd91B4
+✅ FundsHandlerFacet deployed to: 0xC33Ffbf63272dd06ad561F4034b1a7F522f844F7
+✅ GroupHandlerFacet deployed to: 0x6B0acd5b60344868cb8C75D77c98F4D1230250cD
+✅ MetaTransactionsHandlerFacet deployed to: 0xd23bd8f84bCD417B19CcFD107eF86DC004dD2CdD
+✅ OfferHandlerFacet deployed to: 0x0329AA9A7E5A35cc7285AD20ab8bFb194979B680
+✅ OrchestrationHandlerFacet1 deployed to: 0xBcB8EA44eB1Da51C805fe59485Ad1fFAE1088cA9
+✅ PauseHandlerFacet deployed to: 0x1BDFEebc9556a09164Ba647498Cf83D4D39406cB
+✅ ProtocolInitializationHandlerFacet deployed to: 0x18F0c981E599042FB9C944561AA032961FAD9A53
+✅ SellerHandlerFacet deployed to: 0xAfa3BDb593AcfeD6C70DE079bf16151c8Fb33C73
+✅ TwinHandlerFacet deployed to: 0x70BbEa6815a904BC9EE8612935F13Ad56dA585E3
+
+📋 Facet: AccountHandlerFacet
+💎 Replace selectors:
+	getNextAccountId: 0xab00c0da
+
+📋 Facet: BundleHandlerFacet
+💎 Replace selectors:
+	createBundle: 0x7c016ad5
+	getBundle: 0x2d0821b7
+	getBundleIdByOffer: 0xa8e31107
+	getBundleIdByTwin: 0xc6cce096
+	getNextBundleId: 0x4475643d
+
+📋 Facet: ConfigHandlerFacet
+💎 Replace selectors:
+	getAccessControllerAddress: 0x694ca8ab
+	getAuthTokenContract: 0x6c2c13c2
+	getBeaconProxyAddress: 0xc2f73795
+	getBuyerEscalationDepositPercentage: 0x36ee008c
+	setMinResolutionPeriod: 0xdda575c9
+	getMinResolutionPeriod: 0x1b57b63d
+	getMaxEscalationResponsePeriod: 0xeb04d54b
+	getMaxResolutionPeriod: 0x32cf96ff
+	getMaxRoyaltyPecentage: 0xa7f7801a
+	getMaxTotalOfferFeePercentage: 0xd3ab3d25
+	getMinDisputePeriod: 0xbe620a41
+	getProtocolFeeFlatBoson: 0x23bbe5d5
+	getProtocolFeePercentage: 0x706d9f78
+	getTokenAddress: 0x10fe9ae8
+	getTreasuryAddress: 0xe0024604
+	getVoucherBeaconAddress: 0xf8aaad60
+	setAccessControllerAddress: 0x6cb84158
+	setAuthTokenContract: 0x250664d4
+	setBeaconProxyAddress: 0x31cd131e
+	setBuyerEscalationDepositPercentage: 0x6ba0f545
+	setMaxEscalationResponsePeriod: 0x37987b52
+	setMaxResolutionPeriod: 0xf920fc17
+	setMaxRoyaltyPecentage: 0x84bf1ac2
+	setMaxTotalOfferFeePercentage: 0x589e4e58
+	setMinDisputePeriod: 0x84a91ce6
+	setProtocolFeeFlatBoson: 0x4dbcca7e
+	setProtocolFeePercentage: 0xd8a5e936
+	setTokenAddress: 0x26a4e8d2
+	setTreasuryAddress: 0x6605bfda
+	setVoucherBeaconAddress: 0x938d1b27
+
+📋 Facet: DisputeHandlerFacet
+💎 Replace selectors:
+	decideDispute: 0x04f63e12
+	escalateDispute: 0x20a68d25
+	expireDispute: 0x42443efd
+	expireDisputeBatch: 0xae707f1e
+	expireEscalatedDispute: 0xf7d95f3b
+	extendDisputeTimeout: 0xfb50e235
+	getDispute: 0xe3a96cbd
+	getDisputeState: 0xc6a470e2
+	getDisputeTimeout: 0x50f5e643
+	isDisputeFinalized: 0xc3c834b7
+	raiseDispute: 0xa5c1674e
+	refuseEscalatedDispute: 0xdfdcd613
+	resolveDispute: 0xb4dcefaf
+	retractDispute: 0x65f65c94
+
+📋 Facet: DisputeResolverHandlerFacet
+💎 Replace selectors:
+	addFeesToDisputeResolver: 0xa880fd89
+	addSellersToAllowList: 0x1227dbbb
+	areSellersAllowed: 0x8236d3c0
+	createDisputeResolver: 0x1843b3a9
+	getDisputeResolver: 0x9b646e88
+	getDisputeResolverByAddress: 0x6f4fbc16
+	removeFeesFromDisputeResolver: 0x4e534c96
+	removeSellersFromAllowList: 0xfa92792a
+	updateDisputeResolver: 0x125e35ec
+	optInToDisputeResolverUpdate: 0x2230dd12
+
+📋 Facet: ExchangeHandlerFacet
+💎 Replace selectors:
+	cancelVoucher: 0xbed3ac50
+	commitToOffer: 0x1f317d1c
+	completeExchange: 0x58477db8
+	completeExchangeBatch: 0x492edd28
+	expireVoucher: 0x18170b73
+	extendVoucher: 0x229f6943
+	getExchange: 0x0b9d5847
+	getExchangeState: 0xe0cdab47
+	getNextExchangeId: 0x452ddd66
+	getReceipt: 0xb63e6ac3
+	isExchangeFinalized: 0x309bb762
+	onVoucherTransferred: 0x7b02365d
+	redeemVoucher: 0x1c6d6b5e
+	revokeVoucher: 0x79a5fea9
+	commitToPreMintedOffer: 0x5f119c40
+	commitToConditionalOffer: 0x2334fd56
+	isEligibleToCommit: 0x337e6a6d
+
+📋 Facet: FundsHandlerFacet
+💎 Replace selectors:
+	depositFunds: 0xa07fcc70
+	getTokenListPaginated: 0x8c46317f
+	withdrawFunds: 0x685ef733
+	withdrawProtocolFees: 0x11ec8693
+	getAllAvailableFunds: 0x573f625a
+	getAvailableFunds: 0x6c48b1fa
+	getTokenList: 0x41b63bd8
+
+📋 Facet: GroupHandlerFacet
+💎 Replace selectors:
+	addOffersToGroup: 0x4ff2e056
+	setGroupCondition: 0x9349f39c
+	getGroup: 0xceb60654
+	getNextGroupId: 0x49b3cccf
+	removeOffersFromGroup: 0x20dead55
+	createGroup: 0x73acab43
+
+📋 Facet: MetaTransactionsHandlerFacet
+💎 Replace selectors:
+	executeMetaTransaction: 0xdcb9c266
+	isUsedNonce: 0x0ee60fa7
+	isFunctionAllowlisted: 0x6759b8f1
+	isFunctionAllowlisted: 0xbc4d3dd0
+	setAllowlistedFunctions: 0xbaafa0e3
+
+📋 Facet: OfferHandlerFacet
+💎 Replace selectors:
+	createOfferBatch: 0x264ed13a
+	createOffer: 0xbd0e4b3c
+	extendOffer: 0xcc00c061
+	extendOfferBatch: 0xdb7af92f
+	getAgentIdByOffer: 0x1ac3e64a
+	getNextOfferId: 0x1d73add8
+	getOffer: 0x4579268a
+	isOfferVoided: 0x4bec59f4
+	voidOffer: 0x4915907b
+	voidOfferBatch: 0x12b52cf5
+	reserveRange: 0x7f5c9236
+
+📋 Facet: OrchestrationHandlerFacet1
+💎 Replace selectors:
+	createOfferAddToGroup: 0x707d33af
+	createOfferAndTwinWithBundle: 0xc6c9d615
+	createOfferWithCondition: 0x30fcdede
+	createOfferWithConditionAndTwinAndBundle: 0xcd4ce199
+	createPremintedOfferAddToGroup: 0x041d740b
+	createPremintedOfferAndTwinWithBundle: 0x5cace001
+	createPremintedOfferWithCondition: 0xf6917165
+	createPremintedOfferWithConditionAndTwinAndBundle: 0xf52fbdce
+	createSellerAndOffer: 0xf6b902e5
+	createSellerAndOfferAndTwinWithBundle: 0x316cee94
+	createSellerAndOfferWithCondition: 0xaaba8d63
+	createSellerAndOfferWithConditionAndTwinAndBundle: 0x2c8cd044
+	createSellerAndPremintedOffer: 0xc30df7f0
+	createSellerAndPremintedOfferAndTwinWithBundle: 0x041dc9b6
+	createSellerAndPremintedOfferWithCondition: 0x78a497f7
+	createSellerAndPremintedOfferWithConditionAndTwinAndBundle: 0x68628c7f
+
+📋 Facet: PauseHandlerFacet
+💎 Replace selectors:
+	unpause: 0x8b93dd63
+	pause: 0xa290249c
+	getPausedRegions: 0x5e086f2f
+
+📋 Facet: ProtocolInitializationHandlerFacet
+💎 Replace selectors:
+	getVersion: 0x0d8e6e2c
+
+📋 Facet: SellerHandlerFacet
+💎 Replace selectors:
+	updateSeller: 0x695ac7c9
+	getSeller: 0xd6a9de51
+	getSellerByAddress: 0x2e1528ae
+	getSellerByAuthToken: 0x135bdebd
+	updateSellerSalt: 0xa5055733
+	optInToSellerUpdate: 0xf7e469fd
+	calculateCollectionAddress: 0x5737c566
+	createNewCollection: 0xa34084af
+	createSeller: 0x8854063a
+	getSellersCollections: 0x1058e0c6
+	isSellerSaltAvailable: 0x39e3adf2
+
+📋 Facet: TwinHandlerFacet
+💎 Replace selectors:
+	removeTwin: 0x6574e3ba
+	getTwin: 0x164a82f7
+	createTwin: 0xb44d17eb
+	getNextTwinId: 0xa7c078d6
+
+💀 Removed facets:
+	
+--------------------------------------------------------------------------------
+
+📋 New version: 2.3.0
+--------------------------------------------------------------------------------
+✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/80001-mumbai-staging.json
+--------------------------------------------------------------------------------
+
+📋 Diamond upgraded.
+
+
+Removing selectors 0x59b3774271ad2ce7cc4a964dd442fdde6a809e8dfd3eb4ac5f6e579fa898cf69,0x44c64d38103a262e536c7d44b00850ee7d39568e0a5e23a07cc0db96d8ca588b,0xdf3ce320c0a4e7295bf81a5ad49769fcb25784d66f5d4a39b978501163fda0dd,0xd38416ff2e3a24a9d6f4afd7fab6b1eb7df895fccb6f3571039472873a801cce,0x65a10c2c5f9d8209b0ede293b5f688731449721da44b172252dbf907a41396a0,0xd6134aaf2d311b92b9b43e38c900a903e4d3b88123a5cde707fbd024556e7380,0x70d24d634d34d701846c87bbd5f0d2f2673ad26a8fe6d0909214556aec8036fa,0xd7ac2c472259a4ccc14c2547f87b8b75e59a1fb4e7132806631f7139e25c3d12,0xb54767f6c38074ceeb9208a184f809be6eb186b2fba8689be9f00fd13e0dd7d4,0x94413c549867828e6bcd84ea60b6624e95514b0ff8e5612f9c6915880911d8f6,0xbc799909d2adfef554722fbe497b18b3b1554de8c80b6bb44af791d97a451a3d,0x0096aa98a4d21faf023691ab08ef40b0e661f95cb4aa0b2fa15ded59cae584f6,0xa70fdde1850dde7245105e8fd1e309b80c95ed7529c250bf60fe4042312ab57a,0x3f4ba83af89dc9793996d9e56b8abe6dc88cd97c9c2bb23027806e9c1ffd54dc,0xc1c96af89a34084bccc5d426d6b90b7261d20475e2cf693fa4b4b23274d43730,0xcb5fcf36e049de1f1a0a7b504e72ef51aa215f0fff1ce6df3c50b5d7374d3ef1,0x34fa96a697bb35f3a16a0ecd1fbbca12f084d2fe335fc54eb4a7032092c74c33,0x3635882429ecf7427e1d090edff7038f6d8b32e69247f4dfcc8bb1aea18e7617,0x1b002277f50ea47601c7446146c19b0603fc425d8b3db37aa07e12271713db19,0x3e03b0f6491639aad746484d776881edb4b355319b1a7fbf77e1a05d5c0139a2,0x6c9438963ac3ab915f3ed3989682db91152b626badcb0f5912ee6ab094d22fae,0x34e80651930420944e6cd28627fdd6be582c32c487b038e3ca233c110f99c360,0xf69c9a40831710bc6151c351c2487c5691ad9933e9e6f885080690d7888342f1,0xf9384c29daa2f0aff169fc2062cd19d14da2dd568f027aec4d99c8e3d25b688b,0xfbf346df886f09306aa58642ed3d51dac939d9530e9a964a6709df6c1fe095ce,0x2220dd970bc6c8a043ce33fac30e3fadfd1566d3883da9e23d8503fd472fc6f6,0xcd6047e82d2d8d14fdf1bf3de4097f00bc6f1d342e8cb1ac72e13df6e75465fa,0xbe5a64d26f6fb5e8d6c406b1920da649830283ce454c2f66f1450d3aeaa5951f,0x33e9eeeb875164148e64881660776c51e37b91bf88d121dd594559158a6826b0,0xcfad23046ca3f5712a8d3a12867efe841d9d9092978cb8cddd0ff11ec302e493,0x30b668e56aef5dae1f32985f6da701092fe97a1cd9c650d401c51cfc4507b6b1,0xe272d77605996cc5fb44fed0b5a9e9bc916eba4cb81f14fe6baae7a11bd8a852
+Adding selectors 0xa34084af2da08a75ed6af7f3f8968fcee303c049b0c3a7a59796409f2582fbc1,0x8854063a5e57a1a65633a53b3dc242afa9c149323f28186cbc5651fe818e1414,0xa50557336f9bb3e8e70e668fc17848d40af40203789c9e732a6e37b56d9b9e3d,0xbd0e4b3ca96bfe7d7c028498fe528902d696f09580c032f7792d2ed450fe60a5,0x264ed13a1ee4bde6beca80843165a845c53ebc1f7ff0a9d4bda6f33392efc848,0xdda575c99686d3736de29d01c94ff3fb39321b0f0825d7d2192323f5ed78b3b5,0x8b93dd6320d173b3758b42cc75fdb3d8d738d38d35c17855c436502540770d7e,0x73acab433a13a42a58328b7840acab03a26ce4c1f2baae62db495d429e76c677,0x9349f39ce632c463b03780d37bacc88583c7afd89e3de51b185997fea06722b4,0x707d33af04d7f029de0fe3eaf65fda22ec27c241a62bcd8239df84ff6d59010e,0xc6c9d61561df4f5cb050c847c564d0e70f99a37fdf35d0fc4cf2b6d6e3a9ef45,0x30fcdede06e0b9ccb13008e58a5186dda2adbedc641773693673131954324079,0xcd4ce199ed4786a477676afd86459adbb763301dc8312196535758f7a518dc92,0x041d740bc5e6e8d6255ca844d13c30ed58a3ee7ee1be3f0fbf7b516cc68c73e7,0x5cace0016db70007238743a6aa35521b897e6c2dcc4f9e67cac4b578ec37a3ca,0xf69171653192b8df1c3359a4747469459f16027b3b9ff0cecec0e62b62fae818,0xf52fbdce5c3bfcf610fbd64b22e181befb4958b9e4c52bde5a2d9bc4d34ae5af,0xf6b902e5811b33a65d04fb8398d175001e7fbc48f040b3a0e977be5fa350ae20,0x316cee9473a0f71d5765ece0ad5d741a3f5873ad3e7c1100b7453e3010288f5d,0xaaba8d63075cd13f81d94bffd6dbdb832d6c0fd1ad36372c9519cd65e9728c7c,0x2c8cd04413100a4363199cead605c903890571cd1eaa3b8cf6fac5eaadeb34a4,0xc30df7f0925e66e6c10178a164baacbef163657f6b2eb7c14cc847acba5ed4cd,0x041dc9b6a8c2f4972ab5d66c6dcf0a44d8c491604677883edca4cea5066af4f8,0x78a497f7dc8f458f9fcc6b24ae5cd0db62ca40ed77d9b6af41e0bf5d09ebb96f,0x68628c7f229ef7bf31e5fd142ea38594f06bec5ec3f35ff22b19b89e26b637e8,0x2334fd566824a7ae1954041b5b0ecd2f08602107cb94953401e5f02f34b75975
+Executing upgrade clients script
+--------------------------------------------------------------------------------
+Boson Protocol Client Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: mumbai
+📅 Mon Sep 25 2023 14:05:09 GMT+0200 (Srednjeevropski poletni čas)
+🔱 Admin account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+
+📋 Deploying new logic contract
+
+📋 Updating implementation address on beacon
+✅ BosonVoucher Logic deployed to: 0x1D39490C47659eC26C5384AC5192320eB47782E1
+--------------------------------------------------------------------------------
+✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/80001-mumbai-staging.json
+--------------------------------------------------------------------------------
+
+📋 Client upgraded.
+
+
+Unpausing all regions...
+M	addresses/80001-mumbai-staging.json
+M	logs/mumbai-staging.upgrade.contracts.txt
+Your branch is up to date with 'origin/release-2_3_0'.
+Unstaged changes after reset:
+M	addresses/80001-mumbai-staging.json
+M	logs/mumbai-staging.upgrade.contracts.txt
+Migration HEAD completed
