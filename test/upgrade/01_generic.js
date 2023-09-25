@@ -51,7 +51,6 @@ function getGenericContext(
 
     // Create new protocol entities. Existing data should not be affected
     context("📋 New data after the upgrade do not corrupt the data from before the upgrade", async function () {
-      this.timeout(1000000);
       let protocolContractStateAfterUpgradeAndActions;
 
       before(async function () {

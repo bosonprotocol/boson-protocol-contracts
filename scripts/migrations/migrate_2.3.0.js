@@ -21,7 +21,7 @@ const { META_TRANSACTION_FORWARDER } = require("../config/client-upgrade");
 const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
 
 const config = {
-  // status at v2.3.0-rc.3
+  // status at v2.3.0-rc.4
   addOrUpgrade: [
     "AccountHandlerFacet",
     "BundleHandlerFacet",
@@ -42,8 +42,15 @@ const config = {
   remove: [],
   skipSelectors: {},
   facetsToInit: {
-    ExchangeHandlerFacet: { init: [], constructorArgs: [EXCHANGE_ID_2_2_0[network]] },
-  }, // must match nextExchangeId at the time of the upgrade
+    ExchangeHandlerFacet: { init: [], constructorArgs: [EXCHANGE_ID_2_2_0[network]] }, // must match nextExchangeId at the time of the upgrade
+    AccountHandlerFacet: { init: [] },
+    FundsHandlerFacet: { init: [] },
+    GroupHandlerFacet: { init: [] },
+    MetaTransactionsHandlerFacet: { init: [[]] },
+    OfferHandlerFacet: { init: [] },
+    OrchestrationHandlerFacet1: { init: [] },
+    PauseHandlerFacet: { init: [] },
+  },
   initializationData: abiCoder.encode(["uint256"], [oneWeek]),
 };
 

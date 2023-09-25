@@ -40,14 +40,29 @@ task("verify-suite", "Verify contracts on the block explorer")
 
 task(
   "deploy-suite",
-  "Deploy suite deploys protocol diamond, all facets, client and beacon, and initializes protcol diamond"
+  "Deploy suite deploys protocol diamond, all facets, client and beacon, and initializes protocol diamond"
 )
   .addOptionalParam("env", "The deployment environment")
   .addOptionalParam("facetConfig", "JSON list of facets to deploy")
-  .setAction(async ({ env, facetConfig }) => {
-    const { deploySuite } = await lazyImport("./scripts/deploy-suite.js");
+  .addFlag("dryRun", "Test the deployment without deploying")
+  .setAction(async ({ env, facetConfig, dryRun }) => {
+    let balanceBefore, getBalance;
+    if (dryRun) {
+      let setupDryRun;
+      ({ setupDryRun, getBalance } = await lazyImport(`./scripts/util/dry-run.js`));
+      ({ env, deployerBalance: balanceBefore } = await setupDryRun(env));
+    }
 
+    const { deploySuite } = await lazyImport("./scripts/deploy-suite.js");
     await deploySuite(env, facetConfig);
+
+    if (dryRun) {
+      const balanceAfter = await getBalance();
+      const etherSpent = balanceBefore - balanceAfter;
+
+      const { formatUnits } = require("ethers");
+      console.log("Ether spent: ", formatUnits(etherSpent, "ether"));
+    }
   });
 
 task("upgrade-facets", "Upgrade existing facets, add new facets or remove existing facets")
@@ -107,8 +122,8 @@ task("migrate", "Migrates the protocol to a new version")
     let balanceBefore, getBalance;
     if (dryRun) {
       let setupDryRun;
-      ({ setupDryRun, getBalance } = await lazyImport(`./scripts/migrations/dry-run.js`));
-      ({ env, upgraderBalance: balanceBefore } = await setupDryRun(env));
+      ({ setupDryRun, getBalance } = await lazyImport(`./scripts/util/dry-run.js`));
+      ({ env, deployerBalance: balanceBefore } = await setupDryRun(env));
     }
 
     const { migrate } = await lazyImport(`./scripts/migrations/migrate_${newVersion}.js`);
@@ -118,7 +133,7 @@ task("migrate", "Migrates the protocol to a new version")
       const balanceAfter = await getBalance();
       const etherSpent = balanceBefore - balanceAfter;
 
-      const formatUnits = require("ethers").formatUnits;
+      const { formatUnits } = require("ethers");
       console.log("Ether spent: ", formatUnits(etherSpent, "ether"));
     }
   });

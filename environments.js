@@ -71,7 +71,7 @@ module.exports = {
   goerli: {
     txNode: process.env.DEPLOYER_GOERLI_TXNODE,
     keys: [process.env.DEPLOYER_GOERLI_KEY],
-    adminAddress: process.env.ADMIN_ADDRESS_MAINNET,
+    adminAddress: process.env.ADMIN_ADDRESS_GOERLI,
   },
 
   // Polygon Mumbai testnet

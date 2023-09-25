@@ -608,17 +608,6 @@ async function populateProtocolContract(
         twin721.tokenAddress = await mockTwinTokens[j % 2].getAddress(); // oscilate between twins
         twin721.id = twinId;
 
-        // mint tokens to be transferred on redeem
-        // ToDo: for the future, change this to shorten the test
-        let tokensToMint = BigInt(minSupplyAvailable);
-        let tokenIdToMint = BigInt(twin721.tokenId);
-        while (tokensToMint > 500n) {
-          await mockTwinTokens[j % 2].connect(seller.wallet).mint(tokenIdToMint, 500n);
-          tokensToMint -= 500n;
-          tokenIdToMint += 500n;
-        }
-
-        await mockTwinTokens[j % 2].connect(seller.wallet).mint(tokenIdToMint, tokensToMint);
         await twinHandler.connect(seller.wallet).createTwin(twin721);
 
         twins.push(twin721);
@@ -655,7 +644,6 @@ async function populateProtocolContract(
         twin1155.id = twinId;
 
         // mint tokens to be transferred on redeem
-        await mockTwin1155.connect(seller.wallet).mint(twin1155.tokenId, twin1155.supplyAvailable);
         await twinHandler.connect(seller.wallet).createTwin(twin1155);
 
         twins.push(twin1155);
@@ -718,6 +706,29 @@ async function populateProtocolContract(
   // redeem some vouchers #4
   for (const id of [2, 5, 11, 8]) {
     const exchange = exchanges[id - 1];
+
+    // If exchange has twins, mint them so the transfer can succeed
+    // const offer = offers[Number(exchange.offerId) - 1];
+    const offer = offers.find((o) => o.offer.id == exchange.offerId);
+    const seller = sellers.find((s) => s.seller.id == offer.offer.sellerId);
+    if (twinHandler && Number(seller.id) % 2 == 1) {
+      const bundle = bundles.find((b) => b.sellerId == seller.id);
+      const twinsIds = bundle.twinIds;
+      for (const twinId of twinsIds) {
+        const [, twin] = await twinHandler.getTwin(twinId);
+        if (twin.tokenType == TokenType.NonFungibleToken) {
+          await mockTwinTokens[0]
+            .connect(seller.wallet)
+            .mint(BigInt(twin.tokenId) + BigInt(twin.supplyAvailable) - 1n, 1);
+          await mockTwinTokens[1]
+            .connect(seller.wallet)
+            .mint(BigInt(twin.tokenId) + BigInt(twin.supplyAvailable) - 1n, 1);
+        } else if (twin.tokenType == TokenType.MultiToken) {
+          await mockTwin1155.connect(seller.wallet).mint(twin.tokenId, twin.supplyAvailable);
+        }
+      }
+    }
+
     await exchangeHandler
       .connect(buyers[exchange.buyerIndex].wallet)
       .redeemVoucher(exchange.exchangeId, { gasLimit: 10000000 });
@@ -799,7 +810,8 @@ async function getProtocolContractState(
     getProtocolLookupsPrivateContractState(
       protocolDiamondAddress,
       { mockToken, mockTwinTokens },
-      { sellers, DRs, agents, buyers, offers, groups, twins }
+      { sellers, DRs, agents, buyers, offers, groups, twins },
+      groupHandler
     ),
   ]);
 
@@ -1283,7 +1295,8 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
 async function getProtocolLookupsPrivateContractState(
   protocolDiamondAddress,
   { mockToken, mockTwinTokens },
-  { sellers, DRs, agents, buyers, offers, groups, twins }
+  { sellers, DRs, agents, buyers, offers, groups, twins },
+  groupHandler
 ) {
   /*
         ProtocolLookups storage layout
@@ -1321,8 +1334,11 @@ async function getProtocolLookupsPrivateContractState(
         #29 [ ] // placeholder for pendingAddressUpdatesBySeller
         #30 [ ] // placeholder for pendingAuthTokenUpdatesBySeller
         #31 [ ] // placeholder for pendingAddressUpdatesByDisputeResolver
-        #32 [X] // placeholder for additionalCollections
-        #33 [ ] // placeholder for rangeIdByTwin
+        #32 [ ] // placeholder for rangeIdByTwin
+        #33 [ ] // placeholder for conditionalCommitsByTokenId
+        #34 [X] // placeholder for additionalCollections
+        #35 [ ] // placeholder for sellerSalt
+        #36 [ ] // placeholder for isUsedSellerSalt
         */
 
   // starting slot
@@ -1520,10 +1536,16 @@ async function getProtocolLookupsPrivateContractState(
     allowedSellerIndex.push(sellerStatus);
   }
 
-  // offerIdIndexByGroup
+  // offerIdIndexByGroup, conditionalCommitsByTokenId
   let offerIdIndexByGroup = [];
+  let conditionalCommitsByTokenId = [];
+  decache("../../scripts/domain/Condition.js");
+  Condition = require("../../scripts/domain/Condition.js");
+
   for (const group of groups) {
     const id = group.id;
+
+    // offerIdIndexByGroup
     const firstMappingStorageSlot = BigInt(
       getMappingStoragePosition(protocolLookupsSlotNumber + 28n, id, paddingType.START)
     );
@@ -1538,6 +1560,26 @@ async function getProtocolLookupsPrivateContractState(
       );
     }
     offerIdIndexByGroup.push(offerIndices);
+
+    // conditionalCommitsByTokenId
+    // get condition
+    let [, , condition] = await groupHandler.getGroup(id);
+    condition = Condition.fromStruct(condition);
+    let commitsPerTokenId = [];
+    for (let tokenId = condition.minTokenId; tokenId <= condition.maxTokenId; tokenId++) {
+      const firstMappingStorageSlot = BigInt(
+        getMappingStoragePosition(protocolLookupsSlotNumber + 33n, tokenId, paddingType.START)
+      );
+
+      commitsPerTokenId.push(
+        await getStorageAt(
+          protocolDiamondAddress,
+          getMappingStoragePosition(firstMappingStorageSlot, id, paddingType.START)
+        )
+      );
+    }
+
+    conditionalCommitsByTokenId.push(commitsPerTokenId);
   }
 
   // pendingAddressUpdatesBySeller, pendingAuthTokenUpdatesBySeller, pendingAddressUpdatesByDisputeResolver
@@ -1581,7 +1623,7 @@ async function getProtocolLookupsPrivateContractState(
       // BosonTypes.DisputeResolver has 8 fields
       structFields.push(await getStorageAt(protocolDiamondAddress, structStorageSlot + i));
     }
-    structFields[6] = await getStorageAt(protocolDiamondAddress, keccak256(ethersId(structStorageSlot + 6n))); // represents field string metadataUri. Technically this value represents the length of the string, but since it should be 0, we don't do further decoding
+    structFields[6] = await getStorageAt(protocolDiamondAddress, ethersId(structStorageSlot + 6n)); // represents field string metadataUri. Technically this value represents the length of the string, but since it should be 0, we don't do further decoding
     pendingAddressUpdatesByDisputeResolver.push(structFields);
   }
 
@@ -1592,8 +1634,27 @@ async function getProtocolLookupsPrivateContractState(
     rangeIdByTwin.push(
       await getStorageAt(
         protocolDiamondAddress,
-        getMappingStoragePosition(protocolLookupsSlotNumber + 33n, id, paddingType.START)
+        getMappingStoragePosition(protocolLookupsSlotNumber + 32n, id, paddingType.START)
       )
+    );
+  }
+
+  // sellerSalt, isUsedSellerSalt
+  let sellerSalt = [];
+  let isUsedSellerSalt = {};
+  for (const seller of sellers) {
+    // sellerSalt
+    const { id } = seller;
+    const salt = await getStorageAt(
+      protocolDiamondAddress,
+      getMappingStoragePosition(protocolLookupsSlotNumber + 35n, id, paddingType.START)
+    );
+    sellerSalt.push(salt);
+
+    // isUsedSellerSalt
+    isUsedSellerSalt[salt] = await getStorageAt(
+      protocolDiamondAddress,
+      getMappingStoragePosition(protocolLookupsSlotNumber + 36n, salt, paddingType.START)
     );
   }
 
@@ -1615,6 +1676,9 @@ async function getProtocolLookupsPrivateContractState(
     pendingAuthTokenUpdatesBySeller,
     pendingAddressUpdatesByDisputeResolver,
     rangeIdByTwin,
+    conditionalCommitsByTokenId,
+    sellerSalt,
+    isUsedSellerSalt,
   };
 }
 
