@@ -35,7 +35,7 @@
     "deploy-suite:hardhat": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-suite --network hardhat",
     "deploy-suite:local": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-suite --network localhost",
     "deploy-suite:test": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-suite --network test --env test >> logs/test.deploy.contracts.txt",
-    "deploy-suite:ethereum:mainnet": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-suite --network mainnet >> logs/mainnet.deploy.contracts.txt",
+    "deploy-suite:ethereum:mainnet": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-suite --network mainnet --env prod >> logs/mainnet.deploy.contracts.txt",
     "deploy-suite:ethereum:goerli-test": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-suite --network goerli --env test >> logs/goerli.deploy.contracts.txt",
     "deploy-suite:ethereum:goerli-staging": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-suite --network goerli --env staging >> logs/goerli.deploy.contracts.txt",
     "deploy-suite:polygon:mumbai-test": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-suite --network mumbai --env test >> logs/mumbai-test.deploy.contracts.txt",
