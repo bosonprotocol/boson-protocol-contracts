@@ -237,56 +237,26 @@
         {
           "indexed": true,
           "internalType": "uint256",
-          "name": "disputeResolverId",
+          "name": "sellerId",
           "type": "uint256"
         },
         {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "id",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "escalationResponsePeriod",
-              "type": "uint256"
-            },
-            {
-              "internalType": "address",
-              "name": "operator",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "admin",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "clerk",
-              "type": "address"
-            },
-            {
-              "internalType": "address payable",
-              "name": "treasury",
-              "type": "address"
-            },
-            {
-              "internalType": "string",
-              "name": "metadataUri",
-              "type": "string"
-            },
-            {
-              "internalType": "bool",
-              "name": "active",
-              "type": "bool"
-            }
-          ],
           "indexed": false,
-          "internalType": "struct BosonTypes.DisputeResolver",
-          "name": "disputeResolver",
-          "type": "tuple"
+          "internalType": "uint256",
+          "name": "collectionIndex",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "collectionAddress",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "string",
+          "name": "externalId",
+          "type": "string"
         },
         {
           "indexed": true,
@@ -295,7 +265,7 @@
           "type": "address"
         }
       ],
-      "name": "DisputeResolverActivated",
+      "name": "CollectionCreated",
       "type": "event"
     },
     {
@@ -321,7 +291,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -484,7 +454,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -532,7 +502,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -599,7 +569,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -661,7 +631,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -683,6 +653,11 @@
               "internalType": "bool",
               "name": "active",
               "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
             }
           ],
           "indexed": false,
@@ -742,7 +717,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -764,6 +739,11 @@
               "internalType": "bool",
               "name": "active",
               "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
             }
           ],
           "indexed": false,
@@ -780,7 +760,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -802,6 +782,11 @@
               "internalType": "bool",
               "name": "active",
               "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
             }
           ],
           "indexed": false,
@@ -873,7 +858,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -895,6 +880,11 @@
               "internalType": "bool",
               "name": "active",
               "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
             }
           ],
           "indexed": false,

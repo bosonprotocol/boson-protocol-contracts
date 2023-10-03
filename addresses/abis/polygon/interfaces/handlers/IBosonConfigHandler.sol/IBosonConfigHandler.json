@@ -90,44 +90,6 @@
       "inputs": [
         {
           "indexed": false,
-          "internalType": "uint16",
-          "name": "maxAllowedSellers",
-          "type": "uint16"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "executedBy",
-          "type": "address"
-        }
-      ],
-      "name": "MaxAllowedSellersChanged",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint16",
-          "name": "maxDisputesPerBatch",
-          "type": "uint16"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "executedBy",
-          "type": "address"
-        }
-      ],
-      "name": "MaxDisputesPerBatchChanged",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
           "internalType": "uint256",
           "name": "maxEscalationResponsePeriod",
           "type": "uint256"
@@ -147,9 +109,9 @@
       "inputs": [
         {
           "indexed": false,
-          "internalType": "uint16",
-          "name": "maxExchangesPerBatch",
-          "type": "uint16"
+          "internalType": "uint256",
+          "name": "maxPremintedVouchers",
+          "type": "uint256"
         },
         {
           "indexed": true,
@@ -158,83 +120,7 @@
           "type": "address"
         }
       ],
-      "name": "MaxExchangesPerBatchChanged",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint16",
-          "name": "maxFeesPerDisputeResolver",
-          "type": "uint16"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "executedBy",
-          "type": "address"
-        }
-      ],
-      "name": "MaxFeesPerDisputeResolverChanged",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint16",
-          "name": "maxOffersPerBatch",
-          "type": "uint16"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "executedBy",
-          "type": "address"
-        }
-      ],
-      "name": "MaxOffersPerBatchChanged",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint16",
-          "name": "maxOffersPerBundle",
-          "type": "uint16"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "executedBy",
-          "type": "address"
-        }
-      ],
-      "name": "MaxOffersPerBundleChanged",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint16",
-          "name": "maxOffersPerGroup",
-          "type": "uint16"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "executedBy",
-          "type": "address"
-        }
-      ],
-      "name": "MaxOffersPerGroupChanged",
+      "name": "MaxPremintedVouchersChanged",
       "type": "event"
     },
     {
@@ -281,25 +167,6 @@
         {
           "indexed": false,
           "internalType": "uint16",
-          "name": "maxTokensPerWithdrawal",
-          "type": "uint16"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "executedBy",
-          "type": "address"
-        }
-      ],
-      "name": "MaxTokensPerWithdrawalChanged",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint16",
           "name": "maxTotalOfferFeePercentage",
           "type": "uint16"
         },
@@ -311,25 +178,6 @@
         }
       ],
       "name": "MaxTotalOfferFeePercentageChanged",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint16",
-          "name": "maxTwinsPerBundle",
-          "type": "uint16"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "executedBy",
-          "type": "address"
-        }
-      ],
-      "name": "MaxTwinsPerBundleChanged",
       "type": "event"
     },
     {
@@ -349,6 +197,25 @@
         }
       ],
       "name": "MinDisputePeriodChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "minResolutionPeriod",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "MinResolutionPeriodChanged",
       "type": "event"
     },
     {
@@ -506,103 +373,12 @@
     },
     {
       "inputs": [],
-      "name": "getMaxAllowedSellers",
-      "outputs": [
-        {
-          "internalType": "uint16",
-          "name": "",
-          "type": "uint16"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "getMaxDisputesPerBatch",
-      "outputs": [
-        {
-          "internalType": "uint16",
-          "name": "",
-          "type": "uint16"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
       "name": "getMaxEscalationResponsePeriod",
       "outputs": [
         {
           "internalType": "uint256",
           "name": "",
           "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "getMaxExchangesPerBatch",
-      "outputs": [
-        {
-          "internalType": "uint16",
-          "name": "",
-          "type": "uint16"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "getMaxFeesPerDisputeResolver",
-      "outputs": [
-        {
-          "internalType": "uint16",
-          "name": "",
-          "type": "uint16"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "getMaxOffersPerBatch",
-      "outputs": [
-        {
-          "internalType": "uint16",
-          "name": "",
-          "type": "uint16"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "getMaxOffersPerBundle",
-      "outputs": [
-        {
-          "internalType": "uint16",
-          "name": "",
-          "type": "uint16"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "getMaxOffersPerGroup",
-      "outputs": [
-        {
-          "internalType": "uint16",
-          "name": "",
-          "type": "uint16"
         }
       ],
       "stateMutability": "view",
@@ -636,19 +412,6 @@
     },
     {
       "inputs": [],
-      "name": "getMaxTokensPerWithdrawal",
-      "outputs": [
-        {
-          "internalType": "uint16",
-          "name": "",
-          "type": "uint16"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
       "name": "getMaxTotalOfferFeePercentage",
       "outputs": [
         {
@@ -662,12 +425,12 @@
     },
     {
       "inputs": [],
-      "name": "getMaxTwinsPerBundle",
+      "name": "getMinDisputePeriod",
       "outputs": [
         {
-          "internalType": "uint16",
+          "internalType": "uint256",
           "name": "",
-          "type": "uint16"
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -675,7 +438,7 @@
     },
     {
       "inputs": [],
-      "name": "getMinDisputePeriod",
+      "name": "getMinResolutionPeriod",
       "outputs": [
         {
           "internalType": "uint256",
@@ -811,103 +574,12 @@
     {
       "inputs": [
         {
-          "internalType": "uint16",
-          "name": "_maxAllowedSellers",
-          "type": "uint16"
-        }
-      ],
-      "name": "setMaxAllowedSellers",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint16",
-          "name": "_maxDisputesPerBatch",
-          "type": "uint16"
-        }
-      ],
-      "name": "setMaxDisputesPerBatch",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
           "internalType": "uint256",
           "name": "_maxEscalationResponsePeriod",
           "type": "uint256"
         }
       ],
       "name": "setMaxEscalationResponsePeriod",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint16",
-          "name": "_maxExchangesPerBatch",
-          "type": "uint16"
-        }
-      ],
-      "name": "setMaxExchangesPerBatch",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint16",
-          "name": "_maxFeesPerDisputeResolver",
-          "type": "uint16"
-        }
-      ],
-      "name": "setMaxFeesPerDisputeResolver",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint16",
-          "name": "_maxOffersPerBatch",
-          "type": "uint16"
-        }
-      ],
-      "name": "setMaxOffersPerBatch",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint16",
-          "name": "_maxOffersPerBundle",
-          "type": "uint16"
-        }
-      ],
-      "name": "setMaxOffersPerBundle",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint16",
-          "name": "_maxOffersPerGroup",
-          "type": "uint16"
-        }
-      ],
-      "name": "setMaxOffersPerGroup",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -942,37 +614,11 @@
       "inputs": [
         {
           "internalType": "uint16",
-          "name": "_maxTokensPerWithdrawal",
-          "type": "uint16"
-        }
-      ],
-      "name": "setMaxTokensPerWithdrawal",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint16",
           "name": "_maxTotalOfferFeePercentage",
           "type": "uint16"
         }
       ],
       "name": "setMaxTotalOfferFeePercentage",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint16",
-          "name": "_maxTwinsPerBundle",
-          "type": "uint16"
-        }
-      ],
-      "name": "setMaxTwinsPerBundle",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -986,6 +632,19 @@
         }
       ],
       "name": "setMinDisputePeriod",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_minResolutionPeriod",
+          "type": "uint256"
+        }
+      ],
+      "name": "setMinResolutionPeriod",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
