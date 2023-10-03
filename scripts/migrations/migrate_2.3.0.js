@@ -103,18 +103,19 @@ async function migrate(env) {
       await hre.run("compile");
     }
 
-
     console.log("Pausing the Seller region...");
     let pauseHandler = await getContractAt("IBosonPauseHandler", protocolAddress);
-    
+
     const unPauseTransaction = await pauseHandler.unpause(await getFees(maxPriorityFeePerGas));
     await unPauseTransaction.wait(confirmations);
 
-    const pauseTransaction = await pauseHandler.pause([PausableRegion.Twins, PausableRegion.Sellers], await getFees(maxPriorityFeePerGas));
+    const pauseTransaction = await pauseHandler.pause(
+      [PausableRegion.Twins, PausableRegion.Sellers],
+      await getFees(maxPriorityFeePerGas)
+    );
 
     // await 1 block to ensure the pause is effective
     await pauseTransaction.wait(confirmations);
-
 
     let functionNamesToSelector = {};
 
