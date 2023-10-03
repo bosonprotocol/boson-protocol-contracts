@@ -91,13 +91,6 @@ async function migrate(env) {
 
     const protocolAddress = contracts.find((c) => c.name === "ProtocolDiamond")?.address;
 
-    console.log("Pausing the Seller region...");
-    let pauseHandler = await getContractAt("IBosonPauseHandler", protocolAddress);
-    const pauseTransaction = await pauseHandler.pause([PausableRegion.Sellers], await getFees(maxPriorityFeePerGas));
-
-    // await 1 block to ensure the pause is effective
-    await pauseTransaction.wait(confirmations);
-
     if (env != "upgrade-test") {
       // Checking old version contracts to get selectors to remove
       console.log("Checking out contracts on version 2.2.1");
@@ -109,6 +102,19 @@ async function migrate(env) {
       await hre.run("clean");
       await hre.run("compile");
     }
+
+
+    console.log("Pausing the Seller region...");
+    let pauseHandler = await getContractAt("IBosonPauseHandler", protocolAddress);
+    
+    const unPauseTransaction = await pauseHandler.unpause(await getFees(maxPriorityFeePerGas));
+    await unPauseTransaction.wait(confirmations);
+
+    const pauseTransaction = await pauseHandler.pause([PausableRegion.Twins, PausableRegion.Sellers], await getFees(maxPriorityFeePerGas));
+
+    // await 1 block to ensure the pause is effective
+    await pauseTransaction.wait(confirmations);
+
 
     let functionNamesToSelector = {};
 
