@@ -14,14 +14,14 @@ const ethers = hre.ethers;
 const { getContractAt, getSigners } = ethers;
 const network = hre.network.name;
 const abiCoder = new ethers.AbiCoder();
-const tag = "HEAD";
+const tag = "v2.3.0";
 const version = "2.3.0";
 const { EXCHANGE_ID_2_2_0 } = require("../config/protocol-parameters");
 const { META_TRANSACTION_FORWARDER } = require("../config/client-upgrade");
 const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
 
 const config = {
-  // status at v2.3.0-rc.4
+  // status at v2.3.0
   addOrUpgrade: [
     "AccountHandlerFacet",
     "BundleHandlerFacet",
