@@ -24,6 +24,11 @@
           "type": "uint256"
         },
         {
+          "internalType": "uint256",
+          "name": "_collectionIndex",
+          "type": "uint256"
+        },
+        {
           "internalType": "address",
           "name": "_newOwner",
           "type": "address"
@@ -39,6 +44,11 @@
               "internalType": "uint256",
               "name": "royaltyPercentage",
               "type": "uint256"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "collectionSalt",
+              "type": "bytes32"
             }
           ],
           "internalType": "struct BosonTypes.VoucherInitValues",
