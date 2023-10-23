@@ -316,9 +316,10 @@ contract BosonTypes {
 
     struct PriceDiscovery {
         uint256 price;
-        address priceDiscoveryContract;
-        bytes priceDiscoveryData;
         Side side;
+        address priceDiscoveryContract;
+        address conduit;
+        bytes priceDiscoveryData;
     }
 
     enum Side {

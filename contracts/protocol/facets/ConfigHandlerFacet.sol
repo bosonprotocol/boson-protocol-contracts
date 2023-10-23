@@ -37,6 +37,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setTokenAddress(_addresses.token);
         setTreasuryAddress(_addresses.treasury);
         setVoucherBeaconAddress(_addresses.voucherBeacon);
+        setWeth(_addresses.weth);
         setProtocolFeePercentage(_fees.percentage);
         setProtocolFeeFlatBoson(_fees.flatBoson);
         setMaxEscalationResponsePeriod(_limits.maxEscalationResponsePeriod);
@@ -544,9 +545,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _weth - the WETH contract address
      */
-    function setWeth(address payable _weth) external override onlyRole(ADMIN) nonReentrant {
+    function setWeth(address _weth) public override onlyRole(ADMIN) nonReentrant {
         require(_weth != address(0), INVALID_ADDRESS);
-        protocolAddresses().token = _weth;
+        protocolAddresses().weth = _weth;
         emit WethAddressChanged(_weth, msgSender());
     }
 

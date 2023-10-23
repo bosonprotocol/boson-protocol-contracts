@@ -15,10 +15,10 @@ function getConfigHandlerInitArgs(wethAddress) {
       treasury: protocolConfig.TREASURY[network],
       voucherBeacon: protocolConfig.BEACON[network],
       beaconProxy: protocolConfig.BEACON_PROXY[network],
+      weth: wethAddress || protocolConfig.WETH[network],
     },
     protocolConfig.limits,
     protocolConfig.fees,
-    wethAddress,
   ];
 }
 

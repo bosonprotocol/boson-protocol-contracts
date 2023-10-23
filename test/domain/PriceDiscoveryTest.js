@@ -10,7 +10,7 @@ const Side = require("../../scripts/domain/Side");
 describe("PriceDiscovery", function () {
   // Suite-wide scope
   let priceDiscovery, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let accounts, price, priceDiscoveryContract, priceDiscoveryData, side;
+  let accounts, price, side, priceDiscoveryContract, conduit, priceDiscoveryData;
 
   beforeEach(async function () {
     // Get a list of accounts
@@ -19,17 +19,19 @@ describe("PriceDiscovery", function () {
     // Required constructor params
     price = "150";
     priceDiscoveryContract = accounts[1].address;
+    conduit = accounts[2].address;
     priceDiscoveryData = "0xdeadbeef";
     side = Side.Ask;
   });
 
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated PriceDiscovery instance", async function () {
-      priceDiscovery = new PriceDiscovery(price, priceDiscoveryContract, priceDiscoveryData, side);
+      priceDiscovery = new PriceDiscovery(price, side, priceDiscoveryContract, conduit, priceDiscoveryData);
       expect(priceDiscovery.priceIsValid()).is.true;
-      expect(priceDiscovery.priceDiscoveryContractIsValid()).is.true;
-      expect(priceDiscovery.priceDiscoveryDataIsValid()).is.true;
       expect(priceDiscovery.sideIsValid()).is.true;
+      expect(priceDiscovery.priceDiscoveryContractIsValid()).is.true;
+      expect(priceDiscovery.conduitIsValid()).is.true;
+      expect(priceDiscovery.priceDiscoveryDataIsValid()).is.true;
       expect(priceDiscovery.isValid()).is.true;
     });
   });
@@ -37,7 +39,7 @@ describe("PriceDiscovery", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid priceDiscovery, then set fields in tests directly
-      priceDiscovery = new PriceDiscovery(price, priceDiscoveryContract, priceDiscoveryData, side);
+      priceDiscovery = new PriceDiscovery(price, side, priceDiscoveryContract, conduit, priceDiscoveryData);
       expect(priceDiscovery.isValid()).is.true;
     });
 
@@ -68,6 +70,28 @@ describe("PriceDiscovery", function () {
       expect(priceDiscovery.isValid()).is.true;
     });
 
+    it("If present, side must be a Side enum", async function () {
+      // Invalid field value
+      priceDiscovery.side = "zedzdeadbaby";
+      expect(priceDiscovery.sideIsValid()).is.false;
+      expect(priceDiscovery.isValid()).is.false;
+
+      // Invalid field value
+      priceDiscovery.side = new Date();
+      expect(priceDiscovery.sideIsValid()).is.false;
+      expect(priceDiscovery.isValid()).is.false;
+
+      // Invalid field value
+      priceDiscovery.side = 12;
+      expect(priceDiscovery.sideIsValid()).is.false;
+      expect(priceDiscovery.isValid()).is.false;
+
+      // Valid field value
+      priceDiscovery.side = Side.Bid;
+      expect(priceDiscovery.sideIsValid()).is.true;
+      expect(priceDiscovery.isValid()).is.true;
+    });
+
     it("Always present, priceDiscoveryContract must be a string representation of an EIP-55 compliant address", async function () {
       // Invalid field value
       priceDiscovery.priceDiscoveryContract = "0xASFADF";
@@ -87,6 +111,28 @@ describe("PriceDiscovery", function () {
       // Valid field value
       priceDiscovery.priceDiscoveryContract = "0xec2fd5bd6fc7b576dae82c0b9640969d8de501a2";
       expect(priceDiscovery.priceDiscoveryContractIsValid()).is.true;
+      expect(priceDiscovery.isValid()).is.true;
+    });
+
+    it("Always present, conduit must be a string representation of an EIP-55 compliant address", async function () {
+      // Invalid field value
+      priceDiscovery.conduit = "0xASFADF";
+      expect(priceDiscovery.conduitIsValid()).is.false;
+      expect(priceDiscovery.isValid()).is.false;
+
+      // Invalid field value
+      priceDiscovery.conduit = "zedzdeadbaby";
+      expect(priceDiscovery.conduitIsValid()).is.false;
+      expect(priceDiscovery.isValid()).is.false;
+
+      // Valid field value
+      priceDiscovery.conduit = accounts[0].address;
+      expect(priceDiscovery.conduitIsValid()).is.true;
+      expect(priceDiscovery.isValid()).is.true;
+
+      // Valid field value
+      priceDiscovery.conduit = "0xec2fd5bd6fc7b576dae82c0b9640969d8de501a2";
+      expect(priceDiscovery.conduitIsValid()).is.true;
       expect(priceDiscovery.isValid()).is.true;
     });
 
@@ -121,46 +167,25 @@ describe("PriceDiscovery", function () {
       expect(priceDiscovery.priceDiscoveryDataIsValid()).is.true;
       expect(priceDiscovery.isValid()).is.true;
     });
-
-    it("If present, side must be a Side enum", async function () {
-      // Invalid field value
-      priceDiscovery.side = "zedzdeadbaby";
-      expect(priceDiscovery.sideIsValid()).is.false;
-      expect(priceDiscovery.isValid()).is.false;
-
-      // Invalid field value
-      priceDiscovery.side = new Date();
-      expect(priceDiscovery.sideIsValid()).is.false;
-      expect(priceDiscovery.isValid()).is.false;
-
-      // Invalid field value
-      priceDiscovery.side = 12;
-      expect(priceDiscovery.sideIsValid()).is.false;
-      expect(priceDiscovery.isValid()).is.false;
-
-      // Valid field value
-      priceDiscovery.side = Side.Bid;
-      expect(priceDiscovery.sideIsValid()).is.true;
-      expect(priceDiscovery.isValid()).is.true;
-    });
   });
 
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid priceDiscovery, then set fields in tests directly
-      priceDiscovery = new PriceDiscovery(price, priceDiscoveryContract, priceDiscoveryData, side);
+      priceDiscovery = new PriceDiscovery(price, side, priceDiscoveryContract, conduit, priceDiscoveryData);
       expect(priceDiscovery.isValid()).is.true;
 
       // Get plain object
       object = {
         price,
-        priceDiscoveryContract,
-        priceDiscoveryData,
         side,
+        priceDiscoveryContract,
+        conduit,
+        priceDiscoveryData,
       };
 
       // Struct representation
-      struct = [price, priceDiscoveryContract, priceDiscoveryData, side];
+      struct = [price, side, priceDiscoveryContract, conduit, priceDiscoveryData];
     });
 
     context("👉 Static", async function () {

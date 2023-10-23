@@ -266,3 +266,4 @@ string constant INVALID_PRICE_TYPE = "Invalid price type";
 string constant INVALID_PRICE_DISCOVERY = "Invalid price discovery argument";
 string constant INCOMING_VOUCHER_ALREADY_SET = "Incoming voucher already set";
 string constant NEW_OWNER_AND_BUYER_MUST_MATCH = "New owner and buyer must match";
+string constant PRICE_DISCOVERY_CONTRACTS_NOT_SET = "PriceDiscoveryContract and Conduit must be set";

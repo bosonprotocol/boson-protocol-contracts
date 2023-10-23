@@ -39,8 +39,8 @@ contract PriceDiscoveryBase is ProtocolBase {
         address _buyer
     ) internal returns (uint256 actualPrice) {
         require(
-            _priceDiscovery.priceDiscoveryContract != address(0),
-            "PriceDiscoveryBase: price discovery contract is zero address"
+            _priceDiscovery.priceDiscoveryContract != address(0) && _priceDiscovery.conduit != address(0),
+            PRICE_DISCOVERY_CONTRACTS_NOT_SET
         );
 
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
@@ -50,8 +50,6 @@ contract PriceDiscoveryBase is ProtocolBase {
         protocolStatus().incomingVoucherCloneAddress = address(bosonVoucher);
 
         address exchangeToken = _offer.exchangeToken;
-        address priceDiscoveryContract = _priceDiscovery.priceDiscoveryContract;
-
         address owner;
 
         if (_tokenId != 0) {
@@ -59,7 +57,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         }
 
         // Handle wrapper voucher, there is no difference between ask and bid
-        if (owner == priceDiscoveryContract) {
+        if (owner == _priceDiscovery.priceDiscoveryContract) {
             handleWrapper(_tokenId, exchangeToken, _priceDiscovery);
         } else if (_priceDiscovery.side == Side.Ask) {
             return fulfilAskOrder(_tokenId, exchangeToken, _priceDiscovery, _buyer, bosonVoucher);
@@ -153,17 +151,13 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         // If token is ERC20, approve price discovery contract to transfer protocol funds
         if (_exchangeToken != address(0)) {
-            IERC20(_exchangeToken).approve(_priceDiscovery.priceDiscoveryContract, _priceDiscovery.price);
+            IERC20(_exchangeToken).approve(_priceDiscovery.conduit, _priceDiscovery.price);
         }
 
         uint256 balanceBefore = getBalance(_exchangeToken, address(this));
 
         // Call the price discovery contract
-        if (msg.value > 0) {
-            _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
-        } else {
-            _priceDiscovery.priceDiscoveryContract.functionCall(_priceDiscovery.priceDiscoveryData);
-        }
+        _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
 
         uint256 balanceAfter = getBalance(_exchangeToken, address(this));
 
@@ -171,7 +165,7 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         // If token is ERC20, reset approval
         if (_exchangeToken != address(0)) {
-            IERC20(_exchangeToken).approve(address(_priceDiscovery.priceDiscoveryContract), 0);
+            IERC20(_exchangeToken).approve(address(_priceDiscovery.conduit), 0);
         }
 
         _tokenId = getAndVerifyTokenId(_tokenId);
@@ -223,8 +217,8 @@ contract PriceDiscoveryBase is ProtocolBase {
         // Don't need to use safe transfer from, since that protocol can handle the voucher
         _bosonVoucher.transferFrom(msgSender(), address(this), _tokenId);
 
-        // Approve price discovery contract to transfer voucher. There is no need to reset approval afterwards, since protocol is not the voucher owner anymore
-        _bosonVoucher.approve(_priceDiscovery.priceDiscoveryContract, _tokenId);
+        // Approve conduit to transfer voucher. There is no need to reset approval afterwards, since protocol is not the voucher owner anymore
+        _bosonVoucher.approve(_priceDiscovery.conduit, _tokenId);
 
         // Get protocol balance before calling price discovery contract
         uint256 balanceBefore = getBalance(_exchangeToken, address(this));

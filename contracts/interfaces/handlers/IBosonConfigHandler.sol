@@ -336,5 +336,5 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * @param _weth - the WETH contract address
      */
-    function setWeth(address payable _weth) external;
+    function setWeth(address _weth) external;
 }
