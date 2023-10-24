@@ -212,9 +212,11 @@ bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(
         "MetaTransaction(uint256 nonce,address from,address contractAddress,string functionName,bytes functionSignature)"
     )
 );
-bytes32 constant OFFER_DETAILS_TYPEHASH = keccak256("MetaTxOfferDetails(address buyer,uint256 offerId)");
+bytes32 constant OFFER_DETAILS_TYPEHASH = keccak256(
+    "MetaTxOfferDetails(address buyer,uint256 offerId,address exchangeToken,uint256 price,uint256 sellerDeposit,uint256 buyerCancelPenalty,uint256 voucherRedeemableFrom,uint256 disputePeriod,uint256 resolutionPeriod)"
+);
 bytes32 constant META_TX_COMMIT_TO_OFFER_TYPEHASH = keccak256(
-    "MetaTxCommitToOffer(uint256 nonce,address from,address contractAddress,string functionName,MetaTxOfferDetails offerDetails)MetaTxOfferDetails(address buyer,uint256 offerId)"
+    "MetaTxCommitToOffer(uint256 nonce,address from,address contractAddress,string functionName,MetaTxOfferDetails offerDetails)MetaTxOfferDetails(address buyer,uint256 offerId,address exchangeToken,uint256 price,uint256 sellerDeposit,uint256 buyerCancelPenalty,uint256 voucherRedeemableFrom,uint256 disputePeriod,uint256 resolutionPeriod)"
 );
 bytes32 constant CONDITIONAL_OFFER_DETAILS_TYPEHASH = keccak256(
     "MetaTxConditionalOfferDetails(address buyer,uint256 offerId,uint256 tokenId)"

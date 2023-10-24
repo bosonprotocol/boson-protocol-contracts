@@ -111,9 +111,30 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @param _offerDetails - the offer details
      * @return the hashed representation of the offer details struct
      */
-    function hashOfferDetails(bytes memory _offerDetails) internal pure returns (bytes32) {
+    function hashOfferDetails(bytes memory _offerDetails) internal view returns (bytes32) {
+        // The buyer and offerId are part of calldata
         (address buyer, uint256 offerId) = abi.decode(_offerDetails, (address, uint256));
-        return keccak256(abi.encode(OFFER_DETAILS_TYPEHASH, buyer, offerId));
+
+        // Get other offer details from the protocol
+        Offer storage offer = getValidOffer(offerId);
+        OfferDates storage offerDates = fetchOfferDates(offerId);
+        OfferDurations storage offerDurations = fetchOfferDurations(offerId);
+
+        return
+            keccak256(
+                abi.encode(
+                    OFFER_DETAILS_TYPEHASH,
+                    buyer,
+                    offerId,
+                    offer.exchangeToken,
+                    offer.price,
+                    offer.sellerDeposit,
+                    offer.buyerCancelPenalty,
+                    offerDates.voucherRedeemableFrom,
+                    offerDurations.disputePeriod,
+                    offerDurations.resolutionPeriod
+                )
+            );
     }
 
     /**

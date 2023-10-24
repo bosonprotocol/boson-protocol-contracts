@@ -1648,6 +1648,13 @@ describe("IBosonMetaTransactionsHandler", function () {
             offerType = [
               { name: "buyer", type: "address" },
               { name: "offerId", type: "uint256" },
+              { name: "exchangeToken", type: "address" },
+              { name: "price", type: "uint256" },
+              { name: "sellerDeposit", type: "uint256" },
+              { name: "buyerCancelPenalty", type: "uint256" },
+              { name: "voucherRedeemableFrom", type: "uint256" },
+              { name: "disputePeriod", type: "uint256" },
+              { name: "resolutionPeriod", type: "uint256" },
             ];
 
             // Set the message Type
@@ -1671,8 +1678,19 @@ describe("IBosonMetaTransactionsHandler", function () {
               offerId: offer.id,
             };
 
+            const extendedOfferDetails = {
+              ...validOfferDetails,
+              exchangeToken: offer.exchangeToken,
+              price: offer.price,
+              sellerDeposit: offer.sellerDeposit,
+              buyerCancelPenalty: offer.buyerCancelPenalty,
+              voucherRedeemableFrom: offerDates.voucherRedeemableFrom,
+              disputePeriod: offerDurations.disputePeriod,
+              resolutionPeriod: offerDurations.resolutionPeriod,
+            };
+
             // Prepare the message
-            message.offerDetails = validOfferDetails;
+            message.offerDetails = extendedOfferDetails;
 
             // Deposit native currency to the same seller id
             await fundsHandler
@@ -1733,7 +1751,16 @@ describe("IBosonMetaTransactionsHandler", function () {
             validOfferDetails.offerId = offerId;
 
             // Prepare the message
-            message.offerDetails = validOfferDetails;
+            message.offerDetails = {
+              ...validOfferDetails,
+              exchangeToken: offer.exchangeToken,
+              price: offer.price,
+              sellerDeposit: offer.sellerDeposit,
+              buyerCancelPenalty: offer.buyerCancelPenalty,
+              voucherRedeemableFrom: offerDates.voucherRedeemableFrom,
+              disputePeriod: offerDurations.disputePeriod,
+              resolutionPeriod: offerDurations.resolutionPeriod,
+            };
 
             // Collect the signature components
             let { r, s, v } = await prepareDataSignatureParameters(
