@@ -69,6 +69,11 @@
               "internalType": "bool",
               "name": "voided",
               "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "collectionIndex",
+              "type": "uint256"
             }
           ],
           "indexed": false,
