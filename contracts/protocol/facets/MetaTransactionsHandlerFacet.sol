@@ -117,11 +117,33 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         // The buyer and offerId are part of calldata
         (address buyer, uint256 offerId) = abi.decode(_offerDetails, (address, uint256));
 
+        return keccak256(abi.encode(OFFER_DETAILS_TYPEHASH, buyer, hashOfferParameters(offerId)));
+    }
+
+    /**
+     * @notice Returns hashed representation of the conditional offer details struct.
+     *
+     * @param _offerDetails - the conditional offer details
+     * @return the hashed representation of the conditional offer details struct
+     */
+    function hashConditionalOfferDetails(bytes memory _offerDetails) internal view returns (bytes32) {
+        (address buyer, uint256 offerId, uint256 tokenId) = abi.decode(_offerDetails, (address, uint256, uint256));
+        return keccak256(abi.encode(CONDITIONAL_OFFER_DETAILS_TYPEHASH, buyer, hashOfferParameters(offerId), tokenId));
+    }
+
+    /**
+     * @notice Returns hashed representation of the offer parameters struct.
+     * This is reused for both the offer and conditional offer.
+     *
+     * @param _offerId - the offer id
+     * @return the hashed representation of the offer details struct
+     */
+    function hashOfferParameters(uint256 _offerId) internal view returns (bytes32) {
         // Get other offer details from the protocol
-        Offer storage offer = getValidOffer(offerId);
+        Offer storage offer = getValidOffer(_offerId);
         bytes memory redeemableFrom;
         {
-            OfferDates storage offerDates = fetchOfferDates(offerId);
+            OfferDates storage offerDates = fetchOfferDates(_offerId);
 
             (uint256 year, uint256 month, uint256 day, uint256 hour, uint256 minute, uint256 second) = DateTime
                 .timestampToDateTime(offerDates.voucherRedeemableFrom);
@@ -140,14 +162,13 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
             );
         }
 
-        OfferDurations storage offerDurations = fetchOfferDurations(offerId);
+        OfferDurations storage offerDurations = fetchOfferDurations(_offerId);
 
         return
             keccak256(
                 abi.encode(
-                    OFFER_DETAILS_TYPEHASH,
-                    buyer,
-                    offerId,
+                    OFFER_PARAMETERS_TYPEHASH,
+                    _offerId,
                     offer.exchangeToken,
                     offer.price,
                     offer.sellerDeposit,
@@ -167,17 +188,6 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
                     )
                 )
             );
-    }
-
-    /**
-     * @notice Returns hashed representation of the conditional offer details struct.
-     *
-     * @param _offerDetails - the conditional offer details
-     * @return the hashed representation of the conditional offer details struct
-     */
-    function hashConditionalOfferDetails(bytes memory _offerDetails) internal pure returns (bytes32) {
-        (address buyer, uint256 offerId, uint256 tokenId) = abi.decode(_offerDetails, (address, uint256, uint256));
-        return keccak256(abi.encode(CONDITIONAL_OFFER_DETAILS_TYPEHASH, buyer, offerId, tokenId));
     }
 
     /**
