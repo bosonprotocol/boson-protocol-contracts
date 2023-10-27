@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.7.0) (token/ERC721/ERC721.sol)
 
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import "../../../interfaces/IERC721.sol";
-import "../../../ext_libs/Address.sol";
-import "../../../ext_libs/Strings.sol";
 import "./IERC721Receiver.sol";
 import "./IERC721Metadata.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
  * @dev Modified version of ERC721 useful only for this example.
@@ -108,7 +108,7 @@ contract ERC721 is IERC721, IERC721Metadata {
 
         require(
             msg.sender == owner || isApprovedForAll(owner, msg.sender),
-            "ERC721: approve caller is not token owner nor approved for all"
+            "ERC721: approve caller is not token owner or approved for all"
         );
 
         _approve(to, tokenId);
@@ -142,7 +142,7 @@ contract ERC721 is IERC721, IERC721Metadata {
      */
     function transferFrom(address from, address to, uint256 tokenId) public virtual override {
         //solhint-disable-next-line max-line-length
-        require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: caller is not token owner nor approved");
+        require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: caller is not token owner or approved");
 
         _transfer(from, to, tokenId);
     }
@@ -158,7 +158,7 @@ contract ERC721 is IERC721, IERC721Metadata {
      * @dev See {IERC721-safeTransferFrom}.
      */
     function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public virtual override {
-        require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: caller is not token owner nor approved");
+        require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: caller is not token owner or approved");
         _safeTransfer(from, to, tokenId, data);
     }
 

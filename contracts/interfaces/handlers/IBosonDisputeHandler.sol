@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IBosonDisputeEvents } from "../events/IBosonDisputeEvents.sol";
@@ -87,7 +87,6 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      *
      * Reverts if:
      * - The disputes region of protocol is paused
-     * - Number of disputes exceeds maximum allowed number per batch
      * - For any dispute:
      *   - Exchange does not exist
      *   - Exchange is not in a Disputed state

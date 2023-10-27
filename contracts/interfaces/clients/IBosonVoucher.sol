@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
@@ -10,7 +10,7 @@ import { IERC721ReceiverUpgradeable } from "@openzeppelin/contracts-upgradeable/
  *
  * @notice This is the interface for the Boson Protocol ERC-721 Voucher contract.
  *
- * The ERC-165 identifier for this interface is: 0x97644a69
+ * The ERC-165 identifier for this interface is: 0x6a474d2c
  */
 interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable, IERC721ReceiverUpgradeable {
     event ContractURIChanged(string contractURI);
@@ -167,8 +167,9 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable, IERC7
      * - There is nothing to burn
      *
      * @param _offerId - the id of the offer
+     * @param _amount - amount to burn
      */
-    function burnPremintedVouchers(uint256 _offerId) external;
+    function burnPremintedVouchers(uint256 _offerId, uint256 _amount) external;
 
     /**
      * @notice Gets the number of vouchers available to be pre-minted for an offer.
@@ -193,12 +194,13 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable, IERC7
      * - _to is zero address
      * - call to external contract fails
      * - caller is not the owner
-     * - caller tries to call ERC20 method that would allow transfer of tokens from this contract
+     * - _to is a contract that represents some assets (all contracts that implement `balanceOf` method, including ERC20 and ERC721)
      *
      * @param _to - address of the contract to call
      * @param _data - data to pass to the external contract
+     * @return result - result of the call
      */
-    function callExternalContract(address _to, bytes memory _data) external payable;
+    function callExternalContract(address _to, bytes memory _data) external payable returns (bytes memory);
 
     /** @notice Set approval for all to the vouchers owned by this contract
      *

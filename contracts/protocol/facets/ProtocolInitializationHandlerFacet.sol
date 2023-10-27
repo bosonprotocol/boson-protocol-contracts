@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonProtocolInitializationHandler } from "../../interfaces/handlers/IBosonProtocolInitializationHandler.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
+import { BeaconClientProxy } from "../../protocol/clients/proxy/BeaconClientProxy.sol";
 
 /**
  * @title BosonProtocolInitializationHandler
@@ -47,7 +48,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      * - For upgrade to v2.2.0:
      *   - If versions is set already
      *   - If _initializationData cannot be decoded to uin256
-     *   - If _initializationData is represents value 0
+     *   - If _initializationData is represents value
      *
      * @param _version - version of the protocol
      * @param _addresses - array of facet addresses to call initialize methods
@@ -72,7 +73,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         require(_addresses.length == _calldata.length, ADDRESSES_AND_CALLDATA_LENGTH_MISMATCH);
 
         // Delegate call to initialize methods of facets declared in _addresses
-        for (uint256 i = 0; i < _addresses.length; i++) {
+        for (uint256 i = 0; i < _addresses.length; ) {
             (bool success, bytes memory error) = _addresses[i].delegatecall(_calldata[i]);
 
             // Handle result
@@ -87,12 +88,20 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
                     revert(PROTOCOL_INITIALIZATION_FAILED);
                 }
             }
+
+            unchecked {
+                i++;
+            }
         }
 
         ProtocolLib.ProtocolStatus storage status = protocolStatus();
         if (_isUpgrade) {
             if (_version == bytes32("2.2.0")) {
                 initV2_2_0(_initializationData);
+            } else if (_version == bytes32("2.2.1")) {
+                initV2_2_1();
+            } else if (_version == bytes32("2.3.0")) {
+                initV2_3_0(_initializationData);
             }
         }
 
@@ -100,6 +109,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         addInterfaces(_interfacesToAdd);
 
         status.version = _version;
+
         emit ProtocolInitialized(string(abi.encodePacked(_version)));
     }
 
@@ -122,6 +132,51 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
     }
 
     /**
+     * @notice Initializes the version 2.2.0.
+     */
+    function initV2_2_1() internal view {
+        // Current version must be 2.2.0
+        require(protocolStatus().version == bytes32("2.2.0"), WRONG_CURRENT_VERSION);
+    }
+
+    /**
+     * @notice Initializes the version 2.3.0.
+     *
+     * V2.3.0 adds the minimal resolution period. Cannot be initialized with ConfigHandlerFacet.initialize since it would reset the counters.
+     *
+     * Reverts if:
+     *  - Current version is not 2.2.1
+     *  - There are already twins. This version adds a new mapping for twins which make it incompatible with previous versions.
+     *  - minResolutionPeriod is not present in _initializationData parameter
+     *  - if minResolutionPeriod is greater than maxResolutionPeriod
+     *
+     * @param _initializationData - data representing uint256 _minResolutionPeriod
+     */
+    function initV2_3_0(bytes calldata _initializationData) internal {
+        // Current version must be 2.2.1
+        require(protocolStatus().version == bytes32("2.2.1"), WRONG_CURRENT_VERSION);
+
+        require(protocolCounters().nextTwinId == 1, TWINS_ALREADY_EXIST);
+
+        // Decode initialization data
+        uint256 _minResolutionPeriod = abi.decode(_initializationData, (uint256));
+
+        // cache protocol limits
+        ProtocolLib.ProtocolLimits storage limits = protocolLimits();
+
+        // make sure _minResolutionPeriod is less than maxResolutionPeriod
+        require(limits.maxResolutionPeriod >= _minResolutionPeriod, INVALID_RESOLUTION_PERIOD);
+
+        // Initialize limits.maxPremintedVouchers (configHandlerFacet initializer)
+        require(_minResolutionPeriod != 0, VALUE_ZERO_NOT_ALLOWED);
+        limits.minResolutionPeriod = _minResolutionPeriod;
+        emit MinResolutionPeriodChanged(_minResolutionPeriod, msgSender());
+
+        // Deploy a new voucher proxy
+        protocolAddresses().beaconProxy = address(new BeaconClientProxy{ salt: VOUCHER_PROXY_SALT }());
+    }
+
+    /**
      * @notice Gets the current protocol version.
      *
      */
@@ -131,14 +186,22 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
     }
 
     function addInterfaces(bytes4[] calldata _interfaces) internal {
-        for (uint256 i = 0; i < _interfaces.length; i++) {
+        for (uint256 i = 0; i < _interfaces.length; ) {
             DiamondLib.addSupportedInterface(_interfaces[i]);
+
+            unchecked {
+                i++;
+            }
         }
     }
 
     function removeInterfaces(bytes4[] calldata _interfaces) internal {
-        for (uint256 i = 0; i < _interfaces.length; i++) {
+        for (uint256 i = 0; i < _interfaces.length; ) {
             DiamondLib.removeSupportedInterface(_interfaces[i]);
+
+            unchecked {
+                i++;
+            }
         }
     }
 }

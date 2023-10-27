@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IBosonConfigEvents } from "../events/IBosonConfigEvents.sol";
@@ -9,7 +9,7 @@ import { IBosonConfigEvents } from "../events/IBosonConfigEvents.sol";
  *
  * @notice Handles management of configuration within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xe393ad01
+ * The ERC-165 identifier for this interface is: 0xbc28d3e6
  */
 interface IBosonConfigHandler is IBosonConfigEvents {
     /**
@@ -135,126 +135,6 @@ interface IBosonConfigHandler is IBosonConfigEvents {
     function getProtocolFeeFlatBoson() external view returns (uint256);
 
     /**
-     * @notice Sets the maximum numbers of offers that can be created in a single transaction.
-     *
-     * Emits a MaxOffersPerBatchChanged event.
-     *
-     * Reverts if _maxOffersPerBatch is zero.
-     *
-     * @dev Caller must have ADMIN role.
-     *
-     * @param _maxOffersPerBatch - the maximum length of {BosonTypes.Offer[]}
-     */
-    function setMaxOffersPerBatch(uint16 _maxOffersPerBatch) external;
-
-    /**
-     * @notice Gets the maximum numbers of offers that can be created in a single transaction.
-     *
-     * @return the maximum numbers of offers that can be created in a single transaction
-     */
-    function getMaxOffersPerBatch() external view returns (uint16);
-
-    /**
-     * @notice Sets the maximum numbers of offers that can be added to a group in a single transaction.
-     *
-     * Emits a MaxOffersPerGroupChanged event.
-     *
-     * Reverts if _maxOffersPerGroup is zero.
-     *
-     * @dev Caller must have ADMIN role.
-     *
-     * @param _maxOffersPerGroup - the maximum length of {BosonTypes.Group.offerIds}
-     */
-    function setMaxOffersPerGroup(uint16 _maxOffersPerGroup) external;
-
-    /**
-     * @notice Gets the maximum numbers of offers that can be added to a group in a single transaction.
-     *
-     * @return the maximum numbers of offers that can be added to a group in a single transaction
-     */
-    function getMaxOffersPerGroup() external view returns (uint16);
-
-    /**
-     * @notice Sets the maximum numbers of twins that can be added to a bundle in a single transaction.
-     *
-     * Emits a MaxTwinsPerBundleChanged event.
-     *
-     * Reverts if _maxTwinsPerBundle is zero.
-     *
-     * @dev Caller must have ADMIN role.
-     *
-     * @param _maxTwinsPerBundle - the maximum length of {BosonTypes.Bundle.twinIds}
-     */
-    function setMaxTwinsPerBundle(uint16 _maxTwinsPerBundle) external;
-
-    /**
-     * @notice Gets the maximum numbers of twins that can be added to a bundle in a single transaction.
-     *
-     * @return the maximum numbers of twins that can be added to a bundle in a single transaction.
-     */
-    function getMaxTwinsPerBundle() external view returns (uint16);
-
-    /**
-     * @notice Sets the maximum numbers of offers that can be added to a bundle in a single transaction.
-     *
-     * Emits a MaxOffersPerBundleChanged event.
-     *
-     * Reverts if _maxOffersPerBundle is zero.
-     *
-     * @dev Caller must have ADMIN role.
-     *
-     * @param _maxOffersPerBundle - the maximum length of {BosonTypes.Bundle.offerIds}
-     */
-    function setMaxOffersPerBundle(uint16 _maxOffersPerBundle) external;
-
-    /**
-     * @notice Gets the maximum numbers of offers that can be added to a bundle in a single transaction.
-     *
-     * @return the maximum numbers of offers that can be added to a bundle in a single transaction
-     */
-    function getMaxOffersPerBundle() external view returns (uint16);
-
-    /**
-     * @notice Sets the maximum numbers of tokens that can be withdrawn in a single transaction.
-     *
-     * Emits a MaxTokensPerWithdrawalChanged event.
-     *
-     * Reverts if _maxTokensPerWithdrawal is zero.
-     *
-     * @dev Caller must have ADMIN role.
-     *
-     * @param _maxTokensPerWithdrawal - the maximum length of token list when calling {FundsHandlerFacet.withdraw}
-     */
-    function setMaxTokensPerWithdrawal(uint16 _maxTokensPerWithdrawal) external;
-
-    /**
-     * @notice Gets the maximum numbers of tokens that can be withdrawn in a single transaction.
-     *
-     * @return the maximum length of token list when calling {FundsHandlerFacet.withdraw}
-     */
-    function getMaxTokensPerWithdrawal() external view returns (uint16);
-
-    /**
-     * @notice Sets the maximum number of dispute resolver fee structs that can be processed in a single transaction.
-     *
-     * Emits a MaxFeesPerDisputeResolverChanged event.
-     *
-     * Reverts if _maxFeesPerDisputeResolver is zero.
-     *
-     * @dev Caller must have ADMIN role.
-     *
-     * @param _maxFeesPerDisputeResolver - the maximum length of dispute resolver fees list when calling {AccountHandlerFacet.createDisputeResolver} or {AccountHandlerFacet.updateDisputeResolver}
-     */
-    function setMaxFeesPerDisputeResolver(uint16 _maxFeesPerDisputeResolver) external;
-
-    /**
-     * @notice Gets the maximum number of dispute resolver fee structs that can be processed in a single transaction.
-     *
-     * @return the maximum number of dispute resolver fee structs that can be processed in a single transaction
-     */
-    function getMaxFeesPerDisputeResolver() external view returns (uint16);
-
-    /**
      * @notice Sets the maximum escalation response period a dispute resolver can specify.
      *
      * Emits a MaxEscalationResponsePeriodChanged event.
@@ -273,26 +153,6 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @return the maximum escalation response period that a {BosonTypes.DisputeResolver} can specify
      */
     function getMaxEscalationResponsePeriod() external view returns (uint256);
-
-    /**
-     * @notice Sets the maximum number of disputes that can be expired in a single transaction.
-     *
-     * Emits a MaxDisputesPerBatchChanged event.
-     *
-     * Reverts if _maxDisputesPerBatch is zero.
-     *
-     * @dev Caller must have ADMIN role.
-     *
-     * @param _maxDisputesPerBatch - the maximum number of disputes that can be expired
-     */
-    function setMaxDisputesPerBatch(uint16 _maxDisputesPerBatch) external;
-
-    /**
-     * @notice Gets the maximum number of disputes that can be expired in a single transaction.
-     *
-     * @return the maximum number of disputes that can be expired
-     */
-    function getMaxDisputesPerBatch() external view returns (uint16);
 
     /**
      * @notice Sets the total offer fee percentage limit which will validate the sum of (Protocol Fee percentage + Agent Fee percentage) of an offer fee.
@@ -316,26 +176,6 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @return the maximum total offer fee percentage
      */
     function getMaxTotalOfferFeePercentage() external view returns (uint16);
-
-    /**
-     * @notice Sets the maximum number of seller ids that can be added to or removed from dispute resolver seller allow list in a single transaction.
-     *
-     * Emits a MaxAllowedSellersChanged event.
-     *
-     * Reverts if _maxAllowedSellers is zero.
-     *
-     * @dev Caller must have ADMIN role.
-     *
-     * @param _maxAllowedSellers - the maximum number of seller ids that can be added or removed
-     */
-    function setMaxAllowedSellers(uint16 _maxAllowedSellers) external;
-
-    /**
-     * @notice Gets the maximum number of seller ids that can be added to or removed from dispute resolver seller allow list in a single transaction.
-     *
-     * @return the maximum number of seller ids that can be added or removed
-     */
-    function getMaxAllowedSellers() external view returns (uint16);
 
     /**
      * @notice Sets the buyer escalation fee percentage.
@@ -385,26 +225,6 @@ interface IBosonConfigHandler is IBosonConfigEvents {
     function getAuthTokenContract(BosonTypes.AuthTokenType _authTokenType) external view returns (address);
 
     /**
-     * @notice Sets the maximum number of exchanges that can be created in a single transaction.
-     *
-     * Emits a MaxExchangesPerBatchChanged event.
-     *
-     * Reverts if _maxExchangesPerBatch is zero.
-     *
-     * @dev Caller must have ADMIN role.
-     *
-     * @param _maxExchangesPerBatch - the maximum length of {BosonTypes.Exchange[]}
-     */
-    function setMaxExchangesPerBatch(uint16 _maxExchangesPerBatch) external;
-
-    /**
-     * @notice Gets the maximum number of exchanges that can be created in a single transaction.
-     *
-     * @return the maximum length of {BosonTypes.Exchange[]}
-     */
-    function getMaxExchangesPerBatch() external view returns (uint16);
-
-    /**
      * @notice Sets the maximum royalty percentage that can be set by the seller.
      *
      * Emits a MaxRoyaltyPercentageChanged event.
@@ -428,6 +248,26 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @return the maximum royalty percentage
      */
     function getMaxRoyaltyPecentage() external view returns (uint16);
+
+    /**
+     * @notice Sets the minimum resolution period a seller can specify.
+     *
+     * Emits a MinResolutionPeriodChanged event.
+     *
+     * Reverts if _minResolutionPeriod is zero.
+     *
+     * @dev Caller must have ADMIN role.
+     *
+     * @param _minResolutionPeriod - the minimum resolution period that a {BosonTypes.Seller} can specify
+     */
+    function setMinResolutionPeriod(uint256 _minResolutionPeriod) external;
+
+    /**
+     * @notice Gets the minimum resolution period a seller can specify.
+     *
+     * @return the minimum resolution period that a {BosonTypes.Seller} can specify
+     */
+    function getMinResolutionPeriod() external view returns (uint256);
 
     /**
      * @notice Sets the maximum resolution period a seller can specify.
@@ -464,22 +304,6 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Gets the minimum dispute period a seller can specify.
      */
     function getMinDisputePeriod() external view returns (uint256);
-
-    /**
-     * @notice Sets the maximum number of vouchers that can be preminted in a single transaction.
-     *
-     * Emits a MaxPremintedVouchersChanged event if successful.
-     *
-     * Reverts if the _maxPremintedVouchers is zero.
-     *
-     * @param _maxPremintedVouchers - the maximum number of vouchers
-     */
-    function setMaxPremintedVouchers(uint256 _maxPremintedVouchers) external;
-
-    /**
-     * @notice Gets the maximum number of vouchers that can be preminted in a single transaction.
-     */
-    function getMaxPremintedVouchers() external view returns (uint256);
 
     /**
      * @notice Sets the access controller address.

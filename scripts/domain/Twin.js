@@ -55,9 +55,9 @@ class Twin {
       sellerId: sellerId.toString(),
       amount: amount.toString(),
       supplyAvailable: supplyAvailable ? supplyAvailable.toString() : "",
-      tokenId: tokenId ? tokenId.toString() : "",
+      tokenId: tokenId ? tokenId.toString() : "0",
       tokenAddress,
-      tokenType,
+      tokenType: Number(tokenType),
     });
   }
 

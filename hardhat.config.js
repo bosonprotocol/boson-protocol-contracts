@@ -6,6 +6,7 @@ const { task } = require("hardhat/config");
 require("@nomicfoundation/hardhat-toolbox");
 require("@nomiclabs/hardhat-web3");
 require("hardhat-contract-sizer");
+require("hardhat-preprocessor");
 
 const lazyImport = async (module) => {
   return await require(module);
@@ -39,32 +40,50 @@ task("verify-suite", "Verify contracts on the block explorer")
 
 task(
   "deploy-suite",
-  "Deploy suite deploys protocol diamond, all facets, client and beacon, and initializes protcol diamond"
+  "Deploy suite deploys protocol diamond, all facets, client and beacon, and initializes protocol diamond"
 )
   .addOptionalParam("env", "The deployment environment")
   .addOptionalParam("facetConfig", "JSON list of facets to deploy")
-  .setAction(async ({ env, facetConfig }) => {
-    const { deploySuite } = await lazyImport("./scripts/deploy-suite.js");
+  .addFlag("dryRun", "Test the deployment without deploying")
+  .setAction(async ({ env, facetConfig, dryRun }) => {
+    let balanceBefore, getBalance;
+    if (dryRun) {
+      let setupDryRun;
+      ({ setupDryRun, getBalance } = await lazyImport(`./scripts/util/dry-run.js`));
+      ({ env, deployerBalance: balanceBefore } = await setupDryRun(env));
+    }
 
+    const { deploySuite } = await lazyImport("./scripts/deploy-suite.js");
     await deploySuite(env, facetConfig);
+
+    if (dryRun) {
+      const balanceAfter = await getBalance();
+      const etherSpent = balanceBefore - balanceAfter;
+
+      const { formatUnits } = require("ethers");
+      console.log("Ether spent: ", formatUnits(etherSpent, "ether"));
+    }
   });
 
 task("upgrade-facets", "Upgrade existing facets, add new facets or remove existing facets")
-  .addOptionalParam("env", "The deployment environment")
+  .addParam("newVersion", "The version of the protocol to upgrade to")
+  .addParam("env", "The deployment environment")
+  .addParam("functionNamesToSelector", "JSON list of function names to selectors")
   .addOptionalParam("facetConfig", "JSON list of facets to upgrade")
-  .setAction(async ({ env, facetConfig }) => {
+  .setAction(async ({ env, facetConfig, newVersion, functionNamesToSelector }) => {
     const { upgradeFacets } = await lazyImport("./scripts/upgrade-facets.js");
 
-    await upgradeFacets(env, facetConfig);
+    await upgradeFacets(env, facetConfig, newVersion, functionNamesToSelector);
   });
 
 task("upgrade-clients", "Upgrade existing clients")
-  .addOptionalParam("env", "The deployment environment")
+  .addParam("newVersion", "The version of the protocol to upgrade to")
+  .addParam("env", "The deployment environment")
   .addOptionalParam("clientConfig", "JSON list of arguments by network to send to implementation constructor")
-  .setAction(async ({ env, clientConfig }) => {
+  .setAction(async ({ env, clientConfig, newVersion }) => {
     const { upgradeClients } = await lazyImport("./scripts/upgrade-clients.js");
 
-    await upgradeClients(env, clientConfig);
+    await upgradeClients(env, clientConfig, newVersion);
   });
 
 task("manage-roles", "Grant or revoke access control roles")
@@ -95,6 +114,30 @@ task("split-unit-tests-into-chunks", "Splits unit tests into chunks")
     await splitUnitTestsIntoChunks(chunks);
   });
 
+task("migrate", "Migrates the protocol to a new version")
+  .addPositionalParam("newVersion", "The version to migrate to")
+  .addParam("env", "The deployment environment")
+  .addFlag("dryRun", "Test the migration without deploying")
+  .setAction(async ({ newVersion, env, dryRun }) => {
+    let balanceBefore, getBalance;
+    if (dryRun) {
+      let setupDryRun;
+      ({ setupDryRun, getBalance } = await lazyImport(`./scripts/util/dry-run.js`));
+      ({ env, deployerBalance: balanceBefore } = await setupDryRun(env));
+    }
+
+    const { migrate } = await lazyImport(`./scripts/migrations/migrate_${newVersion}.js`);
+    await migrate(env);
+
+    if (dryRun) {
+      const balanceAfter = await getBalance();
+      const etherSpent = balanceBefore - balanceAfter;
+
+      const { formatUnits } = require("ethers");
+      console.log("Ether spent: ", formatUnits(etherSpent, "ether"));
+    }
+  });
+
 module.exports = {
   defaultNetwork: "hardhat",
   networks: {
@@ -115,6 +158,10 @@ module.exports = {
       url: environments.mainnet.txNode,
       accounts: environments.mainnet.keys,
     },
+    goerli: {
+      url: environments.goerli.txNode,
+      accounts: environments.goerli.keys,
+    },
     mumbai: {
       url: environments.mumbai.txNode,
       accounts: environments.mumbai.keys,
@@ -127,6 +174,7 @@ module.exports = {
   etherscan: {
     apiKey: {
       mainnet: environments.etherscan.apiKey,
+      goerli: environments.etherscan.apiKey,
       polygonMumbai: environments.polygonscan.apiKey,
       polygon: environments.polygonscan.apiKey,
     },
@@ -146,6 +194,19 @@ module.exports = {
         },
       },
       {
+        version: "0.8.21",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+            details: {
+              yul: true,
+            },
+          },
+          evmVersion: "london", // for ethereum mainnet, use shanghai
+        },
+      },
+      {
         version: "0.8.17",
         settings: {
           optimizer: {
@@ -156,6 +217,9 @@ module.exports = {
             },
           },
         },
+      },
+      {
+        version: "0.4.17",
       },
     ],
   },

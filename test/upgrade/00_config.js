@@ -1,3 +1,11 @@
+const hre = require("hardhat");
+const network = hre.network.name;
+const {
+  getConfigHandlerInitArgs,
+  getMetaTransactionsHandlerFacetInitArgs,
+} = require("../../scripts/config/facet-deploy.js");
+const protocolConfig = require("../../scripts/config/protocol-parameters");
+
 /*
 Immutable facet configs for deployment and upgrade, used in upgrade test.
 
@@ -6,29 +14,68 @@ This file contains deployment and upgrade configs for each tag. Format of config
 - scripts/config/facet-upgrade.js
 */
 
+// Scripts must run on tag v2.1.0-scripts
+function getV2_0_0DeployConfig() {
+  return {
+    noArgFacets: [
+      "AccountHandlerFacet",
+      "SellerHandlerFacet",
+      "BuyerHandlerFacet",
+      "DisputeResolverHandlerFacet",
+      "AgentHandlerFacet",
+      "BundleHandlerFacet",
+      "DisputeHandlerFacet",
+      "ExchangeHandlerFacet",
+      "FundsHandlerFacet",
+      "GroupHandlerFacet",
+      "OfferHandlerFacet",
+      "OrchestrationHandlerFacet",
+      "TwinHandlerFacet",
+      "PauseHandlerFacet",
+      "MetaTransactionsHandlerFacet",
+    ],
+    argFacets: {},
+  };
+}
+
+async function getV2_2_0DeployConfig() {
+  const facets = {
+    AccountHandlerFacet: { init: [] },
+    SellerHandlerFacet: { init: [] },
+    BuyerHandlerFacet: { init: [] },
+    DisputeResolverHandlerFacet: { init: [] },
+    AgentHandlerFacet: { init: [] },
+    BundleHandlerFacet: { init: [] },
+    DisputeHandlerFacet: { init: [] },
+    FundsHandlerFacet: { init: [] },
+    GroupHandlerFacet: { init: [] },
+    OfferHandlerFacet: { init: [] },
+    OrchestrationHandlerFacet1: { init: [] },
+    OrchestrationHandlerFacet2: { init: [] },
+    TwinHandlerFacet: { init: [] },
+    PauseHandlerFacet: { init: [] },
+    ProtocolInitializationHandlerFacet: { init: [] },
+    ConfigHandlerFacet: { init: getConfigHandlerInitArgs(), constructorArgs: [] },
+    ExchangeHandlerFacet: { init: [], constructorArgs: [protocolConfig.EXCHANGE_ID_2_2_0[network]] },
+  };
+
+  const metaTransactionArgs = await getMetaTransactionsHandlerFacetInitArgs(
+    Object.keys(facets).concat(["MetaTransactionsHandlerFacet"])
+  );
+
+  facets["MetaTransactionsHandlerFacet"] = { init: [metaTransactionArgs] };
+  return facets;
+}
+
 async function getFacets() {
+  const v2_0_0 = getV2_0_0DeployConfig();
+  const v2_2_0 = await getV2_2_0DeployConfig();
   const facets = {
     deploy: {
-      "v2.0.0": {
-        noArgFacets: [
-          "AccountHandlerFacet",
-          "SellerHandlerFacet",
-          "BuyerHandlerFacet",
-          "DisputeResolverHandlerFacet",
-          "AgentHandlerFacet",
-          "BundleHandlerFacet",
-          "DisputeHandlerFacet",
-          "ExchangeHandlerFacet",
-          "FundsHandlerFacet",
-          "GroupHandlerFacet",
-          "OfferHandlerFacet",
-          "OrchestrationHandlerFacet",
-          "TwinHandlerFacet",
-          "PauseHandlerFacet",
-          "MetaTransactionsHandlerFacet",
-        ],
-        argFacets: {},
-      },
+      "v2.0.0": v2_0_0,
+      "v2.1.0": v2_0_0, // same as v2.0.0
+      "v2.2.0": v2_2_0,
+      "v2.2.1": v2_2_0, // same as v2.2.0
     },
     upgrade: {
       "v2.1.0": {
@@ -144,14 +191,36 @@ async function getFacets() {
         },
         initializationData: "0x0000000000000000000000000000000000000000000000000000000000002710", // input for initV2_2_0, representing maxPremintedVoucher (0x2710=10000)
       },
+      // POST 2.2.0 upgrade configs are part of respective migration script
     },
   };
-
-  // Versions that have the same deploy config
-  facets.deploy["v2.1.0"] = facets.deploy["v2.0.0"];
-  facets.upgrade["latest"] = facets.upgrade["v2.2.0"];
 
   return facets;
 }
 
+const tagsByVersion = {
+  "2.1.0": {
+    oldVersion: "v2.0.0",
+    newVersion: "v2.1.0",
+    deployScript: "v2.1.0-scripts",
+    upgradeScript: "v2.1.0-scripts",
+  },
+  "2.2.0": {
+    oldVersion: "v2.1.0",
+    newVersion: "v2.2.0",
+    deployScript: "v2.1.0-scripts",
+  },
+  "2.2.1": {
+    oldVersion: "v2.2.0",
+    newVersion: "v2.2.1",
+  },
+  "2.3.0": {
+    oldVersion: "v2.2.1",
+    newVersion: "v2.3.0",
+    updateDomain: ["Condition"],
+  },
+};
+
 exports.getFacets = getFacets;
+exports.tagsByVersion = tagsByVersion;
+exports.getV2_2_0DeployConfig = getV2_2_0DeployConfig;

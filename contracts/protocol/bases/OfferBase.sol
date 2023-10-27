@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import { IBosonOfferEvents } from "../../interfaces/events/IBosonOfferEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
@@ -27,7 +27,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Voucher redeemable period is fixed, but it ends before it starts
      * - Voucher redeemable period is fixed, but it ends before offer expires
      * - Dispute period is less than minimum dispute period
-     * - Resolution period is set to zero or above the maximum resolution period
+     * - Resolution period is not between the minimum and the maximum resolution period
      * - Voided is set to true
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -90,7 +90,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Voucher redeemable period is fixed, but it ends before it starts
      * - Voucher redeemable period is fixed, but it ends before offer expires
      * - Dispute period is less than minimum dispute period
-     * - Resolution period is set to zero or above the maximum resolution period
+     * - Resolution period is not between the minimum and the maximum resolution period
      * - Voided is set to true
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
@@ -140,9 +140,10 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // dispute period must be greater than or equal to the minimum dispute period
         require(_offerDurations.disputePeriod >= limits.minDisputePeriod, INVALID_DISPUTE_PERIOD);
 
-        // dispute duration must be greater than zero
+        // resolution period must be between the minimum and maximum resolution periods
         require(
-            _offerDurations.resolutionPeriod > 0 && _offerDurations.resolutionPeriod <= limits.maxResolutionPeriod,
+            _offerDurations.resolutionPeriod >= limits.minResolutionPeriod &&
+                _offerDurations.resolutionPeriod <= limits.maxResolutionPeriod,
             INVALID_RESOLUTION_PERIOD
         );
 
@@ -152,17 +153,11 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // quantity must be greater than zero
         require(_offer.quantityAvailable > 0, INVALID_QUANTITY_AVAILABLE);
 
-        // Cache protocol lookups for reference
-        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-
-        // Get memory location for dispute resolution terms
         DisputeResolutionTerms memory disputeResolutionTerms;
-
-        // Get storage location for offer fees
         OfferFees storage offerFees = fetchOfferFees(_offer.id);
-
-        // Operate in a block to avoid "stack too deep" error
         {
+            // Cache protocol lookups for reference
+            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
             ProtocolLib.ProtocolFees storage fees = protocolFees();
 
             // Specified resolver must be registered and active, except for absolute zero offers with unspecified dispute resolver.
@@ -170,14 +165,12 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             // In this case, there is no need to check the validity of the dispute resolver. However, if one (or more) of {price, sellerDeposit, _disputeResolverId}
             // is different from 0, it must be checked that dispute resolver exists, supports the exchange token and seller is allowed to choose them.
             if (_offer.price != 0 || _offer.sellerDeposit != 0 || _disputeResolverId != 0) {
-                DisputeResolver storage disputeResolver;
-                DisputeResolverFee[] storage disputeResolverFees;
-                // Operate in a block to avoid "stack too deep" error
-                {
-                    bool exists;
-                    (exists, disputeResolver, disputeResolverFees) = fetchDisputeResolver(_disputeResolverId);
-                    require(exists && disputeResolver.active, INVALID_DISPUTE_RESOLVER);
-                }
+                (
+                    bool exists,
+                    DisputeResolver storage disputeResolver,
+                    DisputeResolverFee[] storage disputeResolverFees
+                ) = fetchDisputeResolver(_disputeResolverId);
+                require(exists && disputeResolver.active, INVALID_DISPUTE_RESOLVER);
 
                 // Operate in a block to avoid "stack too deep" error
                 {
@@ -191,26 +184,32 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                         );
                     }
 
-                    uint256 feeAmount;
+                    // get the index of DisputeResolverFee and make sure DR supports the exchangeToken
                     {
-                        // get the index of DisputeResolverFee and make sure DR supports the exchangeToken
                         uint256 feeIndex = lookups.disputeResolverFeeTokenIndex[_disputeResolverId][
                             _offer.exchangeToken
                         ];
                         require(feeIndex > 0, DR_UNSUPPORTED_FEE);
 
-                        feeAmount = disputeResolverFees[feeIndex - 1].feeAmount;
+                        uint256 feeAmount = disputeResolverFees[feeIndex - 1].feeAmount;
+
+                        // store DR terms
+                        disputeResolutionTerms.disputeResolverId = _disputeResolverId;
+                        disputeResolutionTerms.escalationResponsePeriod = disputeResolver.escalationResponsePeriod;
+                        disputeResolutionTerms.feeAmount = feeAmount;
+                        disputeResolutionTerms.buyerEscalationDeposit =
+                            (feeAmount * fees.buyerEscalationDepositPercentage) /
+                            10000;
                     }
-
-                    // store DR terms
-                    disputeResolutionTerms.disputeResolverId = _disputeResolverId;
-                    disputeResolutionTerms.escalationResponsePeriod = disputeResolver.escalationResponsePeriod;
-                    disputeResolutionTerms.feeAmount = feeAmount;
-                    disputeResolutionTerms.buyerEscalationDeposit =
-                        (feeAmount * fees.buyerEscalationDepositPercentage) /
-                        10000;
-
                     protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
+                }
+
+                // Collection must exist. Collections with index 0 exist by default.
+                if (_offer.collectionIndex > 0) {
+                    require(
+                        lookups.additionalCollections[_offer.sellerId].length >= _offer.collectionIndex,
+                        NO_SUCH_COLLECTION
+                    );
                 }
             }
 
@@ -245,70 +244,67 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                 offerFees.protocolFee = protocolFee;
                 offerFees.agentFee = agentFeeAmount;
             }
-        }
 
-        // Store the agent id for the offer
-        lookups.agentIdByOffer[_offer.id] = _agentId;
+            // Store the agent id for the offer
+            lookups.agentIdByOffer[_offer.id] = _agentId;
 
-        // Make sure that supplied royalties ok
-        // Operate in a block to avoid "stack too deep" error
-        {
-            require(_offer.royaltyInfo.recipients.length == _offer.royaltyInfo.bps.length, ARRAY_LENGTH_MISMATCH);
+            // Make sure that supplied royalties ok
+            // Operate in a block to avoid "stack too deep" error
+            {
+                require(_offer.royaltyInfo.recipients.length == _offer.royaltyInfo.bps.length, ARRAY_LENGTH_MISMATCH);
 
-            RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_offer.sellerId];
+                RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_offer.sellerId];
 
-            uint256 totalRoyalties;
-            for (uint256 i = 0; i < _offer.royaltyInfo.recipients.length; i++) {
-                uint256 royaltyRecipientId = lookups.royaltyRecipientIndexBySellerAndRecipient[_offer.sellerId][
-                    _offer.royaltyInfo.recipients[i]
-                ];
-                require(royaltyRecipientId != 0, INVALID_ROYALTY_RECIPIENT);
+                uint256 totalRoyalties;
+                for (uint256 i = 0; i < _offer.royaltyInfo.recipients.length; i++) {
+                    uint256 royaltyRecipientId = lookups.royaltyRecipientIndexBySellerAndRecipient[_offer.sellerId][
+                        _offer.royaltyInfo.recipients[i]
+                    ];
+                    require(royaltyRecipientId != 0, INVALID_ROYALTY_RECIPIENT);
 
-                require(
-                    _offer.royaltyInfo.bps[i] >= royaltyRecipients[royaltyRecipientId - 1].minRoyaltyPercentage,
-                    INVALID_ROYALTY_PERCENTAGE
-                );
+                    require(
+                        _offer.royaltyInfo.bps[i] >= royaltyRecipients[royaltyRecipientId - 1].minRoyaltyPercentage,
+                        INVALID_ROYALTY_PERCENTAGE
+                    );
 
-                totalRoyalties = _offer.royaltyInfo.bps[i];
+                    totalRoyalties = _offer.royaltyInfo.bps[i];
+                }
+
+                require(totalRoyalties <= limits.maxRoyaltyPecentage, INVALID_ROYALTY_PERCENTAGE);
             }
-
-            require(totalRoyalties <= limits.maxRoyaltyPecentage, INVALID_ROYALTY_PERCENTAGE);
         }
+        // Get storage location for offer
+        (, Offer storage offer) = fetchOffer(_offer.id);
 
-        // Operate in a block to avoid "stack too deep" error
-        {
-            // Get storage location for offer
-            (, Offer storage offer) = fetchOffer(_offer.id);
+        // Set offer props individually since memory structs can't be copied to storage
+        offer.id = _offer.id;
+        offer.sellerId = _offer.sellerId;
+        offer.price = _offer.price;
+        offer.sellerDeposit = _offer.sellerDeposit;
+        offer.buyerCancelPenalty = _offer.buyerCancelPenalty;
+        offer.quantityAvailable = _offer.quantityAvailable;
+        offer.exchangeToken = _offer.exchangeToken;
+        offer.metadataUri = _offer.metadataUri;
+        offer.metadataHash = _offer.metadataHash;
+        offer.collectionIndex = _offer.collectionIndex;
+        offer.royaltyInfo = _offer.royaltyInfo;
 
-            // Set offer props individually since memory structs can't be copied to storage
-            offer.id = _offer.id;
-            offer.sellerId = _offer.sellerId;
-            offer.price = _offer.price;
-            offer.sellerDeposit = _offer.sellerDeposit;
-            offer.buyerCancelPenalty = _offer.buyerCancelPenalty;
-            offer.quantityAvailable = _offer.quantityAvailable;
-            offer.exchangeToken = _offer.exchangeToken;
-            offer.metadataUri = _offer.metadataUri;
-            offer.metadataHash = _offer.metadataHash;
-            offer.royaltyInfo = _offer.royaltyInfo;
+        // Get storage location for offer dates
+        OfferDates storage offerDates = fetchOfferDates(_offer.id);
 
-            // Get storage location for offer dates
-            OfferDates storage offerDates = fetchOfferDates(_offer.id);
+        // Set offer dates props individually since calldata structs can't be copied to storage
+        offerDates.validFrom = _offerDates.validFrom;
+        offerDates.validUntil = _offerDates.validUntil;
+        offerDates.voucherRedeemableFrom = _offerDates.voucherRedeemableFrom;
+        offerDates.voucherRedeemableUntil = _offerDates.voucherRedeemableUntil;
 
-            // Set offer dates props individually since calldata structs can't be copied to storage
-            offerDates.validFrom = _offerDates.validFrom;
-            offerDates.validUntil = _offerDates.validUntil;
-            offerDates.voucherRedeemableFrom = _offerDates.voucherRedeemableFrom;
-            offerDates.voucherRedeemableUntil = _offerDates.voucherRedeemableUntil;
+        // Get storage location for offer durations
+        OfferDurations storage offerDurations = fetchOfferDurations(_offer.id);
 
-            // Get storage location for offer durations
-            OfferDurations storage offerDurations = fetchOfferDurations(_offer.id);
-
-            // Set offer durations props individually since calldata structs can't be copied to storage
-            offerDurations.disputePeriod = _offerDurations.disputePeriod;
-            offerDurations.voucherValid = _offerDurations.voucherValid;
-            offerDurations.resolutionPeriod = _offerDurations.resolutionPeriod;
-        }
+        // Set offer durations props individually since calldata structs can't be copied to storage
+        offerDurations.disputePeriod = _offerDurations.disputePeriod;
+        offerDurations.voucherValid = _offerDurations.voucherValid;
+        offerDurations.resolutionPeriod = _offerDurations.resolutionPeriod;
 
         // Notify watchers of state change
         emit OfferCreated(
@@ -349,7 +345,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         address _to
     ) internal offersNotPaused exchangesNotPaused {
         // Get offer, make sure the caller is the assistant
-        Offer storage offer = getValidOffer(_offerId);
+        Offer storage offer = getValidOfferWithSellerCheck(_offerId);
 
         // Prevent reservation of an empty range
         require(_length > 0, INVALID_RANGE_LENGTH);
@@ -358,21 +354,20 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         require(offer.quantityAvailable >= _length, INVALID_RANGE_LENGTH);
 
         // Prevent reservation of too large range, since it affects exchangeId
-        require(_length < (1 << 64), INVALID_RANGE_LENGTH);
+        require(_length <= type(uint64).max, INVALID_RANGE_LENGTH);
 
         // Get starting token id
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
         uint256 _startId = pc.nextExchangeId;
 
-        IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
+        IBosonVoucher bosonVoucher = IBosonVoucher(
+            getCloneAddress(protocolLookups(), offer.sellerId, offer.collectionIndex)
+        );
 
         address sender = msgSender();
 
         // _to must be the contract address or the contract owner
         require(_to == address(bosonVoucher) || _to == sender, INVALID_TO_ADDRESS);
-
-        // Call reserveRange on voucher
-        bosonVoucher.reserveRange(_offerId, _startId, _length, _to);
 
         // increase exchangeIds
         pc.nextExchangeId = _startId + _length;
@@ -381,6 +376,9 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         if (offer.quantityAvailable != type(uint256).max) {
             offer.quantityAvailable -= _length;
         }
+
+        // Call reserveRange on voucher
+        bosonVoucher.reserveRange(_offerId, _startId, _length, _to);
 
         // Notify external observers
         emit RangeReserved(_offerId, offer.sellerId, _startId, _startId + _length - 1, _to, sender);

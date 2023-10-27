@@ -1,5 +1,6 @@
 const hre = require("hardhat");
 const shell = require("shelljs");
+const { getContractFactory } = hre.ethers;
 const { getInterfaceIds, interfaceImplementers } = require("../config/supported-interfaces.js");
 
 const prefix = "contracts/";
@@ -19,15 +20,26 @@ Detects is contract changed between two versions
 @param {string} referenceCommit - commit/tag/branch to compare to
 @param {string} targetCommit - commit/tag/branch to compare. If not provided, it will compare to current branch.
 */
-async function detectChangedContract(referenceCommit, targetCommit) {
+async function detectChangedContract(referenceCommit, targetCommit = "HEAD") {
   // By default compiler adds metadata ipfs hash to the end of bytecode.
   // Even if contract is not changed, the metadata hash can be different, which makes the bytecode different and hard to detect if change has happened.
   // To make comparison clean, we remove the metadata hash from the bytecode.
   for (const compiler of hre.config.solidity.compilers) {
-    // This setting is solidity v0.8.9 style
-    // versions >= 0.8.18 use compiler.settings["metadata"] = {appendCBOR: false}
-    compiler.settings["metadata"] = { bytecodeHash: "none" };
+    compiler.settings["metadata"] = { bytecodeHash: "none", appendCBOR: false };
   }
+
+  // Protocol versions < 2.3.0 use solidity 0.8.9. To make bytecode comparison clean, we need to replace the pragma
+  hre.config.preprocess = {
+    eachLine: () => ({
+      transform: (line) => {
+        if (line.match(/^\s*pragma /i)) {
+          //
+          line = line.replace(/solidity\s+0\.8\.9/i, "solidity 0.8.21");
+        }
+        return line;
+      },
+    }),
+  };
 
   // Check if reference commit is provided
   if (!referenceCommit) {
@@ -39,6 +51,14 @@ async function detectChangedContract(referenceCommit, targetCommit) {
   console.log(`Checking out version ${referenceCommit}`);
   shell.exec(`rm -rf contracts`);
   shell.exec(`git checkout ${referenceCommit} contracts`);
+
+  // Temporary target install reference version dependencies
+  // - Protocol versions < 2.3.0 use different OZ contracts
+  const isOldOZVersion = ["v2.0", "v2.1", "v2.2"].some((v) => referenceCommit.startsWith(v));
+  if (isOldOZVersion) {
+    // Temporary install old OZ contracts
+    shell.exec("npm i @openzeppelin/contracts-upgradeable@4.7.1");
+  }
 
   // Compile old version
   await hre.run("clean");
@@ -53,6 +73,11 @@ async function detectChangedContract(referenceCommit, targetCommit) {
   shell.exec(`rm -rf contracts`);
   console.log(`Checking out version ${targetCommit}`);
   shell.exec(`git checkout ${targetCommit} contracts`);
+
+  // If reference commit is old version, we need to revert to target version dependencies
+  if (isOldOZVersion) {
+    installDependencies(targetCommit);
+  }
 
   // Compile new version
   await hre.run("clean");
@@ -111,6 +136,11 @@ async function detectChangedContract(referenceCommit, targetCommit) {
   shell.exec(`git reset HEAD contracts`);
 }
 
+function installDependencies(commit) {
+  shell.exec(`git checkout ${commit} package.json package-lock.json`);
+  shell.exec("npm i");
+}
+
 async function getBytecodes() {
   // Get build info
   const contractNames = await hre.artifacts.getAllFullyQualifiedNames();
@@ -124,7 +154,7 @@ async function getBytecodes() {
 
     // Abstract contracts do not have bytecode, and factory creation fails. Skip them.
     try {
-      const contract = await hre.ethers.getContractFactory(name);
+      const contract = await getContractFactory(name);
 
       // Store the bytecode
       byteCodes[name] = contract.bytecode;

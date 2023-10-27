@@ -20,13 +20,14 @@ module.exports = {
     maxOffersPerBatch: "12",
     maxTokensPerWithdrawal: "125",
     maxFeesPerDisputeResolver: "75",
-    maxEscalationResponsePeriod: ninetyDays,
+    maxEscalationResponsePeriod: ninetyDays.toString(),
     maxDisputesPerBatch: "75",
     maxAllowedSellers: "140",
     maxTotalOfferFeePercentage: "10000", // 100%
     maxRoyaltyPecentage: "10000", //100%
-    maxResolutionPeriod: ninetyDays,
-    minDisputePeriod: oneWeek,
+    minResolutionPeriod: oneWeek.toString(),
+    maxResolutionPeriod: ninetyDays.toString(),
+    minDisputePeriod: oneWeek.toString(),
     maxPremintedVouchers: "10000",
   },
 
@@ -38,6 +39,7 @@ module.exports = {
     test: "0x520ce45DF6d14334257BFdD360a5C22B06E309c7", //dummy
     mumbai: "0x1f5431E8679630790E8EbA3a9b41d1BB4d41aeD0",
     polygon: "0x9b3b0703d392321ad24338ff1f846650437a43c9",
+    goerli: "0xE3c811AbbD19FBb9Fe324EB0F30f32d1F6D20C95",
   },
 
   // Treasury contract address
@@ -48,6 +50,7 @@ module.exports = {
     test: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
     mumbai: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
     polygon: "0x11D0d293751E18FCC56c70E1FB264CeB9f7C3fE7",
+    goerli: "0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8",
   },
 
   // Boson voucher beacon contract address
@@ -57,7 +60,8 @@ module.exports = {
     localhost: "0x494f5238b40119e707582Ce87E0ca3627dB23Bcb", //dummy
     test: "0x494f5238b40119e707582Ce87E0ca3627dB23Bcb", //dummy
     mumbai: "0x494f5238b40119e707582Ce87E0ca3627dB23Bcb", //dummy
-    polygon: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
+    polygon: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy,
+    goerli: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
   },
 
   // Beacon proxy contract address
@@ -68,12 +72,15 @@ module.exports = {
     test: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
     mumbai: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
     polygon: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
+    goerli: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
   },
 
   EXCHANGE_ID_2_2_0: {
     hardhat: 1,
-    mumbai: 1, // TODO: adjust for actual deployment
-    polygon: 2, // TODO: adjust for actual deployment
+    mumbai: 1, // test: 1, staging: 1
+    polygon: 413,
     localhost: 1,
+    goerli: 1,
+    mainnet: 1,
   },
 };

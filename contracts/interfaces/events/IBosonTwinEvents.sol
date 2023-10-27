@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 
@@ -34,4 +34,5 @@ interface IBosonTwinEvents {
         uint256 amount,
         address executedBy
     );
+    event TwinTransferSkipped(uint256 indexed exchangeId, uint256 twinCount, address indexed executedBy);
 }

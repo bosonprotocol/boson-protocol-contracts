@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 
@@ -62,6 +62,8 @@ library ProtocolLib {
         uint16 maxRoyaltyPecentage;
         // limit the max number of vouchers that can be preminted in a single transaction
         uint256 maxPremintedVouchers;
+        // lower limit for resolution period
+        uint256 minResolutionPeriod;
     }
 
     // Protocol fees storage
@@ -133,6 +135,7 @@ library ProtocolLib {
         // seller admin address => sellerId
         mapping(address => uint256) sellerIdByAdmin;
         // seller clerk address => sellerId
+        // @deprecated sellerIdByClerk is no longer used. Keeping it for backwards compatibility.
         mapping(address => uint256) sellerIdByClerk;
         // buyer wallet address => buyerId
         mapping(address => uint256) buyerIdByWallet;
@@ -141,6 +144,7 @@ library ProtocolLib {
         // dispute resolver admin address => disputeResolverId
         mapping(address => uint256) disputeResolverIdByAdmin;
         // dispute resolver clerk address => disputeResolverId
+        // @deprecated disputeResolverIdByClerk is no longer used. Keeping it for backwards compatibility.
         mapping(address => uint256) disputeResolverIdByClerk;
         // dispute resolver id to fee token address => index of the token address
         mapping(uint256 => mapping(address => uint256)) disputeResolverFeeTokenIndex;
@@ -165,6 +169,7 @@ library ProtocolLib {
         // seller id => token address (only ERC721) => start and end of token ids range
         mapping(uint256 => mapping(address => BosonTypes.TokenRange[])) twinRangesBySeller;
         // seller id => token address (only ERC721) => twin ids
+        // @deprecated twinIdsByTokenAddressAndBySeller is no longer used. Keeping it for backwards compatibility.
         mapping(uint256 => mapping(address => uint256[])) twinIdsByTokenAddressAndBySeller;
         // exchange id => BosonTypes.TwinReceipt
         mapping(uint256 => BosonTypes.TwinReceipt[]) twinReceiptsByExchange;
@@ -182,6 +187,16 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.AuthToken) pendingAuthTokenUpdatesBySeller;
         // dispute resolver id => DisputeResolver
         mapping(uint256 => BosonTypes.DisputeResolver) pendingAddressUpdatesByDisputeResolver;
+        // twin id => range id
+        mapping(uint256 => uint256) rangeIdByTwin;
+        // tokenId => groupId =>  commit count (count how many times a token has been used as gate for this group)
+        mapping(uint256 => mapping(uint256 => uint256)) conditionalCommitsByTokenId;
+        // seller id => collections
+        mapping(uint256 => BosonTypes.Collection[]) additionalCollections;
+        // seller id => seller salt used to create collections
+        mapping(uint256 => bytes32) sellerSalt;
+        // seller salt => is used
+        mapping(bytes32 => bool) isUsedSellerSalt;
         // seller id => royalty recipients
         mapping(uint256 => BosonTypes.RoyaltyRecipient[]) royaltyRecipientsBySeller;
         // seller id => royalty recipient => index of royalty recipient in royaltyRecipientsBySeller

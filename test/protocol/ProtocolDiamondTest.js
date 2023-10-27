@@ -1,6 +1,6 @@
 const { assert, expect } = require("chai");
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { getSigners, getContractAt, getContractFactory, Interface, ZeroAddress } = hre.ethers;
 
 const Role = require("../../scripts/domain/Role");
 const Facet = require("../../scripts/domain/Facet");
@@ -57,7 +57,7 @@ describe("ProtocolDiamond", async function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, admin, upgrader, rando] = await ethers.getSigners();
+    [deployer, admin, upgrader, rando] = await getSigners();
 
     // Deploy the Diamond
     [protocolDiamond, diamondLoupe, diamondCut, erc165, accessController] = await deployProtocolDiamond(
@@ -65,23 +65,23 @@ describe("ProtocolDiamond", async function () {
     );
 
     // Cast Diamond to DiamondLoupeFacet
-    loupeFacetViaDiamond = await ethers.getContractAt("DiamondLoupeFacet", protocolDiamond.address);
+    loupeFacetViaDiamond = await getContractAt("DiamondLoupeFacet", await protocolDiamond.getAddress());
 
     // Cast Diamond to DiamondCutFacet
-    cutFacetViaDiamond = await ethers.getContractAt("DiamondCutFacet", protocolDiamond.address);
+    cutFacetViaDiamond = await getContractAt("DiamondCutFacet", await protocolDiamond.getAddress());
 
     // Cast Diamond to ERC165Facet
-    erc165ViaDiamond = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
+    erc165ViaDiamond = await getContractAt("ERC165Facet", await protocolDiamond.getAddress());
 
     // Get the facet addresses
     addresses = Object.assign([], await loupeFacetViaDiamond.facetAddresses());
 
     // Deployer grants ADMIN role to admin address and renounces admin
-    await accessController.connect(deployer).grantRole(Role.ADMIN, admin.address);
-    await accessController.connect(deployer).renounceRole(Role.ADMIN, deployer.address);
+    await accessController.connect(deployer).grantRole(Role.ADMIN, await admin.getAddress());
+    await accessController.connect(deployer).renounceRole(Role.ADMIN, await deployer.getAddress());
 
     // Grant UPGRADER role to upgrader account
-    await accessController.connect(admin).grantRole(Role.UPGRADER, upgrader.address);
+    await accessController.connect(admin).grantRole(Role.UPGRADER, await upgrader.getAddress());
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -146,9 +146,9 @@ describe("ProtocolDiamond", async function () {
       it("should revert if more than 255 functions are added", async () => {
         // add more than 256 facets
         // Deploy TestFacet256
-        const TestFacet256 = await ethers.getContractFactory("TestFacet256");
+        const TestFacet256 = await getContractFactory("TestFacet256");
         const testFacet256 = await TestFacet256.deploy();
-        await testFacet256.deployed();
+        await testFacet256.waitForDeployment();
 
         // Get the TestFacet256 function selectors from the abi
         selectors = getSelectors(testFacet256);
@@ -156,7 +156,7 @@ describe("ProtocolDiamond", async function () {
         // Define the facet cut
         facetCuts = [
           {
-            facetAddress: testFacet256.address,
+            facetAddress: await testFacet256.getAddress(),
             action: FacetCutAction.Add,
             functionSelectors: selectors,
           },
@@ -165,7 +165,7 @@ describe("ProtocolDiamond", async function () {
         // Send the DiamondCut transaction
         tx = await cutFacetViaDiamond
           .connect(upgrader)
-          .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit: "10000000" });
+          .diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit: "10000000" });
 
         // this should revert
         await expect(loupeFacetViaDiamond.facets()).to.be.revertedWith(RevertReasons.TOO_MANY_FUNCTIONS);
@@ -180,20 +180,20 @@ describe("ProtocolDiamond", async function () {
 
       it("facet addresses should be correct and in order", async () => {
         // DiamondLoupeFacet was first cut
-        assert.equal(addresses[0], diamondLoupe.address);
+        assert.equal(addresses[0], await diamondLoupe.getAddress());
 
         // DiamondCutFacet was second cut
-        assert.equal(addresses[1], diamondCut.address);
+        assert.equal(addresses[1], await diamondCut.getAddress());
 
         // ERC165Facet was last cut
-        assert.equal(addresses[2], erc165.address);
+        assert.equal(addresses[2], await erc165.getAddress());
       });
 
       it("Should return correct addresses even when selectorCount is greater than 8", async () => {
         // Deploy Test1Facet to have more selectors
-        Test1Facet = await ethers.getContractFactory("Test1Facet");
+        Test1Facet = await getContractFactory("Test1Facet");
         test1Facet = await Test1Facet.deploy();
-        await test1Facet.deployed();
+        await test1Facet.waitForDeployment();
 
         // Get the Test1Facet function selectors from the abi
         selectors = getSelectors(test1Facet);
@@ -201,23 +201,21 @@ describe("ProtocolDiamond", async function () {
         // Define the facet cut
         facetCuts = [
           {
-            facetAddress: test1Facet.address,
+            facetAddress: await test1Facet.getAddress(),
             action: FacetCutAction.Add,
             functionSelectors: selectors,
           },
         ];
 
         // Send the DiamondCut transaction
-        await cutFacetViaDiamond
-          .connect(upgrader)
-          .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit });
+        await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit });
 
         const addresses = await loupeFacetViaDiamond.facetAddresses();
 
-        assert.equal(addresses[0], diamondLoupe.address);
-        assert.equal(addresses[1], diamondCut.address);
-        assert.equal(addresses[2], erc165.address);
-        assert.equal(addresses[3], test1Facet.address);
+        assert.equal(addresses[0], await diamondLoupe.getAddress());
+        assert.equal(addresses[1], await diamondCut.getAddress());
+        assert.equal(addresses[2], await erc165.getAddress());
+        assert.equal(addresses[3], await test1Facet.getAddress());
 
         assert.equal(addresses.length, 4);
       });
@@ -225,17 +223,16 @@ describe("ProtocolDiamond", async function () {
 
     context("👉 facetFunctionSelectors() ", async () => {
       it("should return the correct function selectors for the DiamondCutFacet", async () => {
-        // Test cutFacetViaDiamond selectors
         selectors = getSelectors(cutFacetViaDiamond);
-        result = await loupeFacetViaDiamond.facetFunctionSelectors(diamondCut.address);
-        assert.sameMembers(result, selectors);
+        result = await loupeFacetViaDiamond.facetFunctionSelectors(await diamondCut.getAddress());
+        assert.sameMembers([...result], selectors);
       });
 
       it("should return the correct function selectors for the DiamondLoupeFacet", async () => {
         // Test DiamondLoupeFacet selectors
         selectors = getSelectors(loupeFacetViaDiamond);
-        result = await loupeFacetViaDiamond.facetFunctionSelectors(diamondLoupe.address);
-        assert.sameMembers(result, selectors);
+        result = await loupeFacetViaDiamond.facetFunctionSelectors(await diamondLoupe.getAddress());
+        assert.sameMembers([...result], selectors);
       });
     });
 
@@ -261,32 +258,32 @@ describe("ProtocolDiamond", async function () {
   context("📋 DiamondCutFacet", async function () {
     beforeEach(async function () {
       // Deploy Test1Facet
-      Test1Facet = await ethers.getContractFactory("Test1Facet");
+      Test1Facet = await getContractFactory("Test1Facet");
       test1Facet = await Test1Facet.deploy();
-      await test1Facet.deployed();
+      await test1Facet.waitForDeployment();
 
       // Deploy Test2Facet
-      Test2Facet = await ethers.getContractFactory("Test2Facet");
+      Test2Facet = await getContractFactory("Test2Facet");
       test2Facet = await Test2Facet.deploy();
-      await test2Facet.deployed();
+      await test2Facet.waitForDeployment();
 
       // Deploy Test3Facet
-      Test3Facet = await ethers.getContractFactory("Test3Facet");
+      Test3Facet = await getContractFactory("Test3Facet");
       test3Facet = await Test3Facet.deploy();
-      await test3Facet.deployed();
+      await test3Facet.waitForDeployment();
 
       // N.B. The facets are not yet connected to the diamond in any way,
       // but following handles prepare us for accessing the diamond via
       // the ABI of these facets, once their functions have been added.
 
       // Cast Diamond to Test1Facet
-      test1ViaDiamond = await ethers.getContractAt("Test1Facet", protocolDiamond.address);
+      test1ViaDiamond = await getContractAt("Test1Facet", await protocolDiamond.getAddress());
 
       // Cast Diamond to Test2Facet
-      test2ViaDiamond = await ethers.getContractAt("Test2Facet", protocolDiamond.address);
+      test2ViaDiamond = await getContractAt("Test2Facet", await protocolDiamond.getAddress());
 
       // Cast Diamond to Test3Facet
-      test3ViaDiamond = await ethers.getContractAt("Test3Facet", protocolDiamond.address);
+      test3ViaDiamond = await getContractAt("Test3Facet", await protocolDiamond.getAddress());
     });
 
     context("👉 diamondCut() - Privileged Access", async function () {
@@ -297,7 +294,7 @@ describe("ProtocolDiamond", async function () {
         // Define the facet cut
         facetCuts = [
           {
-            facetAddress: test1Facet.address,
+            facetAddress: await test1Facet.getAddress(),
             action: FacetCutAction.Add,
             functionSelectors: selectors,
           },
@@ -305,13 +302,11 @@ describe("ProtocolDiamond", async function () {
 
         // non-UPGRADER attempt
         await expect(
-          cutFacetViaDiamond.connect(admin).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
+          cutFacetViaDiamond.connect(admin).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit })
         ).to.be.revertedWith(RevertReasons.ONLY_UPGRADER);
 
         // UPGRADER attempt
-        tx = await cutFacetViaDiamond
-          .connect(upgrader)
-          .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit });
+        tx = await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit });
 
         // Wait for transaction to confirm
         receipt = await tx.wait();
@@ -329,16 +324,14 @@ describe("ProtocolDiamond", async function () {
         // Define the facet cut
         facetCuts = [
           {
-            facetAddress: test1Facet.address,
+            facetAddress: await test1Facet.getAddress(),
             action: FacetCutAction.Add,
             functionSelectors: selectors,
           },
         ];
 
         // Send the DiamondCut transaction
-        tx = await cutFacetViaDiamond
-          .connect(upgrader)
-          .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit });
+        tx = await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit });
 
         // Wait for transaction to confirm
         receipt = await tx.wait();
@@ -347,8 +340,8 @@ describe("ProtocolDiamond", async function () {
         assert.equal(receipt.status, 1, `Diamond upgrade failed: ${tx.hash}`);
 
         // Make sure function selectors for the facet are correct
-        result = await loupeFacetViaDiamond.facetFunctionSelectors(test1Facet.address);
-        assert.sameMembers(result, selectors);
+        result = await loupeFacetViaDiamond.facetFunctionSelectors(await test1Facet.getAddress());
+        assert.sameMembers([...result], selectors);
       });
 
       it("should add functions from Test2Facet", async () => {
@@ -358,16 +351,14 @@ describe("ProtocolDiamond", async function () {
         // Define the facet cut
         facetCuts = [
           {
-            facetAddress: test2Facet.address,
+            facetAddress: await test2Facet.getAddress(),
             action: FacetCutAction.Add,
             functionSelectors: selectors,
           },
         ];
 
         // Send the DiamondCut transaction
-        tx = await cutFacetViaDiamond
-          .connect(upgrader)
-          .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit });
+        tx = await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit });
 
         // Wait for transaction to confirm
         receipt = await tx.wait();
@@ -376,43 +367,41 @@ describe("ProtocolDiamond", async function () {
         assert.equal(receipt.status, 1, `Diamond upgrade failed: ${tx.hash}`);
 
         // Make sure function selectors for the facet are correct
-        result = await loupeFacetViaDiamond.facetFunctionSelectors(test2Facet.address);
-        assert.sameMembers(result, selectors);
+        result = await loupeFacetViaDiamond.facetFunctionSelectors(await test2Facet.getAddress());
+        assert.sameMembers([...result], selectors);
       });
 
       it("should allow functions from different facets to be added in one transaction", async () => {
         // Get even numbered selectors from Test1Facet + odd from Test2Facet
         selectors = [
-          getSelectors(test1ViaDiamond).filter((s, i) => i % 2),
-          getSelectors(test2ViaDiamond).filter((s, i) => !(i % 2)),
+          getSelectors(test1ViaDiamond).filter((_, i) => i % 2),
+          getSelectors(test2ViaDiamond).filter((_, i) => !(i % 2)),
         ];
 
         // Define facet cuts
         facetCuts = [
           {
-            facetAddress: test1Facet.address,
+            facetAddress: await test1Facet.getAddress(),
             action: FacetCutAction.Add,
             functionSelectors: selectors[0],
           },
           {
-            facetAddress: test2Facet.address,
+            facetAddress: await test2Facet.getAddress(),
             action: FacetCutAction.Add,
             functionSelectors: selectors[1],
           },
         ];
 
         // Send the DiamondCut transaction
-        tx = await cutFacetViaDiamond
-          .connect(upgrader)
-          .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit });
+        tx = await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit });
 
         // Be certain transaction was successful
         assert.equal(receipt.status, 1, `Diamond upgrade failed: ${tx.hash}`);
 
         // Ensure the currently installed test selectors are what we added
         result = [
-          await loupeFacetViaDiamond.facetFunctionSelectors(test1Facet.address),
-          await loupeFacetViaDiamond.facetFunctionSelectors(test2Facet.address),
+          await loupeFacetViaDiamond.facetFunctionSelectors(await test1Facet.getAddress()),
+          await loupeFacetViaDiamond.facetFunctionSelectors(await test2Facet.getAddress()),
         ];
         assert.sameMembers(result.flat(), selectors.flat());
       });
@@ -421,7 +410,7 @@ describe("ProtocolDiamond", async function () {
         // Define the facet cut
         facetCuts = [
           {
-            facetAddress: ethers.constants.AddressZero,
+            facetAddress: ZeroAddress,
             action: FacetCutAction.Add,
             functionSelectors: [],
           },
@@ -429,7 +418,7 @@ describe("ProtocolDiamond", async function () {
 
         // attempt to add zero selectors
         await expect(
-          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
+          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit })
         ).to.be.revertedWith(RevertReasons.NO_SELECTORS_TO_CUT);
       });
 
@@ -440,20 +429,18 @@ describe("ProtocolDiamond", async function () {
         // Define the facet cut
         facetCuts = [
           {
-            facetAddress: test2Facet.address,
+            facetAddress: await test2Facet.getAddress(),
             action: FacetCutAction.Add,
             functionSelectors: selectors,
           },
         ];
 
         // Send the DiamondCut transaction
-        await cutFacetViaDiamond
-          .connect(upgrader)
-          .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit });
+        await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit });
 
         // attempt to add the same selectors again
         await expect(
-          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
+          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit })
         ).to.be.revertedWith(RevertReasons.FUNCTION_ALREADY_EXISTS);
       });
     });
@@ -463,21 +450,19 @@ describe("ProtocolDiamond", async function () {
         // Define the facet cuts
         facetCuts = [
           {
-            facetAddress: test1Facet.address,
+            facetAddress: await test1Facet.getAddress(),
             action: FacetCutAction.Add,
             functionSelectors: getSelectors(test1Facet),
           },
           {
-            facetAddress: test2Facet.address,
+            facetAddress: await test2Facet.getAddress(),
             action: FacetCutAction.Add,
             functionSelectors: getSelectors(test2Facet),
           },
         ];
 
         // Send the DiamondCut transaction
-        tx = await cutFacetViaDiamond
-          .connect(upgrader)
-          .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit });
+        tx = await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit });
 
         // Wait for transaction to confirm
         receipt = await tx.wait();
@@ -494,16 +479,14 @@ describe("ProtocolDiamond", async function () {
         // Define the facet cuts
         facetCuts = [
           {
-            facetAddress: ethers.constants.AddressZero,
+            facetAddress: ZeroAddress,
             action: FacetCutAction.Remove,
             functionSelectors: selectors,
           },
         ];
 
         // Send the DiamondCut transaction
-        tx = await cutFacetViaDiamond
-          .connect(upgrader)
-          .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit });
+        tx = await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit });
 
         // Wait for transaction to confirm
         receipt = await tx.wait();
@@ -512,7 +495,7 @@ describe("ProtocolDiamond", async function () {
         assert.equal(receipt.status, 1, `Diamond upgrade failed: ${tx.hash}`);
 
         // Verify that the function selectors were removed
-        result = await loupeFacetViaDiamond.facetFunctionSelectors(test1Facet.address);
+        result = await loupeFacetViaDiamond.facetFunctionSelectors(await test1Facet.getAddress());
         assert.sameMembers(result, getSelectors(test1Facet).get(discard));
       });
 
@@ -524,16 +507,14 @@ describe("ProtocolDiamond", async function () {
         // Define the facet cuts
         facetCuts = [
           {
-            facetAddress: ethers.constants.AddressZero,
+            facetAddress: ZeroAddress,
             action: FacetCutAction.Remove,
             functionSelectors: selectors,
           },
         ];
 
         // Send the DiamondCut transaction
-        tx = await cutFacetViaDiamond
-          .connect(upgrader)
-          .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit });
+        tx = await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit });
 
         // Wait for transaction to confirm
         receipt = await tx.wait();
@@ -542,7 +523,7 @@ describe("ProtocolDiamond", async function () {
         assert.equal(receipt.status, 1, `Diamond upgrade failed: ${tx.hash}`);
 
         // Verify that the function selectors were removed
-        result = await loupeFacetViaDiamond.facetFunctionSelectors(test2Facet.address);
+        result = await loupeFacetViaDiamond.facetFunctionSelectors(await test2Facet.getAddress());
         assert.sameMembers(result, getSelectors(test2Facet).get(discard));
       });
 
@@ -564,16 +545,14 @@ describe("ProtocolDiamond", async function () {
         // Define the facet cuts
         facetCuts = [
           {
-            facetAddress: ethers.constants.AddressZero,
+            facetAddress: ZeroAddress,
             action: FacetCutAction.Remove,
             functionSelectors: selectors,
           },
         ];
 
         // Send the DiamondCut transaction
-        tx = await cutFacetViaDiamond
-          .connect(upgrader)
-          .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit });
+        tx = await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit });
 
         // Wait for transaction to confirm
         receipt = await tx.wait();
@@ -593,14 +572,14 @@ describe("ProtocolDiamond", async function () {
         assert.equal(facets.length, 1); // loupe
 
         // Check that the remaining facet address is correct
-        assert.equal(facets[0].facetAddress, diamondLoupe.address, "Incorrect facet address");
+        assert.equal(facets[0].facetAddress, await diamondLoupe.getAddress(), "Incorrect facet address");
       });
 
       it("at least one selector should be removed", async function () {
         // Define the facet cut
         facetCuts = [
           {
-            facetAddress: ethers.constants.AddressZero,
+            facetAddress: ZeroAddress,
             action: FacetCutAction.Remove,
             functionSelectors: [],
           },
@@ -608,7 +587,7 @@ describe("ProtocolDiamond", async function () {
 
         // attempt to remove zero selectors
         await expect(
-          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
+          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit })
         ).to.be.revertedWith(RevertReasons.NO_SELECTORS_TO_CUT);
       });
 
@@ -620,7 +599,7 @@ describe("ProtocolDiamond", async function () {
         // Define the facet cuts
         facetCuts = [
           {
-            facetAddress: test1Facet.address,
+            facetAddress: await test1Facet.getAddress(),
             action: FacetCutAction.Remove,
             functionSelectors: selectors,
           },
@@ -628,7 +607,7 @@ describe("ProtocolDiamond", async function () {
 
         // attempt to make remove cut with non zero facet address
         await expect(
-          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
+          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit })
         ).to.be.revertedWith(RevertReasons.REMOVING_NON_ZERO_ADDRESS_FACET);
       });
 
@@ -636,7 +615,7 @@ describe("ProtocolDiamond", async function () {
         // Define the facet cut
         facetCuts = [
           {
-            facetAddress: ethers.constants.AddressZero,
+            facetAddress: ZeroAddress,
             action: FacetCutAction.Remove,
             functionSelectors: getSelectors(test3Facet),
           },
@@ -644,7 +623,7 @@ describe("ProtocolDiamond", async function () {
 
         // attempt to remove function that doesn't exist
         await expect(
-          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
+          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit })
         ).to.be.revertedWith(RevertReasons.REMOVING_FUNCTION_DOES_NOT_EXIST);
       });
 
@@ -653,21 +632,19 @@ describe("ProtocolDiamond", async function () {
         // to test that immutable function cannot be replaced
         facetCuts = [
           {
-            facetAddress: protocolDiamond.address,
+            facetAddress: await protocolDiamond.getAddress(),
             action: FacetCutAction.Add,
             functionSelectors: getSelectors(test3Facet),
           },
         ];
 
         // Send the DiamondCut transaction that adds immutable functions
-        await cutFacetViaDiamond
-          .connect(upgrader)
-          .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit });
+        await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit });
 
         // Define the facet cut
         facetCuts = [
           {
-            facetAddress: ethers.constants.AddressZero,
+            facetAddress: ZeroAddress,
             action: FacetCutAction.Remove,
             functionSelectors: getSelectors(test3Facet),
           },
@@ -675,7 +652,7 @@ describe("ProtocolDiamond", async function () {
 
         // attempt to make remove immutable function
         await expect(
-          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
+          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit })
         ).to.be.revertedWith(RevertReasons.REMOVING_IMMUTABLE_FUNCTION);
       });
     });
@@ -685,21 +662,19 @@ describe("ProtocolDiamond", async function () {
         // Define the facet cuts
         facetCuts = [
           {
-            facetAddress: test1Facet.address,
+            facetAddress: await test1Facet.getAddress(),
             action: FacetCutAction.Add,
             functionSelectors: getSelectors(test1Facet),
           },
           {
-            facetAddress: test2Facet.address,
+            facetAddress: await test2Facet.getAddress(),
             action: FacetCutAction.Add,
             functionSelectors: getSelectors(test2Facet),
           },
         ];
 
         // Send the DiamondCut transaction
-        tx = await cutFacetViaDiamond
-          .connect(upgrader)
-          .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit });
+        tx = await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit });
 
         // Wait for transaction to confirm
         receipt = await tx.wait();
@@ -713,23 +688,21 @@ describe("ProtocolDiamond", async function () {
         assert.equal(await test2ViaDiamond.test2Func13(), "Boson");
 
         // Deploy Test2FacetUpgrade
-        Test2FacetUpgrade = await ethers.getContractFactory("Test2FacetUpgrade");
+        Test2FacetUpgrade = await getContractFactory("Test2FacetUpgrade");
         test2FacetUpgrade = await Test2FacetUpgrade.deploy();
-        await test2FacetUpgrade.deployed();
+        await test2FacetUpgrade.waitForDeployment();
 
         // Define the facet cut
         facetCuts = [
           {
-            facetAddress: test2FacetUpgrade.address,
+            facetAddress: await test2FacetUpgrade.getAddress(),
             action: FacetCutAction.Replace,
             functionSelectors: getSelectors(test2FacetUpgrade),
           },
         ];
 
         // Send the DiamondCut transaction
-        tx = await cutFacetViaDiamond
-          .connect(upgrader)
-          .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit });
+        tx = await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit });
 
         // Wait for transaction to confirm
         receipt = await tx.wait();
@@ -745,7 +718,7 @@ describe("ProtocolDiamond", async function () {
         // Define the facet cut
         facetCuts = [
           {
-            facetAddress: ethers.constants.AddressZero,
+            facetAddress: ZeroAddress,
             action: FacetCutAction.Replace,
             functionSelectors: [],
           },
@@ -753,7 +726,7 @@ describe("ProtocolDiamond", async function () {
 
         // attempt to replace zero selectors
         await expect(
-          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
+          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit })
         ).to.be.revertedWith(RevertReasons.NO_SELECTORS_TO_CUT);
       });
 
@@ -763,21 +736,19 @@ describe("ProtocolDiamond", async function () {
         // to test that immutable function cannot be replaced
         facetCuts = [
           {
-            facetAddress: protocolDiamond.address,
+            facetAddress: await protocolDiamond.getAddress(),
             action: FacetCutAction.Add,
             functionSelectors: getSelectors(test3Facet),
           },
         ];
 
         // Send the DiamondCut transaction that adds immutable functions
-        await cutFacetViaDiamond
-          .connect(upgrader)
-          .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit });
+        await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit });
 
         // Define the facet cut
         facetCuts = [
           {
-            facetAddress: test3Facet.address,
+            facetAddress: await test3Facet.getAddress(),
             action: FacetCutAction.Replace,
             functionSelectors: getSelectors(test3Facet),
           },
@@ -785,7 +756,7 @@ describe("ProtocolDiamond", async function () {
 
         // attempt to replace immutable functions
         await expect(
-          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
+          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit })
         ).to.be.revertedWith(RevertReasons.REPLACING_IMMUTABLE_FUNCTION);
       });
 
@@ -793,7 +764,7 @@ describe("ProtocolDiamond", async function () {
         // Define the facet cuts
         facetCuts = [
           {
-            facetAddress: test1Facet.address,
+            facetAddress: await test1Facet.getAddress(),
             action: FacetCutAction.Replace,
             functionSelectors: getSelectors(test1Facet),
           },
@@ -801,7 +772,7 @@ describe("ProtocolDiamond", async function () {
 
         // attempt to replace function with same function
         await expect(
-          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
+          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit })
         ).to.be.revertedWith(RevertReasons.REPLACING_WITH_SAME_FUNCTION);
       });
 
@@ -809,7 +780,7 @@ describe("ProtocolDiamond", async function () {
         // Define the facet cut
         facetCuts = [
           {
-            facetAddress: test3Facet.address,
+            facetAddress: await test3Facet.getAddress(),
             action: FacetCutAction.Replace,
             functionSelectors: getSelectors(test3Facet),
           },
@@ -817,7 +788,7 @@ describe("ProtocolDiamond", async function () {
 
         // attempt to replace function that doesn't exist
         await expect(
-          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
+          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit })
         ).to.be.revertedWith(RevertReasons.REPLACING_FUNCTION_DOES_NOT_EXIST);
       });
     });
@@ -826,7 +797,7 @@ describe("ProtocolDiamond", async function () {
       // Define the facet cuts
       facetCuts = [
         {
-          facetAddress: test1Facet.address,
+          facetAddress: await test1Facet.getAddress(),
           action: 3,
           functionSelectors: getSelectors(test1Facet),
         },
@@ -834,7 +805,7 @@ describe("ProtocolDiamond", async function () {
 
       // Send the DiamondCut transaction
       await expect(
-        cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
+        cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit })
       ).to.be.reverted;
     });
   });
@@ -843,24 +814,24 @@ describe("ProtocolDiamond", async function () {
   context("📋 Initializer", async function () {
     beforeEach(async function () {
       // Deploy Test3Facet
-      Test3Facet = await ethers.getContractFactory("Test3Facet");
+      Test3Facet = await getContractFactory("Test3Facet");
       test3Facet = await Test3Facet.deploy();
-      await test3Facet.deployed();
+      await test3Facet.waitForDeployment();
 
       // N.B. The facets are not yet connected to the diamond in any way,
       // but following handles prepare us for accessing the diamond via
       // the ABI of these facets, once their functions have been added.
 
       // Cast Diamond to Test3Facet
-      test3ViaDiamond = await ethers.getContractAt("Test3Facet", protocolDiamond.address);
+      test3ViaDiamond = await getContractAt("Test3Facet", await protocolDiamond.getAddress());
     });
 
     context("👉 Normal operation", async function () {
       beforeEach(async function () {
         // Encode the initialization call
         initFunction = "initialize(address _testAddress)";
-        initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
-        initCallData = initInterface.encodeFunctionData("initialize", [rando.address]);
+        initInterface = new Interface([`function ${initFunction}`]);
+        initCallData = initInterface.encodeFunctionData("initialize", [await rando.getAddress()]);
 
         // Get the Test3Facet function selectors from the abi, removing the initializer
         selectors = getSelectors(test3Facet).remove([initFunction]);
@@ -868,7 +839,7 @@ describe("ProtocolDiamond", async function () {
         // Create facet cut payload
         facetCuts = [
           {
-            facetAddress: test3Facet.address,
+            facetAddress: await test3Facet.getAddress(),
             action: FacetCutAction.Add,
             functionSelectors: selectors,
           },
@@ -877,7 +848,7 @@ describe("ProtocolDiamond", async function () {
         // Execute the Diamond cut
         tx = await cutFacetViaDiamond
           .connect(upgrader)
-          .diamondCut(facetCuts, test3Facet.address, initCallData, { gasLimit });
+          .diamondCut(facetCuts, await test3Facet.getAddress(), initCallData, { gasLimit });
 
         // Wait for transaction to confirm
         receipt = await tx.wait();
@@ -888,8 +859,8 @@ describe("ProtocolDiamond", async function () {
 
       it("Should call an initializer function if supplied", async () => {
         // Make sure function selectors for the facet are correct
-        result = await loupeFacetViaDiamond.facetFunctionSelectors(test3Facet.address);
-        assert.sameMembers(result, selectors);
+        result = await loupeFacetViaDiamond.facetFunctionSelectors(await test3Facet.getAddress());
+        assert.sameMembers([...result], selectors);
       });
 
       it("Should store initializer state in diamond storage slot when modifier runs", async () => {
@@ -901,7 +872,7 @@ describe("ProtocolDiamond", async function () {
       it("Should store initializer argument in diamond storage slot when method runs", async () => {
         // Make sure argument passed to initializer got stored when method ran
         result = await test3ViaDiamond.getTestAddress();
-        assert.equal(result, rando.address, "Initializer argument not stored");
+        assert.equal(result, await rando.getAddress(), "Initializer argument not stored");
       });
 
       it("Should call an initializer function on diamond itself", async () => {
@@ -912,23 +883,23 @@ describe("ProtocolDiamond", async function () {
 
         // Arguments for Diamond constructor
         const diamondArgs = [
-          accessController.address,
-          [getFacetAddCut(diamondLoupe), getFacetAddCut(diamondCut), getFacetAddCut(erc165)],
+          await accessController.getAddress(),
+          [await getFacetAddCut(diamondLoupe), await getFacetAddCut(diamondCut), await getFacetAddCut(erc165)],
           interfaces,
         ];
 
         // Deploy Protocol Diamond
-        const ProtocolDiamond = await ethers.getContractFactory("TestInitializableDiamond");
+        const ProtocolDiamond = await getContractFactory("TestInitializableDiamond");
         const protocolDiamond = await ProtocolDiamond.deploy(...diamondArgs);
-        await protocolDiamond.deployTransaction.wait();
+        await protocolDiamond.waitForDeployment();
 
         // Cast new Diamond to DiamondCutFacet
-        cutFacetViaDiamond = await ethers.getContractAt("DiamondCutFacet", protocolDiamond.address);
+        cutFacetViaDiamond = await getContractAt("DiamondCutFacet", await protocolDiamond.getAddress());
 
         // Create facet cut payload
         facetCuts = [
           {
-            facetAddress: protocolDiamond.address,
+            facetAddress: await protocolDiamond.getAddress(),
             action: FacetCutAction.Add,
             functionSelectors: selectors,
           },
@@ -937,7 +908,7 @@ describe("ProtocolDiamond", async function () {
         // Execute the Diamond cut
         await cutFacetViaDiamond
           .connect(upgrader)
-          .diamondCut(facetCuts, protocolDiamond.address, initCallData, { gasLimit });
+          .diamondCut(facetCuts, await protocolDiamond.getAddress(), initCallData, { gasLimit });
 
         // Make sure initializer state got stored when modifier ran
         result = await protocolDiamond.isInitialized();
@@ -949,8 +920,8 @@ describe("ProtocolDiamond", async function () {
       it("Reason supplied by implementation", async () => {
         // Encode the initialization call
         initFunction = "initialize(address _testAddress)";
-        initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
-        initCallData = initInterface.encodeFunctionData("initialize", [accessController.address]);
+        initInterface = new Interface([`function ${initFunction}`]);
+        initCallData = initInterface.encodeFunctionData("initialize", [await accessController.getAddress()]);
 
         // Get the Test3Facet function selectors from the abi, removing the initializer
         selectors = getSelectors(test3Facet).remove([initFunction]);
@@ -958,7 +929,7 @@ describe("ProtocolDiamond", async function () {
         // Create facet cut payload
         facetCuts = [
           {
-            facetAddress: test3Facet.address,
+            facetAddress: await test3Facet.getAddress(),
             action: FacetCutAction.Add,
             functionSelectors: selectors,
           },
@@ -966,15 +937,17 @@ describe("ProtocolDiamond", async function () {
 
         // If contract address is supplied Test3Facet's initializer will revert with the specific reason
         await expect(
-          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, test3Facet.address, initCallData, { gasLimit })
+          cutFacetViaDiamond
+            .connect(upgrader)
+            .diamondCut(facetCuts, await test3Facet.getAddress(), initCallData, { gasLimit })
         ).to.revertedWith(RevertReasons.CONTRACT_NOT_ALLOWED);
       });
 
       it("Library reason if not supplied by implementation", async () => {
         // Encode the initialization call
         initFunction = "initialize(address _testAddress)";
-        initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
-        initCallData = initInterface.encodeFunctionData("initialize", [upgrader.address]);
+        initInterface = new Interface([`function ${initFunction}`]);
+        initCallData = initInterface.encodeFunctionData("initialize", [await upgrader.getAddress()]);
 
         // Get the Test3Facet function selectors from the abi, removing the initializer
         selectors = getSelectors(test3Facet).remove([initFunction]);
@@ -982,7 +955,7 @@ describe("ProtocolDiamond", async function () {
         // Create facet cut payload
         facetCuts = [
           {
-            facetAddress: test3Facet.address,
+            facetAddress: await test3Facet.getAddress(),
             action: FacetCutAction.Add,
             functionSelectors: selectors,
           },
@@ -991,15 +964,17 @@ describe("ProtocolDiamond", async function () {
         // If the caller's address is supplied Test3Facet's initializer will revert with no reason
         // and so the diamondCut function will supply it's own reason
         await expect(
-          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, test3Facet.address, initCallData, { gasLimit })
+          cutFacetViaDiamond
+            .connect(upgrader)
+            .diamondCut(facetCuts, await test3Facet.getAddress(), initCallData, { gasLimit })
         ).to.revertedWith(RevertReasons.INIT_REVERTED);
       });
 
       it("_init is address(0) but _calldata is not empty", async () => {
         // Encode the initialization call
         initFunction = "initialize(address _testAddress)";
-        initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
-        initCallData = initInterface.encodeFunctionData("initialize", [accessController.address]);
+        initInterface = new Interface([`function ${initFunction}`]);
+        initCallData = initInterface.encodeFunctionData("initialize", [await accessController.getAddress()]);
 
         // Get the Test3Facet function selectors from the abi, removing the initializer
         selectors = getSelectors(test3Facet).remove([initFunction]);
@@ -1007,7 +982,7 @@ describe("ProtocolDiamond", async function () {
         // Create facet cut payload
         facetCuts = [
           {
-            facetAddress: test3Facet.address,
+            facetAddress: await test3Facet.getAddress(),
             action: FacetCutAction.Add,
             functionSelectors: selectors,
           },
@@ -1015,9 +990,7 @@ describe("ProtocolDiamond", async function () {
 
         // If contract address is supplied but _calldata is empty, diamondCut will revert with it's own reason
         await expect(
-          cutFacetViaDiamond
-            .connect(upgrader)
-            .diamondCut(facetCuts, ethers.constants.AddressZero, initCallData, { gasLimit })
+          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, initCallData, { gasLimit })
         ).to.revertedWith(RevertReasons.INIT_ZERO_ADDRESS_NON_EMPTY_CALLDATA);
       });
 
@@ -1029,7 +1002,7 @@ describe("ProtocolDiamond", async function () {
         // Create facet cut payload
         facetCuts = [
           {
-            facetAddress: test3Facet.address,
+            facetAddress: await test3Facet.getAddress(),
             action: FacetCutAction.Add,
             functionSelectors: selectors,
           },
@@ -1037,15 +1010,15 @@ describe("ProtocolDiamond", async function () {
 
         // If _calldata is empty, but contract address is not supplied, diamondCut will revert with it's own reason
         await expect(
-          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, test3Facet.address, "0x", { gasLimit })
+          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, await test3Facet.getAddress(), "0x", { gasLimit })
         ).to.revertedWith(RevertReasons.INIT_EMPTY_CALLDATA_NON_ZERO_ADDRESS);
       });
 
       it("_init address has no code", async () => {
         // Encode the initialization call
         initFunction = "initialize(address _testAddress)";
-        initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
-        initCallData = initInterface.encodeFunctionData("initialize", [accessController.address]);
+        initInterface = new Interface([`function ${initFunction}`]);
+        initCallData = initInterface.encodeFunctionData("initialize", [await accessController.getAddress()]);
 
         // Get the Test3Facet function selectors from the abi, removing the initializer
         selectors = getSelectors(test3Facet).remove([initFunction]);
@@ -1053,7 +1026,7 @@ describe("ProtocolDiamond", async function () {
         // Create facet cut payload
         facetCuts = [
           {
-            facetAddress: test3Facet.address,
+            facetAddress: await test3Facet.getAddress(),
             action: FacetCutAction.Add,
             functionSelectors: selectors,
           },
@@ -1061,7 +1034,9 @@ describe("ProtocolDiamond", async function () {
 
         // If contract address has no code, diamondCut will revert with it's own reason
         await expect(
-          cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, deployer.address, initCallData, { gasLimit })
+          cutFacetViaDiamond
+            .connect(upgrader)
+            .diamondCut(facetCuts, await deployer.getAddress(), initCallData, { gasLimit })
         ).to.revertedWith(RevertReasons.INIT_ADDRESS_WITH_NO_CODE);
       });
 
@@ -1071,13 +1046,13 @@ describe("ProtocolDiamond", async function () {
 
         // Arguments for Diamond constructor
         const diamondArgs = [
-          ethers.constants.AddressZero,
-          [getFacetAddCut(diamondLoupe), getFacetAddCut(diamondCut), getFacetAddCut(erc165)],
+          ZeroAddress,
+          [await getFacetAddCut(diamondLoupe), await getFacetAddCut(diamondCut), await getFacetAddCut(erc165)],
           interfaces,
         ];
 
         // Attempt to deploy Protocol Diamond
-        const ProtocolDiamond = await ethers.getContractFactory("ProtocolDiamond");
+        const ProtocolDiamond = await getContractFactory("ProtocolDiamond");
 
         await expect(ProtocolDiamond.deploy(...diamondArgs)).to.revertedWith(RevertReasons.INVALID_ADDRESS);
       });
@@ -1088,39 +1063,37 @@ describe("ProtocolDiamond", async function () {
   context("📋 Proxying", async function () {
     beforeEach(async function () {
       // Deploy Test1Facet
-      Test1Facet = await ethers.getContractFactory("Test1Facet");
+      Test1Facet = await getContractFactory("Test1Facet");
       test1Facet = await Test1Facet.deploy();
-      await test1Facet.deployed();
+      await test1Facet.waitForDeployment();
 
       // Deploy Test2Facet
-      Test2Facet = await ethers.getContractFactory("Test2Facet");
+      Test2Facet = await getContractFactory("Test2Facet");
       test2Facet = await Test2Facet.deploy();
-      await test2Facet.deployed();
+      await test2Facet.waitForDeployment();
 
       // Cast Diamond to Test1Facet
-      test1ViaDiamond = await ethers.getContractAt("Test1Facet", protocolDiamond.address);
+      test1ViaDiamond = await getContractAt("Test1Facet", await protocolDiamond.getAddress());
 
       // Cast Diamond to Test2Facet
-      test2ViaDiamond = await ethers.getContractAt("Test2Facet", protocolDiamond.address);
+      test2ViaDiamond = await getContractAt("Test2Facet", await protocolDiamond.getAddress());
 
       // Define the facet cuts
       facetCuts = [
         {
-          facetAddress: test1Facet.address,
+          facetAddress: await test1Facet.getAddress(),
           action: FacetCutAction.Add,
           functionSelectors: getSelectors(test1Facet),
         },
         {
-          facetAddress: test2Facet.address,
+          facetAddress: await test2Facet.getAddress(),
           action: FacetCutAction.Add,
           functionSelectors: getSelectors(test2Facet),
         },
       ];
 
       // Send the DiamondCut transaction
-      tx = await cutFacetViaDiamond
-        .connect(upgrader)
-        .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit });
+      tx = await cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit });
 
       // Wait for transaction to confirm
       receipt = await tx.wait();

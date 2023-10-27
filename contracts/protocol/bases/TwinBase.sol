@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonTwinEvents } from "../../interfaces/events/IBosonTwinEvents.sol";
@@ -72,46 +72,29 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
                 lastTokenId = tokenId + _twin.supplyAvailable - 1;
             }
 
-            // Get all seller twin ids that belong to the same token address of the new twin to validate if they have not unlimited supply since ranges can overlaps each other
-            uint256[] storage twinIds = lookups.twinIdsByTokenAddressAndBySeller[sellerId][_twin.tokenAddress];
-            uint256 twinIdsLength = twinIds.length;
-
-            if (twinIdsLength > 0) {
-                uint256 maxInt = type(uint256).max;
-                uint256 supplyAvailable = _twin.supplyAvailable;
-
-                for (uint256 i = 0; i < twinIdsLength; i++) {
-                    // Get storage location for looped twin
-                    (, Twin storage currentTwin) = fetchTwin(twinIds[i]);
-
-                    //  Make sure no twins have unlimited supply, otherwise ranges would overlap
-                    require(
-                        currentTwin.supplyAvailable != maxInt || supplyAvailable != maxInt,
-                        INVALID_TWIN_TOKEN_RANGE
-                    );
-                }
-            }
-
             // Get all ranges of twins that belong to the seller and to the same token address of the new twin to validate if range is available
             TokenRange[] storage twinRanges = lookups.twinRangesBySeller[sellerId][_twin.tokenAddress];
 
             uint256 twinRangesLength = twinRanges.length;
-
             // Checks if token range isn't being used in any other twin of seller
-            for (uint256 i = 0; i < twinRangesLength; i++) {
+            for (uint256 i = 0; i < twinRangesLength; ) {
                 // A valid range has:
                 // - the first id of range greater than the last token id (tokenId + initialSupply - 1) of the looped twin or
                 // - the last id of range lower than the looped twin tokenId (beginning of range)
                 require(tokenId > twinRanges[i].end || lastTokenId < twinRanges[i].start, INVALID_TWIN_TOKEN_RANGE);
+
+                unchecked {
+                    i++;
+                }
             }
 
             // Add range to twinRangesBySeller mapping
             TokenRange storage tokenRange = twinRanges.push();
             tokenRange.start = tokenId;
             tokenRange.end = lastTokenId;
+            tokenRange.twinId = twinId;
 
-            // Add twin id to twinIdsByTokenAddressAndBySeller mapping
-            twinIds.push(_twin.id);
+            lookups.rangeIdByTwin[twinId] = ++twinRangesLength;
         } else if (_twin.tokenType == TokenType.MultiToken) {
             // If token is Fungible or MultiToken amount should not be zero
             // Also, the amount of tokens should not be more than the available token supply.

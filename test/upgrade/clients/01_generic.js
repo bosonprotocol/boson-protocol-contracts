@@ -1,5 +1,4 @@
 const shell = require("shelljs");
-const { ethers } = require("hardhat");
 const { assert } = require("chai");
 const {
   getStorageLayout,
@@ -18,7 +17,8 @@ function getGenericContext(
   voucherContractState,
   preUpgradeEntities,
   preUpgradeStorageLayout,
-  snapshot
+  snapshot,
+  equalCustomTypes
 ) {
   const genericContextFunction = async function () {
     afterEach(async function () {
@@ -44,7 +44,7 @@ function getGenericContext(
         const postUpgradeStorageLayout = await getStorageLayout("BosonVoucher");
 
         assert(
-          compareStorageLayouts(preUpgradeStorageLayout, postUpgradeStorageLayout),
+          compareStorageLayouts(preUpgradeStorageLayout, postUpgradeStorageLayout, equalCustomTypes),
           "Upgrade breaks storage layout"
         );
       });
@@ -72,7 +72,7 @@ function getGenericContext(
         // Get protocol state after the upgrade. Get the data that should be in location of old data.
         const voucherContractStateAfterUpgradeAndActions = await getVoucherContractState(preUpgradeEntities);
 
-        // The only thing that should change are buyers's balances, since they comitted to new offers and they got vouchers for them.
+        // The only thing that should change are buyers's balances, since they committed to new offers and they got vouchers for them.
         // Modify the post upgrade state to reflect the expected changes
         const { buyers, sellers } = preUpgradeEntities;
         const entities = [...sellers, ...buyers];
@@ -80,18 +80,18 @@ function getGenericContext(
           // loop matches the loop in populateVoucherContract
           for (let j = i; j < buyers.length; j++) {
             const offer = preUpgradeEntities.offers[i + j].offer;
-            const sellerId = ethers.BigNumber.from(offer.sellerId).toHexString();
+            const sellerId = BigInt(offer.sellerId).toString();
 
             // Find the voucher data for the seller
             const voucherData = voucherContractStateAfterUpgradeAndActions.find(
-              (vd) => vd.sellerId.toHexString() == sellerId
+              (vd) => vd.sellerId.toString() == sellerId
             );
 
             const buyerWallet = buyers[j].wallet;
-            const buyerIndex = entities.findIndex((e) => e.wallet.address == buyerWallet.address);
+            const buyerIndex = entities.findIndex((e) => e.wallet == buyerWallet);
 
             // Update the balance of the buyer
-            voucherData.balanceOf[buyerIndex] = voucherData.balanceOf[buyerIndex].sub(1);
+            voucherData.balanceOf[buyerIndex] = voucherData.balanceOf[buyerIndex] - 1n;
           }
         }
 

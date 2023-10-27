@@ -237,56 +237,26 @@
         {
           "indexed": true,
           "internalType": "uint256",
-          "name": "disputeResolverId",
+          "name": "sellerId",
           "type": "uint256"
         },
         {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "id",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "escalationResponsePeriod",
-              "type": "uint256"
-            },
-            {
-              "internalType": "address",
-              "name": "operator",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "admin",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "clerk",
-              "type": "address"
-            },
-            {
-              "internalType": "address payable",
-              "name": "treasury",
-              "type": "address"
-            },
-            {
-              "internalType": "string",
-              "name": "metadataUri",
-              "type": "string"
-            },
-            {
-              "internalType": "bool",
-              "name": "active",
-              "type": "bool"
-            }
-          ],
           "indexed": false,
-          "internalType": "struct BosonTypes.DisputeResolver",
-          "name": "disputeResolver",
-          "type": "tuple"
+          "internalType": "uint256",
+          "name": "collectionIndex",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "collectionAddress",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "string",
+          "name": "externalId",
+          "type": "string"
         },
         {
           "indexed": true,
@@ -295,7 +265,7 @@
           "type": "address"
         }
       ],
-      "name": "DisputeResolverActivated",
+      "name": "CollectionCreated",
       "type": "event"
     },
     {
@@ -321,7 +291,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -484,7 +454,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -532,7 +502,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -599,7 +569,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -661,7 +631,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -683,6 +653,11 @@
               "internalType": "bool",
               "name": "active",
               "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
             }
           ],
           "indexed": false,
@@ -742,7 +717,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -764,6 +739,11 @@
               "internalType": "bool",
               "name": "active",
               "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
             }
           ],
           "indexed": false,
@@ -780,7 +760,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -802,6 +782,11 @@
               "internalType": "bool",
               "name": "active",
               "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
             }
           ],
           "indexed": false,
@@ -873,7 +858,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -895,6 +880,11 @@
               "internalType": "bool",
               "name": "active",
               "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
             }
           ],
           "indexed": false,
@@ -929,19 +919,6 @@
       ],
       "name": "SellerUpdatePending",
       "type": "event"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_disputeResolverId",
-          "type": "uint256"
-        }
-      ],
-      "name": "activateDisputeResolver",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
     },
     {
       "inputs": [
@@ -1015,6 +992,35 @@
           "internalType": "bool[]",
           "name": "sellerAllowed",
           "type": "bool[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_sellerId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_collectionSalt",
+          "type": "bytes32"
+        }
+      ],
+      "name": "calculateCollectionAddress",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "collectionAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "isAvailable",
+          "type": "bool"
         }
       ],
       "stateMutability": "view",
@@ -1101,7 +1107,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -1170,6 +1176,41 @@
     {
       "inputs": [
         {
+          "internalType": "string",
+          "name": "_externalId",
+          "type": "string"
+        },
+        {
+          "components": [
+            {
+              "internalType": "string",
+              "name": "contractURI",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "royaltyPercentage",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "collectionSalt",
+              "type": "bytes32"
+            }
+          ],
+          "internalType": "struct BosonTypes.VoucherInitValues",
+          "name": "_voucherInitValues",
+          "type": "tuple"
+        }
+      ],
+      "name": "createNewCollection",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "components": [
             {
               "internalType": "uint256",
@@ -1178,7 +1219,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -1200,6 +1241,11 @@
               "internalType": "bool",
               "name": "active",
               "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
             }
           ],
           "internalType": "struct BosonTypes.Seller",
@@ -1234,6 +1280,11 @@
               "internalType": "uint256",
               "name": "royaltyPercentage",
               "type": "uint256"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "collectionSalt",
+              "type": "bytes32"
             }
           ],
           "internalType": "struct BosonTypes.VoucherInitValues",
@@ -1362,7 +1413,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -1455,7 +1506,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -1556,7 +1607,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -1578,6 +1629,11 @@
               "internalType": "bool",
               "name": "active",
               "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
             }
           ],
           "internalType": "struct BosonTypes.Seller",
@@ -1629,7 +1685,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -1651,6 +1707,11 @@
               "internalType": "bool",
               "name": "active",
               "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
             }
           ],
           "internalType": "struct BosonTypes.Seller",
@@ -1714,7 +1775,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -1736,6 +1797,11 @@
               "internalType": "bool",
               "name": "active",
               "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
             }
           ],
           "internalType": "struct BosonTypes.Seller",
@@ -1758,6 +1824,66 @@
           "internalType": "struct BosonTypes.AuthToken",
           "name": "authToken",
           "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_sellerId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getSellersCollections",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "defaultVoucherAddress",
+          "type": "address"
+        },
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "collectionAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "externalId",
+              "type": "string"
+            }
+          ],
+          "internalType": "struct BosonTypes.Collection[]",
+          "name": "additionalCollections",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_adminAddres",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_salt",
+          "type": "bytes32"
+        }
+      ],
+      "name": "isSellerSaltAvailable",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "isAvailable",
+          "type": "bool"
         }
       ],
       "stateMutability": "view",
@@ -1916,7 +2042,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -1966,7 +2092,7 @@
             },
             {
               "internalType": "address",
-              "name": "operator",
+              "name": "assistant",
               "type": "address"
             },
             {
@@ -1988,6 +2114,11 @@
               "internalType": "bool",
               "name": "active",
               "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
             }
           ],
           "internalType": "struct BosonTypes.Seller",
@@ -2013,6 +2144,24 @@
         }
       ],
       "name": "updateSeller",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_sellerId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_newSalt",
+          "type": "bytes32"
+        }
+      ],
+      "name": "updateSellerSalt",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

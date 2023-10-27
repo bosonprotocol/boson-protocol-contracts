@@ -90,44 +90,6 @@
       "inputs": [
         {
           "indexed": false,
-          "internalType": "uint16",
-          "name": "maxAllowedSellers",
-          "type": "uint16"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "executedBy",
-          "type": "address"
-        }
-      ],
-      "name": "MaxAllowedSellersChanged",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint16",
-          "name": "maxDisputesPerBatch",
-          "type": "uint16"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "executedBy",
-          "type": "address"
-        }
-      ],
-      "name": "MaxDisputesPerBatchChanged",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
           "internalType": "uint256",
           "name": "maxEscalationResponsePeriod",
           "type": "uint256"
@@ -147,9 +109,9 @@
       "inputs": [
         {
           "indexed": false,
-          "internalType": "uint16",
-          "name": "maxExchangesPerBatch",
-          "type": "uint16"
+          "internalType": "uint256",
+          "name": "maxPremintedVouchers",
+          "type": "uint256"
         },
         {
           "indexed": true,
@@ -158,83 +120,7 @@
           "type": "address"
         }
       ],
-      "name": "MaxExchangesPerBatchChanged",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint16",
-          "name": "maxFeesPerDisputeResolver",
-          "type": "uint16"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "executedBy",
-          "type": "address"
-        }
-      ],
-      "name": "MaxFeesPerDisputeResolverChanged",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint16",
-          "name": "maxOffersPerBatch",
-          "type": "uint16"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "executedBy",
-          "type": "address"
-        }
-      ],
-      "name": "MaxOffersPerBatchChanged",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint16",
-          "name": "maxOffersPerBundle",
-          "type": "uint16"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "executedBy",
-          "type": "address"
-        }
-      ],
-      "name": "MaxOffersPerBundleChanged",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint16",
-          "name": "maxOffersPerGroup",
-          "type": "uint16"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "executedBy",
-          "type": "address"
-        }
-      ],
-      "name": "MaxOffersPerGroupChanged",
+      "name": "MaxPremintedVouchersChanged",
       "type": "event"
     },
     {
@@ -281,25 +167,6 @@
         {
           "indexed": false,
           "internalType": "uint16",
-          "name": "maxTokensPerWithdrawal",
-          "type": "uint16"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "executedBy",
-          "type": "address"
-        }
-      ],
-      "name": "MaxTokensPerWithdrawalChanged",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint16",
           "name": "maxTotalOfferFeePercentage",
           "type": "uint16"
         },
@@ -311,25 +178,6 @@
         }
       ],
       "name": "MaxTotalOfferFeePercentageChanged",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint16",
-          "name": "maxTwinsPerBundle",
-          "type": "uint16"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "executedBy",
-          "type": "address"
-        }
-      ],
-      "name": "MaxTwinsPerBundleChanged",
       "type": "event"
     },
     {
@@ -349,6 +197,25 @@
         }
       ],
       "name": "MinDisputePeriodChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "minResolutionPeriod",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "MinResolutionPeriodChanged",
       "type": "event"
     },
     {

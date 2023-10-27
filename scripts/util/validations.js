@@ -1,6 +1,6 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
 const eip55 = require("eip55");
+const { ethers } = require("hardhat");
+const { MaxUint256 } = ethers;
 
 /**
  * Must be a string representation of a big number
@@ -13,23 +13,24 @@ const eip55 = require("eip55");
  * @returns {boolean}
  */
 function bigNumberIsValid(bigNumber, { optional, gt, lte, empty } = {}) {
-  let valid = false;
+  let valid = true;
+
   if (optional && (bigNumber == undefined || bigNumber == null)) {
-    return true;
+    valid = true;
+  } else if (empty && bigNumber === "") {
+    valid = true;
+  } else {
+    try {
+      const bigNumberValue = BigInt(bigNumber);
+      valid =
+        (typeof bigNumber === "string" || typeof bigNumber === "bigint") &&
+        (gt == undefined || bigNumberValue > BigInt(gt)) &&
+        (lte == undefined || bigNumberValue <= BigInt(lte));
+    } catch (e) {
+      valid = false;
+    }
   }
-  try {
-    valid =
-      typeof bigNumber === "string" &&
-      (empty
-        ? bigNumber === "" || typeof ethers.BigNumber.from(bigNumber) === "object"
-        : typeof ethers.BigNumber.from(bigNumber) === "object");
-    if (gt != undefined) {
-      valid = valid && ethers.BigNumber.from(bigNumber).gt(gt);
-    }
-    if (lte != undefined) {
-      valid = valid && ethers.BigNumber.from(bigNumber).lte(lte);
-    }
-  } catch (e) {}
+
   return valid;
 }
 
@@ -116,7 +117,15 @@ function stringIsValid(string) {
 function bytes4IsValid(bytes4) {
   let valid = false;
   try {
-    valid = ethers.BigNumber.from(bytes4).gte("0") && ethers.BigNumber.from(bytes4).lte("4294967295"); // max bytes4 value
+    valid = BigInt(bytes4) >= 0n && BigInt(bytes4) <= 4294967295n; // max bytes4 value
+  } catch (e) {}
+  return valid;
+}
+
+function bytes32IsValid(bytes32) {
+  let valid = false;
+  try {
+    valid = BigInt(bytes32) >= 0n && BigInt(bytes32) <= MaxUint256; // max bytes32 value is equal to MaxUint256
   } catch (e) {}
   return valid;
 }
@@ -140,3 +149,4 @@ exports.bigNumberArrayIsValid = bigNumberArrayIsValid;
 exports.stringIsValid = stringIsValid;
 exports.bytes4ArrayIsValid = bytes4ArrayIsValid;
 exports.addressArrayIsValid = addressArrayIsValid;
+exports.bytes32IsValid = bytes32IsValid;

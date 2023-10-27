@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import { IBosonGroupHandler } from "../../interfaces/handlers/IBosonGroupHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
@@ -31,7 +31,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * - Any of offers belongs to different seller
      * - Any of offers does not exist
      * - Offer exists in a different group
-     * - Number of offers exceeds maximum allowed number per group
+     * - Condition fields are invalid
      *
      * @param _group - the fully populated struct with group id set to 0x0
      * @param _condition - the fully populated condition struct
@@ -51,7 +51,6 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * Reverts if:
      * - Caller is not the seller
      * - Offer ids param is an empty list
-     * - Current number of offers plus number of offers added exceeds maximum allowed number per group
      * - Group does not exist
      * - Any of offers belongs to different seller
      * - Any of offers does not exist
@@ -77,7 +76,6 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * - The groups region of protocol is paused
      * - Caller is not the seller
      * - Offer ids param is an empty list
-     * - Number of offers exceeds maximum allowed number per group
      * - Group does not exist
      * - Any offer is not part of the group
      *
@@ -94,10 +92,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
         // Check if group can be updated
         (uint256 sellerId, Group storage group) = preUpdateChecks(_groupId, _offerIds);
 
-        // limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_offerIds.length <= protocolLimits().maxOffersPerGroup, TOO_MANY_OFFERS);
-
-        for (uint256 i = 0; i < _offerIds.length; i++) {
+        for (uint256 i = 0; i < _offerIds.length; ) {
             uint256 offerId = _offerIds[i];
 
             // Offer should belong to the group
@@ -125,6 +120,10 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
             group.offerIds.pop();
             // Delete from index mapping
             delete offerIdIndexes[offerId];
+
+            unchecked {
+                i++;
+            }
         }
 
         // Get the condition

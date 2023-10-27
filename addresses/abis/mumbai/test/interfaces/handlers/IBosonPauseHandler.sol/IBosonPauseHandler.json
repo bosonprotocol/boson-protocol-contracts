@@ -27,6 +27,12 @@
       "inputs": [
         {
           "indexed": false,
+          "internalType": "enum BosonTypes.PausableRegion[]",
+          "name": "regions",
+          "type": "uint8[]"
+        },
+        {
+          "indexed": false,
           "internalType": "address",
           "name": "executedBy",
           "type": "address"
@@ -34,6 +40,19 @@
       ],
       "name": "ProtocolUnpaused",
       "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "getPausedRegions",
+      "outputs": [
+        {
+          "internalType": "enum BosonTypes.PausableRegion[]",
+          "name": "regions",
+          "type": "uint8[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
     },
     {
       "inputs": [
@@ -49,7 +68,13 @@
       "type": "function"
     },
     {
-      "inputs": [],
+      "inputs": [
+        {
+          "internalType": "enum BosonTypes.PausableRegion[]",
+          "name": "_regions",
+          "type": "uint8[]"
+        }
+      ],
       "name": "unpause",
       "outputs": [],
       "stateMutability": "nonpayable",

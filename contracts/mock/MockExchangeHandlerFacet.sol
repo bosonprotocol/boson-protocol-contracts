@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import { IBosonVoucher } from "../interfaces/clients/IBosonVoucher.sol";
 import { BuyerBase } from "../protocol/bases/BuyerBase.sol";
 import { DisputeBase } from "../protocol/bases/DisputeBase.sol";
 import { FundsLib } from "../protocol/libs/FundsLib.sol";
 import "../domain/BosonConstants.sol";
-import { Address } from "../ext_libs/Address.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @title MockExchangeHandlerFacet
@@ -100,7 +100,6 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
      *
      * Reverts if:
      * - The exchanges region of protocol is paused
-     * - Number of exchanges exceeds maximum allowed number per batch
      * - For any exchange:
      *   - Exchange does not exist
      *   - Exchange is not in Redeemed state
@@ -109,12 +108,13 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
      * @param _exchangeIds - the array of exchanges ids
      */
     function completeExchangeBatch(uint256[] calldata _exchangeIds) external exchangesNotPaused {
-        // limit maximum number of exchanges to avoid running into block gas limit in a loop
-        require(_exchangeIds.length <= protocolLimits().maxExchangesPerBatch, TOO_MANY_EXCHANGES);
-
-        for (uint256 i = 0; i < _exchangeIds.length; i++) {
+        for (uint256 i = 0; i < _exchangeIds.length; ) {
             // complete the exchange
             completeExchange(_exchangeIds[i]);
+
+            unchecked {
+                i++;
+            }
         }
     }
 
@@ -407,7 +407,7 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
             uint256 exchangeId = _exchange.id;
 
             // Visit the twins
-            for (uint256 i = 0; i < twinIds.length; i++) {
+            for (uint256 i = 0; i < twinIds.length; ) {
                 // Get the twin
                 (, Twin storage twin) = fetchTwin(twinIds[i]);
 
@@ -479,6 +479,10 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
                     );
 
                     emit TwinTransferred2(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
+                }
+
+                unchecked {
+                    i++;
                 }
             }
 

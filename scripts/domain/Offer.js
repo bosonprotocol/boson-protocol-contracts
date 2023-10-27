@@ -19,6 +19,7 @@ class Offer {
             string metadataUri;
             string metadataHash;
             bool voided;
+            uint256 collectionIndex;            
             RoyaltyInfo royaltyInfo;
         }
     */
@@ -34,6 +35,7 @@ class Offer {
     metadataUri,
     metadataHash,
     voided,
+    collectionIndex,
     royaltyInfo
   ) {
     this.id = id;
@@ -46,6 +48,7 @@ class Offer {
     this.metadataUri = metadataUri;
     this.metadataHash = metadataHash;
     this.voided = voided;
+    this.collectionIndex = collectionIndex;
     this.royaltyInfo = royaltyInfo;
   }
 
@@ -66,6 +69,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      collectionIndex,
       royaltyInfo,
     } = o;
 
@@ -80,6 +84,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      collectionIndex,
       RoyaltyInfo.fromObject(royaltyInfo)
     );
   }
@@ -100,8 +105,8 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      collectionIndex,
       royaltyInfo;
-
     // destructure struct
     [
       id,
@@ -114,8 +119,12 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      collectionIndex,
       royaltyInfo,
     ] = struct;
+    if (!collectionIndex) {
+      collectionIndex = 0;
+    }
 
     return Offer.fromObject({
       id: id.toString(),
@@ -128,6 +137,7 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
+      collectionIndex: collectionIndex.toString(),
       royaltyInfo: RoyaltyInfo.fromStruct(royaltyInfo),
     });
   }
@@ -164,6 +174,7 @@ class Offer {
       this.metadataUri,
       this.metadataHash,
       this.voided,
+      this.collectionIndex,
       this.royaltyInfo.toStruct(),
     ];
   }
@@ -270,6 +281,15 @@ class Offer {
   }
 
   /**
+   * Is this Offer instance's collectionIndex field valid?
+   * Must be a string representation of a big number
+   * @returns {boolean}
+   */
+  collectionIndexIsValid() {
+    return bigNumberIsValid(this.collectionIndex);
+  }
+
+  /**
    * Is this Offer instance's royaltyInfo field valid?
    * Must be a valid RoyaltyInfo instance
    * @returns {boolean}
@@ -299,6 +319,7 @@ class Offer {
       this.metadataUriIsValid() &&
       this.metadataHashIsValid() &&
       this.voidedIsValid() &&
+      this.collectionIndexIsValid() &&
       this.royaltyInfoIsValid()
     );
   }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
 import { IAccessControl } from "../../interfaces/IAccessControl.sol";
@@ -20,10 +20,10 @@ contract ClientExternalAddressesBase is IClientExternalAddresses {
      *
      * See: {AccessController.hasRole}
      *
-     * @param role - the role to check
+     * @param _role - the role to check
      */
-    modifier onlyRole(bytes32 role) {
-        require(ClientLib.hasRole(role), "Access denied, caller doesn't have role");
+    modifier onlyRole(bytes32 _role) {
+        require(ClientLib.hasRole(_role), "Access denied, caller doesn't have role");
         _;
     }
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import "./../../domain/BosonConstants.sol";
 import { IBosonGroupEvents } from "../../interfaces/events/IBosonGroupEvents.sol";
@@ -22,7 +22,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      * - Any of offers belongs to different seller
      * - Any of offers does not exist
      * - Offer exists in a different group
-     * - Number of offers exceeds maximum allowed number per group
+     * - Condition fields are invalid
      *
      * @param _group - the fully populated struct with group id set to 0x0
      * @param _condition - the fully populated condition struct
@@ -38,18 +38,15 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         (bool exists, uint256 sellerId) = getSellerIdByAssistant(sender);
         require(exists, NOT_ASSISTANT);
 
-        // limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_group.offerIds.length <= protocolLimits().maxOffersPerGroup, TOO_MANY_OFFERS);
-
         // condition must be valid
         require(validateCondition(_condition), INVALID_CONDITION_PARAMETERS);
 
         // Get the next group and increment the counter
         uint256 groupId = protocolCounters().nextGroupId++;
 
-        for (uint256 i = 0; i < _group.offerIds.length; i++) {
+        for (uint256 i = 0; i < _group.offerIds.length; ) {
             // make sure offer exists and belongs to the seller
-            getValidOffer(_group.offerIds[i]);
+            getValidOfferWithSellerCheck(_group.offerIds[i]);
 
             // Offer should not belong to another group already
             (bool exist, ) = getGroupIdByOffer(_group.offerIds[i]);
@@ -60,6 +57,10 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
 
             // Set index mapping. Should be index in offerIds + 1
             lookups.offerIdIndexByGroup[groupId][_group.offerIds[i]] = i + 1;
+
+            unchecked {
+                i++;
+            }
         }
 
         // Get storage location for group
@@ -91,34 +92,69 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         condition.method = _condition.method;
         condition.tokenType = _condition.tokenType;
         condition.tokenAddress = _condition.tokenAddress;
-        condition.tokenId = _condition.tokenId;
+        condition.gating = _condition.gating;
+        condition.minTokenId = _condition.minTokenId;
         condition.threshold = _condition.threshold;
         condition.maxCommits = _condition.maxCommits;
+        condition.maxTokenId = _condition.maxTokenId;
     }
 
     /**
      * @notice Validates that condition parameters make sense.
      *
-     * Reverts if:
-     * - EvaluationMethod.None and has fields different from 0
-     * - EvaluationMethod.Threshold and token address or maxCommits is zero
-     * - EvaluationMethod.SpecificToken and token address or maxCommits is zero
+     * An invalid condition is one that fits any of the following criteria:
+     * - EvaluationMethod.None: any field different from zero
+     * - EvaluationMethod.Threshold:
+     *    - Token address, maxCommits, or threshold is zero.
+     *    - Min token id is greater than max token id.
+     *    - TokenType is FungibleToken or NonFungibleToken and
+     *       - Min token id is not 0
+     *       - Gating is not PerAddress
+     * - EvaluationMethod.SpecificToken:
+     *    - TokenType is FungibleToken or MultiToken
+     *    - Token address, maxCommits is zero.
+     *    - Threshold is not zero.
+     *    - Min token id is greater than max token id.
      *
      * @param _condition - fully populated condition struct
      * @return valid - validity of condition
      *
      */
-    function validateCondition(Condition memory _condition) internal pure returns (bool valid) {
+    function validateCondition(Condition calldata _condition) internal pure returns (bool) {
         if (_condition.method == EvaluationMethod.None) {
-            valid = (_condition.tokenAddress == address(0) &&
-                _condition.tokenId == 0 &&
-                _condition.threshold == 0 &&
-                _condition.maxCommits == 0);
-        } else if (_condition.method == EvaluationMethod.Threshold) {
-            valid = (_condition.tokenAddress != address(0) && _condition.maxCommits > 0 && _condition.threshold > 0);
-        } else if (_condition.method == EvaluationMethod.SpecificToken) {
-            valid = (_condition.tokenAddress != address(0) && _condition.threshold == 0 && _condition.maxCommits > 0);
+            // bitwise OR of all fields should be zero
+            return
+                (uint8(_condition.tokenType) |
+                    uint160(_condition.tokenAddress) |
+                    uint8(_condition.gating) |
+                    _condition.minTokenId |
+                    _condition.threshold |
+                    _condition.maxCommits |
+                    _condition.maxTokenId) == 0;
         }
+
+        // SpecificToken or Threshold
+        if (
+            _condition.maxCommits == 0 ||
+            _condition.tokenAddress == address(0) ||
+            _condition.minTokenId > _condition.maxTokenId
+        ) return false;
+
+        if (_condition.method == EvaluationMethod.Threshold) {
+            if (_condition.threshold == 0) return false;
+
+            // Fungible token and NonFungible token cannot have token id range or per token id gating
+            if (
+                _condition.tokenType != TokenType.MultiToken &&
+                (_condition.minTokenId != 0 || _condition.gating != GatingType.PerAddress)
+            ) return false;
+        } else {
+            // SpecificToken
+            // Only NonFungible is allowed
+            return (_condition.tokenType == TokenType.NonFungibleToken && _condition.threshold == 0);
+        }
+
+        return true;
     }
 
     /**
@@ -129,7 +165,6 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      * Reverts if:
      * - Caller is not the seller
      * - Offer ids param is an empty list
-     * - Current number of offers plus number of offers added exceeds maximum allowed number per group
      * - Group does not exist
      * - Any of offers belongs to different seller
      * - Any of offers does not exist
@@ -146,14 +181,10 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         // check if group can be updated
         (uint256 sellerId, Group storage group) = preUpdateChecks(_groupId, _offerIds);
 
-        // limit maximum number of total offers to avoid running into block gas limit in a loop
-        // and make sure total number of offers in group does not exceed max
-        require(group.offerIds.length + _offerIds.length <= protocolLimits().maxOffersPerGroup, TOO_MANY_OFFERS);
-
-        for (uint256 i = 0; i < _offerIds.length; i++) {
+        for (uint256 i = 0; i < _offerIds.length; ) {
             uint256 offerId = _offerIds[i];
-            // make sure offer exist and belong to the seller
-            getValidOffer(offerId);
+
+            getValidOfferWithSellerCheck(offerId);
 
             // Offer should not belong to another group already
             (bool exist, ) = getGroupIdByOffer(offerId);
@@ -167,6 +198,10 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
 
             // Set index mapping. Should be index in offerIds + 1
             lookups.offerIdIndexByGroup[_groupId][offerId] = group.offerIds.length;
+
+            unchecked {
+                i++;
+            }
         }
 
         // Get the condition
@@ -183,7 +218,6 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      * Reverts if:
      * - Caller is not the seller
      * - Offer ids param is an empty list
-     * - Number of offers exceeds maximum allowed number per group
      * - Group does not exist
      *
      * @param _groupId  - the id of the group to be updated

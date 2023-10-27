@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ZeroAddress, getContractAt, getSigners, provider, randomBytes, keccak256, toUtf8Bytes } = hre.ethers;
 const { assert, expect } = require("chai");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const {
@@ -21,7 +21,6 @@ const {
   revertState,
 } = require("../util/upgrade");
 const { getGenericContext } = require("./01_generic");
-const { keccak256, toUtf8Bytes } = require("ethers/lib/utils");
 const TokenType = require("../../scripts/domain/TokenType");
 const Twin = require("../../scripts/domain/Twin");
 const {
@@ -34,9 +33,7 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons");
 const { readContracts } = require("../../scripts/util/utils.js");
 const { VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
 
-const oldVersion = "v2.1.0";
-const newVersion = "v2.2.0";
-const v2_1_0_scripts = "v2.1.0-scripts";
+const newVersion = "2.2.0";
 
 /**
  *  Upgrade test case - After upgrade from 2.1.0 to 2.0.0 everything is still operational
@@ -65,13 +62,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   before(async function () {
     try {
       // Make accounts available
-      [deployer, rando, , assistant] = await ethers.getSigners();
+      [deployer, rando, , assistant] = await getSigners();
 
-      ({ protocolDiamondAddress, protocolContracts, mockContracts } = await deploySuite(
-        deployer,
-        oldVersion,
-        v2_1_0_scripts
-      ));
+      ({ protocolDiamondAddress, protocolContracts, mockContracts } = await deploySuite(deployer, newVersion));
       ({ twinHandler, disputeHandler } = protocolContracts);
       ({ mockToken: mockToken } = mockContracts);
 
@@ -81,7 +74,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         protocolDiamondAddress,
         protocolContracts,
         mockContracts,
-        oldVersion
+        true
       );
 
       // Get current protocol state, which serves as the reference
@@ -90,8 +83,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         protocolDiamondAddress,
         protocolContracts,
         mockContracts,
-        preUpgradeEntities,
-        oldVersion
+        preUpgradeEntities
       );
 
       // upgrade clients
@@ -107,7 +99,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         offerHandler,
         exchangeHandler,
       } = await upgradeSuite(
-        newVersion,
         protocolDiamondAddress,
         {
           accountHandler: "IBosonAccountHandler",
@@ -126,7 +117,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         }
       ));
 
-      protocolContracts = {
+      const protocolContractsAfter = {
         ...protocolContracts,
         accountHandler,
         metaTransactionsHandler,
@@ -136,7 +127,15 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         exchangeHandler,
       };
 
-      snapshot = await ethers.provider.send("evm_snapshot", []);
+      // Get protocol state after the upgrade
+      const protocolContractStateAfter = await getProtocolContractState(
+        protocolDiamondAddress,
+        protocolContractsAfter,
+        mockContracts,
+        preUpgradeEntities
+      );
+
+      snapshot = await provider.send("evm_snapshot", []);
 
       // This context is placed in an uncommon place due to order of test execution.
       // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
@@ -148,11 +147,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           deployer,
           protocolDiamondAddress,
           protocolContracts,
+          protocolContractsAfter,
           mockContracts,
           protocolContractState,
+          protocolContractStateAfter,
           preUpgradeEntities,
-          snapshot,
-          newVersion
+          snapshot
         )
       );
     } catch (err) {
@@ -166,8 +166,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   afterEach(async function () {
     // Revert to state right after the upgrade.
     // This is used so the lengthly setup (deploy+upgrade) is done only once.
-    await ethers.provider.send("evm_revert", [snapshot]);
-    snapshot = await ethers.provider.send("evm_snapshot", []);
+    await provider.send("evm_revert", [snapshot]);
+    snapshot = await provider.send("evm_snapshot", []);
   });
 
   after(async function () {
@@ -190,10 +190,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
       const { contracts } = readContracts(31337, "hardhat", "upgrade-test");
       const orchestrationHandler1 = contracts.find((i) => i.name === "OrchestrationHandlerFacet1");
-      const diamondLoupe = await ethers.getContractAt("DiamondLoupeFacet", protocolDiamondAddress);
+      const diamondLoupe = await getContractAt("DiamondLoupeFacet", protocolDiamondAddress);
 
       for (const selector of selectors) {
-        expect(await diamondLoupe.facetAddress(selector)).to.equal(orchestrationHandler1.address);
+        expect(await diamondLoupe.facetAddress(selector)).to.equal(await orchestrationHandler1.getAddress());
       }
     });
   });
@@ -211,7 +211,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         expect(exist, "DR should not exist").to.be.false;
 
         // New DR must be created with active = true
-        const DR = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, true, true);
+        const DR = mockDisputeResolver(
+          await rando.getAddress(),
+          await rando.getAddress(),
+          await rando.getAddress(),
+          await rando.getAddress(),
+          true,
+          true
+        );
         DR.id = nextAccountId.toString();
 
         await accountHandler.connect(rando).createDisputeResolver(DR, [], []);
@@ -227,12 +234,21 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         const { nextAccountId } = protocolContractState.accountContractState;
 
         // Create seller
-        const seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address, true);
+        const seller = mockSeller(
+          await assistant.getAddress(),
+          await assistant.getAddress(),
+          await assistant.getAddress(),
+          await assistant.getAddress(),
+          true
+        );
         await accountHandler.connect(assistant).createSeller(seller, mockAuthToken(), mockVoucherInitValues());
 
         // Voucher contract
-        const expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, sellers.length + 1);
-        const bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        const expectedCloneAddress = calculateContractAddress(
+          await orchestrationHandler.getAddress(),
+          sellers.length + 1
+        );
+        const bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
         // Validate voucher name and symbol
         expect(await bosonVoucher.name()).to.equal(
@@ -308,7 +324,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
           const offer = preUpgradeEntities.offers.find((o) => o.offer.id == exchange.offerId);
           const seller = preUpgradeEntities.sellers.find((s) => s.seller.id == offer.offer.sellerId);
-          bosonVoucher = await ethers.getContractAt("IBosonVoucher", seller.voucherContractAddress);
+          bosonVoucher = await getContractAt("IBosonVoucher", seller.voucherContractAddress);
           tokenId = exchange.exchangeId;
           sellerWallet = seller.wallet;
         });
@@ -319,12 +335,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // Protocol event
           await expect(tx)
             .to.emit(exchangeHandler, "VoucherRedeemed")
-            .withArgs(exchange.offerId, exchange.exchangeId, buyerWallet.address);
+            .withArgs(exchange.offerId, exchange.exchangeId, await buyerWallet.getAddress());
 
           // Voucher burned event
           await expect(tx)
             .to.emit(bosonVoucher, "Transfer")
-            .withArgs(buyerWallet.address, ethers.constants.AddressZero, tokenId);
+            .withArgs(await buyerWallet.getAddress(), ZeroAddress, tokenId);
         });
 
         it("Cancel old voucher", async function () {
@@ -333,12 +349,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // Protocol event
           await expect(tx)
             .to.emit(exchangeHandler, "VoucherCanceled")
-            .withArgs(exchange.offerId, exchange.exchangeId, buyerWallet.address);
+            .withArgs(exchange.offerId, exchange.exchangeId, await buyerWallet.getAddress());
 
           // Voucher burned event
           await expect(tx)
             .to.emit(bosonVoucher, "Transfer")
-            .withArgs(buyerWallet.address, ethers.constants.AddressZero, tokenId);
+            .withArgs(await buyerWallet.getAddress(), ZeroAddress, tokenId);
         });
 
         it("Revoke old voucher", async function () {
@@ -347,12 +363,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // Protocol event
           await expect(tx)
             .to.emit(exchangeHandler, "VoucherRevoked")
-            .withArgs(exchange.offerId, exchange.exchangeId, sellerWallet.address);
+            .withArgs(exchange.offerId, exchange.exchangeId, await sellerWallet.getAddress());
 
           // Voucher burned event
           await expect(tx)
             .to.emit(bosonVoucher, "Transfer")
-            .withArgs(buyerWallet.address, ethers.constants.AddressZero, tokenId);
+            .withArgs(await buyerWallet.getAddress(), ZeroAddress, tokenId);
         });
       });
 
@@ -366,11 +382,11 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
           let price;
           ({ id: offerId, price } = preUpgradeEntities.offers[0].offer);
-          await exchangeHandler.commitToOffer(buyerWallet.address, offerId, { value: price });
+          await exchangeHandler.commitToOffer(await buyerWallet.getAddress(), offerId, { value: price });
 
           const offer = preUpgradeEntities.offers.find((o) => o.offer.id == offerId);
           const seller = preUpgradeEntities.sellers.find((s) => s.seller.id == offer.offer.sellerId);
-          bosonVoucher = await ethers.getContractAt("IBosonVoucher", seller.voucherContractAddress);
+          bosonVoucher = await getContractAt("IBosonVoucher", seller.voucherContractAddress);
           tokenId = deriveTokenId(offerId, exchangeId);
           sellerWallet = seller.wallet;
         });
@@ -381,12 +397,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // Protocol event
           await expect(tx)
             .to.emit(exchangeHandler, "VoucherRedeemed")
-            .withArgs(offerId, exchangeId, buyerWallet.address);
+            .withArgs(offerId, exchangeId, await buyerWallet.getAddress());
 
           // Voucher burned event
           await expect(tx)
             .to.emit(bosonVoucher, "Transfer")
-            .withArgs(buyerWallet.address, ethers.constants.AddressZero, tokenId);
+            .withArgs(await buyerWallet.getAddress(), ZeroAddress, tokenId);
         });
 
         it("Cancel new voucher", async function () {
@@ -395,12 +411,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // Protocol event
           await expect(tx)
             .to.emit(exchangeHandler, "VoucherCanceled")
-            .withArgs(offerId, exchangeId, buyerWallet.address);
+            .withArgs(offerId, exchangeId, await buyerWallet.getAddress());
 
           // Voucher burned event
           await expect(tx)
             .to.emit(bosonVoucher, "Transfer")
-            .withArgs(buyerWallet.address, ethers.constants.AddressZero, tokenId);
+            .withArgs(await buyerWallet.getAddress(), ZeroAddress, tokenId);
         });
 
         it("Revoke new voucher", async function () {
@@ -409,12 +425,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // Protocol event
           await expect(tx)
             .to.emit(exchangeHandler, "VoucherRevoked")
-            .withArgs(offerId, exchangeId, sellerWallet.address);
+            .withArgs(offerId, exchangeId, await sellerWallet.getAddress());
 
           // Voucher burned event
           await expect(tx)
             .to.emit(bosonVoucher, "Transfer")
-            .withArgs(buyerWallet.address, ethers.constants.AddressZero, tokenId);
+            .withArgs(await buyerWallet.getAddress(), ZeroAddress, tokenId);
         });
       });
 
@@ -422,7 +438,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         let seller, functionSignature, metaTransactionType, customTransactionType, nonce, message;
 
         beforeEach(async function () {
-          seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address, true);
+          seller = mockSeller(
+            await assistant.getAddress(),
+            await assistant.getAddress(),
+            await assistant.getAddress(),
+            await assistant.getAddress(),
+            true
+          );
 
           // Prepare the function signature for the facet function.
           functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
@@ -444,13 +466,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             MetaTransaction: metaTransactionType,
           };
 
-          nonce = parseInt(ethers.utils.randomBytes(8));
+          nonce = parseInt(randomBytes(8));
 
           // Prepare the message
           message = {
             nonce,
-            from: assistant.address,
-            contractAddress: accountHandler.address,
+            from: await assistant.getAddress(),
+            contractAddress: await accountHandler.getAddress(),
             functionName:
               "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint256))",
             functionSignature: functionSignature,
@@ -464,17 +486,25 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             customTransactionType,
             "MetaTransaction",
             message,
-            metaTransactionsHandler.address
+            await metaTransactionsHandler.getAddress()
           );
 
           // send a meta transaction, check for event
           await expect(
             metaTransactionsHandler
               .connect(deployer)
-              .executeMetaTransaction(assistant.address, message.functionName, functionSignature, nonce, r, s, v)
+              .executeMetaTransaction(
+                await assistant.getAddress(),
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              )
           )
             .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-            .withArgs(assistant.address, deployer.address, message.functionName, nonce);
+            .withArgs(await assistant.getAddress(), await deployer.getAddress(), message.functionName, nonce);
         });
 
         it("Meta transaction should fail when function name is not allowlisted", async function () {
@@ -486,14 +516,22 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             customTransactionType,
             "MetaTransaction",
             message,
-            metaTransactionsHandler.address
+            await metaTransactionsHandler.getAddress()
           );
 
           // Execute meta transaction, expecting revert.
           await expect(
             metaTransactionsHandler
               .connect(assistant)
-              .executeMetaTransaction(assistant.address, message.functionName, functionSignature, nonce, r, s, v)
+              .executeMetaTransaction(
+                await assistant.getAddress(),
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              )
           ).to.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
         });
 
@@ -536,12 +574,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // Enable functions
           await expect(metaTransactionsHandler.connect(deployer).setAllowlistedFunctions(functionHashList, true))
             .to.emit(metaTransactionsHandler, "FunctionsAllowlisted")
-            .withArgs(functionHashList, true, deployer.address);
+            .withArgs(functionHashList, true, await deployer.getAddress());
 
           // Disable functions
           await expect(metaTransactionsHandler.connect(deployer).setAllowlistedFunctions(functionHashList, false))
             .to.emit(metaTransactionsHandler, "FunctionsAllowlisted")
-            .withArgs(functionHashList, false, deployer.address);
+            .withArgs(functionHashList, false, await deployer.getAddress());
         });
 
         it("👉 isFunctionAllowlisted(bytes32)", async function () {
@@ -611,7 +649,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // Set new value
           await expect(configHandler.connect(deployer).setMaxPremintedVouchers(100))
             .to.emit(configHandler, "MaxPremintedVouchersChanged")
-            .withArgs(100, deployer.address);
+            .withArgs(100, await deployer.getAddress());
 
           // Verify that new value is stored
           expect(await configHandler.connect(rando).getMaxPremintedVouchers()).to.equal("100");
@@ -658,9 +696,18 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                 DRs: [, disputeResolver], // take DR that has empty allow list
               } = preUpgradeEntities;
 
-              seller = mockSeller(rando.address, rando.address, rando.address, rando.address, true);
+              seller = mockSeller(
+                await rando.getAddress(),
+                await rando.getAddress(),
+                await rando.getAddress(),
+                await rando.getAddress(),
+                true
+              );
               disputeResolverId = disputeResolver.id;
-              expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, sellers.length + 1);
+              expectedCloneAddress = calculateContractAddress(
+                await orchestrationHandler.getAddress(),
+                sellers.length + 1
+              );
 
               ({ offer, offerDates, offerDurations } = await mockOffer());
               agentId = 0;
@@ -689,17 +736,17 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
 
               // Voucher clone contract
-              let bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+              let bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
               await expect(tx).to.emit(bosonVoucher, "ContractURIChanged");
               await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged");
 
-              bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress); // Different ABI
+              bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress); // Different ABI
               await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred");
             });
 
             it("👉 createSellerAndOfferWithCondition", async function () {
               const condition = mockCondition({
-                tokenAddress: rando.address,
+                tokenAddress: await rando.getAddress(),
                 tokenType: TokenType.MultiToken,
                 tokenId: "5150",
               });
@@ -724,11 +771,11 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               await expect(tx).to.emit(orchestrationHandler, "GroupCreated");
 
               // Voucher clone contract
-              let bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+              let bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
               await expect(tx).to.emit(bosonVoucher, "ContractURIChanged");
               await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged");
 
-              bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+              bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
               await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred");
             });
 
@@ -738,9 +785,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               beforeEach(async function () {
                 [bosonToken] = await deployMockTokens();
                 // Approving the twinHandler contract to transfer seller's tokens
-                await bosonToken.connect(rando).approve(twinHandler.address, 1); // approving the twin handler
+                await bosonToken.connect(rando).approve(await twinHandler.getAddress(), 1); // approving the twin handler
 
-                twin = mockTwin(bosonToken.address);
+                twin = mockTwin(await bosonToken.getAddress());
               });
 
               it("👉 createSellerAndOfferAndTwinWithBundle", async function () {
@@ -766,17 +813,17 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                 await expect(tx).to.emit(orchestrationHandler, "BundleCreated");
 
                 // Voucher clone contract
-                let bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+                let bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
                 await expect(tx).to.emit(bosonVoucher, "ContractURIChanged");
                 await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged");
 
-                bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+                bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
                 await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred");
               });
 
               it("👉 createSellerAndOfferWithConditionAndTwinAndBundle", async function () {
                 const condition = mockCondition({
-                  tokenAddress: rando.address,
+                  tokenAddress: await rando.getAddress(),
                   tokenType: TokenType.MultiToken,
                   tokenId: "5150",
                 });
@@ -805,11 +852,11 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                 await expect(tx).to.emit(orchestrationHandler, "BundleCreated");
 
                 // Voucher clone contract
-                let bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+                let bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
                 await expect(tx).to.emit(bosonVoucher, "ContractURIChanged");
                 await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged");
 
-                bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+                bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
                 await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred");
               });
             });
@@ -833,7 +880,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
             it("👉 createOfferWithCondition", async function () {
               const condition = mockCondition({
-                tokenAddress: rando.address,
+                tokenAddress: await rando.getAddress(),
                 tokenType: TokenType.MultiToken,
                 tokenId: "5150",
               });
@@ -869,9 +916,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               beforeEach(async function () {
                 [bosonToken] = await deployMockTokens();
                 // Approving the twinHandler contract to transfer seller's tokens
-                await bosonToken.connect(assistant).approve(twinHandler.address, 1); // approving the twin handler
+                await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
 
-                twin = mockTwin(bosonToken.address);
+                twin = mockTwin(await bosonToken.getAddress());
               });
 
               it("👉 createOfferAndTwinWithBundle", async function () {
@@ -888,7 +935,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
               it("👉 createOfferWithConditionAndTwinAndBundle", async function () {
                 const condition = mockCondition({
-                  tokenAddress: rando.address,
+                  tokenAddress: await rando.getAddress(),
                   tokenType: TokenType.MultiToken,
                   tokenId: "5150",
                 });
@@ -927,9 +974,18 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                 DRs: [, disputeResolver], // take DR that has empty allow list
               } = preUpgradeEntities;
 
-              seller = mockSeller(rando.address, rando.address, rando.address, rando.address, true);
+              seller = mockSeller(
+                await rando.getAddress(),
+                await rando.getAddress(),
+                await rando.getAddress(),
+                await rando.getAddress(),
+                true
+              );
               disputeResolverId = disputeResolver.id;
-              expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, sellers.length + 1);
+              expectedCloneAddress = calculateContractAddress(
+                await orchestrationHandler.getAddress(),
+                sellers.length + 1
+              );
 
               ({ offer, offerDates, offerDurations } = await mockOffer());
               reservedRangeLength = offer.quantityAvailable;
@@ -950,7 +1006,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                   offerDurations,
                   disputeResolverId,
                   reservedRangeLength,
-                  rando.address,
+                  await rando.getAddress(),
                   authToken,
                   voucherInitValues,
                   agentId
@@ -962,18 +1018,18 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               await expect(tx).to.emit(orchestrationHandler, "RangeReserved");
 
               // Voucher clone contract
-              let bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+              let bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
               await expect(tx).to.emit(bosonVoucher, "ContractURIChanged");
               await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged");
               await expect(tx).to.emit(bosonVoucher, "RangeReserved");
 
-              bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress); // Different ABI
+              bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress); // Different ABI
               await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred");
             });
 
             it("👉 createSellerAndPremintedOfferWithCondition", async function () {
               const condition = mockCondition({
-                tokenAddress: rando.address,
+                tokenAddress: await rando.getAddress(),
                 tokenType: TokenType.MultiToken,
                 tokenId: "5150",
               });
@@ -987,7 +1043,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                   offerDurations,
                   disputeResolverId,
                   reservedRangeLength,
-                  rando.address,
+                  await rando.getAddress(),
                   condition,
                   authToken,
                   voucherInitValues,
@@ -1001,12 +1057,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               await expect(tx).to.emit(orchestrationHandler, "GroupCreated");
 
               // Voucher clone contract
-              let bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+              let bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
               await expect(tx).to.emit(bosonVoucher, "ContractURIChanged");
               await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged");
               await expect(tx).to.emit(bosonVoucher, "RangeReserved");
 
-              bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+              bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
               await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred");
             });
 
@@ -1016,9 +1072,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               beforeEach(async function () {
                 [bosonToken] = await deployMockTokens();
                 // Approving the twinHandler contract to transfer seller's tokens
-                await bosonToken.connect(rando).approve(twinHandler.address, 1); // approving the twin handler
+                await bosonToken.connect(rando).approve(await twinHandler.getAddress(), 1); // approving the twin handler
 
-                twin = mockTwin(bosonToken.address);
+                twin = mockTwin(await bosonToken.getAddress());
               });
 
               it("👉 createSellerAndPremintedOfferAndTwinWithBundle", async function () {
@@ -1032,7 +1088,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                     offerDurations,
                     disputeResolverId,
                     reservedRangeLength,
-                    rando.address,
+                    await rando.getAddress(),
                     twin,
                     authToken,
                     voucherInitValues,
@@ -1047,18 +1103,18 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                 await expect(tx).to.emit(orchestrationHandler, "BundleCreated");
 
                 // Voucher clone contract
-                let bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+                let bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
                 await expect(tx).to.emit(bosonVoucher, "ContractURIChanged");
                 await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged");
                 await expect(tx).to.emit(bosonVoucher, "RangeReserved");
 
-                bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+                bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
                 await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred");
               });
 
               it("👉 createSellerAndPremintedOfferWithConditionAndTwinAndBundle", async function () {
                 const condition = mockCondition({
-                  tokenAddress: rando.address,
+                  tokenAddress: await rando.getAddress(),
                   tokenType: TokenType.MultiToken,
                   tokenId: "5150",
                 });
@@ -1073,7 +1129,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                     offerDurations,
                     disputeResolverId,
                     reservedRangeLength,
-                    rando.address,
+                    await rando.getAddress(),
                     condition,
                     twin,
                     authToken,
@@ -1090,12 +1146,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                 await expect(tx).to.emit(orchestrationHandler, "BundleCreated");
 
                 // Voucher clone contract
-                let bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+                let bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
                 await expect(tx).to.emit(bosonVoucher, "ContractURIChanged");
                 await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged");
                 await expect(tx).to.emit(bosonVoucher, "RangeReserved");
 
-                bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+                bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
                 await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred");
               });
             });
@@ -1119,13 +1175,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               assistant = seller.wallet;
 
               // Voucher clone contract
-              const expectedCloneAddress = calculateContractAddress(accountHandler.address, "1");
-              bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+              const expectedCloneAddress = calculateContractAddress(await accountHandler.getAddress(), "1");
+              bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
             });
 
             it("👉 createPremintedOfferWithCondition", async function () {
               const condition = mockCondition({
-                tokenAddress: rando.address,
+                tokenAddress: await rando.getAddress(),
                 tokenType: TokenType.MultiToken,
                 tokenId: "5150",
               });
@@ -1138,7 +1194,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                   offerDurations,
                   disputeResolverId,
                   reservedRangeLength,
-                  assistant.address,
+                  await assistant.getAddress(),
                   condition,
                   agentId
                 );
@@ -1158,7 +1214,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                 offerDurations,
                 disputeResolverId,
                 reservedRangeLength,
-                assistant.address,
+                await assistant.getAddress(),
                 "1", // seller already has a group with id 1 (from populateProtocolContract)
                 agentId
               );
@@ -1176,9 +1232,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               beforeEach(async function () {
                 [bosonToken] = await deployMockTokens();
                 // Approving the twinHandler contract to transfer seller's tokens
-                await bosonToken.connect(assistant).approve(twinHandler.address, 1); // approving the twin handler
+                await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
 
-                twin = mockTwin(bosonToken.address);
+                twin = mockTwin(await bosonToken.getAddress());
               });
 
               it("👉 createPremintedOfferAndTwinWithBundle", async function () {
@@ -1191,7 +1247,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                     offerDurations,
                     disputeResolverId,
                     reservedRangeLength,
-                    assistant.address,
+                    await assistant.getAddress(),
                     twin,
                     agentId
                   );
@@ -1206,7 +1262,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
               it("👉 createPremintedOfferWithConditionAndTwinAndBundle", async function () {
                 const condition = mockCondition({
-                  tokenAddress: rando.address,
+                  tokenAddress: await rando.getAddress(),
                   tokenType: TokenType.MultiToken,
                   tokenId: "5150",
                 });
@@ -1220,7 +1276,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
                     offerDurations,
                     disputeResolverId,
                     reservedRangeLength,
-                    assistant.address,
+                    await assistant.getAddress(),
                     condition,
                     twin,
                     agentId
@@ -1262,20 +1318,22 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             const tokenId = deriveTokenId(offer.id, exchangeId);
 
             // Reserve range
-            await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
+            await offerHandler
+              .connect(assistant)
+              .reserveRange(offer.id, offer.quantityAvailable, await assistant.getAddress());
 
             // TODO: remove this once newVersion is 2.2.0 (not 2.2.0-rc.1)
             await configHandler.connect(deployer).setMaxPremintedVouchers(100);
 
             // Boson voucher contract address
             const sellerIndex = sellers.findIndex((s) => s.id === seller.id);
-            const voucherCloneAddress = calculateContractAddress(accountHandler.address, sellerIndex + 1);
-            const bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherCloneAddress);
+            const voucherCloneAddress = calculateContractAddress(await accountHandler.getAddress(), sellerIndex + 1);
+            const bosonVoucher = await getContractAt("BosonVoucher", voucherCloneAddress);
             await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
 
             // Commit to preminted offer, testing for the event
             await expect(
-              bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.wallet.address, tokenId)
+              bosonVoucher.connect(assistant).transferFrom(await assistant.getAddress(), buyer.wallet, tokenId)
             ).to.emit(exchangeHandler, "BuyerCommitted");
           });
         });
@@ -1284,18 +1342,22 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           it("👉 reserveRange for assistant", async function () {
             // Reserve range
             await expect(
-              offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address)
+              offerHandler
+                .connect(assistant)
+                .reserveRange(offer.id, offer.quantityAvailable, await assistant.getAddress())
             ).to.emit(offerHandler, "RangeReserved");
           });
 
           it("👉 reserveRange to contract", async function () {
             // Voucher contract
             const sellerIndex = sellers.findIndex((s) => s.id === seller.id);
-            const expectedCloneAddress = calculateContractAddress(accountHandler.address, sellerIndex + 1);
-            const bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+            const expectedCloneAddress = calculateContractAddress(await accountHandler.getAddress(), sellerIndex + 1);
+            const bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
             await expect(
-              offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, bosonVoucher.address)
+              offerHandler
+                .connect(assistant)
+                .reserveRange(offer.id, offer.quantityAvailable, await bosonVoucher.getAddress())
             ).to.emit(offerHandler, "RangeReserved");
           });
         });
@@ -1317,7 +1379,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       twin.id = "666";
 
       // Approve twinHandler to transfer assistant tokens
-      await mockToken.connect(assistant).approve(twinHandler.address, twin.amount);
+      await mockToken.connect(assistant).approve(await twinHandler.getAddress(), twin.amount);
 
       // Create twin
       await twinHandler.connect(assistant).createTwin(twin);
@@ -1348,14 +1410,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
       // Reserve range
       const length = "1";
-      const tx = await offerHandler.connect(assistant).reserveRange(offerId, length, assistant.address);
+      const tx = await offerHandler.connect(assistant).reserveRange(offerId, length, await assistant.getAddress());
       const { events } = await tx.wait();
       const { startExchangeId } = events.find((e) => e.event === "RangeReserved").args;
 
       // Find voucher contract
       const sellerIndex = sellers.findIndex((s) => s.id === seller.id);
-      const expectedCloneAddress = calculateContractAddress(accountHandler.address, sellerIndex + 1);
-      const bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+      const expectedCloneAddress = calculateContractAddress(await accountHandler.getAddress(), sellerIndex + 1);
+      const bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
       // Premint
       await bosonVoucher.connect(assistant).preMint(offerId, 1);

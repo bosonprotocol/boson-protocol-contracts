@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import { IAccessControl } from "../../interfaces/IAccessControl.sol";
 import { IBosonConfigHandler } from "../../interfaces/handlers/IBosonConfigHandler.sol";
@@ -48,13 +48,13 @@ library ClientLib {
      *
      * See: {AccessController.hasRole}
      *
-     * @param role - the role to check
+     * @param _role - the role to check
      */
-    function hasRole(bytes32 role) internal view returns (bool) {
+    function hasRole(bytes32 _role) internal view returns (bool) {
         ProxyStorage storage ps = proxyStorage();
         IAccessControl accessController = IAccessControl(
             IBosonConfigHandler(ps.protocolDiamond).getAccessControllerAddress()
         );
-        return accessController.hasRole(role, EIP712Lib.msgSender());
+        return accessController.hasRole(_role, EIP712Lib.msgSender());
     }
 }

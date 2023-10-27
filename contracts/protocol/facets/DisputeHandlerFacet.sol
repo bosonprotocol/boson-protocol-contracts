@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.9;
+pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonDisputeHandler } from "../../interfaces/handlers/IBosonDisputeHandler.sol";
@@ -188,7 +188,6 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * Reverts if:
      * - The disputes region of protocol is paused
-     * - Number of disputes exceeds maximum allowed number per batch
      * - For any dispute:
      *   - Exchange does not exist
      *   - Exchange is not in a Disputed state
@@ -198,12 +197,13 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * @param _exchangeIds - the array of ids of the associated exchanges
      */
     function expireDisputeBatch(uint256[] calldata _exchangeIds) external override {
-        // limit maximum number of disputes to avoid running into block gas limit in a loop
-        require(_exchangeIds.length <= protocolLimits().maxDisputesPerBatch, TOO_MANY_DISPUTES);
-
-        for (uint256 i = 0; i < _exchangeIds.length; i++) {
+        for (uint256 i = 0; i < _exchangeIds.length; ) {
             // create offer and update structs values to represent true state
             expireDispute(_exchangeIds[i]);
+
+            unchecked {
+                i++;
+            }
         }
     }
 

@@ -1,9 +1,25 @@
 const { ethers } = require("hardhat");
-const { utils, provider, BigNumber } = ethers;
+const {
+  getAddress,
+  provider,
+  keccak256,
+  encodeRlp,
+  getSigners,
+  parseUnits,
+  getContractAt,
+  toBeArray,
+  isHexString,
+  zeroPadValue,
+  Interface,
+  toUtf8Bytes,
+  solidityPackedKeccak256,
+  ZeroAddress,
+  ZeroHash,
+} = ethers;
 const { getFacets } = require("../../scripts/config/facet-deploy.js");
-const { keccak256, RLP } = utils;
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("./constants");
 const Role = require("../../scripts/domain/Role");
+const { toHexString } = require("../../scripts/util/utils.js");
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
 const { RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
@@ -12,7 +28,7 @@ function getEvent(receipt, factory, eventName) {
   let found = false;
 
   const eventFragment = factory.interface.fragments.filter((e) => e.name == eventName);
-  const iface = new utils.Interface(eventFragment);
+  const iface = new Interface(eventFragment);
 
   for (const log in receipt.logs) {
     const topics = receipt.logs[log].topics;
@@ -24,8 +40,9 @@ function getEvent(receipt, factory, eventName) {
         // CHECK IF TOPIC CORRESPONDS TO THE EVENT GIVEN TO FN
         const event = iface.getEvent(encodedTopic);
 
-        if (event.name == eventName) {
+        if (event && event.name == eventName) {
           found = true;
+
           const eventArgs = iface.parseLog(receipt.logs[log]).args;
           return eventArgs;
         }
@@ -47,7 +64,7 @@ function eventEmittedWithArgs(receipt, factory, eventName, args) {
   let match = false;
 
   const eventFragment = factory.interface.fragments.filter((e) => e.name == eventName);
-  const iface = new utils.Interface(eventFragment);
+  const iface = new Interface(eventFragment);
 
   for (const log in receipt.logs) {
     const topics = receipt.logs[log].topics;
@@ -107,7 +124,7 @@ function compareArgs(eventArgs, args) {
           disputeResolutionTermsStruct,
           offerFeesStruct,
           agentId,
-          assistant.address,
+          await assistant.getAddress(),
         );
  * 
  * @param {*} returnedOffer 
@@ -137,15 +154,17 @@ function compareRoyaltyRecipientLists(returnedRoyaltyRecipientList) {
   return true;
 }
 
-async function setNextBlockTimestamp(timestamp) {
+async function setNextBlockTimestamp(timestamp, mine = false) {
   if (typeof timestamp == "string" && timestamp.startsWith("0x0") && timestamp.length > 3)
     timestamp = "0x" + timestamp.substring(3);
   await provider.send("evm_setNextBlockTimestamp", [timestamp]);
-  await provider.send("evm_mine", []);
+
+  // when testing static call, a block must be mined to get the correct timestamp
+  if (mine) await provider.send("evm_mine", []);
 }
 
 function getSignatureParameters(signature) {
-  if (!utils.isHexString(signature)) {
+  if (!isHexString(signature)) {
     throw new Error('Given value "'.concat(signature, '" is not a valid hex string.'));
   }
 
@@ -195,10 +214,10 @@ async function prepareDataSignatureParameters(
 
   if (type == "Protocol") {
     //hardhat default chain id is 31337
-    domainData.salt = utils.hexZeroPad(BigNumber.from(31337).toHexString(), 32);
+    domainData.salt = zeroPadValue(toHexString(31337n), 32);
   } else {
     const { chainId } = await provider.getNetwork();
-    domainData.chainId = chainId;
+    domainData.chainId = chainId.toString();
   }
 
   // Prepare the types
@@ -216,7 +235,7 @@ async function prepareDataSignatureParameters(
   });
 
   // Sign the data
-  const signature = await provider.send("eth_signTypedData_v4", [user.address, dataToSign]);
+  const signature = await provider.send("eth_signTypedData_v4", [await user.getAddress(), dataToSign]);
 
   // Collect the Signature components
   const { r, s, v } = getSignatureParameters(signature);
@@ -230,28 +249,74 @@ async function prepareDataSignatureParameters(
 }
 
 function calculateVoucherExpiry(block, voucherRedeemableFromDate, voucherValidDuration) {
-  const startDate = BigNumber.from(block.timestamp).gte(BigNumber.from(voucherRedeemableFromDate))
-    ? BigNumber.from(block.timestamp)
-    : BigNumber.from(voucherRedeemableFromDate);
-  return startDate.add(BigNumber.from(voucherValidDuration)).toString();
+  const startDate =
+    BigInt(block.timestamp) > BigInt(voucherRedeemableFromDate)
+      ? BigInt(block.timestamp)
+      : BigInt(voucherRedeemableFromDate);
+  return (startDate + BigInt(voucherValidDuration)).toString();
 }
 
 function applyPercentage(base, percentage) {
-  return BigNumber.from(base).mul(percentage).div("10000").toString();
+  return ((BigInt(base) * BigInt(percentage)) / BigInt(10000)).toString();
 }
 
 function calculateContractAddress(senderAddress, senderNonce) {
-  const nonce = BigNumber.from(senderNonce);
-  const nonceHex = nonce.eq(0) ? "0x" : nonce.toHexString();
+  const nonce = BigInt(senderNonce);
+  const nonceHex = nonce == 0n ? "0x" : toBeArray(nonce);
 
   const input_arr = [senderAddress, nonceHex];
-  const rlp_encoded = RLP.encode(input_arr);
+  const rlp_encoded = encodeRlp(input_arr);
 
   const contract_address_long = keccak256(rlp_encoded);
 
   const contract_address = "0x" + contract_address_long.substring(26); //Trim the first 24 characters.
 
-  return utils.getAddress(contract_address);
+  return getAddress(contract_address);
+}
+
+function calculateContractAddress2(senderAddress, cloneByteCodeHash, salt) {
+  const contract_address_long = solidityPackedKeccak256(
+    ["bytes1", "address", "bytes32", "bytes32"],
+    ["0xFF", senderAddress, salt, cloneByteCodeHash]
+  );
+
+  const contract_address = "0x" + contract_address_long.substring(26); //Trim the first 24 characters.
+
+  return getAddress(contract_address);
+}
+
+function getCloneByteCodeHash(beaconProxyAddress) {
+  return keccak256(
+    `0x3d602d80600a3d3981f3363d3d373d3d3d363d73${beaconProxyAddress.slice(2)}5af43d82803e903d91602b57fd5bf3`
+  );
+}
+
+function getCollectionSalt(sellerSalt, collectionSalt) {
+  return solidityPackedKeccak256(["bytes32", "bytes32"], [sellerSalt, collectionSalt]);
+}
+
+function getSellerSalt(sellerAdmin, sellerSalt) {
+  return solidityPackedKeccak256(["address", "bytes32"], [sellerAdmin, sellerSalt]);
+}
+
+function calculateCloneAddress(
+  voucherCreator,
+  beaconProxyAddress,
+  sellerAddress,
+  collectionSalt = ZeroHash,
+  creationSalt = ZeroHash
+) {
+  const cloneByteCodeHash = getCloneByteCodeHash(beaconProxyAddress);
+  const sellerSalt = getSellerSalt(sellerAddress, creationSalt);
+  const salt = getCollectionSalt(sellerSalt, collectionSalt);
+  return calculateContractAddress2(voucherCreator, cloneByteCodeHash, salt);
+}
+
+async function calculateBosonProxyAddress(proxyCreator) {
+  const salt = solidityPackedKeccak256(["string"], ["BosonVoucherProxy"]);
+  const { bytecode } = await ethers.getContractFactory("BeaconClientProxy");
+  const byteCodeHash = keccak256(bytecode);
+  return calculateContractAddress2(proxyCreator, byteCodeHash, salt);
 }
 
 const paddingType = {
@@ -262,18 +327,23 @@ const paddingType = {
 
 function getMappingStoragePosition(slot, key, padding = paddingType.NONE) {
   let keyBuffer;
+
+  let keyHex = String(key).startsWith("0x") ? String(key) : toHexString(key);
+
   switch (padding) {
     case paddingType.NONE:
-      keyBuffer = utils.toUtf8Bytes(key);
+      keyBuffer = toUtf8Bytes(key);
       break;
     case paddingType.START:
-      keyBuffer = Buffer.from(utils.hexZeroPad(key, 32).toString().slice(2), "hex");
+      keyBuffer = Buffer.from(zeroPadValue(keyHex, 32).toString().slice(2), "hex");
       break;
     case paddingType.END:
-      keyBuffer = Buffer.from(key.slice(2).padEnd(64, "0"), "hex"); // assume key is prefixed with 0x
+      keyBuffer = Buffer.from(keyHex.slice(2).padEnd(64, "0"), "hex");
       break;
   }
-  const pBuffer = Buffer.from(slot.toHexString().slice(2), "hex");
+
+  const slotHex = String(slot).startsWith("0x") ? slot : toHexString(slot);
+  const pBuffer = Buffer.from(slotHex.slice(2), "hex"); // slice is used to remove '0x' prefix for Buffer.from
   return keccak256(Buffer.concat([keyBuffer, pBuffer]));
 }
 
@@ -288,7 +358,7 @@ async function getFacetsWithArgs(facetNames, config) {
 
 function objectToArray(input) {
   // If the input is not an object, return it as-is
-  if (BigNumber.isBigNumber(input) || typeof input !== "object" || input === null) {
+  if (typeof input !== "object" || input === null) {
     return input;
   }
 
@@ -335,46 +405,44 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
     "MetaTransactionsHandlerFacet",
   ];
 
-  const signers = await ethers.getSigners();
+  const signers = await getSigners();
   const [deployer, protocolTreasury, bosonToken, pauser] = signers;
 
   // Deploy the Protocol Diamond
   const [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
 
   // Temporarily grant UPGRADER role to deployer account
-  await accessController.grantRole(Role.UPGRADER, deployer.address);
+  await accessController.grantRole(Role.UPGRADER, await deployer.getAddress());
 
   // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
-  await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+  await accessController.grantRole(Role.PROTOCOL, await protocolDiamond.getAddress());
 
   // Grant PAUSER role to pauser account
-  await accessController.grantRole(Role.PAUSER, pauser.address);
+  await accessController.grantRole(Role.PAUSER, await pauser.getAddress());
 
   // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
-  const protocolClientArgs = [protocolDiamond.address];
-  const [implementations, beacons, proxies, clients] = await deployProtocolClients(
+  const protocolClientArgs = [await protocolDiamond.getAddress()];
+  const [implementations, beacons] = await deployProtocolClients(
     protocolClientArgs,
     maxPriorityFeePerGas,
     forwarderAddress
   );
   const [beacon] = beacons;
-  const [proxy] = proxies;
-  const [bosonVoucher] = clients;
   const [voucherImplementation] = implementations;
 
   // set protocolFees
   const protocolFeePercentage = "200"; // 2 %
-  const protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+  const protocolFeeFlatBoson = parseUnits("0.01", "ether").toString();
   const buyerEscalationDepositPercentage = "1000"; // 10%
 
   // Add config Handler, so ids start at 1, and so voucher address can be found
   const protocolConfig = [
     // Protocol addresses
     {
-      treasury: protocolTreasury.address,
-      token: bosonTokenAddress || bosonToken.address,
-      voucherBeacon: beacon.address,
-      beaconProxy: proxy.address,
+      treasury: await protocolTreasury.getAddress(),
+      token: bosonTokenAddress || (await bosonToken.getAddress()),
+      voucherBeacon: await beacon.getAddress(),
+      beaconProxy: ZeroAddress,
     },
     // Protocol limits
     {
@@ -390,6 +458,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
       maxAllowedSellers: 100,
       maxTotalOfferFeePercentage: 4000, //40%
       maxRoyaltyPecentage: 1000, //10%
+      minResolutionPeriod: oneWeek,
       maxResolutionPeriod: oneMonth,
       minDisputePeriod: oneWeek,
       maxPremintedVouchers: 10000,
@@ -405,34 +474,34 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
   const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
 
   // Cut the protocol handler facets into the Diamond
-  await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
+  await deployAndCutFacets(await protocolDiamond.getAddress(), facetsToDeploy, maxPriorityFeePerGas);
 
   let contractInstances = {};
   for (const contract of Object.keys(contracts)) {
-    contractInstances[contract] = await ethers.getContractAt(contracts[contract], protocolDiamond.address);
+    contractInstances[contract] = await getContractAt(contracts[contract], await protocolDiamond.getAddress());
   }
 
-  const extraReturnValues = { accessController, bosonVoucher, voucherImplementation, beacon };
+  const extraReturnValues = { accessController, voucherImplementation, beacon };
 
   return {
     signers: signers.slice(3),
     contractInstances,
     protocolConfig,
-    diamondAddress: protocolDiamond.address,
+    diamondAddress: await protocolDiamond.getAddress(),
     extraReturnValues,
   };
 }
 
 async function getSnapshot() {
-  return await ethers.provider.send("evm_snapshot", []);
+  return await provider.send("evm_snapshot", []);
 }
 
 async function revertToSnapshot(snapshotId) {
-  return await ethers.provider.send("evm_revert", [snapshotId]);
+  return await provider.send("evm_revert", [snapshotId]);
 }
 
 function deriveTokenId(offerId, exchangeId) {
-  return ethers.BigNumber.from(offerId).shl(128).add(exchangeId);
+  return (BigInt(offerId) << 128n) + BigInt(exchangeId);
 }
 
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
@@ -441,6 +510,8 @@ exports.eventEmittedWithArgs = eventEmittedWithArgs;
 exports.prepareDataSignatureParameters = prepareDataSignatureParameters;
 exports.calculateVoucherExpiry = calculateVoucherExpiry;
 exports.calculateContractAddress = calculateContractAddress;
+exports.calculateCloneAddress = calculateCloneAddress;
+exports.calculateBosonProxyAddress = calculateBosonProxyAddress;
 exports.applyPercentage = applyPercentage;
 exports.getMappingStoragePosition = getMappingStoragePosition;
 exports.paddingType = paddingType;
@@ -452,3 +523,4 @@ exports.setupTestEnvironment = setupTestEnvironment;
 exports.getSnapshot = getSnapshot;
 exports.revertToSnapshot = revertToSnapshot;
 exports.deriveTokenId = deriveTokenId;
+exports.getSellerSalt = getSellerSalt;
