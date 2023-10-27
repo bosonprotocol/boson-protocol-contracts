@@ -10,6 +10,8 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
+import { DateTime } from "@quant-finance/solidity-datetime/contracts/DateTime.sol";
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
  * @title MetaTransactionsHandlerFacet
@@ -117,7 +119,27 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
 
         // Get other offer details from the protocol
         Offer storage offer = getValidOffer(offerId);
-        OfferDates storage offerDates = fetchOfferDates(offerId);
+        bytes memory redeemableFrom;
+        {
+            OfferDates storage offerDates = fetchOfferDates(offerId);
+
+            (uint256 year, uint256 month, uint256 day, uint256 hour, uint256 minute, uint256 second) = DateTime
+                .timestampToDateTime(offerDates.voucherRedeemableFrom);
+            redeemableFrom = abi.encodePacked(
+                Strings.toString(year),
+                "/",
+                Strings.toString(month),
+                "/",
+                Strings.toString(day),
+                " ",
+                Strings.toString(hour),
+                ":",
+                Strings.toString(minute),
+                ":",
+                Strings.toString(second)
+            );
+        }
+
         OfferDurations storage offerDurations = fetchOfferDurations(offerId);
 
         return
@@ -130,9 +152,19 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
                     offer.price,
                     offer.sellerDeposit,
                     offer.buyerCancelPenalty,
-                    offerDates.voucherRedeemableFrom,
-                    offerDurations.disputePeriod,
-                    offerDurations.resolutionPeriod
+                    keccak256(redeemableFrom),
+                    keccak256(
+                        abi.encodePacked(
+                            Strings.toString(offerDurations.disputePeriod / DateTime.SECONDS_PER_DAY),
+                            " days"
+                        )
+                    ),
+                    keccak256(
+                        abi.encodePacked(
+                            Strings.toString(offerDurations.resolutionPeriod / DateTime.SECONDS_PER_DAY),
+                            " days"
+                        )
+                    )
                 )
             );
     }

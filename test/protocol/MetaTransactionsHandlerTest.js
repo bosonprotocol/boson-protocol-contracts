@@ -1652,9 +1652,9 @@ describe("IBosonMetaTransactionsHandler", function () {
               { name: "price", type: "uint256" },
               { name: "sellerDeposit", type: "uint256" },
               { name: "buyerCancelPenalty", type: "uint256" },
-              { name: "voucherRedeemableFrom", type: "uint256" },
-              { name: "disputePeriod", type: "uint256" },
-              { name: "resolutionPeriod", type: "uint256" },
+              { name: "voucherRedeemableFrom", type: "string" },
+              { name: "disputePeriod", type: "string" },
+              { name: "resolutionPeriod", type: "string" },
             ];
 
             // Set the message Type
@@ -1678,15 +1678,57 @@ describe("IBosonMetaTransactionsHandler", function () {
               offerId: offer.id,
             };
 
+            const SECONDS_PER_DAY = 24n * 60n * 60n;
+            const SECONDS_PER_HOUR = 60n * 60n;
+            const SECONDS_PER_MINUTE = 60n;
+            const OFFSET19700101 = 2440588n;
+
+            function timestampToDateTime(timestamp) {
+              timestamp = BigInt(timestamp);
+              let [year, month, day] = _daysToDate(timestamp / SECONDS_PER_DAY);
+              let secs = timestamp % SECONDS_PER_DAY;
+              let hour = secs / SECONDS_PER_HOUR;
+              secs = secs % SECONDS_PER_HOUR;
+              let minute = secs / SECONDS_PER_MINUTE;
+              let second = secs % SECONDS_PER_MINUTE;
+
+              return [year, month, day, hour, minute, second];
+            }
+
+            function _daysToDate(_days) {
+              let __days = _days;
+
+              let L = __days + 68569n + OFFSET19700101;
+              let N = (4n * L) / 146097n;
+              L = L - (146097n * N + 3n) / 4n;
+              let _year = (4000n * (L + 1n)) / 1461001n;
+              L = L - (1461n * _year) / 4n + 31n;
+              let _month = (80n * L) / 2447n;
+              let _day = L - (2447n * _month) / 80n;
+              L = _month / 11n;
+              _month = _month + 2n - 12n * L;
+              _year = 100n * (N - 49n) + _year + L;
+
+              let year = _year;
+              let month = _month;
+              let day = _day;
+              return [year, month, day];
+            }
+
+            let [year, month, day, hour, minute, second] = timestampToDateTime(
+              Number(offerDates.voucherRedeemableFrom)
+            );
+            let voucherRedeemableFrom = `${year}/${month}/${day} ${hour}:${minute}:${second}`;
+
             const extendedOfferDetails = {
               ...validOfferDetails,
               exchangeToken: offer.exchangeToken,
               price: offer.price,
               sellerDeposit: offer.sellerDeposit,
               buyerCancelPenalty: offer.buyerCancelPenalty,
-              voucherRedeemableFrom: offerDates.voucherRedeemableFrom,
-              disputePeriod: offerDurations.disputePeriod,
-              resolutionPeriod: offerDurations.resolutionPeriod,
+              voucherRedeemableFrom: voucherRedeemableFrom,
+              disputePeriod: `${BigInt(offerDurations.disputePeriod) / SECONDS_PER_DAY} days`,
+              resolutionPeriod: `${BigInt(offerDurations.resolutionPeriod) / SECONDS_PER_DAY} days`,
             };
 
             // Prepare the message
@@ -1752,14 +1794,8 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Prepare the message
             message.offerDetails = {
+              ...message.offerDetails,
               ...validOfferDetails,
-              exchangeToken: offer.exchangeToken,
-              price: offer.price,
-              sellerDeposit: offer.sellerDeposit,
-              buyerCancelPenalty: offer.buyerCancelPenalty,
-              voucherRedeemableFrom: offerDates.voucherRedeemableFrom,
-              disputePeriod: offerDurations.disputePeriod,
-              resolutionPeriod: offerDurations.resolutionPeriod,
             };
 
             // Collect the signature components

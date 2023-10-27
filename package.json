@@ -77,7 +77,8 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.9.0",
-    "@openzeppelin/contracts-upgradeable": "4.9.3"
+    "@openzeppelin/contracts-upgradeable": "4.9.3",
+    "@quant-finance/solidity-datetime": "^2.2.0"
   },
   "devDependencies": {
     "@bosonprotocol/solidoc": "3.0.3",
