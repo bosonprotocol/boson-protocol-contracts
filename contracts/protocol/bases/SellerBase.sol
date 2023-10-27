@@ -99,7 +99,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
 
         // Set treasury as the default royalty recipient
         require(
-            _voucherInitValues.royaltyPercentage <= protocolLimits().maxRoyaltyPecentage,
+            _voucherInitValues.royaltyPercentage <= protocolLimits().maxRoyaltyPercentage,
             INVALID_ROYALTY_PERCENTAGE
         );
         RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[sellerId];

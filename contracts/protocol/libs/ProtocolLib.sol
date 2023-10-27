@@ -59,7 +59,7 @@ library ProtocolLib {
         // limit the sum of (protocol fee percentage + agent fee percentage) of an offer fee
         uint16 maxTotalOfferFeePercentage;
         // limit the max royalty percentage that can be set by the seller
-        uint16 maxRoyaltyPecentage;
+        uint16 maxRoyaltyPercentage;
         // limit the max number of vouchers that can be preminted in a single transaction
         uint256 maxPremintedVouchers;
         // lower limit for resolution period

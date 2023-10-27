@@ -24,7 +24,7 @@ module.exports = {
     maxDisputesPerBatch: "75",
     maxAllowedSellers: "140",
     maxTotalOfferFeePercentage: "10000", // 100%
-    maxRoyaltyPecentage: "10000", //100%
+    maxRoyaltyPercentage: "10000", //100%
     minResolutionPeriod: oneWeek.toString(),
     maxResolutionPeriod: ninetyDays.toString(),
     minDisputePeriod: oneWeek.toString(),

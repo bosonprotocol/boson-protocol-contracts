@@ -980,7 +980,7 @@ async function setupCommonEnvironment() {
       maxDisputesPerBatch: 10000,
       maxAllowedSellers: 10000,
       maxTotalOfferFeePercentage: 4000, //40%
-      maxRoyaltyPecentage: 1000, //10%
+      maxRoyaltyPercentage: 1000, //10%
       maxResolutionPeriod: oneMonth,
       minDisputePeriod: oneWeek,
       maxPremintedVouchers: 100,

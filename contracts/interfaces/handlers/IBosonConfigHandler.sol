@@ -9,7 +9,7 @@ import { IBosonConfigEvents } from "../events/IBosonConfigEvents.sol";
  *
  * @notice Handles management of configuration within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xbc28d3e6
+ * The ERC-165 identifier for this interface is: 0x7899c7b9
  */
 interface IBosonConfigHandler is IBosonConfigEvents {
     /**
@@ -231,23 +231,23 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * Reverts if:
      * - The _maxRoyaltyPercentage is zero.
-     * - The _maxRoyaltyPecentage is greater than 10000.
+     * - The _maxRoyaltyPercentage is greater than 10000.
      *
      * @dev Caller must have ADMIN role.
      *
-     * @param _maxRoyaltyPecentage - the maximum royalty percentage
+     * @param _maxRoyaltyPercentage - the maximum royalty percentage
      *
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
      */
-    function setMaxRoyaltyPecentage(uint16 _maxRoyaltyPecentage) external;
+    function setMaxRoyaltyPercentage(uint16 _maxRoyaltyPercentage) external;
 
     /**
      * @notice Gets the maximum royalty percentage that can be set by the seller.
      *
      * @return the maximum royalty percentage
      */
-    function getMaxRoyaltyPecentage() external view returns (uint16);
+    function getMaxRoyaltyPercentage() external view returns (uint16);
 
     /**
      * @notice Sets the minimum resolution period a seller can specify.

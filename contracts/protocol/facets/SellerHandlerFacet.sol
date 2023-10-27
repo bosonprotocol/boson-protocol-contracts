@@ -509,7 +509,7 @@ contract SellerHandlerFacet is SellerBase {
                 RECIPIENT_NOT_UNIQUE
             );
             require(
-                _royaltyRecipients[i].minRoyaltyPercentage <= protocolLimits().maxRoyaltyPecentage,
+                _royaltyRecipients[i].minRoyaltyPercentage <= protocolLimits().maxRoyaltyPercentage,
                 INVALID_ROYALTY_PERCENTAGE
             );
             royaltyRecipients.push(_royaltyRecipients[i]);
@@ -580,7 +580,7 @@ contract SellerHandlerFacet is SellerBase {
                 }
             }
             require(
-                _royaltyRecipients[i].minRoyaltyPercentage <= protocolLimits().maxRoyaltyPecentage,
+                _royaltyRecipients[i].minRoyaltyPercentage <= protocolLimits().maxRoyaltyPercentage,
                 INVALID_ROYALTY_PERCENTAGE
             );
             royaltyRecipients[royaltyRecipientId] = _royaltyRecipients[i];

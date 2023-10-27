@@ -270,7 +270,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                     totalRoyalties = _offer.royaltyInfo.bps[i];
                 }
 
-                require(totalRoyalties <= limits.maxRoyaltyPecentage, INVALID_ROYALTY_PERCENTAGE);
+                require(totalRoyalties <= limits.maxRoyaltyPercentage, INVALID_ROYALTY_PERCENTAGE);
             }
         }
         // Get storage location for offer

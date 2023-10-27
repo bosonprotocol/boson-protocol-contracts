@@ -2434,7 +2434,7 @@ describe("IBosonVoucher", function () {
       });
 
       it("eip2981 always returns only the first entry as the recipient", async function () {
-        await configHandler.connect(deployer).setMaxRoyaltyPecentage("10000");
+        await configHandler.connect(deployer).setMaxRoyaltyPercentage("10000");
 
         // Add multiple royalty recipients
         const royaltyRecipientList = new RoyaltyRecipientList([

@@ -457,7 +457,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
       maxDisputesPerBatch: 100,
       maxAllowedSellers: 100,
       maxTotalOfferFeePercentage: 4000, //40%
-      maxRoyaltyPecentage: 1000, //10%
+      maxRoyaltyPercentage: 1000, //10%
       minResolutionPeriod: oneWeek,
       maxResolutionPeriod: oneMonth,
       minDisputePeriod: oneWeek,

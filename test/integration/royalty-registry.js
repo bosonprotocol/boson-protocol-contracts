@@ -81,7 +81,7 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
         maxDisputesPerBatch: 100,
         maxAllowedSellers: 100,
         maxTotalOfferFeePercentage: 4000, //40%
-        maxRoyaltyPecentage: 1000, //10%
+        maxRoyaltyPercentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
         minDisputePeriod: oneWeek,
         maxPremintedVouchers: 10000,
