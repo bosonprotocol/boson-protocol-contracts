@@ -2064,7 +2064,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             validOfferDetails.tokenId = tokenId;
 
             // Prepare the message
-            message.offerDetails = validOfferDetails;
+            message.offerDetails.tokenId = tokenId;
 
             // Collect the signature components
             let { r, s, v } = await prepareDataSignatureParameters(
