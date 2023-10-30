@@ -54,7 +54,7 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
         ProtocolLib.ProtocolStatus storage status = protocolStatus();
 
         // Make sure the protocol is paused
-        require(status.pauseScenario > 0, NOT_PAUSED);
+        if (status.pauseScenario == 0) revert NotPaused();
 
         togglePause(_regions, false);
 

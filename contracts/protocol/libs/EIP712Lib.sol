@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
 /**
@@ -55,14 +56,13 @@ library EIP712Lib {
     ) internal returns (bool) {
         // Ensure signature is unique
         // See https://github.com/OpenZeppelin/openzeppelin-contracts/blob/04695aecbd4d17dddfd55de766d10e3805d6f42f/contracts/cryptography/ECDSA.sol#63
-        require(
-            uint256(_sigS) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0 &&
-                (_sigV == 27 || _sigV == 28),
-            INVALID_SIGNATURE
-        );
+        if (
+            uint256(_sigS) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0 ||
+            (_sigV != 27 || _sigV != 28)
+        ) revert BosonErrors.InvalidSignature();
 
         address signer = ecrecover(toTypedMessageHash(_hashedMetaTx), _sigV, _sigR, _sigS);
-        require(signer != address(0), INVALID_SIGNATURE);
+        if (signer == address(0)) revert BosonErrors.InvalidSignature();
         return signer == _user;
     }
 
@@ -124,7 +124,7 @@ library EIP712Lib {
         // Get sender from the storage if this is a meta transaction
         if (isItAMetaTransaction) {
             address sender = getCurrentSenderAddress();
-            require(sender != address(0), INVALID_ADDRESS);
+            if (sender == address(0)) revert BosonErrors.InvalidAddress();
 
             return sender;
         } else {

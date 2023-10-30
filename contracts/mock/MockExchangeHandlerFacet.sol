@@ -83,7 +83,9 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         // N.B. An existing buyer or seller may be the "anyone else" on an exchange they are not a part of
         if (!buyerExists || buyerId != exchange.buyerId) {
             uint256 elapsed = block.timestamp - voucher.redeemedDate;
-            require(elapsed >= fetchOfferDurations(offerId).disputePeriod, DISPUTE_PERIOD_NOT_ELAPSED);
+            if (elapsed < fetchOfferDurations(offerId).disputePeriod) {
+                revert DisputePeriodNotElapsed();
+            }
         }
 
         // Finalize the exchange
@@ -145,7 +147,9 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         (, offer) = fetchOffer(exchange.offerId);
 
         // Only seller's assistant may call
-        require(sellerExists && offer.sellerId == sellerId, NOT_ASSISTANT);
+        if (!sellerExists || offer.sellerId != sellerId) {
+            revert NotAssistant();
+        }
 
         // Revoke the voucher
         revokeVoucherInternal(exchange);
@@ -196,7 +200,9 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
         // Make sure that the voucher has expired
-        require(block.timestamp >= voucher.validUntilDate, VOUCHER_STILL_VALID);
+        if (block.timestamp < voucher.validUntilDate) {
+            revert VoucherStillValid();
+        }
 
         // Finalize the exchange, burning the voucher
         finalizeExchange(exchange, ExchangeState.Canceled);
@@ -241,10 +247,14 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         (sellerExists, sellerId) = getSellerIdByAssistant(sender);
 
         // Only seller's assistant may call
-        require(sellerExists && offer.sellerId == sellerId, NOT_ASSISTANT);
+        if (!sellerExists || offer.sellerId != sellerId) {
+            revert NotAssistant();
+        }
 
         // Make sure the proposed date is later than the current one
-        require(_validUntilDate > voucher.validUntilDate, VOUCHER_EXTENSION_NOT_VALID);
+        if (_validUntilDate <= voucher.validUntilDate) {
+            revert VoucherExtensionNotValid();
+        }
 
         // Extend voucher
         voucher.validUntilDate = _validUntilDate;
@@ -277,11 +287,11 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         checkBuyer(exchange.buyerId);
 
         // Make sure the voucher is redeemable
-        require(
-            block.timestamp >= fetchOfferDates(offerId).voucherRedeemableFrom &&
-                block.timestamp <= voucher.validUntilDate,
-            VOUCHER_NOT_REDEEMABLE
-        );
+        if (
+            block.timestamp < fetchOfferDates(offerId).voucherRedeemableFrom || block.timestamp > voucher.validUntilDate
+        ) {
+            revert VoucherNotRedeemable();
+        }
 
         // Store the time the exchange was redeemed
         voucher.redeemedDate = block.timestamp;

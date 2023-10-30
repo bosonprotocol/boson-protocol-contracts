@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
@@ -18,7 +19,7 @@ import { IClientExternalAddresses } from "../../interfaces/clients/IClientExtern
  *
  * Boson client contracts include BosonVoucher
  */
-abstract contract BeaconClientBase is BosonTypes {
+abstract contract BeaconClientBase is BosonTypes, BosonErrors {
     /**
      * @dev Modifier that checks that the caller has a specific role.
      *
@@ -30,7 +31,7 @@ abstract contract BeaconClientBase is BosonTypes {
      * @param _role - the role to check
      */
     modifier onlyRole(bytes32 _role) {
-        require(BeaconClientLib.hasRole(_role), ACCESS_DENIED);
+        if (!BeaconClientLib.hasRole(_role)) revert AccessDenied();
         _;
     }
 

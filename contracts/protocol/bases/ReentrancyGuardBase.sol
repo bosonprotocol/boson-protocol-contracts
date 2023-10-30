@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-
 import "../../domain/BosonConstants.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
 pragma solidity 0.8.21;
@@ -36,7 +36,7 @@ abstract contract ReentrancyGuardBase {
     modifier nonReentrant() {
         ProtocolLib.ProtocolStatus storage ps = ProtocolLib.protocolStatus();
         // On the first call to nonReentrant, ps.reentrancyStatus will be NOT_ENTERED
-        require(ps.reentrancyStatus != ENTERED, REENTRANCY_GUARD);
+        if (ps.reentrancyStatus == ENTERED) revert BosonErrors.ReentrancyGuard();
 
         // Any calls to nonReentrant after this point will fail
         ps.reentrancyStatus = ENTERED;

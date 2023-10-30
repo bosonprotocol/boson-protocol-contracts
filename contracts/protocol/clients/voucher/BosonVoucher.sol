@@ -117,7 +117,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
 
         // Revert if exchange id falls within a reserved range
         uint256 rangeStart = range.start;
-        require(_tokenId < rangeStart || _tokenId >= rangeStart + range.length, EXCHANGE_ID_IN_RESERVED_RANGE);
+        if (_tokenId >= rangeStart && _tokenId < rangeStart + range.length) revert ExchangeIdInReservedRange();
 
         // Issue voucher is called only during commitToOffer (in protocol), so token can be set as committed
         _committed[_tokenId] = true;
@@ -158,23 +158,23 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      */
     function reserveRange(uint256 _offerId, uint256 _start, uint256 _length, address _to) external onlyRole(PROTOCOL) {
         // _to must be the contract address or the contract owner (operator)
-        require(_to == address(this) || _to == owner(), INVALID_TO_ADDRESS);
+        if (_to != address(this) && _to != owner()) revert InvalidToAddress();
 
         // Prevent reservation of an empty range
-        require(_length > 0, INVALID_RANGE_LENGTH);
+        if (_length == 0) revert InvalidRangeLength();
 
         // Adjust start id to include offer id
-        require(_start > 0, INVALID_RANGE_START);
+        if (_start == 0) revert InvalidRangeStart();
         _start += (_offerId << 128);
 
         // Prevent overflow in issueVoucher and preMint
-        require(_start <= type(uint256).max - _length, INVALID_RANGE_LENGTH);
+        if (_start > type(uint256).max - _length) revert InvalidRangeLength();
 
         // Get storage slot for the range
         Range storage range = _rangeByOfferId[_offerId];
 
         // Revert if the offer id is already associated with a range
-        require(range.length == 0, OFFER_RANGE_ALREADY_RESERVED);
+        if (range.length != 0) revert OfferRangeAlreadyReserved();
 
         // Store the reserved range
         range.start = _start;
@@ -220,14 +220,14 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         Range storage range = _rangeByOfferId[_offerId];
 
         // Revert if id not associated with a range
-        require(range.length != 0, NO_RESERVED_RANGE_FOR_OFFER);
+        if (range.length == 0) revert NoReservedRangeForOffer();
 
         // Revert if no more to mint in range
-        require(range.length >= range.minted + _amount, INVALID_AMOUNT_TO_MINT);
+        if (range.length < range.minted + _amount) revert InvalidAmountToMint();
 
         // Make sure that offer is not expired or voided
         (Offer memory offer, OfferDates memory offerDates) = getBosonOffer(_offerId);
-        require(!offer.voided && block.timestamp <= offerDates.validUntil, OFFER_EXPIRED_OR_VOIDED);
+        if (offer.voided || block.timestamp > offerDates.validUntil) revert OfferExpiredOrVoided();
 
         // Get the first token to mint
         uint256 start = range.start + range.minted;
@@ -283,11 +283,11 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         Range storage range = _rangeByOfferId[_offerId];
 
         // Revert if id not associated with a range
-        require(range.length != 0, NO_RESERVED_RANGE_FOR_OFFER);
+        if (range.length == 0) revert NoReservedRangeForOffer();
 
         // Make sure that offer is either expired or voided
         (Offer memory offer, OfferDates memory offerDates) = getBosonOffer(_offerId);
-        require(offer.voided || block.timestamp > offerDates.validUntil, OFFER_STILL_VALID);
+        if (!offer.voided && block.timestamp <= offerDates.validUntil) revert OfferStillValid();
 
         // Get the first token to burn
         uint256 start = range.lastBurnedTokenId == 0 ? range.start : range.lastBurnedTokenId + 1;
@@ -296,7 +296,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         uint256 end = start + _amount;
 
         // End should be greater than start
-        require(end > start && end <= range.start + range.minted, AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN);
+        if (end <= start || end > range.start + range.minted) revert AmountExceedsRangeOrNothingToBurn();
 
         // Burn the range
         address rangeOwner = range.owner;
@@ -505,7 +505,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * N.B. In the future it might be possible to renounce ownership via seller deactivation in the protocol.
      */
     function renounceOwnership() public pure override {
-        revert(ACCESS_DENIED);
+        revert AccessDenied();
     }
 
     /**
@@ -541,12 +541,12 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * @return result - result of the call
      */
     function callExternalContract(address _to, bytes calldata _data) external payable onlyOwner returns (bytes memory) {
-        require(_to != address(0), INVALID_ADDRESS);
+        if (_to == address(0)) revert InvalidAddress();
 
         // Check if _to supports `balanceOf` method and revert if it does
         // This works with all contracts that implement this method even if they don't necessary implement ERC20 interface
         try IERC20(_to).balanceOf(address(this)) returns (uint256) {
-            revert(INTERACTION_NOT_ALLOWED);
+            revert InteractionNotAllowed();
         } catch {}
 
         return _to.functionCallWithValue(_data, msg.value, FUNCTION_CALL_NOT_SUCCESSFUL);
@@ -563,7 +563,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * @param _approved - true to approve the operator in question, false to revoke approval
      */
     function setApprovalForAllToContract(address _operator, bool _approved) external onlyOwner {
-        require(_operator != address(0), INVALID_ADDRESS);
+        if (_operator == address(0)) revert InvalidAddress();
 
         _setApprovalForAll(address(this), _operator, _approved);
     }
@@ -658,7 +658,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         uint16 maxRoyaltyPecentage = IBosonConfigHandler(protocolDiamond).getMaxRoyaltyPecentage();
 
         // make sure that new royalty percentage does not exceed the max value set in the protocol
-        require(_newRoyaltyPercentage <= maxRoyaltyPecentage, ROYALTY_FEE_INVALID);
+        if (_newRoyaltyPercentage > maxRoyaltyPecentage) revert RoyaltyFeeInvalid();
 
         _royaltyPercentage = _newRoyaltyPercentage;
 
@@ -819,7 +819,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * Updates owners, but do not emit Transfer event. Event was already emited during pre-mint.
      */
     function silentMintAndSetPremintStatus(address _from, uint256 _tokenId) internal {
-        require(_from == owner() || _from == address(this), NO_SILENT_MINT_ALLOWED);
+        if (_from != owner() && _from != address(this)) revert NoSilentMintAllowed();
 
         // update data, so transfer will succeed
         getERC721UpgradeableStorage()._owners[_tokenId] = _from;

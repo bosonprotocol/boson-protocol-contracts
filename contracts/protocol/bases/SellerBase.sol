@@ -45,17 +45,16 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         VoucherInitValues calldata _voucherInitValues
     ) internal {
         // Check active is not set to false
-        require(_seller.active, MUST_BE_ACTIVE);
+        if (!_seller.active) revert MustBeActive();
 
         // Check for zero address
-        require(_seller.assistant != address(0) && _seller.treasury != address(0), INVALID_ADDRESS);
+        if (_seller.assistant == address(0) || _seller.treasury == address(0)) revert InvalidAddress();
 
         // Admin address or AuthToken data must be present. A seller can have one or the other
-        require(
-            (_seller.admin == address(0) && _authToken.tokenType != AuthTokenType.None) ||
-                (_seller.admin != address(0) && _authToken.tokenType == AuthTokenType.None),
-            ADMIN_OR_AUTH_TOKEN
-        );
+        if (
+            (_seller.admin == address(0) && _authToken.tokenType == AuthTokenType.None) ||
+            (_seller.admin != address(0) && _authToken.tokenType != AuthTokenType.None)
+        ) revert AdminOrAuthToken();
 
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
@@ -64,33 +63,29 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         address sender = msgSender();
 
         // Check that caller is the supplied assistant
-        require(_seller.assistant == sender, NOT_ASSISTANT);
-        require(_seller.clerk == address(0), CLERK_DEPRECATED);
+        if (_seller.assistant != sender) revert NotAssistant();
+        if (_seller.clerk != address(0)) revert ClerkDeprecated();
 
         // Do caller and uniqueness checks based on auth type
         if (_authToken.tokenType != AuthTokenType.None) {
-            require(_authToken.tokenType != AuthTokenType.Custom, INVALID_AUTH_TOKEN_TYPE);
+            if (_authToken.tokenType == AuthTokenType.Custom) revert InvalidAuthTokenType();
 
             // Check that caller owns the auth token
             address authTokenContract = lookups.authTokenContracts[_authToken.tokenType];
             address tokenIdOwner = IERC721(authTokenContract).ownerOf(_authToken.tokenId);
-            require(tokenIdOwner == sender, NOT_ADMIN);
+            if (tokenIdOwner != sender) revert NotAdmin();
 
             // Check that auth token is unique to this seller
-            require(
-                lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == 0,
-                AUTH_TOKEN_MUST_BE_UNIQUE
-            );
+            if (lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] != 0)
+                revert AuthTokenMustBeUnique();
         } else {
             // Check that caller is supplied admin
-            require(_seller.admin == sender, NOT_ADMIN);
+            if (_seller.admin != sender) revert NotAdmin();
         }
 
         // Check that the sender address is unique to one seller id, across all roles
-        require(
-            lookups.sellerIdByAdmin[sender] == 0 && lookups.sellerIdByAssistant[sender] == 0,
-            SELLER_ADDRESS_MUST_BE_UNIQUE
-        );
+        if (lookups.sellerIdByAdmin[sender] != 0 || lookups.sellerIdByAssistant[sender] != 0)
+            revert SellerAddressMustBeUnique();
 
         // Get the next account id and increment the counter
         uint256 sellerId = protocolCounters().nextAccountId++;
@@ -99,7 +94,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
 
         // Calculate seller salt and check that it is unique
         bytes32 sellerSalt = keccak256(abi.encodePacked(sender, _voucherInitValues.collectionSalt));
-        require(!lookups.isUsedSellerSalt[sellerSalt], SELLER_SALT_NOT_UNIQUE);
+        if (lookups.isUsedSellerSalt[sellerSalt]) revert SellerSaltNotUnique();
         lookups.sellerSalt[sellerId] = sellerSalt;
         lookups.isUsedSellerSalt[sellerSalt] = true;
 
@@ -187,7 +182,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
             cloneAddress := create2(0, clone, 0x37, collectionSalt)
         }
 
-        require(cloneAddress != address(0), CLONE_CREATION_FAILED);
+        if (cloneAddress == address(0)) revert CloneCreationFailed();
 
         // Initialize the clone
         IInitializableVoucherClone(cloneAddress).initialize(pa.voucherBeacon);

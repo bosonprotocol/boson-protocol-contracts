@@ -53,15 +53,14 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // Check for zero address
-        require(
-            _disputeResolver.admin != address(0) &&
-                _disputeResolver.assistant != address(0) &&
-                _disputeResolver.treasury != address(0),
-            INVALID_ADDRESS
-        );
+        if (
+            _disputeResolver.admin == address(0) ||
+            _disputeResolver.assistant == address(0) ||
+            _disputeResolver.treasury == address(0)
+        ) revert InvalidAddress();
 
         // Check active is not set to false
-        require(_disputeResolver.active, MUST_BE_ACTIVE);
+        if (!_disputeResolver.active) revert MustBeActive();
 
         // Scope to avoid stack too deep errors
         {
@@ -69,8 +68,8 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             address sender = msgSender();
 
             // Check that caller is the supplied admin and assistant
-            require(_disputeResolver.admin == sender && _disputeResolver.assistant == sender, NOT_ADMIN_AND_ASSISTANT);
-            require(_disputeResolver.clerk == address(0), CLERK_DEPRECATED);
+            if (_disputeResolver.admin != sender && _disputeResolver.assistant != sender) revert NotAdminAndAssistant();
+            if (_disputeResolver.clerk != address(0)) revert ClerkDeprecated();
         }
 
         // Get the next account id and increment the counter
@@ -79,13 +78,14 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         // Check that the addresses are unique to one dispute resolver id, across all rolls
         mapping(address => uint256) storage disputeResolverIdByAssistant = lookups.disputeResolverIdByAssistant;
         mapping(address => uint256) storage disputeResolverIdByAdmin = lookups.disputeResolverIdByAdmin;
-        require(
-            disputeResolverIdByAssistant[_disputeResolver.assistant] == 0 &&
-                disputeResolverIdByAssistant[_disputeResolver.admin] == 0 &&
-                disputeResolverIdByAdmin[_disputeResolver.admin] == 0 &&
-                disputeResolverIdByAdmin[_disputeResolver.assistant] == 0,
-            DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
-        );
+        if (
+            disputeResolverIdByAssistant[_disputeResolver.assistant] != 0 ||
+            disputeResolverIdByAssistant[_disputeResolver.admin] != 0 ||
+            disputeResolverIdByAdmin[_disputeResolver.admin] != 0 ||
+            disputeResolverIdByAdmin[_disputeResolver.assistant] != 0
+        ) {
+            revert DisputeResolverAddressMustBeUnique();
+        }
 
         // Scope to avoid stack too deep errors
         {
@@ -93,11 +93,10 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             ProtocolLib.ProtocolLimits storage limits = protocolLimits();
 
             // Escalation period must be greater than zero and less than or equal to the max allowed
-            require(
-                _disputeResolver.escalationResponsePeriod > 0 &&
-                    _disputeResolver.escalationResponsePeriod <= limits.maxEscalationResponsePeriod,
-                INVALID_ESCALATION_PERIOD
-            );
+            if (
+                _disputeResolver.escalationResponsePeriod == 0 ||
+                _disputeResolver.escalationResponsePeriod > limits.maxEscalationResponsePeriod
+            ) revert InvalidEscalationPeriod();
         }
 
         _disputeResolver.id = disputeResolverId;
@@ -111,13 +110,11 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         ];
 
         for (uint256 i = 0; i < _disputeResolverFees.length; ) {
-            require(
-                disputeResolverFeeTokens[_disputeResolverFees[i].tokenAddress] == 0,
-                DUPLICATE_DISPUTE_RESOLVER_FEES
-            );
+            if (disputeResolverFeeTokens[_disputeResolverFees[i].tokenAddress] != 0)
+                revert DuplicateDisputeResolverFees();
 
             // Protocol doesn't yet support DR fees
-            require(_disputeResolverFees[i].feeAmount == 0, FEE_AMOUNT_NOT_YET_SUPPORTED);
+            if (_disputeResolverFees[i].feeAmount != 0) revert FeeAmountNotYetSupported();
 
             disputeResolverFees.push(_disputeResolverFees[i]);
 
@@ -176,13 +173,14 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // Check for zero address
-        require(
-            _disputeResolver.admin != address(0) &&
-                _disputeResolver.assistant != address(0) &&
-                _disputeResolver.treasury != address(0),
-            INVALID_ADDRESS
-        );
-        require(_disputeResolver.clerk == address(0), CLERK_DEPRECATED);
+        if (
+            _disputeResolver.admin == address(0) ||
+            _disputeResolver.assistant == address(0) ||
+            _disputeResolver.treasury == address(0)
+        ) {
+            revert InvalidAddress();
+        }
+        if (_disputeResolver.clerk != address(0)) revert ClerkDeprecated();
 
         bool exists;
         DisputeResolver storage disputeResolver;
@@ -191,13 +189,13 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         (exists, disputeResolver, ) = fetchDisputeResolver(_disputeResolver.id);
 
         // Dispute resolver must already exist
-        require(exists, NO_SUCH_DISPUTE_RESOLVER);
+        if (!exists) revert NoSuchDisputeResolver();
 
         // Get message sender
         address sender = msgSender();
 
         // Check that caller is the admin address for this dispute resolver
-        require(disputeResolver.admin == sender, NOT_ADMIN);
+        if (disputeResolver.admin != sender) revert NotAdmin();
 
         // Clean old dispute resolver pending update data if exists
         delete lookups.pendingAddressUpdatesByDisputeResolver[_disputeResolver.id];
@@ -234,11 +232,12 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
 
         if (_disputeResolver.escalationResponsePeriod != disputeResolver.escalationResponsePeriod) {
             // Escalation period must be greater than zero and less than or equal to the max allowed
-            require(
-                _disputeResolver.escalationResponsePeriod > 0 &&
-                    _disputeResolver.escalationResponsePeriod <= protocolLimits().maxEscalationResponsePeriod,
-                INVALID_ESCALATION_PERIOD
-            );
+            if (
+                _disputeResolver.escalationResponsePeriod == 0 ||
+                _disputeResolver.escalationResponsePeriod > protocolLimits().maxEscalationResponsePeriod
+            ) {
+                revert InvalidEscalationPeriod();
+            }
 
             // Update escalation response period
             disputeResolver.escalationResponsePeriod = _disputeResolver.escalationResponsePeriod;
@@ -268,7 +267,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             );
         }
 
-        require(updateApplied || needsApproval, NO_UPDATE_APPLIED);
+        if (!updateApplied && !needsApproval) revert NoUpdateApplied();
     }
 
     /**
@@ -299,7 +298,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             _disputeResolverId
         );
 
-        require(exists, NO_PENDING_UPDATE_FOR_ACCOUNT);
+        if (!exists) revert NoPendingUpdateForAccount();
 
         bool updateApplied;
 
@@ -311,7 +310,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
 
             if (role == DisputeResolverUpdateFields.Admin && disputeResolverPendingUpdate.admin != address(0)) {
                 // Approve admin update
-                require(disputeResolverPendingUpdate.admin == sender, UNAUTHORIZED_CALLER_UPDATE);
+                if (disputeResolverPendingUpdate.admin != sender) revert UnauthorizedCallerUpdate();
 
                 preUpdateDisputeResolverCheck(_disputeResolverId, sender, lookups);
 
@@ -332,7 +331,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
                 role == DisputeResolverUpdateFields.Assistant && disputeResolverPendingUpdate.assistant != address(0)
             ) {
                 // Approve assistant update
-                require(disputeResolverPendingUpdate.assistant == sender, UNAUTHORIZED_CALLER_UPDATE);
+                if (disputeResolverPendingUpdate.assistant != sender) revert UnauthorizedCallerUpdate();
 
                 preUpdateDisputeResolverCheck(_disputeResolverId, sender, lookups);
 
@@ -350,7 +349,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
 
                 updateApplied = true;
             } else if (role == DisputeResolverUpdateFields.Clerk) {
-                revert(CLERK_DEPRECATED);
+                revert ClerkDeprecated();
             }
 
             unchecked {
@@ -401,25 +400,24 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         (exists, disputeResolver, disputeResolverFees) = fetchDisputeResolver(_disputeResolverId);
 
         // Dispute resolver must already exist
-        require(exists, NO_SUCH_DISPUTE_RESOLVER);
+        if (!exists) revert NoSuchDisputeResolver();
 
         // Get message sender
         address sender = msgSender();
 
         // Check that msg.sender is the admin address for this dispute resolver
-        require(disputeResolver.admin == sender, NOT_ADMIN);
+        if (disputeResolver.admin != sender) revert NotAdmin();
 
         // At least one fee must be specified
-        require(_disputeResolverFees.length > 0, INEXISTENT_DISPUTE_RESOLVER_FEES);
+        if (_disputeResolverFees.length == 0) revert InexistentDisputeResolverFees();
 
         // Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
         for (uint256 i = 0; i < _disputeResolverFees.length; ) {
-            require(
-                lookups.disputeResolverFeeTokenIndex[_disputeResolverId][_disputeResolverFees[i].tokenAddress] == 0,
-                DUPLICATE_DISPUTE_RESOLVER_FEES
-            );
+            if (lookups.disputeResolverFeeTokenIndex[_disputeResolverId][_disputeResolverFees[i].tokenAddress] != 0)
+                revert DuplicateDisputeResolverFees();
+
             // Protocol doesn't yet support DR fees
-            require(_disputeResolverFees[i].feeAmount == 0, FEE_AMOUNT_NOT_YET_SUPPORTED);
+            if (_disputeResolverFees[i].feeAmount != 0) revert FeeAmountNotYetSupported();
 
             disputeResolverFees.push(_disputeResolverFees[i]);
             lookups.disputeResolverFeeTokenIndex[_disputeResolverId][
@@ -464,23 +462,22 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         (exists, disputeResolver, disputeResolverFees) = fetchDisputeResolver(_disputeResolverId);
 
         // Dispute resolver must already exist
-        require(exists, NO_SUCH_DISPUTE_RESOLVER);
+        if (!exists) revert NoSuchDisputeResolver();
 
         // Get message sender
         address sender = msgSender();
 
         // Check that msg.sender is the admin address for this dispute resolver
-        require(disputeResolver.admin == sender, NOT_ADMIN);
+        if (disputeResolver.admin != sender) revert NotAdmin();
 
         // At least one fee must be specified and
-        require(_feeTokenAddresses.length > 0, INEXISTENT_DISPUTE_RESOLVER_FEES);
+        if (_feeTokenAddresses.length == 0) revert InexistentDisputeResolverFees();
 
         // Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
         for (uint256 i = 0; i < _feeTokenAddresses.length; ) {
-            require(
-                lookups.disputeResolverFeeTokenIndex[_disputeResolverId][_feeTokenAddresses[i]] != 0,
-                DISPUTE_RESOLVER_FEE_NOT_FOUND
-            );
+            if (lookups.disputeResolverFeeTokenIndex[_disputeResolverId][_feeTokenAddresses[i]] == 0)
+                revert DisputeResolverFeeNotFound();
+
             uint256 disputeResolverFeeArrayIndex = lookups.disputeResolverFeeTokenIndex[_disputeResolverId][
                 _feeTokenAddresses[i]
             ] - 1; //Get the index in the DisputeResolverFees array, which is 1 less than the disputeResolverFeeTokenIndex index
@@ -527,7 +524,8 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         uint256[] calldata _sellerAllowList
     ) external disputeResolversNotPaused nonReentrant {
         // At least one seller id must be specified
-        require(_sellerAllowList.length > 0, INEXISTENT_ALLOWED_SELLERS_LIST);
+        if (_sellerAllowList.length == 0) revert InexistentAllowedSellersList();
+
         bool exists;
         DisputeResolver storage disputeResolver;
 
@@ -535,13 +533,13 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         (exists, disputeResolver, ) = fetchDisputeResolver(_disputeResolverId);
 
         // Dispute resolver must already exist
-        require(exists, NO_SUCH_DISPUTE_RESOLVER);
+        if (!exists) revert NoSuchDisputeResolver();
 
         // Get message sender
         address sender = msgSender();
 
         // Check that msg.sender is the admin address for this dispute resolver
-        require(disputeResolver.admin == sender, NOT_ADMIN);
+        if (disputeResolver.admin != sender) revert NotAdmin();
 
         storeSellerAllowList(_disputeResolverId, _sellerAllowList);
 
@@ -571,7 +569,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // At least one seller id must be specified
-        require(_sellerAllowList.length > 0, INEXISTENT_ALLOWED_SELLERS_LIST);
+        if (_sellerAllowList.length == 0) revert InexistentAllowedSellersList();
 
         bool exists;
         DisputeResolver storage disputeResolver;
@@ -580,17 +578,17 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         (exists, disputeResolver, ) = fetchDisputeResolver(_disputeResolverId);
 
         // Dispute resolver must already exist
-        require(exists, NO_SUCH_DISPUTE_RESOLVER);
+        if (!exists) revert NoSuchDisputeResolver();
 
         // Get message sender
         address sender = msgSender();
 
         // Check that msg.sender is the admin address for this dispute resolver
-        require(disputeResolver.admin == sender, NOT_ADMIN);
+        if (disputeResolver.admin != sender) revert NotAdmin();
 
         for (uint256 i = 0; i < _sellerAllowList.length; ) {
             uint256 sellerToRemoveIndex = lookups.allowedSellerIndex[_disputeResolverId][_sellerAllowList[i]];
-            require(sellerToRemoveIndex > 0, SELLER_NOT_APPROVED);
+            if (sellerToRemoveIndex == 0) revert SellerNotApproved();
 
             // remove index mapping
             delete lookups.allowedSellerIndex[_disputeResolverId][_sellerAllowList[i]];
@@ -772,10 +770,10 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             (bool exists, , ) = fetchSeller(sellerId);
 
             // Seller must already exist
-            require(exists, NO_SUCH_SELLER);
+            if (!exists) revert NoSuchSeller();
 
             // Seller should not be approved already
-            require(lookups.allowedSellerIndex[_disputeResolverId][sellerId] == 0, SELLER_ALREADY_APPROVED);
+            if (lookups.allowedSellerIndex[_disputeResolverId][sellerId] != 0) revert SellerAlreadyApproved();
 
             // Update the mappings
             lookups.allowedSellers[_disputeResolverId].push(sellerId);
@@ -808,10 +806,9 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         uint256 check1 = _lookups.disputeResolverIdByAssistant[_role];
         uint256 check2 = _lookups.disputeResolverIdByAdmin[_role];
 
-        require(
-            (check1 == 0 || check1 == _disputeResolverId) && (check2 == 0 || check2 == _disputeResolverId),
-            DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
-        );
+        if ((check1 != 0 && check1 != _disputeResolverId) || (check2 != 0 && check2 != _disputeResolverId)) {
+            revert DisputeResolverAddressMustBeUnique();
+        }
     }
 
     /**
