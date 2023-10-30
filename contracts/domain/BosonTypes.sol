@@ -282,7 +282,7 @@ contract BosonTypes {
 
     struct HashInfo {
         bytes32 typeHash;
-        function(bytes memory) internal pure returns (bytes32) hashFunction;
+        function(bytes memory) internal view returns (bytes32) hashFunction;
     }
 
     struct OfferFees {

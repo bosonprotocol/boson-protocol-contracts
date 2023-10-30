@@ -10,6 +10,8 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
+import { DateTime } from "@quant-finance/solidity-datetime/contracts/DateTime.sol";
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
  * @title MetaTransactionsHandlerFacet
@@ -111,9 +113,11 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @param _offerDetails - the offer details
      * @return the hashed representation of the offer details struct
      */
-    function hashOfferDetails(bytes memory _offerDetails) internal pure returns (bytes32) {
+    function hashOfferDetails(bytes memory _offerDetails) internal view returns (bytes32) {
+        // The buyer and offerId are part of calldata
         (address buyer, uint256 offerId) = abi.decode(_offerDetails, (address, uint256));
-        return keccak256(abi.encode(OFFER_DETAILS_TYPEHASH, buyer, offerId));
+
+        return keccak256(abi.encode(OFFER_DETAILS_TYPEHASH, buyer, hashOfferParameters(offerId)));
     }
 
     /**
@@ -122,9 +126,68 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @param _offerDetails - the conditional offer details
      * @return the hashed representation of the conditional offer details struct
      */
-    function hashConditionalOfferDetails(bytes memory _offerDetails) internal pure returns (bytes32) {
+    function hashConditionalOfferDetails(bytes memory _offerDetails) internal view returns (bytes32) {
         (address buyer, uint256 offerId, uint256 tokenId) = abi.decode(_offerDetails, (address, uint256, uint256));
-        return keccak256(abi.encode(CONDITIONAL_OFFER_DETAILS_TYPEHASH, buyer, offerId, tokenId));
+        return keccak256(abi.encode(CONDITIONAL_OFFER_DETAILS_TYPEHASH, buyer, hashOfferParameters(offerId), tokenId));
+    }
+
+    /**
+     * @notice Returns hashed representation of the offer parameters struct.
+     * This is reused for both the offer and conditional offer.
+     *
+     * @param _offerId - the offer id
+     * @return the hashed representation of the offer details struct
+     */
+    function hashOfferParameters(uint256 _offerId) internal view returns (bytes32) {
+        // Get other offer details from the protocol
+        Offer storage offer = getValidOffer(_offerId);
+        bytes memory redeemableFrom;
+        {
+            OfferDates storage offerDates = fetchOfferDates(_offerId);
+
+            (uint256 year, uint256 month, uint256 day, uint256 hour, uint256 minute, uint256 second) = DateTime
+                .timestampToDateTime(offerDates.voucherRedeemableFrom);
+            redeemableFrom = abi.encodePacked(
+                Strings.toString(year),
+                "/",
+                Strings.toString(month),
+                "/",
+                Strings.toString(day),
+                " ",
+                Strings.toString(hour),
+                ":",
+                Strings.toString(minute),
+                ":",
+                Strings.toString(second)
+            );
+        }
+
+        OfferDurations storage offerDurations = fetchOfferDurations(_offerId);
+
+        return
+            keccak256(
+                abi.encode(
+                    OFFER_PARAMETERS_TYPEHASH,
+                    _offerId,
+                    offer.exchangeToken,
+                    offer.price,
+                    offer.sellerDeposit,
+                    offer.buyerCancelPenalty,
+                    keccak256(redeemableFrom),
+                    keccak256(
+                        abi.encodePacked(
+                            Strings.toString(offerDurations.disputePeriod / DateTime.SECONDS_PER_DAY),
+                            " days"
+                        )
+                    ),
+                    keccak256(
+                        abi.encodePacked(
+                            Strings.toString(offerDurations.resolutionPeriod / DateTime.SECONDS_PER_DAY),
+                            " days"
+                        )
+                    )
+                )
+            );
     }
 
     /**

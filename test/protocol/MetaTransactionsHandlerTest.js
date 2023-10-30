@@ -30,6 +30,7 @@ const {
   setupTestEnvironment,
   getSnapshot,
   revertToSnapshot,
+  timestampToDateTime,
 } = require("../util/utils.js");
 const {
   mockOffer,
@@ -42,7 +43,7 @@ const {
   mockExchange,
   mockCondition,
 } = require("../util/mock");
-const { oneMonth } = require("../util/constants");
+const { oneMonth, SECONDS_PER_DAY } = require("../util/constants");
 const {
   getSelectors,
   FacetCutAction,
@@ -74,7 +75,8 @@ describe("IBosonMetaTransactionsHandler", function () {
   let metaTransactionsHandler, nonce, functionSignature;
   let seller, offerId, buyerId;
   let validOfferDetails,
-    offerType,
+    offerDetailsType,
+    offerParametersType,
     metaTransactionType,
     metaTxExchangeType,
     customTransactionType,
@@ -1645,9 +1647,20 @@ describe("IBosonMetaTransactionsHandler", function () {
               .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
 
             // Set the offer Type
-            offerType = [
-              { name: "buyer", type: "address" },
+            offerParametersType = [
               { name: "offerId", type: "uint256" },
+              { name: "exchangeToken", type: "address" },
+              { name: "price", type: "uint256" },
+              { name: "sellerDeposit", type: "uint256" },
+              { name: "buyerCancelPenalty", type: "uint256" },
+              { name: "voucherRedeemableFrom", type: "string" },
+              { name: "disputePeriod", type: "string" },
+              { name: "resolutionPeriod", type: "string" },
+            ];
+
+            offerDetailsType = [
+              { name: "buyer", type: "address" },
+              { name: "offerParameters", type: "MetaTxOfferParameters" },
             ];
 
             // Set the message Type
@@ -1662,7 +1675,8 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             customTransactionType = {
               MetaTxCommitToOffer: metaTransactionType,
-              MetaTxOfferDetails: offerType,
+              MetaTxOfferDetails: offerDetailsType,
+              MetaTxOfferParameters: offerParametersType,
             };
 
             // prepare validOfferDetails
@@ -1671,8 +1685,27 @@ describe("IBosonMetaTransactionsHandler", function () {
               offerId: offer.id,
             };
 
+            let [year, month, day, hour, minute, second] = timestampToDateTime(
+              Number(offerDates.voucherRedeemableFrom)
+            );
+            let voucherRedeemableFrom = `${year}/${month}/${day} ${hour}:${minute}:${second}`;
+
+            const extendedOfferDetails = {
+              buyer: validOfferDetails.buyer,
+              offerParameters: {
+                offerId: validOfferDetails.offerId,
+                exchangeToken: offer.exchangeToken,
+                price: offer.price,
+                sellerDeposit: offer.sellerDeposit,
+                buyerCancelPenalty: offer.buyerCancelPenalty,
+                voucherRedeemableFrom: voucherRedeemableFrom,
+                disputePeriod: `${BigInt(offerDurations.disputePeriod) / SECONDS_PER_DAY} days`,
+                resolutionPeriod: `${BigInt(offerDurations.resolutionPeriod) / SECONDS_PER_DAY} days`,
+              },
+            };
+
             // Prepare the message
-            message.offerDetails = validOfferDetails;
+            message.offerDetails = extendedOfferDetails;
 
             // Deposit native currency to the same seller id
             await fundsHandler
@@ -1733,7 +1766,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             validOfferDetails.offerId = offerId;
 
             // Prepare the message
-            message.offerDetails = validOfferDetails;
+            message.offerDetails.offerParameters.offerId = offerId;
 
             // Collect the signature components
             let { r, s, v } = await prepareDataSignatureParameters(
@@ -1870,9 +1903,20 @@ describe("IBosonMetaTransactionsHandler", function () {
               .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId);
 
             // Set the offer Type
-            offerType = [
-              { name: "buyer", type: "address" },
+            offerParametersType = [
               { name: "offerId", type: "uint256" },
+              { name: "exchangeToken", type: "address" },
+              { name: "price", type: "uint256" },
+              { name: "sellerDeposit", type: "uint256" },
+              { name: "buyerCancelPenalty", type: "uint256" },
+              { name: "voucherRedeemableFrom", type: "string" },
+              { name: "disputePeriod", type: "string" },
+              { name: "resolutionPeriod", type: "string" },
+            ];
+
+            offerDetailsType = [
+              { name: "buyer", type: "address" },
+              { name: "offerParameters", type: "MetaTxOfferParameters" },
               { name: "tokenId", type: "uint256" },
             ];
 
@@ -1888,7 +1932,8 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             customTransactionType = {
               MetaTxCommitToConditionalOffer: metaTransactionType,
-              MetaTxConditionalOfferDetails: offerType,
+              MetaTxConditionalOfferDetails: offerDetailsType,
+              MetaTxOfferParameters: offerParametersType,
             };
 
             // prepare validOfferDetails
@@ -1898,8 +1943,28 @@ describe("IBosonMetaTransactionsHandler", function () {
               tokenId: "0",
             };
 
+            let [year, month, day, hour, minute, second] = timestampToDateTime(
+              Number(offerDates.voucherRedeemableFrom)
+            );
+            let voucherRedeemableFrom = `${year}/${month}/${day} ${hour}:${minute}:${second}`;
+
+            const extendedOfferDetails = {
+              buyer: validOfferDetails.buyer,
+              offerParameters: {
+                offerId: validOfferDetails.offerId,
+                exchangeToken: offer.exchangeToken,
+                price: offer.price,
+                sellerDeposit: offer.sellerDeposit,
+                buyerCancelPenalty: offer.buyerCancelPenalty,
+                voucherRedeemableFrom: voucherRedeemableFrom,
+                disputePeriod: `${BigInt(offerDurations.disputePeriod) / SECONDS_PER_DAY} days`,
+                resolutionPeriod: `${BigInt(offerDurations.resolutionPeriod) / SECONDS_PER_DAY} days`,
+              },
+              tokenId: validOfferDetails.tokenId,
+            };
+
             // Prepare the message
-            message.offerDetails = validOfferDetails;
+            message.offerDetails = extendedOfferDetails;
 
             // Deposit native currency to the same seller id
             await fundsHandler
@@ -1960,7 +2025,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             validOfferDetails.offerId = offerId;
 
             // Prepare the message
-            message.offerDetails = validOfferDetails;
+            message.offerDetails.offerParameters.offerId = offerId;
 
             // Collect the signature components
             let { r, s, v } = await prepareDataSignatureParameters(
@@ -1999,7 +2064,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             validOfferDetails.tokenId = tokenId;
 
             // Prepare the message
-            message.offerDetails = validOfferDetails;
+            message.offerDetails.tokenId = tokenId;
 
             // Collect the signature components
             let { r, s, v } = await prepareDataSignatureParameters(
