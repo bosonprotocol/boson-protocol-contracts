@@ -225,11 +225,11 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         OfferDates storage offerDates = fetchOfferDates(_offerId);
 
         // New valid until date must be greater than existing one
-        if (offerDates.validUntil >= _validUntilDate) revert OfferPeriodInvalid();
+        if (offerDates.validUntil >= _validUntilDate) revert InvalidOfferPeriod();
 
         // If voucherRedeemableUntil is set, _validUntilDate must be less or equal than that
         if (offerDates.voucherRedeemableUntil > 0) {
-            if (_validUntilDate > offerDates.voucherRedeemableUntil) revert OfferPeriodInvalid();
+            if (_validUntilDate > offerDates.voucherRedeemableUntil) revert InvalidOfferPeriod();
         }
 
         // Update the valid until property

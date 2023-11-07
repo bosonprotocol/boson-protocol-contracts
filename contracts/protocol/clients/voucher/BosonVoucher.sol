@@ -658,7 +658,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         uint16 maxRoyaltyPecentage = IBosonConfigHandler(protocolDiamond).getMaxRoyaltyPecentage();
 
         // make sure that new royalty percentage does not exceed the max value set in the protocol
-        if (_newRoyaltyPercentage > maxRoyaltyPecentage) revert RoyaltyFeeInvalid();
+        if (_newRoyaltyPercentage > maxRoyaltyPecentage) revert InvalidRoyaltyFee();
 
         _royaltyPercentage = _newRoyaltyPercentage;
 

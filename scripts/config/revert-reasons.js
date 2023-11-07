@@ -31,14 +31,14 @@ exports.RevertReasons = {
   NOT_ASSISTANT: "NotAssistant",
   NO_SUCH_OFFER: "NoSuchOffer",
   OFFER_HAS_BEEN_VOIDED: "OfferHasBeenVoided",
-  OFFER_PERIOD_INVALID: "OfferPeriodInvalid",
-  OFFER_PENALTY_INVALID: "OfferPenaltyInvalid",
+  OFFER_PERIOD_INVALID: "InvalidOfferPeriod",
+  OFFER_PENALTY_INVALID: "InvalidOfferPenalty",
   OFFER_MUST_BE_ACTIVE: "OfferMustBeActive",
   OFFER_MUST_BE_UNIQUE: "OfferMustBeUnique",
   CANNOT_COMMIT: "CannotCommit",
   EXCHANGE_FOR_OFFER_EXISTS: "ExchangeForOfferExists",
   AMBIGUOUS_VOUCHER_EXPIRY: "AmbiguousVoucherExpiry",
-  REDEMPTION_PERIOD_INVALID: "RedemptionPeriodInvalid",
+  REDEMPTION_PERIOD_INVALID: "InvalidRedemptionPeriod",
   INVALID_DISPUTE_PERIOD: "InvalidDisputePeriod",
   INVALID_RESOLUTION_PERIOD: "InvalidResolutionPeriod",
   INVALID_DISPUTE_RESOLVER: "InvalidDisputeResolver",
@@ -185,11 +185,11 @@ exports.RevertReasons = {
   ESCALATION_NOT_ALLOWED: "EscalationNotAllowed",
 
   // Config related
-  FEE_PERCENTAGE_INVALID: "FeePercentageInvalid",
+  FEE_PERCENTAGE_INVALID: "InvalidFeePercentage",
   VALUE_ZERO_NOT_ALLOWED: "ValueZeroNotAllowed",
 
   // ERC2981 related
-  ROYALTY_FEE_INVALID: "RoyaltyFeeInvalid",
+  ROYALTY_FEE_INVALID: "InvalidRoyaltyFee",
 
   // Diamond related
   TOO_MANY_FUNCTIONS: "Too many functions on facet.",

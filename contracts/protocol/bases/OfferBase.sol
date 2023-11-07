@@ -113,18 +113,18 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         uint256 _agentId
     ) internal {
         // validFrom date must be less than validUntil date
-        if (_offerDates.validFrom >= _offerDates.validUntil) revert OfferPeriodInvalid();
+        if (_offerDates.validFrom >= _offerDates.validUntil) revert InvalidOfferPeriod();
 
         // validUntil date must be in the future
-        if (_offerDates.validUntil <= block.timestamp) revert OfferPeriodInvalid();
+        if (_offerDates.validUntil <= block.timestamp) revert InvalidOfferPeriod();
 
         // exactly one of voucherRedeemableUntil and voucherValid must be zero
         // if voucherRedeemableUntil exist, it must be greater than validUntil
         if (_offerDates.voucherRedeemableUntil > 0) {
             if (_offerDurations.voucherValid != 0) revert AmbiguousVoucherExpiry();
             if (_offerDates.voucherRedeemableFrom >= _offerDates.voucherRedeemableUntil)
-                revert RedemptionPeriodInvalid();
-            if (_offerDates.voucherRedeemableUntil < _offerDates.validUntil) revert RedemptionPeriodInvalid();
+                revert InvalidRedemptionPeriod();
+            if (_offerDates.voucherRedeemableUntil < _offerDates.validUntil) revert InvalidRedemptionPeriod();
         } else {
             if (_offerDurations.voucherValid == 0) revert AmbiguousVoucherExpiry();
         }
@@ -219,7 +219,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             uint256 offerPrice = _offer.price;
 
             // condition for successful payout when exchange final state is canceled
-            if (_offer.buyerCancelPenalty > offerPrice) revert OfferPenaltyInvalid();
+            if (_offer.buyerCancelPenalty > offerPrice) revert InvalidOfferPenalty();
 
             // Calculate and set the protocol fee
             uint256 protocolFee = _offer.exchangeToken == protocolAddresses().token

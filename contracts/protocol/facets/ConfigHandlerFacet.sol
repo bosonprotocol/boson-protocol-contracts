@@ -555,6 +555,6 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * Reverts if the value more than 10000
      */
     function checkMaxPercententage(uint256 _percentage) internal pure {
-        if (_percentage > 10000) revert FeePercentageInvalid();
+        if (_percentage > 10000) revert InvalidFeePercentage();
     }
 }
