@@ -68,7 +68,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             address sender = msgSender();
 
             // Check that caller is the supplied admin and assistant
-            if (_disputeResolver.admin != sender && _disputeResolver.assistant != sender) revert NotAdminAndAssistant();
+            if (_disputeResolver.admin != sender || _disputeResolver.assistant != sender) revert NotAdminAndAssistant();
             if (_disputeResolver.clerk != address(0)) revert ClerkDeprecated();
         }
 

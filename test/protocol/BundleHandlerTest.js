@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { ZeroAddress, getContractFactory, MaxUint256 } = ethers;
+const { ZeroAddress, getContractFactory, MaxUint256, getContractAt } = ethers;
 const { expect, assert } = require("chai");
 
 const Bundle = require("../../scripts/domain/Bundle");
@@ -52,6 +52,7 @@ describe("IBosonBundleHandler", function () {
   let emptyAuthToken;
   let agentId;
   let snapshotId;
+  let bosonErrors;
 
   before(async function () {
     // get interface Ids
@@ -92,6 +93,8 @@ describe("IBosonBundleHandler", function () {
         pauseHandler,
       },
     } = await setupTestEnvironment(contracts));
+
+    bosonErrors = await getContractAt("BosonErrors", await accountHandler.getAddress());
 
     // make all account the same
     assistant = admin;
@@ -326,7 +329,8 @@ describe("IBosonBundleHandler", function () {
 
         bundle.offerIds = [...bundle.offerIds, newOfferId, newOfferId2];
         bundle.twinIds = ["6"];
-        await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(
+        await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWithCustomError(
+          bosonErrors,
           RevertReasons.INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
         );
 
@@ -351,21 +355,26 @@ describe("IBosonBundleHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Bundles]);
 
           // Attempt to create a bundle, expecting revert
-          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(
+          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.REGION_PAUSED
           );
         });
 
         it("Caller not assistant of any seller", async function () {
           // Attempt to Create a bundle, expecting revert
-          await expect(bundleHandler.connect(rando).createBundle(bundle)).to.revertedWith(RevertReasons.NOT_ASSISTANT);
+          await expect(bundleHandler.connect(rando).createBundle(bundle)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.NOT_ASSISTANT
+          );
         });
 
         it("Bundle has no offers", async function () {
           bundle.offerIds = [];
 
           // Attempt to Create a bundle, expecting revert
-          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(
+          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.BUNDLE_REQUIRES_AT_LEAST_ONE_TWIN_AND_ONE_OFFER
           );
         });
@@ -374,7 +383,8 @@ describe("IBosonBundleHandler", function () {
           bundle.twinIds = [];
 
           // Attempt to Create a bundle, expecting revert
-          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(
+          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.BUNDLE_REQUIRES_AT_LEAST_ONE_TWIN_AND_ONE_OFFER
           );
         });
@@ -384,7 +394,8 @@ describe("IBosonBundleHandler", function () {
           bundle.offerIds = [];
 
           // Attempt to Create a bundle, expecting revert
-          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(
+          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.BUNDLE_REQUIRES_AT_LEAST_ONE_TWIN_AND_ONE_OFFER
           );
         });
@@ -411,7 +422,8 @@ describe("IBosonBundleHandler", function () {
           bundle.offerIds = ["2", "6"];
 
           // Attempt to create a bundle, expecting revert
-          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(
+          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NOT_ASSISTANT
           );
         });
@@ -421,7 +433,8 @@ describe("IBosonBundleHandler", function () {
           bundle.offerIds = ["1", "999"];
 
           // Attempt to create a bundle, expecting revert
-          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(
+          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_SUCH_OFFER
           );
 
@@ -429,7 +442,8 @@ describe("IBosonBundleHandler", function () {
           bundle.offerIds = ["0", "4"];
 
           // Attempt to create a bundle, expecting revert
-          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(
+          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_SUCH_OFFER
           );
         });
@@ -455,7 +469,8 @@ describe("IBosonBundleHandler", function () {
           bundle.twinIds = ["2", "6"];
 
           // Attempt to create a bundle, expecting revert
-          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(
+          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NOT_ASSISTANT
           );
         });
@@ -465,7 +480,8 @@ describe("IBosonBundleHandler", function () {
           bundle.twinIds = ["1", "999"];
 
           // Attempt to create a bundle, expecting revert
-          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(
+          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_SUCH_TWIN
           );
 
@@ -473,7 +489,8 @@ describe("IBosonBundleHandler", function () {
           bundle.twinIds = ["0", "4"];
 
           // Attempt to create a bundle, expecting revert
-          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(
+          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_SUCH_TWIN
           );
         });
@@ -486,7 +503,8 @@ describe("IBosonBundleHandler", function () {
           bundle.offerIds = ["1", "2", "4"];
 
           // Attempt to create a bundle, expecting revert
-          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(
+          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.BUNDLE_OFFER_MUST_BE_UNIQUE
           );
         });
@@ -496,7 +514,8 @@ describe("IBosonBundleHandler", function () {
           bundle.offerIds = ["1", "1", "4"];
 
           // Attempt to create a bundle, expecting revert
-          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(
+          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.BUNDLE_OFFER_MUST_BE_UNIQUE
           );
         });
@@ -506,7 +525,8 @@ describe("IBosonBundleHandler", function () {
           bundle.twinIds = ["1", "1", "4"];
 
           // Attempt to create a bundle, expecting revert
-          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(
+          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.BUNDLE_TWIN_MUST_BE_UNIQUE
           );
         });
@@ -524,7 +544,8 @@ describe("IBosonBundleHandler", function () {
             .commitToOffer(await buyer.getAddress(), offerIdToCommit, { value: price });
 
           // Attempt to Create a bundle, expecting revert
-          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(
+          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.EXCHANGE_FOR_OFFER_EXISTS
           );
         });
@@ -543,7 +564,8 @@ describe("IBosonBundleHandler", function () {
           expectedBundle.id = expectedNextBundleId;
 
           // Attempt to Create a bundle, expecting revert
-          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(
+          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.BUNDLE_TWIN_MUST_BE_UNIQUE
           );
         });
@@ -555,7 +577,8 @@ describe("IBosonBundleHandler", function () {
           await twinHandler.connect(assistant).createTwin(newTwin); // creates a twin with id 6
 
           bundle.twinIds = ["1", expectedNewTwinId];
-          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(
+          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
           );
         });
@@ -570,7 +593,8 @@ describe("IBosonBundleHandler", function () {
             .createOffer(newOffer, offerDates, offerDurations, disputeResolverId, agentId);
 
           bundle.offerIds = [expectedNewOfferId];
-          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(
+          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
           );
         });

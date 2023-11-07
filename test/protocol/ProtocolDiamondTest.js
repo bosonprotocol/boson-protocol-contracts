@@ -1054,7 +1054,7 @@ describe("ProtocolDiamond", async function () {
         // Attempt to deploy Protocol Diamond
         const ProtocolDiamond = await getContractFactory("ProtocolDiamond");
 
-        await expect(ProtocolDiamond.deploy(...diamondArgs)).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+        await expect(ProtocolDiamond.deploy(...diamondArgs)).to.revertedWith("Invalid address");
       });
     });
   });

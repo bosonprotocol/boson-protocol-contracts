@@ -58,7 +58,7 @@ library EIP712Lib {
         // See https://github.com/OpenZeppelin/openzeppelin-contracts/blob/04695aecbd4d17dddfd55de766d10e3805d6f42f/contracts/cryptography/ECDSA.sol#63
         if (
             uint256(_sigS) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0 ||
-            (_sigV != 27 || _sigV != 28)
+            (_sigV != 27 && _sigV != 28)
         ) revert BosonErrors.InvalidSignature();
 
         address signer = ecrecover(toTypedMessageHash(_hashedMetaTx), _sigV, _sigR, _sigS);

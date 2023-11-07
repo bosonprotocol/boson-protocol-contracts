@@ -63,6 +63,7 @@ describe("SellerHandler", function () {
   let mockAuthERC721Contract, mockAuthERC721Contract2;
   let snapshotId;
   let beaconProxyAddress;
+  let bosonErrors;
 
   before(async function () {
     // Reset the accountId iterator
@@ -80,6 +81,8 @@ describe("SellerHandler", function () {
       signers: [pauser, admin, treasury, rando, other1, other2, other3, other4, other5, other6, other7],
       contractInstances: { accountHandler, exchangeHandler, pauseHandler, configHandler },
     } = await setupTestEnvironment(contracts));
+
+    bosonErrors = await getContractAt("BosonErrors", await accountHandler.getAddress());
 
     // make all account the same
     authTokenOwner = assistant = admin;
@@ -671,7 +674,7 @@ describe("SellerHandler", function () {
           // Attempt to create a seller expecting revert
           await expect(
             accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("active is false", async function () {
@@ -680,7 +683,7 @@ describe("SellerHandler", function () {
           // Attempt to Create a seller, expecting revert
           await expect(
             accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
-          ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.MUST_BE_ACTIVE);
         });
 
         it("addresses are not unique to this seller Id when address used for same role", async function () {
@@ -699,7 +702,7 @@ describe("SellerHandler", function () {
           // Attempt to Create a seller with non-unique assistant, expecting revert
           await expect(
             accountHandler.connect(other1).createSeller(seller, emptyAuthToken, voucherInitValues)
-          ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
 
           seller.admin = await admin.getAddress();
           seller.assistant = await assistant.getAddress();
@@ -707,7 +710,7 @@ describe("SellerHandler", function () {
           // Attempt to Create a seller with non-unique admin, expecting revert
           await expect(
             accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues)
-          ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
         });
 
         it("addresses are not unique to this seller Id when address used for different role", async function () {
@@ -726,7 +729,7 @@ describe("SellerHandler", function () {
           // Attempt to Create a seller with non-unique assistant, expecting revert
           await expect(
             accountHandler.connect(other1).createSeller(seller, emptyAuthToken, voucherInitValues)
-          ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
 
           // Update seller admin
           seller.admin = await other3.getAddress();
@@ -743,7 +746,7 @@ describe("SellerHandler", function () {
           // Attempt to Create a seller with non-unique admin, expecting revert
           await expect(
             accountHandler.connect(other3).createSeller(seller, emptyAuthToken, voucherInitValues)
-          ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
         });
 
         it("addresses are not unique to this seller Id when address used for same role and the seller is created with auth token", async function () {
@@ -770,14 +773,14 @@ describe("SellerHandler", function () {
           // Attempt to Create a seller with non-unique assistant, expecting revert
           await expect(
             accountHandler.connect(authTokenOwner).createSeller(seller2, authToken, voucherInitValues)
-          ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
         });
 
         it("admin address is NOT zero address and AuthTokenType is NOT None", async function () {
           // Attempt to Create a seller, expecting revert
           await expect(
             accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues)
-          ).to.revertedWith(RevertReasons.ADMIN_OR_AUTH_TOKEN);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ADMIN_OR_AUTH_TOKEN);
         });
 
         it("admin address is zero address and AuthTokenType is None", async function () {
@@ -786,7 +789,7 @@ describe("SellerHandler", function () {
           // Attempt to Create a seller, expecting revert
           await expect(
             accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
-          ).to.revertedWith(RevertReasons.ADMIN_OR_AUTH_TOKEN);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ADMIN_OR_AUTH_TOKEN);
         });
 
         it("authToken is not unique to this seller", async function () {
@@ -800,7 +803,7 @@ describe("SellerHandler", function () {
           // Attempt to Create a seller with non-unique authToken
           await expect(
             accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues)
-          ).to.revertedWith(RevertReasons.AUTH_TOKEN_MUST_BE_UNIQUE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.AUTH_TOKEN_MUST_BE_UNIQUE);
         });
 
         it("authTokenType is Custom", async function () {
@@ -812,7 +815,7 @@ describe("SellerHandler", function () {
           // Attempt to Create a seller with AuthTokenType == Custom, expecting revert
           await expect(
             accountHandler.connect(authTokenOwner).createSeller(seller, authToken, voucherInitValues)
-          ).to.revertedWith(RevertReasons.INVALID_AUTH_TOKEN_TYPE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_AUTH_TOKEN_TYPE);
         });
 
         it("Caller is not the supplied admin", async function () {
@@ -821,7 +824,7 @@ describe("SellerHandler", function () {
           // Attempt to Create a seller with admin not the same to caller address
           await expect(
             accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
-          ).to.revertedWith(RevertReasons.NOT_ADMIN);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ADMIN);
         });
 
         it("Caller does not own supplied auth token", async function () {
@@ -832,7 +835,7 @@ describe("SellerHandler", function () {
           // Attempt to Create a seller without owning the auth token
           await expect(
             accountHandler.connect(rando).createSeller(seller, authToken, voucherInitValues)
-          ).to.revertedWith(RevertReasons.NOT_ADMIN);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ADMIN);
         });
 
         it("Caller is not the supplied assistant", async function () {
@@ -841,7 +844,7 @@ describe("SellerHandler", function () {
           // Attempt to Create a seller with assistant not the same to caller address
           await expect(
             accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
-          ).to.revertedWith(RevertReasons.NOT_ASSISTANT);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
         });
 
         it("Clerk is not a zero address", async function () {
@@ -852,7 +855,7 @@ describe("SellerHandler", function () {
           // Attempt to Create a seller with clerk not 0
           await expect(
             accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
-          ).to.revertedWith(RevertReasons.CLERK_DEPRECATED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CLERK_DEPRECATED);
         });
 
         it("addresses are the zero address", async function () {
@@ -862,7 +865,7 @@ describe("SellerHandler", function () {
           // Attempt to update a seller, expecting revert
           await expect(
             accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
-          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
         });
 
         it("Assistant address is zero address", async function () {
@@ -871,7 +874,7 @@ describe("SellerHandler", function () {
           // Attempt to Create a seller with assistant == zero address
           await expect(
             accountHandler.connect(authTokenOwner).createSeller(seller, emptyAuthToken, voucherInitValues)
-          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
         });
 
         it("Treasury address is zero address", async function () {
@@ -880,7 +883,7 @@ describe("SellerHandler", function () {
           // Attempt to Create a seller with treasury == zero address
           await expect(
             accountHandler.connect(authTokenOwner).createSeller(seller, emptyAuthToken, voucherInitValues)
-          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
         });
 
         it("seller salt is not unique [same as the original salt]", async function () {
@@ -898,7 +901,7 @@ describe("SellerHandler", function () {
           // Attempt to Create a seller with non unique salt, expecting revert
           await expect(
             accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues)
-          ).to.revertedWith(RevertReasons.SELLER_SALT_NOT_UNIQUE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_SALT_NOT_UNIQUE);
         });
 
         it("seller salt is not unique [same as the updated salt]", async function () {
@@ -919,7 +922,7 @@ describe("SellerHandler", function () {
           voucherInitValues.collectionSalt = newSalt;
           await expect(
             accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues)
-          ).to.revertedWith(RevertReasons.SELLER_SALT_NOT_UNIQUE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_SALT_NOT_UNIQUE);
         });
 
         it("same wallet cannot use the same salt twice", async function () {
@@ -938,7 +941,7 @@ describe("SellerHandler", function () {
           // Attempt to Create a seller with non unique salt, expecting revert
           await expect(
             accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues)
-          ).to.revertedWith(RevertReasons.CLONE_CREATION_FAILED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CLONE_CREATION_FAILED);
         });
       });
     });
@@ -1939,7 +1942,8 @@ describe("SellerHandler", function () {
           );
 
         // Attempt to update the seller with original admin address, expecting revert
-        await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+        await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken)).to.revertedWithCustomError(
+          bosonErrors,
           RevertReasons.NOT_ADMIN
         );
       });
@@ -2002,7 +2006,8 @@ describe("SellerHandler", function () {
           );
 
         // Attempt to update the seller with original admin address, expecting revertStruct
-        await expect(accountHandler.connect(admin).updateSeller(seller, authToken)).to.revertedWith(
+        await expect(accountHandler.connect(admin).updateSeller(seller, authToken)).to.revertedWithCustomError(
+          bosonErrors,
           RevertReasons.NOT_ADMIN
         );
       });
@@ -2154,7 +2159,8 @@ describe("SellerHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
 
           // Attempt to update a seller expecting revert
-          await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.REGION_PAUSED
           );
         });
@@ -2164,7 +2170,8 @@ describe("SellerHandler", function () {
           seller.id = "444";
 
           // Attempt to update the seller, expecting revert
-          await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_SUCH_SELLER
           );
 
@@ -2172,14 +2179,16 @@ describe("SellerHandler", function () {
           seller.id = "0";
 
           // Attempt to update the seller, expecting revert
-          await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_SUCH_SELLER
           );
         });
 
         it("Caller is not seller admin", async function () {
           // Attempt to update the seller, expecting revert
-          await expect(accountHandler.connect(rando).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+          await expect(accountHandler.connect(rando).updateSeller(seller, emptyAuthToken)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NOT_ADMIN
           );
         });
@@ -2189,36 +2198,36 @@ describe("SellerHandler", function () {
           seller.treasury = ZeroAddress;
 
           // Attempt to update a seller, expecting revert
-          await expect(accountHandler.connect(authTokenOwner).updateSeller(seller, emptyAuthToken)).to.revertedWith(
-            RevertReasons.INVALID_ADDRESS
-          );
+          await expect(
+            accountHandler.connect(authTokenOwner).updateSeller(seller, emptyAuthToken)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
         });
 
         it("Assistant is the zero address", async function () {
           seller.assistant = ZeroAddress;
 
           // Attempt to update a seller, expecting revert
-          await expect(accountHandler.connect(authTokenOwner).updateSeller(seller, emptyAuthToken)).to.revertedWith(
-            RevertReasons.INVALID_ADDRESS
-          );
+          await expect(
+            accountHandler.connect(authTokenOwner).updateSeller(seller, emptyAuthToken)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
         });
 
         it("Clerk is not a zero address", async function () {
           seller.clerk = await rando.getAddress();
 
           // Attempt to update a seller, expecting revert
-          await expect(accountHandler.connect(authTokenOwner).updateSeller(seller, emptyAuthToken)).to.revertedWith(
-            RevertReasons.CLERK_DEPRECATED
-          );
+          await expect(
+            accountHandler.connect(authTokenOwner).updateSeller(seller, emptyAuthToken)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CLERK_DEPRECATED);
         });
 
         it("Treasury is the zero address", async function () {
           seller.treasury = ZeroAddress;
 
           // Attempt to update a seller, expecting revert
-          await expect(accountHandler.connect(authTokenOwner).updateSeller(seller, emptyAuthToken)).to.revertedWith(
-            RevertReasons.INVALID_ADDRESS
-          );
+          await expect(
+            accountHandler.connect(authTokenOwner).updateSeller(seller, emptyAuthToken)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
         });
 
         it("addresses are not unique to this seller Id when addresses used for same role", async function () {
@@ -2243,7 +2252,8 @@ describe("SellerHandler", function () {
           seller.assistant = await assistant.getAddress(); //already being used by seller 1
 
           // Attempt to update seller 2 with non-unique assistant, expecting revert
-          await expect(accountHandler.connect(other1).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+          await expect(accountHandler.connect(other1).updateSeller(seller, emptyAuthToken)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
           );
 
@@ -2251,7 +2261,8 @@ describe("SellerHandler", function () {
           seller.assistant = await other1.getAddress();
 
           // Attempt to update a seller with non-unique admin, expecting revert
-          await expect(accountHandler.connect(other1).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+          await expect(accountHandler.connect(other1).updateSeller(seller, emptyAuthToken)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
           );
         });
@@ -2278,7 +2289,8 @@ describe("SellerHandler", function () {
           seller.admin = await assistant.getAddress();
 
           // Attempt to update seller 2 with non-unique assistant, expecting revert
-          await expect(accountHandler.connect(other1).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+          await expect(accountHandler.connect(other1).updateSeller(seller, emptyAuthToken)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
           );
 
@@ -2287,14 +2299,16 @@ describe("SellerHandler", function () {
           seller.assistant = await admin.getAddress();
 
           // Attempt to update a seller with non-unique admin, expecting revert
-          await expect(accountHandler.connect(other1).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+          await expect(accountHandler.connect(other1).updateSeller(seller, emptyAuthToken)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
           );
         });
 
         it("admin address is NOT zero address and AuthTokenType is NOT None", async function () {
           // Attempt to update a seller, expecting revert
-          await expect(accountHandler.connect(admin).updateSeller(seller, authToken)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateSeller(seller, authToken)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.ADMIN_OR_AUTH_TOKEN
           );
         });
@@ -2303,7 +2317,8 @@ describe("SellerHandler", function () {
           seller.admin = ZeroAddress;
 
           // Attempt to Create a seller, expecting revert
-          await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.ADMIN_OR_AUTH_TOKEN
           );
         });
@@ -2332,7 +2347,8 @@ describe("SellerHandler", function () {
           seller2.admin = ZeroAddress;
 
           // Attempt to update seller2 with non-unique authToken used by seller 1
-          await expect(accountHandler.connect(other1).updateSeller(seller2, authToken)).to.revertedWith(
+          await expect(accountHandler.connect(other1).updateSeller(seller2, authToken)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.AUTH_TOKEN_MUST_BE_UNIQUE
           );
         });
@@ -2344,9 +2360,9 @@ describe("SellerHandler", function () {
           authToken.tokenType = AuthTokenType.Custom;
 
           // Attempt to Update a seller with AuthTokenType == Custom, expecting revert
-          await expect(accountHandler.connect(authTokenOwner).updateSeller(seller, authToken)).to.revertedWith(
-            RevertReasons.INVALID_AUTH_TOKEN_TYPE
-          );
+          await expect(
+            accountHandler.connect(authTokenOwner).updateSeller(seller, authToken)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_AUTH_TOKEN_TYPE);
         });
 
         it("seller is not owner of auth token currently stored for seller", async function () {
@@ -2370,9 +2386,9 @@ describe("SellerHandler", function () {
             .transferFrom(await authTokenOwner.getAddress(), await other7.getAddress(), 0);
 
           // Attempt to update seller2 for token that seller doesn't own
-          await expect(accountHandler.connect(authTokenOwner).updateSeller(seller2, authToken2)).to.revertedWith(
-            RevertReasons.NOT_ADMIN
-          );
+          await expect(
+            accountHandler.connect(authTokenOwner).updateSeller(seller2, authToken2)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ADMIN);
         });
 
         it("auth token id does not exist", async function () {
@@ -2393,7 +2409,8 @@ describe("SellerHandler", function () {
         });
 
         it("No updates applied or set to pending", async function () {
-          await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_UPDATE_APPLIED
           );
         });
@@ -2573,7 +2590,7 @@ describe("SellerHandler", function () {
 
         await expect(
           accountHandler.connect(other1).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant])
-        ).to.revertedWith(RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
+        ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
 
         await expect(accountHandler.connect(other2).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant]))
           .to.emit(accountHandler, "SellerUpdateApplied")
@@ -2608,7 +2625,7 @@ describe("SellerHandler", function () {
 
         await expect(
           accountHandler.connect(authTokenOwner).optInToSellerUpdate(seller.id, [SellerUpdateFields.AuthToken])
-        ).to.revertedWith(RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
+        ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
 
         await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [SellerUpdateFields.AuthToken]))
           .to.emit(accountHandler, "SellerUpdateApplied")
@@ -2747,7 +2764,8 @@ describe("SellerHandler", function () {
               await other1.getAddress()
             );
 
-          await expect(accountHandler.connect(other1).optInToSellerUpdate(seller.id, [])).to.revertedWith(
+          await expect(accountHandler.connect(other1).optInToSellerUpdate(seller.id, [])).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_PENDING_UPDATE_FOR_ACCOUNT
           );
         });
@@ -2778,7 +2796,7 @@ describe("SellerHandler", function () {
           // Attempt to update seller1 with non-unique authToken used by seller 2
           await expect(
             accountHandler.connect(newAuthTokenOwner).optInToSellerUpdate(seller.id, [SellerUpdateFields.AuthToken])
-          ).to.revertedWith(RevertReasons.AUTH_TOKEN_MUST_BE_UNIQUE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.AUTH_TOKEN_MUST_BE_UNIQUE);
         });
 
         it("Caller is not the new admin", async function () {
@@ -2788,7 +2806,7 @@ describe("SellerHandler", function () {
 
           await expect(
             accountHandler.connect(other2).optInToSellerUpdate(seller.id, [SellerUpdateFields.Admin])
-          ).to.revertedWith(RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
         });
 
         it("Caller is not the new assistant", async function () {
@@ -2798,7 +2816,7 @@ describe("SellerHandler", function () {
 
           await expect(
             accountHandler.connect(other2).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant])
-          ).to.revertedWith(RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
         });
 
         it("Should revert if the caller is not the new auth token owner", async function () {
@@ -2808,7 +2826,7 @@ describe("SellerHandler", function () {
 
           await expect(
             accountHandler.connect(other2).optInToSellerUpdate(seller.id, [SellerUpdateFields.AuthToken])
-          ).to.revertedWith(RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
         });
 
         it("The sellers region of protocol is paused", async function () {
@@ -2819,7 +2837,8 @@ describe("SellerHandler", function () {
           // Pause the sellers region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
 
-          await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [])).to.revertedWith(
+          await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [])).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.REGION_PAUSED
           );
         });
@@ -2843,7 +2862,7 @@ describe("SellerHandler", function () {
           // Attempt to approve the update with non-unique admin, expecting revert
           await expect(
             accountHandler.connect(other1).optInToSellerUpdate(seller.id, [SellerUpdateFields.Admin])
-          ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
         });
 
         it("Assistant is not unique to this seller", async function () {
@@ -2865,7 +2884,7 @@ describe("SellerHandler", function () {
           // Attempt to approve the update with non-unique assistant, expecting revert
           await expect(
             accountHandler.connect(other1).optInToSellerUpdate(seller.id, [SellerUpdateFields.Assistant])
-          ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
         });
 
         it("Seller tries to update the clerk", async function () {
@@ -2875,7 +2894,7 @@ describe("SellerHandler", function () {
 
           await expect(
             accountHandler.connect(other2).optInToSellerUpdate(seller.id, [SellerUpdateFields.Clerk])
-          ).to.revertedWith(RevertReasons.CLERK_DEPRECATED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CLERK_DEPRECATED);
         });
       });
     });
@@ -3115,14 +3134,14 @@ describe("SellerHandler", function () {
           // Attempt to create a new collection expecting revert
           await expect(
             accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues)
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("Caller is not anyone's assistant", async function () {
           // Attempt to create a new collection
           await expect(
             accountHandler.connect(rando).createNewCollection(externalId, voucherInitValues)
-          ).to.revertedWith(RevertReasons.NO_SUCH_SELLER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_SELLER);
         });
 
         it("Collection creation fails", async function () {
@@ -3131,7 +3150,7 @@ describe("SellerHandler", function () {
           // Try to create a collection with already used salt
           await expect(
             accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues)
-          ).to.revertedWith(RevertReasons.CLONE_CREATION_FAILED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CLONE_CREATION_FAILED);
         });
 
         it("seller salt does not exist yet, and new salt is not unique", async function () {
@@ -3188,7 +3207,7 @@ describe("SellerHandler", function () {
           // Try to create a collection with already used salt
           await expect(
             accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues)
-          ).to.revertedWith(RevertReasons.SELLER_SALT_NOT_UNIQUE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_SALT_NOT_UNIQUE);
         });
       });
     });
@@ -3330,31 +3349,31 @@ describe("SellerHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
 
           // Attempt to update the salt, expecting revert
-          await expect(accountHandler.connect(admin).updateSellerSalt(seller.id, newSellerSalt)).to.revertedWith(
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(
+            accountHandler.connect(admin).updateSellerSalt(seller.id, newSellerSalt)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("Caller is not anyone's admin", async function () {
           // Attempt to update the salt, expecting revert
-          await expect(accountHandler.connect(rando).updateSellerSalt(seller.id, newSellerSalt)).to.revertedWith(
-            RevertReasons.NOT_ADMIN
-          );
+          await expect(
+            accountHandler.connect(rando).updateSellerSalt(seller.id, newSellerSalt)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ADMIN);
         });
 
         it("Caller is not anyone's admin", async function () {
           const sellerId = "444";
           // Attempt to update the salt, expecting revert
-          await expect(accountHandler.connect(admin).updateSellerSalt(sellerId, newSellerSalt)).to.revertedWith(
-            RevertReasons.NO_SUCH_SELLER
-          );
+          await expect(
+            accountHandler.connect(admin).updateSellerSalt(sellerId, newSellerSalt)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_SELLER);
         });
 
         it("seller salt is not unique [same seller id]", async function () {
           // Attempt to update the salt, expecting revert
           await expect(
             accountHandler.connect(admin).updateSellerSalt(seller.id, voucherInitValues.collectionSalt)
-          ).to.revertedWith(RevertReasons.SELLER_SALT_NOT_UNIQUE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_SALT_NOT_UNIQUE);
         });
 
         it("seller salt is not unique [different seller id]", async function () {
@@ -3374,9 +3393,9 @@ describe("SellerHandler", function () {
           await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           // Attempt to update the salt, expecting revert
-          await expect(accountHandler.connect(admin).updateSellerSalt(newSellerId, newSellerSalt)).to.revertedWith(
-            RevertReasons.SELLER_SALT_NOT_UNIQUE
-          );
+          await expect(
+            accountHandler.connect(admin).updateSellerSalt(newSellerId, newSellerSalt)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_SALT_NOT_UNIQUE);
         });
       });
     });

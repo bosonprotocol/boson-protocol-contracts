@@ -99,6 +99,7 @@ describe("IBosonFundsHandler", function () {
   let protocolDiamondAddress;
   let snapshotId;
   let beaconProxyAddress;
+  let bosonErrors;
 
   before(async function () {
     accountId.next(true);
@@ -135,6 +136,8 @@ describe("IBosonFundsHandler", function () {
       extraReturnValues: { accessController },
     } = await setupTestEnvironment(contracts));
 
+    bosonErrors = await getContractAt("BosonErrors", protocolDiamondAddress);
+
     // make all account the same
     assistant = admin;
     assistantDR = adminDR;
@@ -146,7 +149,7 @@ describe("IBosonFundsHandler", function () {
     [mockToken] = await deployMockTokens(["Foreign20"]);
 
     // Get the beacon proxy address
-    beaconProxyAddress = await calculateBosonProxyAddress(await configHandler.getAddress());
+    beaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -286,7 +289,7 @@ describe("IBosonFundsHandler", function () {
           // Attempt to deposit funds, expecting revert
           await expect(
             fundsHandler.connect(assistant).depositFunds(seller.id, await mockToken.getAddress(), depositAmount)
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("Seller id does not exist", async function () {
@@ -294,7 +297,7 @@ describe("IBosonFundsHandler", function () {
           seller.id = "555";
           await expect(
             fundsHandler.connect(rando).depositFunds(seller.id, await mockToken.getAddress(), depositAmount)
-          ).to.revertedWith(RevertReasons.NO_SUCH_SELLER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_SELLER);
         });
 
         it("Native currency deposited, but the token address is not zero", async function () {
@@ -303,7 +306,7 @@ describe("IBosonFundsHandler", function () {
             fundsHandler
               .connect(rando)
               .depositFunds(seller.id, await mockToken.getAddress(), depositAmount, { value: depositAmount })
-          ).to.revertedWith(RevertReasons.NATIVE_WRONG_ADDRESS);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NATIVE_WRONG_ADDRESS);
         });
 
         it("Native currency deposited, but the amount does not match msg.value", async function () {
@@ -312,7 +315,7 @@ describe("IBosonFundsHandler", function () {
             fundsHandler
               .connect(rando)
               .depositFunds(seller.id, ZeroAddress, depositAmount * 2n, { value: depositAmount })
-          ).to.revertedWith(RevertReasons.NATIVE_WRONG_AMOUNT);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NATIVE_WRONG_AMOUNT);
         });
 
         it("Token address contract does not support transferFrom", async function () {
@@ -359,7 +362,7 @@ describe("IBosonFundsHandler", function () {
           // Attempt to deposit funds, expecting revert
           await expect(
             fundsHandler.connect(assistant).depositFunds(seller.id, await Foreign20WithFee.getAddress(), depositAmount)
-          ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
         });
 
         it("ERC20 transferFrom returns false", async function () {
@@ -815,22 +818,25 @@ describe("IBosonFundsHandler", function () {
             // Attempt to withdraw funds, expecting revert
             await expect(
               fundsHandler.connect(buyer).withdrawFunds(buyerId, tokenListBuyer, tokenAmountsBuyer)
-            ).to.revertedWith(RevertReasons.REGION_PAUSED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
           });
 
           it("Caller is not authorized to withdraw", async function () {
             // Attempt to withdraw the buyer funds, expecting revert
-            await expect(fundsHandler.connect(rando).withdrawFunds(buyerId, [], [])).to.revertedWith(
+            await expect(fundsHandler.connect(rando).withdrawFunds(buyerId, [], [])).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.NOT_AUTHORIZED
             );
 
             // Attempt to withdraw the seller funds, expecting revert
-            await expect(fundsHandler.connect(rando).withdrawFunds(seller.id, [], [])).to.revertedWith(
+            await expect(fundsHandler.connect(rando).withdrawFunds(seller.id, [], [])).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.NOT_AUTHORIZED
             );
 
             // Attempt to withdraw the seller funds as treasury, expecting revert
-            await expect(fundsHandler.connect(treasury).withdrawFunds(seller.id, [], [])).to.revertedWith(
+            await expect(fundsHandler.connect(treasury).withdrawFunds(seller.id, [], [])).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.NOT_AUTHORIZED
             );
           });
@@ -843,7 +849,7 @@ describe("IBosonFundsHandler", function () {
             // Attempt to withdraw the funds, expecting revert
             await expect(
               fundsHandler.connect(assistant).withdrawFunds(seller.id, tokenList, tokenAmounts)
-            ).to.revertedWith(RevertReasons.TOKEN_AMOUNT_MISMATCH);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_AMOUNT_MISMATCH);
           });
 
           it("Caller tries to withdraw more than they have in the available funds", async function () {
@@ -854,7 +860,7 @@ describe("IBosonFundsHandler", function () {
             // Attempt to withdraw the funds, expecting revert
             await expect(
               fundsHandler.connect(assistant).withdrawFunds(seller.id, tokenList, tokenAmounts)
-            ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
           });
 
           it("Caller tries to withdraw the same token twice", async function () {
@@ -865,7 +871,7 @@ describe("IBosonFundsHandler", function () {
             // Attempt to withdraw the funds, expecting revert
             await expect(
               fundsHandler.connect(assistant).withdrawFunds(seller.id, tokenList, tokenAmounts)
-            ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
           });
 
           it("Nothing to withdraw", async function () {
@@ -875,13 +881,14 @@ describe("IBosonFundsHandler", function () {
 
             await expect(
               fundsHandler.connect(assistant).withdrawFunds(seller.id, tokenList, tokenAmounts)
-            ).to.revertedWith(RevertReasons.NOTHING_TO_WITHDRAW);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOTHING_TO_WITHDRAW);
 
             // first withdraw everything
             await fundsHandler.connect(assistant).withdrawFunds(seller.id, [], []);
 
             // Attempt to withdraw the funds, expecting revert
-            await expect(fundsHandler.connect(assistant).withdrawFunds(seller.id, [], [])).to.revertedWith(
+            await expect(fundsHandler.connect(assistant).withdrawFunds(seller.id, [], [])).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.NOTHING_TO_WITHDRAW
             );
           });
@@ -910,7 +917,7 @@ describe("IBosonFundsHandler", function () {
                 [ZeroAddress],
                 [offerNative.price]
               )
-            ).to.revertedWith(RevertReasons.TOKEN_TRANSFER_FAILED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_TRANSFER_FAILED);
           });
 
           it("Transfer of funds failed - no payable fallback or receive", async function () {
@@ -937,7 +944,7 @@ describe("IBosonFundsHandler", function () {
                 [ZeroAddress],
                 [offerNative.price]
               )
-            ).to.revertedWith(RevertReasons.TOKEN_TRANSFER_FAILED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_TRANSFER_FAILED);
           });
 
           it("Transfer of funds failed - ERC20 token does not exist anymore", async function () {
@@ -1181,12 +1188,13 @@ describe("IBosonFundsHandler", function () {
             // Attempt to withdraw funds, expecting revert
             await expect(
               fundsHandler.connect(feeCollector).withdrawProtocolFees(tokenList, tokenAmounts)
-            ).to.revertedWith(RevertReasons.REGION_PAUSED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
           });
 
           it("Caller is not authorized to withdraw", async function () {
             // Attempt to withdraw the protocol fees, expecting revert
-            await expect(fundsHandler.connect(rando).withdrawProtocolFees([], [])).to.revertedWith(
+            await expect(fundsHandler.connect(rando).withdrawProtocolFees([], [])).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.ACCESS_DENIED
             );
           });
@@ -1199,7 +1207,7 @@ describe("IBosonFundsHandler", function () {
             // Attempt to withdraw the funds, expecting revert
             await expect(
               fundsHandler.connect(feeCollector).withdrawProtocolFees(tokenList, tokenAmounts)
-            ).to.revertedWith(RevertReasons.TOKEN_AMOUNT_MISMATCH);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_AMOUNT_MISMATCH);
           });
 
           it("Caller tries to withdraw more than they have in the available funds", async function () {
@@ -1210,7 +1218,7 @@ describe("IBosonFundsHandler", function () {
             // Attempt to withdraw the funds, expecting revert
             await expect(
               fundsHandler.connect(feeCollector).withdrawProtocolFees(tokenList, tokenAmounts)
-            ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
           });
 
           it("Caller tries to withdraw the same token twice", async function () {
@@ -1221,7 +1229,7 @@ describe("IBosonFundsHandler", function () {
             // Attempt to withdraw the funds, expecting revert
             await expect(
               fundsHandler.connect(feeCollector).withdrawProtocolFees(tokenList, tokenAmounts)
-            ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
           });
 
           it("Nothing to withdraw", async function () {
@@ -1231,13 +1239,14 @@ describe("IBosonFundsHandler", function () {
 
             await expect(
               fundsHandler.connect(feeCollector).withdrawProtocolFees(tokenList, tokenAmounts)
-            ).to.revertedWith(RevertReasons.NOTHING_TO_WITHDRAW);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOTHING_TO_WITHDRAW);
 
             // first withdraw everything
             await fundsHandler.connect(feeCollector).withdrawProtocolFees([], []);
 
             // Attempt to withdraw the funds, expecting revert
-            await expect(fundsHandler.connect(feeCollector).withdrawProtocolFees([], [])).to.revertedWith(
+            await expect(fundsHandler.connect(feeCollector).withdrawProtocolFees([], [])).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.NOTHING_TO_WITHDRAW
             );
           });
@@ -1255,7 +1264,7 @@ describe("IBosonFundsHandler", function () {
             // attempt to withdraw the funds, expecting revert
             await expect(
               fundsHandler.connect(feeCollector).withdrawProtocolFees([ZeroAddress], [offerNativeProtocolFee])
-            ).to.revertedWith(RevertReasons.TOKEN_TRANSFER_FAILED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_TRANSFER_FAILED);
           });
 
           it("Transfer of funds failed - no payable fallback or receive", async function () {
@@ -1271,7 +1280,7 @@ describe("IBosonFundsHandler", function () {
             // attempt to withdraw the funds, expecting revert
             await expect(
               fundsHandler.connect(feeCollector).withdrawProtocolFees([ZeroAddress], [offerNativeProtocolFee])
-            ).to.revertedWith(RevertReasons.TOKEN_TRANSFER_FAILED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_TRANSFER_FAILED);
           });
 
           it("Transfer of funds failed - ERC20 token does not exist anymore", async function () {
@@ -1936,14 +1945,14 @@ describe("IBosonFundsHandler", function () {
             exchangeHandler
               .connect(buyer)
               .commitToOffer(await buyer.getAddress(), offerNative.id, { value: BigInt(price) - 1n })
-          ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
         });
 
         it("Native currency sent together with ERC20 token transfer", async function () {
           // Attempt to commit to an offer, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id, { value: price })
-          ).to.revertedWith(RevertReasons.NATIVE_NOT_ALLOWED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NATIVE_NOT_ALLOWED);
         });
 
         it("Token address contract does not support transferFrom", async function () {
@@ -2020,7 +2029,7 @@ describe("IBosonFundsHandler", function () {
           // Attempt to commit to an offer, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id)
-          ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
 
           // create an offer with native currency with higher seller deposit
           offerNative.sellerDeposit = BigInt(offerNative.sellerDeposit) * 4n;
@@ -2032,7 +2041,7 @@ describe("IBosonFundsHandler", function () {
           // Attempt to commit to an offer, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerNative.id, { value: price })
-          ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
         });
 
         it("Seller'a availableFunds is less than the required sellerDeposit + price for preminted offer", async function () {
@@ -2057,7 +2066,7 @@ describe("IBosonFundsHandler", function () {
             bosonVoucher
               .connect(assistant)
               .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
 
           // reserve a range and premint vouchers for offer in native currency
           exchangeId = await exchangeHandler.getNextExchangeId();
@@ -2072,7 +2081,7 @@ describe("IBosonFundsHandler", function () {
             bosonVoucher
               .connect(assistant)
               .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
         });
 
         it("Received ERC20 token amount differs from the expected value", async function () {
@@ -2105,7 +2114,7 @@ describe("IBosonFundsHandler", function () {
           // Attempt to commit to offer, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id)
-          ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
         });
       });
     });
