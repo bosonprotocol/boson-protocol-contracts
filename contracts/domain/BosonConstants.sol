@@ -125,6 +125,7 @@ string constant INVALID_RANGE_LENGTH = "Range length is too large or zero";
 string constant UNEXPECTED_ERC721_RECEIVED = "Unexpected ERC721 received";
 string constant FEE_AMOUNT_TOO_HIGH = "Fee amount is too high";
 string constant VOUCHER_NOT_RECEIVED = "Voucher not received";
+string constant NEGATIVE_PRICE_NOT_ALLOWED = "Negative price not allowed";
 
 // Revert Reasons: Twin related
 uint256 constant SINGLE_TWIN_RESERVED_GAS = 160000;

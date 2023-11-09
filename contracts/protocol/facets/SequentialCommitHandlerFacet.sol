@@ -19,7 +19,20 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDiscoveryBase {
     using Address for address;
 
-    constructor(address _weth) PriceDiscoveryBase(_weth) {}
+    /**
+     * @notice
+     * For offers with native exchange token, it is expected the the price discovery contracts will
+     * operate with wrapped native token. Set the address of the wrapped native token in the constructor.
+     *
+     * After v2.2.0, token ids are derived from offerId and exchangeId.
+     * EXCHANGE_ID_2_2_0 is the first exchange id to use for 2.2.0.
+     * Set EXCHANGE_ID_2_2_0 in the constructor.
+     *
+     * @param _wNative - the address of the wrapped native token
+     * @param _firstExchangeId2_2_0 - the first exchange id to use for 2.2.0
+     */
+    //solhint-disable-next-line
+    constructor(address _wNative, uint256 _firstExchangeId2_2_0) PriceDiscoveryBase(_wNative, _firstExchangeId2_2_0) {}
 
     /**
      * @notice Initializes facet.
@@ -30,7 +43,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
     }
 
     /**
-     * @notice Commits to an existing exchange. Price discovery is oflaoaded to external contract.
+     * @notice Commits to an existing exchange. Price discovery is offloaded to external contract.
      *
      * Emits a BuyerCommitted event if successful.
      * Transfers voucher to the buyer address.
@@ -95,8 +108,8 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
         }
 
         // First call price discovery and get actual price
-        // It might be lower tha submitted for buy orders and higher for sell orders
-        uint256 actualPrice = fulFilOrder(_exchangeId, tokenAddress, _priceDiscovery, _buyer, offer.sellerId);
+        // It might be lower than submitted for buy orders and higher for sell orders
+        uint256 actualPrice = fulFilOrder(_exchangeId, tokenAddress, _priceDiscovery, _buyer, offer);
 
         // Calculate the amount to be kept in escrow
         uint256 escrowAmount;
@@ -111,10 +124,9 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                     : (protocolFees().percentage * actualPrice) / 10000;
 
                 // Calculate royalties
-                (, uint256 royaltyAmount) = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]).royaltyInfo(
-                    _exchangeId,
-                    actualPrice
-                );
+                (, uint256 royaltyAmount) = IBosonVoucher(
+                    getCloneAddress(protocolLookups(), offer.sellerId, offer.collectionIndex)
+                ).royaltyInfo(_exchangeId, actualPrice);
 
                 // Verify that fees and royalties are not higher than the price.
                 require((protocolFeeAmount + royaltyAmount) <= actualPrice, FEE_AMOUNT_TOO_HIGH);
@@ -146,8 +158,8 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                         // If exchange is native currency, seller cannot directly approve protocol to transfer funds
                         // They need to approve wrapper contract, so protocol can pull funds from wrapper
                         // But since protocol otherwise normally operates with native currency, needs to unwrap it (i.e. withdraw)
-                        FundsLib.transferFundsToProtocol(address(weth), seller, escrowAmount);
-                        weth.withdraw(escrowAmount);
+                        FundsLib.transferFundsToProtocol(address(wNative), seller, escrowAmount);
+                        wNative.withdraw(escrowAmount);
                     } else {
                         FundsLib.transferFundsToProtocol(tokenAddress, seller, escrowAmount);
                     }
@@ -155,8 +167,8 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
             } else {
                 // when bid side, we have full proceeds in escrow. Keep minimal in, return the difference
                 if (tokenAddress == address(0)) {
-                    tokenAddress = address(weth);
-                    if (escrowAmount > 0) weth.withdraw(escrowAmount);
+                    tokenAddress = address(wNative);
+                    if (escrowAmount > 0) wNative.withdraw(escrowAmount);
                 }
 
                 uint256 payout = actualPrice - escrowAmount;

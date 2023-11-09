@@ -4,7 +4,7 @@ pragma solidity 0.8.21;
 import "../../domain/BosonConstants.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
-import { IWETH9Like } from "../../interfaces/IWETH9Like.sol";
+import { IWrappedNative } from "../../interfaces/IWrappedNative.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
@@ -18,10 +18,25 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 contract PriceDiscoveryBase is ProtocolBase {
     using Address for address;
 
-    IWETH9Like public immutable weth;
+    IWrappedNative public immutable wNative;
+    uint256 private immutable EXCHANGE_ID_2_2_0; // solhint-disable-line
 
-    constructor(address _weth) {
-        weth = IWETH9Like(_weth);
+    /**
+     * @notice
+     * For offers with native exchange token, it is expected the the price discovery contracts will
+     * operate with wrapped native token. Set the address of the wrapped native token in the constructor.
+     *
+     * After v2.2.0, token ids are derived from offerId and exchangeId.
+     * EXCHANGE_ID_2_2_0 is the first exchange id to use for 2.2.0.
+     * Set EXCHANGE_ID_2_2_0 in the constructor.
+     *
+     * @param _wNative - the address of the wrapped native token
+     * @param _firstExchangeId2_2_0 - the first exchange id to use for 2.2.0
+     */
+    //solhint-disable-next-line
+    constructor(address _wNative, uint256 _firstExchangeId2_2_0) {
+        wNative = IWrappedNative(_wNative);
+        EXCHANGE_ID_2_2_0 = _firstExchangeId2_2_0;
     }
 
     /**
@@ -33,7 +48,7 @@ contract PriceDiscoveryBase is ProtocolBase {
      * @param _exchangeToken - the address of the ERC20 token used for the exchange (zero address for native)
      * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
-     * @param _initialSellerId - the id of the original seller
+     * @param _offer - the pointer to offer struct, corresponding to the exchange
      * @return actualPrice - the actual price of the order
      */
     function fulFilOrder(
@@ -41,12 +56,12 @@ contract PriceDiscoveryBase is ProtocolBase {
         address _exchangeToken,
         PriceDiscovery calldata _priceDiscovery,
         address _buyer,
-        uint256 _initialSellerId
+        Offer storage _offer
     ) internal returns (uint256 actualPrice) {
         if (_priceDiscovery.side == Side.Ask) {
-            return fulfilAskOrder(_exchangeId, _exchangeToken, _priceDiscovery, _buyer, _initialSellerId);
+            return fulfilAskOrder(_exchangeId, _exchangeToken, _priceDiscovery, _buyer, _offer);
         } else {
-            return fulfilBidOrder(_exchangeId, _exchangeToken, _priceDiscovery, _initialSellerId);
+            return fulfilBidOrder(_exchangeId, _exchangeToken, _priceDiscovery, _offer);
         }
     }
 
@@ -66,7 +81,7 @@ contract PriceDiscoveryBase is ProtocolBase {
      * @param _exchangeToken - the address of the ERC20 token used for the exchange (zero address for native)
      * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
-     * @param _initialSellerId - the id of the original seller
+     * @param _offer - the pointer to offer struct, corresponding to the exchange
      * @return actualPrice - the actual price of the order
      */
     function fulfilAskOrder(
@@ -74,7 +89,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         address _exchangeToken,
         PriceDiscovery calldata _priceDiscovery,
         address _buyer,
-        uint256 _initialSellerId
+        Offer storage _offer
     ) internal returns (uint256 actualPrice) {
         // Transfer buyers funds to protocol
         FundsLib.validateIncomingPayment(_exchangeToken, _priceDiscovery.price);
@@ -89,11 +104,11 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         // Store the information about incoming voucher
         ProtocolLib.ProtocolStatus storage ps = protocolStatus();
-        address cloneAddress = protocolLookups().cloneAddress[_initialSellerId];
+        address cloneAddress = getCloneAddress(protocolLookups(), _offer.sellerId, _offer.collectionIndex);
         uint256 tokenId;
         {
-            uint256 offerId = protocolEntities().exchanges[_exchangeId].offerId;
-            tokenId = _exchangeId | (offerId << 128);
+            tokenId = _exchangeId;
+            if (tokenId >= EXCHANGE_ID_2_2_0) tokenId |= (_offer.id << 128);
             ps.incomingVoucherId = tokenId;
             ps.incomingVoucherCloneAddress = cloneAddress;
         }
@@ -115,6 +130,7 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         // Check the escrow amount
         uint256 protocolBalanceAfter = getBalance(_exchangeToken);
+        require(protocolBalanceBefore >= protocolBalanceAfter, NEGATIVE_PRICE_NOT_ALLOWED);
         actualPrice = protocolBalanceBefore - protocolBalanceAfter;
 
         uint256 overchargedAmount = _priceDiscovery.price - actualPrice;
@@ -139,30 +155,33 @@ contract PriceDiscoveryBase is ProtocolBase {
      * @param _exchangeId - the id of the exchange to commit to
      * @param _exchangeToken - the address of the ERC20 token used for the exchange (zero address for native)
      * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
-     * @param _initialSellerId - the id of the original seller
+     * @param _offer - the pointer to offer struct, corresponding to the exchange
      * @return actualPrice - the actual price of the order
      */
     function fulfilBidOrder(
         uint256 _exchangeId,
         address _exchangeToken,
         PriceDiscovery calldata _priceDiscovery,
-        uint256 _initialSellerId
+        Offer storage _offer
     ) internal returns (uint256 actualPrice) {
-        IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[_initialSellerId]);
+        IBosonVoucher bosonVoucher = IBosonVoucher(
+            getCloneAddress(protocolLookups(), _offer.sellerId, _offer.collectionIndex)
+        );
 
         // Transfer seller's voucher to protocol
         // Don't need to use safe transfer from, since that protocol can handle the voucher
-        uint256 offerId = protocolEntities().exchanges[_exchangeId].offerId;
-        uint256 tokenId = _exchangeId | (offerId << 128);
+        uint256 tokenId = _exchangeId;
+        if (tokenId >= EXCHANGE_ID_2_2_0) tokenId |= (_offer.id << 128);
         bosonVoucher.transferFrom(msgSender(), address(this), tokenId);
 
-        if (_exchangeToken == address(0)) _exchangeToken = address(weth);
+        if (_exchangeToken == address(0)) _exchangeToken = address(wNative);
 
         // Get protocol balance before the exchange
         uint256 protocolBalanceBefore = getBalance(_exchangeToken);
 
-        // Track native balance just in case if seller send some native currency or price discovery contract does
-        uint256 protocolNativeBalanceBefore = getBalance(address(0));
+        // Track native balance just in case if seller sends some native currency or price discovery contract does
+        // This is the balance that protocol had, before commit to offer was called
+        uint256 protocolNativeBalanceBefore = getBalance(address(0)) - msg.value;
 
         // Approve price discovery contract to transfer voucher. There is no need to reset approval afterwards, since protocol is not the voucher owner anymore
         bosonVoucher.approve(_priceDiscovery.priceDiscoveryContract, tokenId);

@@ -15,7 +15,7 @@ import { IERC721Receiver } from "../IERC721Receiver.sol";
  */
 interface IBosonSequentialCommitHandler is IBosonExchangeEvents, IBosonFundsLibEvents, IERC721Receiver {
     /**
-     * @notice Commits to an existing exchange. Price discovery is oflaoaded to external contract.
+     * @notice Commits to an existing exchange. Price discovery is offloaded to external contract.
      *
      * Emits a BuyerCommitted event if successful.
      * Transfers voucher to the buyer address.
