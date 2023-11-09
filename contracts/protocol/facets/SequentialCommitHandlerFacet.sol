@@ -90,10 +90,11 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
         require(block.timestamp <= voucher.validUntilDate, VOUCHER_HAS_EXPIRED);
 
         // Fetch offer
-        (, Offer storage offer) = fetchOffer(exchange.offerId);
+        uint256 offerId = exchange.offerId;
+        (, Offer storage offer) = fetchOffer(offerId);
 
         // Get token address
-        address tokenAddress = offer.exchangeToken;
+        address exchangeToken = offer.exchangeToken;
 
         // Get current buyer address. This is actually the seller in sequential commit. Need to do it before voucher is transferred
         address seller;
@@ -103,23 +104,25 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
             seller = currentBuyer.wallet;
         }
 
+        address sender = msgSender();
         if (_priceDiscovery.side == Side.Bid) {
-            require(seller == msgSender(), NOT_VOUCHER_HOLDER);
+            require(seller == sender, NOT_VOUCHER_HOLDER);
         }
 
         // First call price discovery and get actual price
         // It might be lower than submitted for buy orders and higher for sell orders
-        uint256 actualPrice = fulFilOrder(_exchangeId, tokenAddress, _priceDiscovery, _buyer, offer);
+        uint256 actualPrice = fulFilOrder(_exchangeId, exchangeToken, _priceDiscovery, _buyer, offer);
 
         // Calculate the amount to be kept in escrow
         uint256 escrowAmount;
+        // address sender ;
         {
             // Get sequential commits for this exchange
             SequentialCommit[] storage sequentialCommits = protocolEntities().sequentialCommits[_exchangeId];
 
             {
                 // Calculate fees
-                uint256 protocolFeeAmount = tokenAddress == protocolAddresses().token
+                uint256 protocolFeeAmount = exchangeToken == protocolAddresses().token
                     ? protocolFees().flatBoson
                     : (protocolFees().percentage * actualPrice) / 10000;
 
@@ -154,30 +157,35 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                 if (escrowAmount > 0) {
                     // Price discovery should send funds to the seller
                     // Nothing in escrow, need to pull everything from seller
-                    if (tokenAddress == address(0)) {
+                    if (exchangeToken == address(0)) {
                         // If exchange is native currency, seller cannot directly approve protocol to transfer funds
                         // They need to approve wrapper contract, so protocol can pull funds from wrapper
                         // But since protocol otherwise normally operates with native currency, needs to unwrap it (i.e. withdraw)
                         FundsLib.transferFundsToProtocol(address(wNative), seller, escrowAmount);
                         wNative.withdraw(escrowAmount);
                     } else {
-                        FundsLib.transferFundsToProtocol(tokenAddress, seller, escrowAmount);
+                        FundsLib.transferFundsToProtocol(exchangeToken, seller, escrowAmount);
                     }
                 }
             } else {
                 // when bid side, we have full proceeds in escrow. Keep minimal in, return the difference
-                if (tokenAddress == address(0)) {
-                    tokenAddress = address(wNative);
+                if (exchangeToken == address(0)) {
+                    exchangeToken = address(wNative);
                     if (escrowAmount > 0) wNative.withdraw(escrowAmount);
                 }
 
                 uint256 payout = actualPrice - escrowAmount;
-                if (payout > 0) FundsLib.transferFundsFromProtocol(tokenAddress, payable(seller), payout);
+                if (payout > 0) {
+                    emit FundsReleased(_exchangeId, buyerId, exchangeToken, payout, sender); // buyerId here is the old buyer id (= reseller)
+                    FundsLib.transferFundsFromProtocol(buyerId, exchangeToken, payable(seller), payout); // also emits FundsWithdrawn
+                }
             }
         }
 
         // Since exchange and voucher are passed by reference, they are updated
-        emit BuyerCommitted(exchange.offerId, exchange.buyerId, _exchangeId, exchange, voucher, msgSender());
+        buyerId = exchange.buyerId;
+        emit FundsEncumbered(buyerId, exchangeToken, actualPrice, sender);
+        emit BuyerCommitted(offerId, buyerId, _exchangeId, exchange, voucher, sender);
         // No need to update exchange detail. Most fields stay as they are, and buyerId was updated at the same time voucher is transferred
     }
 
