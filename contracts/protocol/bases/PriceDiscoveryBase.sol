@@ -3,12 +3,13 @@ pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
-import { IERC20 } from "../../interfaces/IERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IWrappedNative } from "../../interfaces/IWrappedNative.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @title PriceDiscoveryBase
@@ -17,6 +18,7 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
  */
 contract PriceDiscoveryBase is ProtocolBase {
     using Address for address;
+    using SafeERC20 for IERC20;
 
     IWrappedNative public immutable wNative;
     uint256 private immutable EXCHANGE_ID_2_2_0; // solhint-disable-line
@@ -99,7 +101,7 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         // If token is ERC20, approve price discovery contract to transfer funds
         if (_exchangeToken != address(0)) {
-            IERC20(_exchangeToken).approve(address(_priceDiscovery.priceDiscoveryContract), _priceDiscovery.price);
+            IERC20(_exchangeToken).forceApprove(address(_priceDiscovery.priceDiscoveryContract), _priceDiscovery.price);
         }
 
         // Store the information about incoming voucher
@@ -121,7 +123,7 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         // If token is ERC20, reset approval
         if (_exchangeToken != address(0)) {
-            IERC20(_exchangeToken).approve(address(_priceDiscovery.priceDiscoveryContract), 0);
+            IERC20(_exchangeToken).forceApprove(address(_priceDiscovery.priceDiscoveryContract), 0);
         }
 
         // Clear the storage
