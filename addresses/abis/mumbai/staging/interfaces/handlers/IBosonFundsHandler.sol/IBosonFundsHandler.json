@@ -201,6 +201,47 @@
           "type": "uint256"
         }
       ],
+      "name": "getAllAvailableFunds",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "tokenAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "tokenName",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "availableAmount",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.Funds[]",
+          "name": "availableFunds",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_entityId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address[]",
+          "name": "_tokenList",
+          "type": "address[]"
+        }
+      ],
       "name": "getAvailableFunds",
       "outputs": [
         {
@@ -224,6 +265,54 @@
           "internalType": "struct BosonTypes.Funds[]",
           "name": "availableFunds",
           "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_entityId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getTokenList",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "tokenList",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_entityId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_limit",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_offset",
+          "type": "uint256"
+        }
+      ],
+      "name": "getTokenListPaginated",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "tokenList",
+          "type": "address[]"
         }
       ],
       "stateMutability": "view",

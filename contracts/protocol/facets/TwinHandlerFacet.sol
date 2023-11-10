@@ -88,6 +88,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
 
             if (rangeIndex != lastIndex) {
                 twinRanges[rangeIndex] = twinRanges[lastIndex];
+                lookups.rangeIdByTwin[twinRanges[rangeIndex].twinId] = rangeIndex + 1;
             }
 
             // Remove last element
