@@ -89,18 +89,15 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
         // Make sure the voucher is still valid
         require(block.timestamp <= voucher.validUntilDate, VOUCHER_HAS_EXPIRED);
 
-        // Fetch offer
-        uint256 offerId = exchange.offerId;
-        (, Offer storage offer) = fetchOffer(offerId);
-
-        // Get token address
-        address exchangeToken = offer.exchangeToken;
+        // Create a memory struct for sequential commit and populate it as we go
+        // This is done to avoid stack too deep error, while still keeping the number of SLOADs to a minimum
+        SequentialCommit memory sequentialCommit;
 
         // Get current buyer address. This is actually the seller in sequential commit. Need to do it before voucher is transferred
         address seller;
-        uint256 resellerId = exchange.buyerId;
+        sequentialCommit.resellerId = exchange.buyerId;
         {
-            (, Buyer storage currentBuyer) = fetchBuyer(resellerId);
+            (, Buyer storage currentBuyer) = fetchBuyer(sequentialCommit.resellerId);
             seller = currentBuyer.wallet;
         }
 
@@ -109,9 +106,16 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
             require(seller == sender, NOT_VOUCHER_HOLDER);
         }
 
+        // Fetch offer
+        uint256 offerId = exchange.offerId;
+        (, Offer storage offer) = fetchOffer(offerId);
+
+        // Get token address
+        address exchangeToken = offer.exchangeToken;
+
         // First call price discovery and get actual price
         // It might be lower than submitted for buy orders and higher for sell orders
-        uint256 actualPrice = fulFilOrder(_exchangeId, exchangeToken, _priceDiscovery, _buyer, offer);
+        sequentialCommit.price = fulFilOrder(_exchangeId, exchangeToken, _priceDiscovery, _buyer, offer);
 
         // Calculate the amount to be kept in escrow
         uint256 escrowAmount;
@@ -122,38 +126,39 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
 
             {
                 // Calculate fees
-                uint256 protocolFeeAmount = exchangeToken == protocolAddresses().token
+                sequentialCommit.protocolFeeAmount = exchangeToken == protocolAddresses().token
                     ? protocolFees().flatBoson
-                    : (protocolFees().percentage * actualPrice) / 10000;
+                    : (protocolFees().percentage * sequentialCommit.price) / 10000;
 
                 // Calculate royalties
-                (, uint256 royaltyAmount) = IBosonVoucher(
+                (, sequentialCommit.royaltyAmount) = IBosonVoucher(
                     getCloneAddress(protocolLookups(), offer.sellerId, offer.collectionIndex)
-                ).royaltyInfo(_exchangeId, actualPrice);
+                ).royaltyInfo(_exchangeId, sequentialCommit.price);
 
                 // Verify that fees and royalties are not higher than the price.
-                require((protocolFeeAmount + royaltyAmount) <= actualPrice, FEE_AMOUNT_TOO_HIGH);
+                require(
+                    (sequentialCommit.protocolFeeAmount + sequentialCommit.royaltyAmount) <= sequentialCommit.price,
+                    FEE_AMOUNT_TOO_HIGH
+                );
 
                 // Get price paid by current buyer
                 uint256 len = sequentialCommits.length;
                 uint256 currentPrice = len == 0 ? offer.price : sequentialCommits[len - 1].price;
 
                 // Calculate the minimal amount to be kept in the escrow
-                escrowAmount = Math.max(actualPrice, protocolFeeAmount + royaltyAmount + currentPrice) - currentPrice;
+                escrowAmount =
+                    Math.max(
+                        sequentialCommit.price,
+                        sequentialCommit.protocolFeeAmount + sequentialCommit.royaltyAmount + currentPrice
+                    ) -
+                    currentPrice;
 
                 // Update sequential commit
-                sequentialCommits.push(
-                    SequentialCommit({
-                        resellerId: resellerId,
-                        price: actualPrice,
-                        protocolFeeAmount: protocolFeeAmount,
-                        royaltyAmount: royaltyAmount
-                    })
-                );
+                sequentialCommits.push(sequentialCommit);
             }
 
             // Make sure enough get escrowed
-            payout = actualPrice - escrowAmount;
+            payout = sequentialCommit.price - escrowAmount;
 
             if (_priceDiscovery.side == Side.Ask) {
                 if (escrowAmount > 0) {
@@ -171,8 +176,8 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                 }
             } else {
                 // when bid side, we have full proceeds in escrow. Keep minimal in, return the difference
-                if (actualPrice > 0 && exchangeToken == address(0)) {
-                    wNative.withdraw(actualPrice);
+                if (sequentialCommit.price > 0 && exchangeToken == address(0)) {
+                    wNative.withdraw(sequentialCommit.price);
                 }
 
                 if (payout > 0) {
@@ -183,10 +188,10 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
 
         // Since exchange and voucher are passed by reference, they are updated
         uint256 buyerId = exchange.buyerId;
-        if (actualPrice > 0) emit FundsEncumbered(buyerId, exchangeToken, actualPrice, sender);
+        if (sequentialCommit.price > 0) emit FundsEncumbered(buyerId, exchangeToken, sequentialCommit.price, sender);
         if (payout > 0) {
-            emit FundsReleased(_exchangeId, resellerId, exchangeToken, payout, sender);
-            emit FundsWithdrawn(resellerId, seller, exchangeToken, payout, sender);
+            emit FundsReleased(_exchangeId, sequentialCommit.resellerId, exchangeToken, payout, sender);
+            emit FundsWithdrawn(sequentialCommit.resellerId, seller, exchangeToken, payout, sender);
         }
         emit BuyerCommitted(offerId, buyerId, _exchangeId, exchange, voucher, sender);
         // No need to update exchange detail. Most fields stay as they are, and buyerId was updated at the same time voucher is transferred
