@@ -95,6 +95,9 @@ contract PriceDiscovery {
                 }
             }
         }
+
+        // return half of the sent value back to the caller
+        payable(msg.sender).transfer(msg.value / 2);
     }
 }
 

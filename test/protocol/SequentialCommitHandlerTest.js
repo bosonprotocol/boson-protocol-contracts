@@ -1329,6 +1329,44 @@ describe("IBosonSequentialCommitHandler", function () {
                     balancesBefore.originalSeller + expectedOriginalSellerChange
                   );
                 });
+
+                it(`protocol fee: ${fee.protocol / 100}%; royalties: ${
+                  fee.royalties / 100
+                }% - non zero msg.value`, async function () {
+                  await configHandler.setProtocolFeePercentage(fee.protocol);
+                  await bosonVoucherClone.connect(assistant).setRoyaltyPercentage(fee.royalties);
+
+                  const balancesBefore = await getBalances();
+
+                  const sellerMsgValue = parseUnits("0.001", "ether");
+
+                  // Sequential commit to offer
+                  await sequentialCommitHandler
+                    .connect(reseller)
+                    .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, {
+                      gasPrice: 0,
+                      value: sellerMsgValue,
+                    });
+
+                  const balancesAfter = await getBalances();
+
+                  // Expected changes
+                  const expectedBuyerChange = price2;
+                  const reducedSecondaryPrice = (price2 * BigInt(10000 - fee.protocol - fee.royalties)) / 10000n;
+                  const expectedSellerChange = reducedSecondaryPrice <= price ? reducedSecondaryPrice : price;
+                  const expectedProtocolChange = price2 - expectedSellerChange;
+                  const expectedOriginalSellerChange = 0n;
+
+                  // Contract's balance should increase for minimal escrow amount
+                  expect(balancesAfter.protocol).to.equal(balancesBefore.protocol + expectedProtocolChange);
+                  expect(balancesAfter.seller).to.equal(
+                    balancesBefore.seller + expectedSellerChange - sellerMsgValue / 2n
+                  ); // PriceDiscovery returns back half of the sent native value
+                  expect(balancesAfter.newBuyer).to.equal(balancesBefore.newBuyer - expectedBuyerChange);
+                  expect(balancesAfter.originalSeller).to.equal(
+                    balancesBefore.originalSeller + expectedOriginalSellerChange
+                  );
+                });
               });
             });
           });
