@@ -660,6 +660,7 @@ describe("ProtocolInitializationHandler", async function () {
     let protocolDiamondAddress;
 
     beforeEach(async function () {
+      this.timeout(1000000);
       if (snapshotId) {
         await revertToSnapshot(snapshotId);
         snapshotId = await getSnapshot();
