@@ -98,9 +98,9 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
 
         // Get current buyer address. This is actually the seller in sequential commit. Need to do it before voucher is transferred
         address seller;
-        uint256 buyerId = exchange.buyerId;
+        uint256 resellerId = exchange.buyerId;
         {
-            (, Buyer storage currentBuyer) = fetchBuyer(buyerId);
+            (, Buyer storage currentBuyer) = fetchBuyer(resellerId);
             seller = currentBuyer.wallet;
         }
 
@@ -115,7 +115,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
 
         // Calculate the amount to be kept in escrow
         uint256 escrowAmount;
-        // address sender ;
+        uint256 payout;
         {
             // Get sequential commits for this exchange
             SequentialCommit[] storage sequentialCommits = protocolEntities().sequentialCommits[_exchangeId];
@@ -144,7 +144,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                 // Update sequential commit
                 sequentialCommits.push(
                     SequentialCommit({
-                        resellerId: buyerId,
+                        resellerId: resellerId,
                         price: actualPrice,
                         protocolFeeAmount: protocolFeeAmount,
                         royaltyAmount: royaltyAmount
@@ -153,6 +153,8 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
             }
 
             // Make sure enough get escrowed
+            payout = actualPrice - escrowAmount;
+
             if (_priceDiscovery.side == Side.Ask) {
                 if (escrowAmount > 0) {
                     // Price discovery should send funds to the seller
@@ -169,22 +171,23 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                 }
             } else {
                 // when bid side, we have full proceeds in escrow. Keep minimal in, return the difference
-                if (exchangeToken == address(0)) {
-                    exchangeToken = address(wNative);
-                    if (escrowAmount > 0) wNative.withdraw(escrowAmount);
+                if (actualPrice > 0 && exchangeToken == address(0)) {
+                    wNative.withdraw(actualPrice);
                 }
 
-                uint256 payout = actualPrice - escrowAmount;
                 if (payout > 0) {
-                    emit FundsReleased(_exchangeId, buyerId, exchangeToken, payout, sender); // buyerId here is the old buyer id (= reseller)
-                    FundsLib.transferFundsFromProtocol(buyerId, exchangeToken, payable(seller), payout); // also emits FundsWithdrawn
+                    FundsLib.transferFundsFromProtocol(exchangeToken, payable(seller), payout); // also emits FundsWithdrawn
                 }
             }
         }
 
         // Since exchange and voucher are passed by reference, they are updated
-        buyerId = exchange.buyerId;
-        emit FundsEncumbered(buyerId, exchangeToken, actualPrice, sender);
+        uint256 buyerId = exchange.buyerId;
+        if (actualPrice > 0) emit FundsEncumbered(buyerId, exchangeToken, actualPrice, sender);
+        if (payout > 0) {
+            emit FundsReleased(_exchangeId, resellerId, exchangeToken, payout, sender);
+            emit FundsWithdrawn(resellerId, seller, exchangeToken, payout, sender);
+        }
         emit BuyerCommitted(offerId, buyerId, _exchangeId, exchange, voucher, sender);
         // No need to update exchange detail. Most fields stay as they are, and buyerId was updated at the same time voucher is transferred
     }
