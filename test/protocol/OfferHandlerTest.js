@@ -222,7 +222,7 @@ describe("IBosonOfferHandler", function () {
       // Mock offer
       ({ offer, offerDates, offerDurations, offerFees } = await mockOffer());
 
-      // Check if domais are valid
+      // Check if domains are valid
       expect(offer.isValid()).is.true;
       expect(offerDates.isValid()).is.true;
       expect(offerDurations.isValid()).is.true;

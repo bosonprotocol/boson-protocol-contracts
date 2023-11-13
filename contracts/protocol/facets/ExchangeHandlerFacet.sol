@@ -158,78 +158,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
     }
 
     /**
-     * @notice Commits to a preminted offer (first step of an exchange).
-     *
-     * Emits BuyerCommitted and ConditionalCommitAuthorized events if successful.
-     *
-     * Reverts if:
-     * - The exchanges region of protocol is paused
-     * - The buyers region of protocol is paused
-     * - Caller is not the voucher contract, owned by the seller
-     * - Exchange exists already
-     * - Offer has been voided
-     * - Offer has expired
-     * - Offer is not yet available for commits
-     * - Buyer account is inactive
-     * - Buyer is token-gated (conditional commit requirements not met or already used)
-     * - Buyer is token-gated and condition has a range.
-     * - Seller has less funds available than sellerDeposit and price
-     *
-     * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
-     * @param _offerId - the id of the offer to commit to
-     * @param _exchangeId - the id of the exchange
-     */
-    function commitToPreMintedOffer(
-        address payable _buyer,
-        uint256 _offerId,
-        uint256 _exchangeId
-    ) external exchangesNotPaused buyersNotPaused nonReentrant {
-        Offer storage offer = getValidOffer(_offerId);
-        require(offer.priceType == PriceType.Static, INVALID_PRICE_TYPE);
-
-        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-
-        // Make sure that the voucher was issued on the clone that is making a call
-        require(msg.sender == getCloneAddress(lookups, offer.sellerId, offer.collectionIndex), ACCESS_DENIED);
-
-        // Exchange must not exist already
-        (bool exists, ) = fetchExchange(_exchangeId);
-        require(!exists, EXCHANGE_ALREADY_EXISTS);
-
-        uint256 groupId;
-        (exists, groupId) = getGroupIdByOffer(offer.id);
-
-        if (exists) {
-            // Get the condition
-            Condition storage condition = fetchCondition(groupId);
-            EvaluationMethod method = condition.method;
-
-            if (method != EvaluationMethod.None) {
-                uint256 tokenId = 0;
-
-                // Allow commiting only to unambigous conditions, i.e. conditions with a single token id
-                if (condition.method == EvaluationMethod.SpecificToken || condition.tokenType == TokenType.MultiToken) {
-                    uint256 minTokenId = condition.minTokenId;
-                    uint256 maxTokenId = condition.maxTokenId;
-
-                    require(minTokenId == maxTokenId || maxTokenId == 0, CANNOT_COMMIT); // legacy conditions have maxTokenId == 0
-
-                    // Uses token id from the condition
-                    tokenId = minTokenId;
-                }
-
-                authorizeCommit(_buyer, condition, groupId, tokenId, _offerId);
-
-                // Store the condition to be returned afterward on getReceipt function
-                lookups.exchangeCondition[_exchangeId] = condition;
-            }
-        }
-
-        commitToOfferInternal(_buyer, offer, _exchangeId, true);
-    }
-
-    /**
-     * @notice Commits to an offer. Helper function reused by commitToOffer and commitToPreMintedOffer.
+     * @notice Commits to an offer. Helper function reused by commitToOffer and onPremintedVoucherTransferred.
      *
      * Emits a BuyerCommitted event if successful.
      * Issues a voucher to the buyer address for non preminted offers.
@@ -690,17 +619,49 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         require(ps.reentrancyStatus != ENTERED, REENTRANCY_GUARD);
 
         // Derive the offer id
-        uint256 offerId = _tokenId >> 128;
+        uint256 offerId = _tokenId >> 128; // ? pre 2.2. vouchers?
 
         // Derive the exchange id
         uint256 exchangeId = _tokenId & type(uint128).max;
 
         // Get the offer
-        (, Offer storage offer) = fetchOffer(offerId);
+        Offer storage offer = getValidOffer(offerId);
 
         (, Seller storage seller, ) = fetchSeller(offer.sellerId);
 
-        address bosonVoucher = protocolLookups().cloneAddress[offer.sellerId];
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+        address bosonVoucher = getCloneAddress(lookups, offer.sellerId, offer.collectionIndex);
+
+        // Make sure that the voucher was issued on the clone that is making a call
+        require(msg.sender == bosonVoucher, ACCESS_DENIED);
+
+        (bool conditionExists, uint256 groupId) = getGroupIdByOffer(offerId);
+
+        if (conditionExists) {
+            // Get the condition
+            Condition storage condition = fetchCondition(groupId);
+            EvaluationMethod method = condition.method;
+
+            if (method != EvaluationMethod.None) {
+                uint256 tokenId = 0;
+
+                // Allow commiting only to unambigous conditions, i.e. conditions with a single token id
+                if (condition.method == EvaluationMethod.SpecificToken || condition.tokenType == TokenType.MultiToken) {
+                    uint256 minTokenId = condition.minTokenId;
+                    uint256 maxTokenId = condition.maxTokenId;
+
+                    require(minTokenId == maxTokenId || maxTokenId == 0, CANNOT_COMMIT); // legacy conditions have maxTokenId == 0
+
+                    // Uses token id from the condition
+                    tokenId = minTokenId;
+                }
+
+                authorizeCommit(_to, condition, groupId, tokenId, offerId);
+
+                // Store the condition to be returned afterward on getReceipt function
+                lookups.exchangeCondition[exchangeId] = condition;
+            }
+        }
 
         if (offer.priceType == PriceType.Discovery) {
             //  transaction start from `commitToPriceDiscoveryOffer`, should commit
@@ -712,6 +673,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
                 ps.incomingVoucherId = _tokenId;
 
                 commitToOfferInternal(_to, offer, exchangeId, true);
+
                 committed = true;
                 // Only seller can transfer voucher without calling commitToOfferInternal, this is necessary to deposit voucher into wrapper contracts
             } else if (_from != seller.assistant && _from != bosonVoucher) {

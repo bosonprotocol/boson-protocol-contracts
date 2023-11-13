@@ -1365,7 +1365,9 @@ describe("IBosonExchangeHandler", function () {
         it("Caller is not the voucher contract, owned by the seller", async function () {
           // Attempt to commit to preminted offer, expecting revert
           await expect(
-            exchangeHandler.connect(rando).commitToPreMintedOffer(await buyer.getAddress(), offerId, tokenId)
+            exchangeHandler
+              .connect(rando)
+              .onPremintedVoucherTransferred(tokenId, await buyer.getAddress(), await assistant.getAddress())
           ).to.revertedWith(RevertReasons.ACCESS_DENIED);
         });
 
@@ -1386,7 +1388,7 @@ describe("IBosonExchangeHandler", function () {
           await expect(
             exchangeHandler
               .connect(impersonatedBosonVoucher)
-              .commitToPreMintedOffer(await buyer.getAddress(), offerId, exchangeId)
+              .onPremintedVoucherTransferred(tokenId, await buyer.getAddress(), await assistant.getAddress())
           ).to.revertedWith(RevertReasons.EXCHANGE_ALREADY_EXISTS);
         });
 

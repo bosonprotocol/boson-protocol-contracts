@@ -20,7 +20,7 @@ contract PriceDiscoveryBase is ProtocolBase {
     using Address for address;
     using SafeERC20 for IERC20;
 
-    IWrappedNative public immutable wNative;
+    IWrappedNative internal immutable wNative;
     uint256 private immutable EXCHANGE_ID_2_2_0; // solhint-disable-line
 
     /**

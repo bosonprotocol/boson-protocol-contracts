@@ -11,7 +11,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xd17e4484
+ * The ERC-165 identifier for this interface is: 0x8e6fd8c4
  */
 interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents {
     /**
@@ -73,30 +73,6 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @param _tokenId - the id of the token to use for the conditional commit
      */
     function commitToConditionalOffer(address payable _buyer, uint256 _offerId, uint256 _tokenId) external payable;
-
-    /**
-     * @notice Commits to a preminted offer (first step of an exchange).
-     *
-     * Emits a BuyerCommitted event if successful.
-     *
-     * Reverts if:
-     * - The exchanges region of protocol is paused
-     * - The buyers region of protocol is paused
-     * - Caller is not the voucher contract, owned by the seller
-     * - Exchange exists already
-     * - Offer has been voided
-     * - Offer has expired
-     * - Offer is not yet available for commits
-     * - Buyer account is inactive
-     * - Buyer is token-gated (conditional commit requirements not met or already used)
-     * - Buyer is token-gated and condition has a range.
-     * - Seller has less funds available than sellerDeposit and price
-     *
-     * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
-     * @param _offerId - the id of the offer to commit to
-     * @param _exchangeId - the id of the exchange
-     */
-    function commitToPreMintedOffer(address payable _buyer, uint256 _offerId, uint256 _exchangeId) external;
 
     /**
      * @notice Completes an exchange.

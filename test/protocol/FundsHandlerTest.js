@@ -1403,7 +1403,7 @@ describe("IBosonFundsHandler", function () {
       it("Returns info even if name consumes all the gas", async function () {
         // Deploy the mock token that consumes all gas in the name getter
         const [mockToken, mockToken2] = await deployMockTokens(["Foreign20", "Foreign20MaliciousName"]);
-        const ERC20 = await getContractFactory("ERC20");
+        const ERC20 = await getContractFactory("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20");
         const mockToken3 = await ERC20.deploy("SomeToken", "STK");
 
         // top up assistants account
