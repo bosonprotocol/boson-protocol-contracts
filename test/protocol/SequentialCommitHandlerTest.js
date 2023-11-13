@@ -239,14 +239,7 @@ describe("IBosonSequentialCommitHandler", function () {
     context("👉 sequentialCommitToOffer()", async function () {
       let priceDiscovery, price2;
       let newBuyer;
-      let reseller; // for clarity in tests
-
-      // before(async function () {
-      //   // Deploy PriceDiscovery contract
-      //   const PriceDiscoveryFactory = await getContractFactory("PriceDiscovery");
-      //   priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
-      //   await priceDiscoveryContract.waitForDeployment();
-      // });
+      let reseller, resellerId; // for clarity in tests
 
       beforeEach(async function () {
         // Commit to offer with first buyer
@@ -263,6 +256,7 @@ describe("IBosonSequentialCommitHandler", function () {
         voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
         reseller = buyer;
+        resellerId = buyerId;
       });
 
       context("Ask order", async function () {
@@ -306,13 +300,26 @@ describe("IBosonSequentialCommitHandler", function () {
             exchange.buyerId = newBuyer.id;
           });
 
-          it("should emit a BuyerCommitted event", async function () {
+          it("should emit FundsEncumbered, FundsReleased, FundsWithdrawn and BuyerCommitted events", async function () {
             // Sequential commit to offer, retrieving the event
-            await expect(
-              sequentialCommitHandler
-                .connect(buyer2)
-                .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 })
-            )
+            const tx = sequentialCommitHandler
+              .connect(buyer2)
+              .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, { value: price2 });
+
+            await expect(tx)
+              .to.emit(sequentialCommitHandler, "FundsEncumbered")
+              .withArgs(newBuyer.id, ZeroAddress, price2, buyer2.address);
+
+            const immediatePayout = BigInt(price);
+            await expect(tx)
+              .to.emit(sequentialCommitHandler, "FundsReleased")
+              .withArgs(exchangeId, buyerId, ZeroAddress, immediatePayout, buyer2.address);
+
+            await expect(tx)
+              .to.emit(sequentialCommitHandler, "FundsWithdrawn")
+              .withArgs(resellerId, reseller.address, ZeroAddress, immediatePayout, buyer2.address);
+
+            await expect(tx)
               .to.emit(sequentialCommitHandler, "BuyerCommitted")
               .withArgs(offerId, newBuyer.id, exchangeId, exchange.toStruct(), voucher.toStruct(), buyer2.address);
           });
@@ -845,13 +852,26 @@ describe("IBosonSequentialCommitHandler", function () {
             exchange.buyerId = newBuyer.id;
           });
 
-          it("should emit a BuyerCommitted event", async function () {
+          it("should emit FundsEncumbered, FundsReleased, FundsWithdrawn and BuyerCommitted events", async function () {
             // Sequential commit to offer, retrieving the event
-            await expect(
-              sequentialCommitHandler
-                .connect(reseller)
-                .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery)
-            )
+            const tx = sequentialCommitHandler
+              .connect(reseller)
+              .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery);
+
+            await expect(tx)
+              .to.emit(sequentialCommitHandler, "FundsEncumbered")
+              .withArgs(newBuyer.id, ZeroAddress, price2, reseller.address);
+
+            const immediatePayout = BigInt(price);
+            await expect(tx)
+              .to.emit(sequentialCommitHandler, "FundsReleased")
+              .withArgs(exchangeId, buyerId, ZeroAddress, immediatePayout, reseller.address);
+
+            await expect(tx)
+              .to.emit(sequentialCommitHandler, "FundsWithdrawn")
+              .withArgs(resellerId, reseller.address, ZeroAddress, immediatePayout, reseller.address);
+
+            await expect(tx)
               .to.emit(sequentialCommitHandler, "BuyerCommitted")
               .withArgs(offerId, newBuyer.id, exchangeId, exchange.toStruct(), voucher.toStruct(), reseller.address);
           });
@@ -1304,6 +1324,44 @@ describe("IBosonSequentialCommitHandler", function () {
                   // Contract's balance should increase for minimal escrow amount
                   expect(balancesAfter.protocol).to.equal(balancesBefore.protocol + expectedProtocolChange);
                   expect(balancesAfter.seller).to.equal(balancesBefore.seller + expectedSellerChange);
+                  expect(balancesAfter.newBuyer).to.equal(balancesBefore.newBuyer - expectedBuyerChange);
+                  expect(balancesAfter.originalSeller).to.equal(
+                    balancesBefore.originalSeller + expectedOriginalSellerChange
+                  );
+                });
+
+                it(`protocol fee: ${fee.protocol / 100}%; royalties: ${
+                  fee.royalties / 100
+                }% - non zero msg.value`, async function () {
+                  await configHandler.setProtocolFeePercentage(fee.protocol);
+                  await bosonVoucherClone.connect(assistant).setRoyaltyPercentage(fee.royalties);
+
+                  const balancesBefore = await getBalances();
+
+                  const sellerMsgValue = parseUnits("0.001", "ether");
+
+                  // Sequential commit to offer
+                  await sequentialCommitHandler
+                    .connect(reseller)
+                    .sequentialCommitToOffer(buyer2.address, exchangeId, priceDiscovery, {
+                      gasPrice: 0,
+                      value: sellerMsgValue,
+                    });
+
+                  const balancesAfter = await getBalances();
+
+                  // Expected changes
+                  const expectedBuyerChange = price2;
+                  const reducedSecondaryPrice = (price2 * BigInt(10000 - fee.protocol - fee.royalties)) / 10000n;
+                  const expectedSellerChange = reducedSecondaryPrice <= price ? reducedSecondaryPrice : price;
+                  const expectedProtocolChange = price2 - expectedSellerChange;
+                  const expectedOriginalSellerChange = 0n;
+
+                  // Contract's balance should increase for minimal escrow amount
+                  expect(balancesAfter.protocol).to.equal(balancesBefore.protocol + expectedProtocolChange);
+                  expect(balancesAfter.seller).to.equal(
+                    balancesBefore.seller + expectedSellerChange - sellerMsgValue / 2n
+                  ); // PriceDiscovery returns back half of the sent native value
                   expect(balancesAfter.newBuyer).to.equal(balancesBefore.newBuyer - expectedBuyerChange);
                   expect(balancesAfter.originalSeller).to.equal(
                     balancesBefore.originalSeller + expectedOriginalSellerChange

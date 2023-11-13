@@ -37,7 +37,6 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setTokenAddress(_addresses.token);
         setTreasuryAddress(_addresses.treasury);
         setVoucherBeaconAddress(_addresses.voucherBeacon);
-        setWeth(_addresses.weth);
         setProtocolFeePercentage(_fees.percentage);
         setProtocolFeeFlatBoson(_fees.flatBoson);
         setMaxEscalationResponsePeriod(_limits.maxEscalationResponsePeriod);
@@ -532,23 +531,6 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function getAccessControllerAddress() external view returns (address) {
         return address(DiamondLib.diamondStorage().accessController);
-    }
-
-    /**
-     * @notice Sets WETH address.
-     *
-     * Emits a WETHAddressChanged event if successful.
-     *
-     * Reverts if _weth is the zero address
-     *
-     * @dev Caller must have ADMIN role.
-     *
-     * @param _weth - the WETH contract address
-     */
-    function setWeth(address _weth) public override onlyRole(ADMIN) nonReentrant {
-        require(_weth != address(0), INVALID_ADDRESS);
-        protocolAddresses().weth = _weth;
-        emit WethAddressChanged(_weth, msgSender());
     }
 
     function checkNonZero(uint256 _value) internal pure {

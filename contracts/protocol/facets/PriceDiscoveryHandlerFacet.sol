@@ -25,6 +25,21 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
  */
 contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscoveryBase, BuyerBase {
     /**
+     * @notice
+     * For offers with native exchange token, it is expected the the price discovery contracts will
+     * operate with wrapped native token. Set the address of the wrapped native token in the constructor.
+     *
+     * After v2.2.0, token ids are derived from offerId and exchangeId.
+     * EXCHANGE_ID_2_2_0 is the first exchange id to use for 2.2.0.
+     * Set EXCHANGE_ID_2_2_0 in the constructor.
+     *
+     * @param _wNative - the address of the wrapped native token
+     * @param _firstExchangeId2_2_0 - the first exchange id to use for 2.2.0
+     */
+    //solhint-disable-next-line
+    constructor(address _wNative, uint256 _firstExchangeId2_2_0) PriceDiscoveryBase(_wNative, _firstExchangeId2_2_0) {}
+
+    /**
      * @notice Facet Initializer
      * This function is callable only once.
      */
@@ -138,6 +153,6 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
         );
 
         // Clear incoming voucher id and incoming voucher address
-        clearStorage();
+        clearPriceDiscoveryStorage();
     }
 }

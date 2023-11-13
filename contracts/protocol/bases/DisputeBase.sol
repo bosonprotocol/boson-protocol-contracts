@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import { IBosonDisputeEvents } from "../../interfaces/events/IBosonDisputeEvents.sol";
+import { IBosonFundsLibEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 import { FundsLib } from "./../libs/FundsLib.sol";
@@ -12,7 +13,7 @@ import "../../domain/BosonConstants.sol";
  * @title DisputeBase
  * @notice Provides methods for dispute that can be shared across facets.
  */
-contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
+contract DisputeBase is ProtocolBase, IBosonDisputeEvents, IBosonFundsLibEvents {
     /**
      * @notice Raises a dispute
      *
@@ -84,7 +85,8 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
         (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
         // Make sure the caller is buyer associated with the exchange
-        checkBuyer(exchange.buyerId);
+        uint256 buyerId = exchange.buyerId;
+        checkBuyer(buyerId);
 
         // Fetch the dispute and dispute dates
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
@@ -105,7 +107,9 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // make sure buyer sent enough funds to proceed
-        FundsLib.validateIncomingPayment(offer.exchangeToken, disputeResolutionTerms.buyerEscalationDeposit);
+        address exchangeToken = offer.exchangeToken;
+        uint256 buyerEscalationDeposit = disputeResolutionTerms.buyerEscalationDeposit;
+        FundsLib.validateIncomingPayment(exchangeToken, buyerEscalationDeposit);
 
         // fetch the escalation period from the storage
         uint256 escalationResponsePeriod = disputeResolutionTerms.escalationResponsePeriod;
@@ -118,6 +122,8 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
         dispute.state = DisputeState.Escalated;
 
         // Notify watchers of state change
-        emit DisputeEscalated(_exchangeId, disputeResolutionTerms.disputeResolverId, msgSender());
+        address sender = msgSender();
+        emit FundsEncumbered(buyerId, exchangeToken, buyerEscalationDeposit, sender);
+        emit DisputeEscalated(_exchangeId, disputeResolutionTerms.disputeResolverId, sender);
     }
 }

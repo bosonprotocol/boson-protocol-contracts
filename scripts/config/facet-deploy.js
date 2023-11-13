@@ -8,14 +8,13 @@ const protocolConfig = require("./protocol-parameters");
  * @param wethAddress - address of the WETH token
  * @returns { addresses, limits, fees }
  */
-function getConfigHandlerInitArgs(wethAddress) {
+function getConfigHandlerInitArgs() {
   return [
     {
       token: protocolConfig.TOKEN[network],
       treasury: protocolConfig.TREASURY[network],
       voucherBeacon: protocolConfig.BEACON[network],
       beaconProxy: protocolConfig.BEACON_PROXY[network],
-      weth: wethAddress || protocolConfig.WETH[network],
     },
     protocolConfig.limits,
     protocolConfig.fees,
@@ -80,6 +79,14 @@ async function getFacets(config) {
 
   facetArgs["ConfigHandlerFacet"] = { init: ConfigHandlerFacetInitArgs };
   facetArgs["ExchangeHandlerFacet"] = { init: [], constructorArgs: [protocolConfig.EXCHANGE_ID_2_2_0[network]] };
+  facetArgs["SequentialCommitHandlerFacet"] = {
+    init: [],
+    constructorArgs: [protocolConfig.WrappedNative[network], protocolConfig.EXCHANGE_ID_2_2_0[network]],
+  };
+  facetArgs["PriceDiscoveryHandlerFacet"] = {
+    init: [],
+    constructorArgs: [protocolConfig.WrappedNative[network], protocolConfig.EXCHANGE_ID_2_2_0[network]],
+  };
 
   // metaTransactionsHandlerFacet initializer arguments.
   const MetaTransactionsHandlerFacetInitArgs = await getMetaTransactionsHandlerFacetInitArgs(

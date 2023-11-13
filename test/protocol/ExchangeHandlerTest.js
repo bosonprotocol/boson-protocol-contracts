@@ -28,6 +28,7 @@ const Bundle = require("../../scripts/domain/Bundle");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const DisputeState = require("../../scripts/domain/DisputeState");
 const Group = require("../../scripts/domain/Group");
+const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const GatingType = require("../../scripts/domain/GatingType");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
@@ -7091,7 +7092,7 @@ describe("IBosonExchangeHandler", function () {
     });
 
     context("👉 isEligibleToCommit()", async function () {
-      context("✋ No condition", async function () {
+      context("✋ No group", async function () {
         it("buyer is eligible, no commits yet", async function () {
           const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
             buyer.address,
@@ -7120,6 +7121,62 @@ describe("IBosonExchangeHandler", function () {
             expect(commitCount).to.equal(0);
             expect(maxCommits).to.equal(0);
           }
+        });
+      });
+
+      context("✋ Condition None", async function () {
+        beforeEach(async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+
+          // Create Condition
+          condition = new Condition(EvaluationMethod.None, 0, ZeroAddress, 0, 0, 0, 0, 0);
+          // expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+          await groupHandler.connect(assistant).createGroup(group, condition);
+        });
+
+        it("buyer is eligible, no commits yet", async function () {
+          const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+            buyer.address,
+            offerId,
+            0
+          );
+
+          expect(isEligible).to.be.true;
+          expect(commitCount).to.equal(0);
+          expect(maxCommits).to.equal(condition.maxCommits);
+        });
+
+        it("buyer is eligible, with existing commits", async function () {
+          // Commit to offer the maximum number of times
+          for (let i = 0; i < Number(condition.maxCommits); i++) {
+            // Commit to offer.
+            await exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price });
+
+            const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+              buyer.address,
+              offerId,
+              0
+            );
+
+            expect(isEligible).to.equal(i + 1 < Number(condition.maxCommits));
+            expect(commitCount).to.equal(i + 1);
+            expect(maxCommits).to.equal(condition.maxCommits);
+          }
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("Caller sends non-zero tokenId", async function () {});
+          await expect(exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, 1)).to.revertedWith(
+            RevertReasons.INVALID_TOKEN_ID
+          );
         });
       });
 

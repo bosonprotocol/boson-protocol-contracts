@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.9;
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
-import { IWETH9Like as IWETH9 } from "../../interfaces/IWETH9Like.sol";
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { DAIAliases as DAI } from "../../interfaces/DAIAliases.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
@@ -12,6 +11,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IWrappedNative } from "../../interfaces/IWrappedNative.sol";
 
 interface IPool {
     function swapTokenForSpecificNFTs(
@@ -182,8 +182,8 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = _tokenId;
 
-        IWETH9(wethAddress).transferFrom(msg.sender, address(this), _maxPrice);
-        IWETH9(wethAddress).approve(poolAddress, _maxPrice);
+        IWrappedNative(wethAddress).transferFrom(msg.sender, address(this), _maxPrice);
+        IWrappedNative(wethAddress).approve(poolAddress, _maxPrice);
 
         IPool(poolAddress).swapTokenForSpecificNFTs(tokenIds, _maxPrice, msg.sender, false, address(0));
 

@@ -9,7 +9,7 @@ import "./Foreign721.sol";
 /**
  * @dev Simple price discovery contract used in tests
  *
- * This contract simluates external price discovery mechanism.
+ * This contract simulates external price discovery mechanism.
  * When user commits to an offer, protocol talks to this contract to validate the exchange.
  */
 contract PriceDiscovery {
@@ -24,7 +24,7 @@ contract PriceDiscovery {
 
     /**
      * @dev simple fulfillOrder that does not perform any checks
-     * It just transfers the voucher and exchange token to the buyer
+     * It just transfers the voucher from the seller to the caller (buyer) and exchange token from the caller to the seller
      * If any of the transfers fail, the whole transaction will revert
      */
     function fulfilBuyOrder(Order memory _order) public payable virtual {
@@ -95,6 +95,9 @@ contract PriceDiscovery {
                 }
             }
         }
+
+        // return half of the sent value back to the caller
+        payable(msg.sender).transfer(msg.value / 2);
     }
 }
 
@@ -143,7 +146,7 @@ contract PriceDiscoveryModifyVoucherContract is PriceDiscovery {
 /**
  * @dev Simple bad price discovery contract used in tests
  *
- * This contract modifies simply does not transfer the voucher to the caller
+ * This contract simply does not transfer the voucher to the caller
  */
 contract PriceDiscoveryNoTransfer is PriceDiscovery {
     /**

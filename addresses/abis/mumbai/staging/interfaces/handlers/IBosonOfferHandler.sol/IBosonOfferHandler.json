@@ -69,6 +69,11 @@
               "internalType": "bool",
               "name": "voided",
               "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "collectionIndex",
+              "type": "uint256"
             }
           ],
           "indexed": false,
@@ -341,6 +346,11 @@
               "internalType": "bool",
               "name": "voided",
               "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "collectionIndex",
+              "type": "uint256"
             }
           ],
           "internalType": "struct BosonTypes.Offer",
@@ -465,6 +475,11 @@
               "internalType": "bool",
               "name": "voided",
               "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "collectionIndex",
+              "type": "uint256"
             }
           ],
           "internalType": "struct BosonTypes.Offer[]",
@@ -675,6 +690,11 @@
               "internalType": "bool",
               "name": "voided",
               "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "collectionIndex",
+              "type": "uint256"
             }
           ],
           "internalType": "struct BosonTypes.Offer",

@@ -4600,7 +4600,7 @@ describe("IBosonFundsHandler", function () {
                     voucherContract: expectedCloneAddress,
                     tokenId: deriveTokenId(offer.id, exchangeId),
                     exchangeToken: offer.exchangeToken,
-                    price: (BigInt(offer.price) * BigInt(trade.price)) / 100n,
+                    price: BigInt(trade.price),
                   };
 
                   const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [
@@ -6218,7 +6218,7 @@ describe("IBosonFundsHandler", function () {
                   voucherContract: expectedCloneAddress,
                   tokenId: deriveTokenId(offer.id, exchangeId),
                   exchangeToken: offer.exchangeToken,
-                  price: (BigInt(offer.price) * BigInt(trade.price)) / 100n,
+                  price: BigInt(trade.price),
                 };
 
                 const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [
