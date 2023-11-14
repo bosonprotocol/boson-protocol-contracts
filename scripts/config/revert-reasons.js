@@ -219,4 +219,5 @@ exports.RevertReasons = {
   // Price discovery related
   PRICE_TOO_HIGH: "Price discovery returned a price that is too high",
   PRICE_TOO_LOW: "Price discovery returned a price that is too low",
+  TOKEN_ID_MISMATCH: "Token id mismatch",
 };

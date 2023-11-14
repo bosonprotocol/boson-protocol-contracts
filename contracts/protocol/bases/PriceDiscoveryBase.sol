@@ -254,7 +254,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         uint256 protocolBalanceBefore = getBalance(_exchangeToken, address(this));
 
         // Call the price discovery contract
-        _priceDiscovery.priceDiscoveryContract.functionCall(_priceDiscovery.priceDiscoveryData);
+        _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
 
         // Get protocol balance after calling price discovery contract
         uint256 protocolBalanceAfter = getBalance(_exchangeToken, address(this));
@@ -271,7 +271,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         }
 
         // Calculate actual price
-        require(protocolBalanceBefore >= protocolBalanceAfter, NEGATIVE_PRICE_NOT_ALLOWED);
+        require(protocolBalanceAfter >= protocolBalanceBefore, NEGATIVE_PRICE_NOT_ALLOWED);
         actualPrice = protocolBalanceAfter - protocolBalanceBefore;
 
         // Make sure that balance change is at least the expected price
