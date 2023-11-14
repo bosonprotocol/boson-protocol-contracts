@@ -243,7 +243,8 @@ library FundsLib {
     }
 
     /**
-     * @notice Takes the exchange id and releases the funds to all intermediate resellers, depending on the state of the exchange.
+     * @notice Takes the exchange id and releases the funds to original seller if offer.priceType is Discovery
+     * and to all intermediate resellers in case of sequential commit, depending on the state of the exchange.
      * It is called only from releaseFunds. Protocol fee and royalties are calculated and returned to releaseFunds, where they are added to the total.
      *
      * Emits FundsReleased events for non zero payoffs.
@@ -270,7 +271,7 @@ library FundsLib {
 
             exchangeCosts = pe.exchangeCosts[_exchangeId];
 
-            // if no sequential commit happened, just return
+            // if price type was static and no sequential commit happened, just return
             if (exchangeCosts.length == 0) {
                 return (0, 0);
             }

@@ -193,7 +193,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         bool _isPreminted
     ) internal returns (uint256) {
         uint256 _offerId = _offer.id;
-        // Make sure offer is available, and isn't void, expired, or sold out
+        // Make sure offer is available, expired, or sold out
         OfferDates storage offerDates = fetchOfferDates(_offerId);
         require(block.timestamp >= offerDates.validFrom, OFFER_NOT_AVAILABLE);
         require(block.timestamp <= offerDates.validUntil, OFFER_HAS_EXPIRED);
@@ -582,6 +582,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
 
         // Set incoming voucher id if we are in the middle of a price discovery call
         if (ps.incomingVoucherCloneAddress != address(0)) {
+            require(ps.incomingVoucherId == 0, INCOMING_VOUCHER_ALREADY_SET);
             ps.incomingVoucherId = _tokenId;
         }
 
@@ -627,6 +628,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         // Get the offer
         Offer storage offer = getValidOffer(offerId);
 
+        // Get the seller
         (, Seller storage seller, ) = fetchSeller(offer.sellerId);
 
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();

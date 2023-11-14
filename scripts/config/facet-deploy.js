@@ -5,7 +5,6 @@ const protocolConfig = require("./protocol-parameters");
 
 /**
  * Get the configuration data to be passed to the ConfigHandlerFacet initializer
- * @param wethAddress - address of the WETH token
  * @returns { addresses, limits, fees }
  */
 function getConfigHandlerInitArgs() {

@@ -27,6 +27,7 @@ const interfaceImplementers = {
   ERC165Facet: "IERC165Extended",
   ConfigHandlerFacet: "IBosonConfigHandler",
   ProtocolInitializationHandlerFacet: "IBosonProtocolInitializationHandler",
+  SequentialCommitHandlerFacet: "IBosonSequentialCommitHandler",
   PriceDiscoveryHandlerFacet: "IBosonPriceDiscoveryHandler",
 };
 

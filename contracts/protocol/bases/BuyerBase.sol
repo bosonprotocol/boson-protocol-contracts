@@ -75,7 +75,13 @@ contract BuyerBase is ProtocolBase, IBosonAccountEvents {
         bool exists;
         (exists, buyerId) = getBuyerIdByWallet(_buyer);
 
-        if (!exists) {
+        if (exists) {
+            // Fetch the existing buyer account
+            (, Buyer storage buyer) = fetchBuyer(buyerId);
+
+            // Make sure buyer account is active
+            require(buyer.active, MUST_BE_ACTIVE);
+        } else {
             // Create the buyer account
             Buyer memory newBuyer;
             newBuyer.wallet = _buyer;
@@ -83,12 +89,6 @@ contract BuyerBase is ProtocolBase, IBosonAccountEvents {
 
             createBuyerInternal(newBuyer);
             buyerId = newBuyer.id;
-        } else {
-            // Fetch the existing buyer account
-            (, Buyer storage buyer) = fetchBuyer(buyerId);
-
-            // Make sure buyer account is active
-            require(buyer.active, MUST_BE_ACTIVE);
         }
     }
 }

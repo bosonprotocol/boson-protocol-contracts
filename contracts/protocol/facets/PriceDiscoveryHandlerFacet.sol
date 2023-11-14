@@ -86,9 +86,12 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
         uint256 offerId;
 
         // First try to fetch offer with _tokenIdOrOfferId
-        (bool exists, Offer storage offer) = fetchOffer(_tokenIdOrOfferId);
+        (bool exists, Offer storage offer) = fetchOffer(_tokenIdOrOfferId); // TODO: review behaviour of pre v2.2.0 offers
 
         if (exists) {
+            // Make sure offer is not voided
+            require(!offer.voided, OFFER_HAS_BEEN_VOIDED);
+
             // Set offer id if offer exists
             offerId = _tokenIdOrOfferId;
         } else {
@@ -96,17 +99,11 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
             offerId = _tokenIdOrOfferId >> 128;
 
             // Fetch offer with offerId
-            (exists, offer) = fetchOffer(offerId);
+            offer = getValidOffer(offerId);
 
-            // Make sure offer exists
-            require(exists, NO_SUCH_OFFER);
-
-            // Sinalize that _tokenIdOrOfferId is a token id
+            // Signalize that _tokenIdOrOfferId is a token id
             isTokenId = true;
         }
-
-        // Make sure offer exists, is available, and isn't void, expired, or sold out
-        require(exists, NO_SUCH_OFFER);
 
         // Make sure offer type is price discovery. Otherwise, use commitToOffer
         require(offer.priceType == PriceType.Discovery, INVALID_PRICE_TYPE);
@@ -114,10 +111,10 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
         uint256 actualPrice;
 
         // Calls price discovery contract and gets the actual price. Use token id if caller has provided one, otherwise use offer id and accepts any voucher.
-        if (!isTokenId) {
-            actualPrice = fulfilOrder(0, offer, _priceDiscovery, _buyer);
-        } else {
+        if (isTokenId) {
             actualPrice = fulfilOrder(_tokenIdOrOfferId, offer, _priceDiscovery, _buyer);
+        } else {
+            actualPrice = fulfilOrder(0, offer, _priceDiscovery, _buyer);
         }
 
         // Fetch token id on protocol status
@@ -132,17 +129,16 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
         uint256 protocolFeeAmount = getProtocolFee(offer.exchangeToken, actualPrice);
 
         // Calculate royalties
-        (, uint256 royaltyAmount) = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]).royaltyInfo(
-            exchangeId,
-            actualPrice
-        );
+        (, uint256 royaltyAmount) = IBosonVoucher(
+            getCloneAddress(protocolLookups(), offer.sellerId, offer.collectionIndex)
+        ).royaltyInfo(exchangeId, actualPrice);
 
         // Verify that fees and royalties are not higher than the price.
         require((protocolFeeAmount + royaltyAmount) <= actualPrice, FEE_AMOUNT_TOO_HIGH);
 
         uint256 buyerId = getValidBuyer(_buyer);
 
-        // Storage exchange costs so it can be released later. This is the first cost entry for this exchange.
+        // Store exchange costs so it can be released later. This is the first cost entry for this exchange.
         exchangeCosts.push(
             ExchangeCosts({
                 resellerId: buyerId,

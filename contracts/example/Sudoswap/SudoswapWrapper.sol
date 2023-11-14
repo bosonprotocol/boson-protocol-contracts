@@ -50,7 +50,7 @@ interface IPool {
  *   - `unwrap` can be executed by the owner of the wrapped voucher.
  *
  * N.B. Although Sudoswap can send ethers, it's preffered to receive
- * WETH instead. For that reason `recieve` is not implemented, so it automatically sends WETH.
+ * WETH instead. For that reason `receive` is not implemented, so it automatically sends WETH.
  */
 contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
     // Add safeTransferFrom to IERC20
@@ -196,7 +196,7 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
     }
 
     /**
-     * @notice Gets own the token balance for the exchange token, associated with the token ID.
+     * @notice Gets own token balance for the exchange token, associated with the token ID.
      *
      * @dev If the exchange token is not known, it is fetched from the protocol and cached for future use.
      *

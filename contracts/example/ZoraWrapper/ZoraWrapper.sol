@@ -38,7 +38,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  *   - `unwrap` can be executed by the owner of the wrapped voucher.
  *
  * N.B. Although Zora Auction House can send ethers, it's preffered to receive
- * WETH instead. For that reason `recieve` is not implemented, so it automatically sends WETH.
+ * WETH instead. For that reason `receive` is not implemented, so it automatically sends WETH.
  */
 contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
     // Add safeTransferFrom to IERC20
@@ -183,7 +183,7 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
     }
 
     /**
-     * @notice Gets own the token balance for the exchange token, associated with the token ID.
+     * @notice Gets own token balance for the exchange token, associated with the token ID.
      *
      * @dev If the exchange token is not known, it is fetched from the protocol and cached for future use.
      *
