@@ -114,7 +114,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
 
         // First call price discovery and get actual price
         // It might be lower than submitted for buy orders and higher for sell orders
-        exchangeCost.price = fulfilOrder(exchangeId, offer, _priceDiscovery, _buyer);
+        exchangeCost.price = fulfilOrder(_tokenId, offer, _priceDiscovery, _buyer);
 
         // Get token address
         address exchangeToken = offer.exchangeToken;
