@@ -129,19 +129,17 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
         uint256 protocolFeeAmount = getProtocolFee(offer.exchangeToken, actualPrice);
 
         // Calculate royalties
-        (, uint256 royaltyAmount) = IBosonVoucher(
-            getCloneAddress(protocolLookups(), offer.sellerId, offer.collectionIndex)
-        ).royaltyInfo(exchangeId, actualPrice);
+        uint256 sellerId = offer.sellerId;
+        (, uint256 royaltyAmount) = IBosonVoucher(getCloneAddress(protocolLookups(), sellerId, offer.collectionIndex))
+            .royaltyInfo(exchangeId, actualPrice);
 
         // Verify that fees and royalties are not higher than the price.
         require((protocolFeeAmount + royaltyAmount) <= actualPrice, FEE_AMOUNT_TOO_HIGH);
 
-        uint256 buyerId = getValidBuyer(_buyer);
-
         // Store exchange costs so it can be released later. This is the first cost entry for this exchange.
         exchangeCosts.push(
             ExchangeCosts({
-                resellerId: buyerId,
+                resellerId: sellerId,
                 price: actualPrice,
                 protocolFeeAmount: protocolFeeAmount,
                 royaltyAmount: royaltyAmount
