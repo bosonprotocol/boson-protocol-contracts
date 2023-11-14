@@ -145,7 +145,7 @@ class Offer {
       metadataHash,
       voided,
       collectionIndex: collectionIndex.toString(),
-      priceType,
+      priceType: Number(priceType),
     });
   }
 
