@@ -281,12 +281,6 @@ contract PriceDiscoveryBase is ProtocolBase {
         getAndVerifyTokenId(_tokenId);
     }
 
-    function clearPriceDiscoveryStorage() internal {
-        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
-        delete ps.incomingVoucherId;
-        delete ps.incomingVoucherCloneAddress;
-    }
-
     /**
      * @notice Returns the balance of the protocol for the given token address
      *
@@ -322,5 +316,16 @@ contract PriceDiscoveryBase is ProtocolBase {
         require(_tokenId != 0, TOKEN_ID_NOT_SET);
 
         return _tokenId;
+    }
+
+    /*
+     * @notice Resets value of incoming voucher id and incoming voucher clone address to 0
+     * This is called at the end of the methods that interacts with price discovery contracts
+     *
+     */
+    function clearPriceDiscoveryStorage() internal {
+        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
+        delete ps.incomingVoucherId;
+        delete ps.incomingVoucherCloneAddress;
     }
 }

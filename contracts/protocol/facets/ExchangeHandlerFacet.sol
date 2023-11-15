@@ -582,8 +582,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
 
         // Set incoming voucher id if we are in the middle of a price discovery call
         if (ps.incomingVoucherCloneAddress != address(0)) {
-            require(ps.incomingVoucherId == 0, INCOMING_VOUCHER_ALREADY_SET);
-            ps.incomingVoucherId = _tokenId;
+            uint256 incomingVoucherId = ps.incomingVoucherId;
+            if (incomingVoucherId != _tokenId) {
+                require(incomingVoucherId == 0, INCOMING_VOUCHER_ALREADY_SET);
+                ps.incomingVoucherId = _tokenId;
+            }
         }
 
         // Notify watchers of state change

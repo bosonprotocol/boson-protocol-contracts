@@ -366,7 +366,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
     ) public view virtual override(ERC721Upgradeable, IERC721Upgradeable) returns (address owner) {
         if (_exists(_tokenId)) {
             // If _tokenId exists, it does not matter if vouchers were preminted or not
-            owner = super.ownerOf(_tokenId);
+            return super.ownerOf(_tokenId);
         } else {
             // If _tokenId does not exist, but offer is committable, report contract owner as token owner
             bool committable = isTokenCommittable(_tokenId);

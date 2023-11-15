@@ -111,11 +111,7 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
         uint256 actualPrice;
 
         // Calls price discovery contract and gets the actual price. Use token id if caller has provided one, otherwise use offer id and accepts any voucher.
-        if (isTokenId) {
-            actualPrice = fulfilOrder(_tokenIdOrOfferId, offer, _priceDiscovery, _buyer);
-        } else {
-            actualPrice = fulfilOrder(0, offer, _priceDiscovery, _buyer);
-        }
+        actualPrice = fulfilOrder(isTokenId ? _tokenIdOrOfferId : 0, offer, _priceDiscovery, _buyer);
 
         // Fetch token id on protocol status
         uint256 tokenId = protocolStatus().incomingVoucherId;
