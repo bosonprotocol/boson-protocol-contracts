@@ -104,6 +104,7 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
 
         // Transfer voucher to this contract
         // Instead of msg.sender it could be voucherAddress, if vouchers were preminted to contract itself
+        // Not using safeTransferFrom since this contract is the recipient and we are sure it can handle the vouchers
         IERC721(voucherAddress).transferFrom(msg.sender, address(this), _tokenId);
 
         // Mint to itself, so it can be used with Zora Auction House

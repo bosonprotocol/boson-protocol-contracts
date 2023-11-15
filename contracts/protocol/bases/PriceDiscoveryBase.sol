@@ -319,7 +319,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         }
 
         // Token id cannot be zero at this point
-        require(_tokenId != 0, "PriceDiscoveryBase: token id not set");
+        require(_tokenId != 0, TOKEN_ID_NOT_SET);
 
         return _tokenId;
     }

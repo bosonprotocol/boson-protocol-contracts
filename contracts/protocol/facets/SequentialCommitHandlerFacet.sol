@@ -153,7 +153,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                     ) -
                     currentPrice;
 
-                // Update sequential commit
+                // Store the exchange cost, so it can be used in calculations when releasing funds
                 exchangeCosts.push(exchangeCost);
             }
 
