@@ -1403,7 +1403,7 @@ describe("IBosonFundsHandler", function () {
       it("Returns info even if name consumes all the gas", async function () {
         // Deploy the mock token that consumes all gas in the name getter
         const [mockToken, mockToken2] = await deployMockTokens(["Foreign20", "Foreign20MaliciousName"]);
-        const ERC20 = await getContractFactory("ERC20");
+        const ERC20 = await getContractFactory("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20");
         const mockToken3 = await ERC20.deploy("SomeToken", "STK");
 
         // top up assistants account
@@ -4594,13 +4594,14 @@ describe("IBosonFundsHandler", function () {
                 totalProtocolFee = 0n;
                 for (const trade of buyerChains[direction]) {
                   // Prepare calldata for PriceDiscovery contract
+                  const tokenId = deriveTokenId(offer.id, exchangeId);
                   let order = {
                     seller: voucherOwner.address,
                     buyer: trade.buyer.address,
                     voucherContract: expectedCloneAddress,
-                    tokenId: deriveTokenId(offer.id, exchangeId),
+                    tokenId: tokenId,
                     exchangeToken: offer.exchangeToken,
-                    price: (BigInt(offer.price) * BigInt(trade.price)) / 100n,
+                    price: BigInt(trade.price),
                   };
 
                   const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [
@@ -4609,9 +4610,10 @@ describe("IBosonFundsHandler", function () {
 
                   const priceDiscovery = new PriceDiscovery(
                     order.price,
+                    Side.Ask,
                     await priceDiscoveryContract.getAddress(),
-                    priceDiscoveryData,
-                    Side.Ask
+                    await priceDiscoveryContract.getAddress(),
+                    priceDiscoveryData
                   );
 
                   // voucher owner approves protocol to transfer the tokens
@@ -4630,7 +4632,7 @@ describe("IBosonFundsHandler", function () {
                   // commit to offer
                   await sequentialCommitHandler
                     .connect(trade.buyer)
-                    .sequentialCommitToOffer(trade.buyer.address, exchangeId, priceDiscovery, {
+                    .sequentialCommitToOffer(trade.buyer.address, tokenId, priceDiscovery, {
                       gasPrice: 0,
                     });
 
@@ -6212,13 +6214,14 @@ describe("IBosonFundsHandler", function () {
                 await bosonVoucherClone.connect(assistant).setRoyaltyPercentage(fee.royalties);
 
                 // Prepare calldata for PriceDiscovery contract
+                const tokenId = deriveTokenId(offer.id, exchangeId);
                 let order = {
                   seller: voucherOwner.address,
                   buyer: trade.buyer.address,
                   voucherContract: expectedCloneAddress,
-                  tokenId: deriveTokenId(offer.id, exchangeId),
+                  tokenId: tokenId,
                   exchangeToken: offer.exchangeToken,
-                  price: (BigInt(offer.price) * BigInt(trade.price)) / 100n,
+                  price: BigInt(trade.price),
                 };
 
                 const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [
@@ -6228,9 +6231,10 @@ describe("IBosonFundsHandler", function () {
                 const priceDiscoveryContractAddress = await priceDiscoveryContract.getAddress();
                 const priceDiscovery = new PriceDiscovery(
                   order.price,
+                  Side.Ask,
                   priceDiscoveryContractAddress,
-                  priceDiscoveryData,
-                  Side.Ask
+                  priceDiscoveryContractAddress,
+                  priceDiscoveryData
                 );
 
                 // voucher owner approves protocol to transfer the tokens
@@ -6247,7 +6251,7 @@ describe("IBosonFundsHandler", function () {
                 // commit to offer
                 await sequentialCommitHandler
                   .connect(trade.buyer)
-                  .sequentialCommitToOffer(trade.buyer.address, exchangeId, priceDiscovery, {
+                  .sequentialCommitToOffer(trade.buyer.address, tokenId, priceDiscovery, {
                     gasPrice: 0,
                   });
 

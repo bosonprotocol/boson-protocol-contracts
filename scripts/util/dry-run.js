@@ -1,8 +1,8 @@
 const shell = require("shelljs");
-const { getAddressesFilePath } = require("../util/utils.js");
+const { getAddressesFilePath } = require("./utils.js");
 const hre = require("hardhat");
 const { ethers } = hre;
-const { provider, getSigners } = hre.ethers;
+const { getSigners, parseEther } = hre.ethers;
 const network = hre.network.name;
 
 async function setupDryRun(env) {
@@ -13,20 +13,22 @@ async function setupDryRun(env) {
   ({ chainId: forkedChainId } = await ethers.provider.getNetwork());
 
   forkedEnv = env;
-  const upgraderBalance = await getBalance();
-  const blockNumber = await provider.getBlockNumber();
+  let deployerBalance = await getBalance();
+  // const blockNumber = await ethers.provider.getBlockNumber();
+
+  // if deployerBalance is 0, set it to 10 ether
+  if (deployerBalance == 0n) deployerBalance = parseEther("10", "ether");
 
   // change network to hardhat with forking enabled
   hre.config.networks["hardhat"].forking = {
     url: hre.config.networks[network].url,
     enabled: true,
-    blockNumber: blockNumber.toString(), // if performance is too slow, try commenting this line out
+    // blockNumber: "0x" + blockNumber.toString(16), // if performance is too slow, try commenting this line out
   };
 
   hre.config.networks["hardhat"].accounts = [
-    { privateKey: hre.config.networks[network].accounts[0], balance: upgraderBalance.toString() },
+    { privateKey: hre.config.networks[network].accounts[0], balance: deployerBalance.toString() },
   ];
-
   await hre.changeNetwork("hardhat");
 
   env = `${env}-dry-run`;
@@ -37,12 +39,12 @@ async function setupDryRun(env) {
   // copy addresses file
   shell.cp(getAddressesFilePath(forkedChainId, network, forkedEnv), getAddressesFilePath(chainId, "hardhat", env));
 
-  return { env, upgraderBalance };
+  return { env, deployerBalance };
 }
 
 async function getBalance() {
   const upgraderAddress = (await getSigners())[0].address;
-  const upgraderBalance = await provider.getBalance(upgraderAddress);
+  const upgraderBalance = await ethers.provider.getBalance(upgraderAddress);
   return upgraderBalance;
 }
 

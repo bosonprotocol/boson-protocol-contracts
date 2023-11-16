@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.21;
 
-import { IWETH9Like } from "../../interfaces/IWETH9Like.sol";
 import { IBosonSequentialCommitHandler } from "../../interfaces/handlers/IBosonSequentialCommitHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
@@ -21,6 +20,21 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
     using Address for address;
 
     /**
+     * @notice
+     * For offers with native exchange token, it is expected the the price discovery contracts will
+     * operate with wrapped native token. Set the address of the wrapped native token in the constructor.
+     *
+     * After v2.2.0, token ids are derived from offerId and exchangeId.
+     * EXCHANGE_ID_2_2_0 is the first exchange id to use for 2.2.0.
+     * Set EXCHANGE_ID_2_2_0 in the constructor.
+     *
+     * @param _wNative - the address of the wrapped native token
+     * @param _firstExchangeId2_2_0 - the first exchange id to use for 2.2.0
+     */
+    //solhint-disable-next-line
+    constructor(address _wNative, uint256 _firstExchangeId2_2_0) PriceDiscoveryBase(_wNative, _firstExchangeId2_2_0) {}
+
+    /**
      * @notice Initializes facet.
      * This function is callable only once.
      */
@@ -29,7 +43,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
     }
 
     /**
-     * @notice Commits to an existing exchange. Price discovery is oflaoaded to external contract.
+     * @notice Commits to an existing exchange. Price discovery is offloaded to external contract.
      *
      * Emits a BuyerCommitted event if successful.
      * Transfers voucher to the buyer address.
@@ -69,6 +83,12 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
         // Make sure buyer address is not zero address
         require(_buyer != address(0), INVALID_ADDRESS);
 
+        // Make sure caller provided price discovery data
+        require(
+            _priceDiscovery.priceDiscoveryContract != address(0) && _priceDiscovery.priceDiscoveryData.length > 0,
+            INVALID_PRICE_DISCOVERY
+        );
+
         uint256 exchangeId = _tokenId & type(uint128).max;
 
         // Exchange must exist
@@ -77,100 +97,107 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
         // Make sure the voucher is still valid
         require(block.timestamp <= voucher.validUntilDate, VOUCHER_HAS_EXPIRED);
 
-        // Fetch offer
-        (, Offer storage offer) = fetchOffer(exchange.offerId);
-
-        // Get token address
-        address tokenAddress = offer.exchangeToken;
+        // Create a memory struct for sequential commit and populate it as we go
+        // This is done to avoid stack too deep error, while still keeping the number of SLOADs to a minimum
+        ExchangeCosts memory exchangeCost;
 
         // Get current buyer address. This is actually the seller in sequential commit. Need to do it before voucher is transferred
         address seller;
-        uint256 buyerId = exchange.buyerId;
+        exchangeCost.resellerId = exchange.buyerId;
         {
-            (, Buyer storage currentBuyer) = fetchBuyer(buyerId);
+            (, Buyer storage currentBuyer) = fetchBuyer(exchangeCost.resellerId);
             seller = currentBuyer.wallet;
         }
 
-        if (_priceDiscovery.side == Side.Bid) {
-            // @TODO why don't allow third party to call?
-            require(seller == msgSender(), NOT_VOUCHER_HOLDER);
-        }
+        // Fetch offer
+        uint256 offerId = exchange.offerId;
+        (, Offer storage offer) = fetchOffer(offerId);
 
         // First call price discovery and get actual price
-        // It might be lower tha submitted for buy orders and higher for sell orders
-        uint256 actualPrice = fulfilOrder(_tokenId, offer, _priceDiscovery, _buyer);
+        // It might be lower than submitted for buy orders and higher for sell orders
+        exchangeCost.price = fulfilOrder(_tokenId, offer, _priceDiscovery, seller, _buyer);
+
+        // Get token address
+        address exchangeToken = offer.exchangeToken;
 
         // Calculate the amount to be kept in escrow
         uint256 escrowAmount;
-
+        uint256 payout;
         {
             // Get sequential commits for this exchange
             ExchangeCosts[] storage exchangeCosts = protocolEntities().exchangeCosts[exchangeId];
 
             {
                 // Calculate fees
-                uint256 protocolFeeAmount = getProtocolFee(tokenAddress, actualPrice);
+                exchangeCost.protocolFeeAmount = getProtocolFee(exchangeToken, exchangeCost.price);
 
                 // Calculate royalties
-                (, uint256 royaltyAmount) = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]).royaltyInfo(
-                    exchangeId,
-                    actualPrice
-                );
+                (, exchangeCost.royaltyAmount) = IBosonVoucher(
+                    getCloneAddress(protocolLookups(), offer.sellerId, offer.collectionIndex)
+                ).royaltyInfo(exchangeId, exchangeCost.price);
 
                 // Verify that fees and royalties are not higher than the price.
-                require((protocolFeeAmount + royaltyAmount) <= actualPrice, FEE_AMOUNT_TOO_HIGH);
+                require(
+                    (exchangeCost.protocolFeeAmount + exchangeCost.royaltyAmount) <= exchangeCost.price,
+                    FEE_AMOUNT_TOO_HIGH
+                );
 
                 // Get price paid by current buyer
                 uint256 len = exchangeCosts.length;
                 uint256 currentPrice = len == 0 ? offer.price : exchangeCosts[len - 1].price;
 
                 // Calculate the minimal amount to be kept in the escrow
-                escrowAmount = Math.max(actualPrice, protocolFeeAmount + royaltyAmount + currentPrice) - currentPrice;
+                escrowAmount =
+                    Math.max(
+                        exchangeCost.price,
+                        exchangeCost.protocolFeeAmount + exchangeCost.royaltyAmount + currentPrice
+                    ) -
+                    currentPrice;
 
-                // Update sequential commit
-                exchangeCosts.push(
-                    ExchangeCosts({
-                        resellerId: buyerId,
-                        price: actualPrice,
-                        protocolFeeAmount: protocolFeeAmount,
-                        royaltyAmount: royaltyAmount
-                    })
-                );
+                // Store the exchange cost, so it can be used in calculations when releasing funds
+                exchangeCosts.push(exchangeCost);
             }
 
-            address weth = protocolAddresses().weth;
-
             // Make sure enough get escrowed
+            payout = exchangeCost.price - escrowAmount;
+
             if (_priceDiscovery.side == Side.Ask) {
                 if (escrowAmount > 0) {
                     // Price discovery should send funds to the seller
                     // Nothing in escrow, need to pull everything from seller
-                    if (tokenAddress == address(0)) {
+                    if (exchangeToken == address(0)) {
                         // If exchange is native currency, seller cannot directly approve protocol to transfer funds
                         // They need to approve wrapper contract, so protocol can pull funds from wrapper
-                        FundsLib.transferFundsToProtocol(weth, seller, escrowAmount);
+                        FundsLib.transferFundsToProtocol(address(wNative), seller, escrowAmount);
                         // But since protocol otherwise normally operates with native currency, needs to unwrap it (i.e. withdraw)
-                        IWETH9Like(weth).withdraw(escrowAmount);
+                        wNative.withdraw(escrowAmount);
                     } else {
-                        FundsLib.transferFundsToProtocol(tokenAddress, seller, escrowAmount);
+                        FundsLib.transferFundsToProtocol(exchangeToken, seller, escrowAmount);
                     }
                 }
             } else {
                 // when bid side, we have full proceeds in escrow. Keep minimal in, return the difference
-                if (tokenAddress == address(0)) {
-                    tokenAddress = weth;
-                    if (escrowAmount > 0) IWETH9Like(weth).withdraw(escrowAmount);
+                if (exchangeCost.price > 0 && exchangeToken == address(0)) {
+                    wNative.withdraw(exchangeCost.price);
                 }
 
-                uint256 payout = actualPrice - escrowAmount;
-                if (payout > 0) FundsLib.transferFundsFromProtocol(tokenAddress, payable(seller), payout);
+                if (payout > 0) {
+                    FundsLib.transferFundsFromProtocol(exchangeToken, payable(seller), payout); // also emits FundsWithdrawn
+                }
             }
         }
 
-        clearStorage();
+        clearPriceDiscoveryStorage();
 
         // Since exchange and voucher are passed by reference, they are updated
-        emit BuyerCommitted(exchange.offerId, exchange.buyerId, exchangeId, exchange, voucher, msgSender());
+        uint256 buyerId = exchange.buyerId;
+        address sender = msgSender();
+        if (exchangeCost.price > 0) emit FundsEncumbered(buyerId, exchangeToken, exchangeCost.price, sender);
+        if (payout > 0) {
+            emit FundsReleased(exchangeId, exchangeCost.resellerId, exchangeToken, payout, sender);
+            emit FundsWithdrawn(exchangeCost.resellerId, seller, exchangeToken, payout, sender);
+        }
+        emit BuyerCommitted(offerId, buyerId, exchangeId, exchange, voucher, sender);
         // No need to update exchange detail. Most fields stay as they are, and buyerId was updated at the same time voucher is transferred
     }
 }

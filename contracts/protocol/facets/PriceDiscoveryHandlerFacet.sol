@@ -25,6 +25,21 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
  */
 contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscoveryBase, BuyerBase {
     /**
+     * @notice
+     * For offers with native exchange token, it is expected the the price discovery contracts will
+     * operate with wrapped native token. Set the address of the wrapped native token in the constructor.
+     *
+     * After v2.2.0, token ids are derived from offerId and exchangeId.
+     * EXCHANGE_ID_2_2_0 is the first exchange id to use for 2.2.0.
+     * Set EXCHANGE_ID_2_2_0 in the constructor.
+     *
+     * @param _wNative - the address of the wrapped native token
+     * @param _firstExchangeId2_2_0 - the first exchange id to use for 2.2.0
+     */
+    //solhint-disable-next-line
+    constructor(address _wNative, uint256 _firstExchangeId2_2_0) PriceDiscoveryBase(_wNative, _firstExchangeId2_2_0) {}
+
+    /**
      * @notice Facet Initializer
      * This function is callable only once.
      */
@@ -61,6 +76,9 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
         uint256 _tokenIdOrOfferId,
         PriceDiscovery calldata _priceDiscovery
     ) external payable override exchangesNotPaused buyersNotPaused {
+        // Make sure buyer address is not zero address
+        require(_buyer != address(0), INVALID_ADDRESS);
+
         // Make sure caller provided price discovery data
         require(
             _priceDiscovery.priceDiscoveryContract != address(0) && _priceDiscovery.priceDiscoveryData.length > 0,
@@ -71,9 +89,12 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
         uint256 offerId;
 
         // First try to fetch offer with _tokenIdOrOfferId
-        (bool exists, Offer storage offer) = fetchOffer(_tokenIdOrOfferId);
+        (bool exists, Offer storage offer) = fetchOffer(_tokenIdOrOfferId); // TODO: review behaviour of pre v2.2.0 offers
 
         if (exists) {
+            // Make sure offer is not voided
+            require(!offer.voided, OFFER_HAS_BEEN_VOIDED);
+
             // Set offer id if offer exists
             offerId = _tokenIdOrOfferId;
         } else {
@@ -81,28 +102,25 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
             offerId = _tokenIdOrOfferId >> 128;
 
             // Fetch offer with offerId
-            (exists, offer) = fetchOffer(offerId);
+            offer = getValidOffer(offerId);
 
-            // Make sure offer exists
-            require(exists, NO_SUCH_OFFER);
-
-            // Sinalize that _tokenIdOrOfferId is a token id
+            // Signalize that _tokenIdOrOfferId is a token id
             isTokenId = true;
         }
 
-        // Make sure offer exists, is available, and isn't void, expired, or sold out
-        require(exists, NO_SUCH_OFFER);
-
         // Make sure offer type is price discovery. Otherwise, use commitToOffer
         require(offer.priceType == PriceType.Discovery, INVALID_PRICE_TYPE);
+        uint256 sellerId = offer.sellerId;
 
         uint256 actualPrice;
+        {
+            // Get seller address
+            address _seller;
+            (, Seller storage seller, ) = fetchSeller(sellerId);
+            _seller = seller.assistant;
 
-        // Calls price discovery contract and gets the actual price. Use token id if caller has provided one, otherwise use offer id and accepts any voucher.
-        if (!isTokenId) {
-            actualPrice = fulfilOrder(0, offer, _priceDiscovery, _buyer);
-        } else {
-            actualPrice = fulfilOrder(_tokenIdOrOfferId, offer, _priceDiscovery, _buyer);
+            // Calls price discovery contract and gets the actual price. Use token id if caller has provided one, otherwise use offer id and accepts any voucher.
+            actualPrice = fulfilOrder(isTokenId ? _tokenIdOrOfferId : 0, offer, _priceDiscovery, _seller, _buyer);
         }
 
         // Fetch token id on protocol status
@@ -114,30 +132,49 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
         ExchangeCosts[] storage exchangeCosts = protocolEntities().exchangeCosts[exchangeId];
 
         // Calculate fees
-        uint256 protocolFeeAmount = getProtocolFee(offer.exchangeToken, actualPrice);
+        address exchangeToken = offer.exchangeToken;
+        uint256 protocolFeeAmount = getProtocolFee(exchangeToken, actualPrice);
 
-        // Calculate royalties
-        (, uint256 royaltyAmount) = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]).royaltyInfo(
-            exchangeId,
-            actualPrice
-        );
+        {
+            // Calculate royalties
+            (, uint256 royaltyAmount) = IBosonVoucher(
+                getCloneAddress(protocolLookups(), sellerId, offer.collectionIndex)
+            ).royaltyInfo(exchangeId, actualPrice);
 
-        // Verify that fees and royalties are not higher than the price.
-        require((protocolFeeAmount + royaltyAmount) <= actualPrice, FEE_AMOUNT_TOO_HIGH);
+            // Verify that fees and royalties are not higher than the price.
+            require((protocolFeeAmount + royaltyAmount) <= actualPrice, FEE_AMOUNT_TOO_HIGH);
 
-        uint256 buyerId = getValidBuyer(_buyer);
-
-        // Storage exchange costs so it can be released later. This is the first cost entry for this exchange.
-        exchangeCosts.push(
-            ExchangeCosts({
-                resellerId: buyerId,
-                price: actualPrice,
-                protocolFeeAmount: protocolFeeAmount,
-                royaltyAmount: royaltyAmount
-            })
-        );
-
+            // Store exchange costs so it can be released later. This is the first cost entry for this exchange.
+            exchangeCosts.push(
+                ExchangeCosts({
+                    resellerId: sellerId,
+                    price: actualPrice,
+                    protocolFeeAmount: protocolFeeAmount,
+                    royaltyAmount: royaltyAmount
+                })
+            );
+        }
         // Clear incoming voucher id and incoming voucher address
-        clearStorage();
+        clearPriceDiscoveryStorage();
+
+        (, uint256 buyerId) = getBuyerIdByWallet(_buyer);
+        if (actualPrice > 0) {
+            if (_priceDiscovery.side == Side.Ask) {
+                // Price discovery should send funds to the seller
+                // Nothing in escrow, take it from the seller's pool
+                FundsLib.decreaseAvailableFunds(sellerId, exchangeToken, actualPrice);
+
+                emit FundsEncumbered(sellerId, exchangeToken, actualPrice, msgSender());
+            } else {
+                // when bid side, we have full proceeds in escrow.
+                // If exchange token is 0, we need to unwrap it
+                if (exchangeToken == address(0)) {
+                    wNative.withdraw(actualPrice);
+                }
+                emit FundsEncumbered(buyerId, exchangeToken, actualPrice, msgSender());
+            }
+
+            // Not emitting BuyerCommitted since it's emitted in commitToOfferInternal
+        }
     }
 }

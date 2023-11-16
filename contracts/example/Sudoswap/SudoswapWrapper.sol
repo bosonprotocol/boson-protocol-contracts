@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.9;
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
-import { IWETH9Like as IWETH9 } from "../../interfaces/IWETH9Like.sol";
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { DAIAliases as DAI } from "../../interfaces/DAIAliases.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
@@ -50,7 +49,7 @@ interface IPool {
  *   - `unwrap` can be executed by the owner of the wrapped voucher.
  *
  * N.B. Although Sudoswap can send ethers, it's preffered to receive
- * WETH instead. For that reason `recieve` is not implemented, so it automatically sends WETH.
+ * WETH instead. For that reason `receive` is not implemented, so it automatically sends WETH.
  */
 contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
     // Add safeTransferFrom to IERC20
@@ -116,6 +115,7 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
 
             // Transfer vouchers to this contract
             // Instead of msg.sender it could be voucherAddress, if vouchers were preminted to contract itself
+            // Not using safeTransferFrom since this contract is the recipient and we are sure it can handle the vouchers
             IERC721(voucherAddress).transferFrom(msg.sender, address(this), tokenId);
 
             // Mint to caller, so it can be used with Sudoswap
@@ -177,17 +177,17 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
      * @param _maxPrice - the max price
      */
     function swapTokenForSpecificNFT(uint256 _tokenId, uint256 _maxPrice) external {
-        uint256 balanceBefore = getCurrentBalance(_tokenId);
+        (address exchangeToken, uint256 balanceBefore) = getCurrentBalance(_tokenId);
 
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = _tokenId;
 
-        IWETH9(wethAddress).transferFrom(msg.sender, address(this), _maxPrice);
-        IWETH9(wethAddress).approve(poolAddress, _maxPrice);
+        IERC20(exchangeToken).safeTransferFrom(msg.sender, address(this), _maxPrice);
+        IERC20(exchangeToken).forceApprove(poolAddress, _maxPrice);
 
         IPool(poolAddress).swapTokenForSpecificNFTs(tokenIds, _maxPrice, msg.sender, false, address(0));
 
-        uint256 balanceAfter = getCurrentBalance(_tokenId);
+        (, uint256 balanceAfter) = getCurrentBalance(_tokenId);
 
         uint256 actualPrice = balanceAfter - balanceBefore;
         require(actualPrice <= _maxPrice, "SudoswapWrapper: Price too high");
@@ -196,14 +196,14 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
     }
 
     /**
-     * @notice Gets own the token balance for the exchange token, associated with the token ID.
+     * @notice Gets own token balance for the exchange token, associated with the token ID.
      *
      * @dev If the exchange token is not known, it is fetched from the protocol and cached for future use.
      *
      * @param _tokenId The token id.
      */
-    function getCurrentBalance(uint256 _tokenId) internal returns (uint256) {
-        address exchangeToken = cachedExchangeToken[_tokenId];
+    function getCurrentBalance(uint256 _tokenId) internal returns (address exchangeToken, uint256 balance) {
+        exchangeToken = cachedExchangeToken[_tokenId];
 
         // If exchange token is not known, get it from the protocol.
         if (exchangeToken == address(0)) {
@@ -228,7 +228,7 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
             cachedExchangeToken[_tokenId] = exchangeToken;
         }
 
-        return IERC20(exchangeToken).balanceOf(address(this));
+        balance = IERC20(exchangeToken).balanceOf(address(this));
     }
 
     /**

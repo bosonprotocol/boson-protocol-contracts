@@ -101,6 +101,8 @@ contract ZoraWrapper is BosonTypes, ERC721 {
      */
     function wrap(uint256 _tokenId) external {
         // Transfer voucher to this contract
+        // Instead of msg.sender it could be voucherAddress, if vouchers were preminted to contract itself
+        // Not using safeTransferFrom since this contract is the recipient and we are sure it can handle the vouchers
         IERC721(voucherAddress).transferFrom(msg.sender, address(this), _tokenId);
 
         // Mint to itself, so it can be used with Zora Auction House
@@ -181,7 +183,7 @@ contract ZoraWrapper is BosonTypes, ERC721 {
     }
 
     /**
-     * @notice Gets own the token balance for the exchange token, associated with the token ID.
+     * @notice Gets own token balance for the exchange token, associated with the token ID.
      *
      * @dev If the exchange token is not known, it is fetched from the protocol and cached for future use.
      *

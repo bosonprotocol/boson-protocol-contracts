@@ -251,6 +251,7 @@ contract BosonTypes {
     struct TokenRange {
         uint256 start;
         uint256 end;
+        uint256 twinId;
     }
 
     struct Twin {
@@ -315,9 +316,10 @@ contract BosonTypes {
 
     struct PriceDiscovery {
         uint256 price;
-        address priceDiscoveryContract;
-        bytes priceDiscoveryData;
         Side side;
+        address priceDiscoveryContract;
+        address conduit;
+        bytes priceDiscoveryData;
     }
 
     enum Side {

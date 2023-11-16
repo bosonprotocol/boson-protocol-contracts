@@ -158,78 +158,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
     }
 
     /**
-     * @notice Commits to a preminted offer (first step of an exchange).
-     *
-     * Emits BuyerCommitted and ConditionalCommitAuthorized events if successful.
-     *
-     * Reverts if:
-     * - The exchanges region of protocol is paused
-     * - The buyers region of protocol is paused
-     * - Caller is not the voucher contract, owned by the seller
-     * - Exchange exists already
-     * - Offer has been voided
-     * - Offer has expired
-     * - Offer is not yet available for commits
-     * - Buyer account is inactive
-     * - Buyer is token-gated (conditional commit requirements not met or already used)
-     * - Buyer is token-gated and condition has a range.
-     * - Seller has less funds available than sellerDeposit and price
-     *
-     * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
-     * @param _offerId - the id of the offer to commit to
-     * @param _exchangeId - the id of the exchange
-     */
-    function commitToPreMintedOffer(
-        address payable _buyer,
-        uint256 _offerId,
-        uint256 _exchangeId
-    ) external exchangesNotPaused buyersNotPaused nonReentrant {
-        Offer storage offer = getValidOffer(_offerId);
-        require(offer.priceType == PriceType.Static, INVALID_PRICE_TYPE);
-
-        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-
-        // Make sure that the voucher was issued on the clone that is making a call
-        require(msg.sender == getCloneAddress(lookups, offer.sellerId, offer.collectionIndex), ACCESS_DENIED);
-
-        // Exchange must not exist already
-        (bool exists, ) = fetchExchange(_exchangeId);
-        require(!exists, EXCHANGE_ALREADY_EXISTS);
-
-        uint256 groupId;
-        (exists, groupId) = getGroupIdByOffer(offer.id);
-
-        if (exists) {
-            // Get the condition
-            Condition storage condition = fetchCondition(groupId);
-            EvaluationMethod method = condition.method;
-
-            if (method != EvaluationMethod.None) {
-                uint256 tokenId = 0;
-
-                // Allow commiting only to unambigous conditions, i.e. conditions with a single token id
-                if (condition.method == EvaluationMethod.SpecificToken || condition.tokenType == TokenType.MultiToken) {
-                    uint256 minTokenId = condition.minTokenId;
-                    uint256 maxTokenId = condition.maxTokenId;
-
-                    require(minTokenId == maxTokenId || maxTokenId == 0, CANNOT_COMMIT); // legacy conditions have maxTokenId == 0
-
-                    // Uses token id from the condition
-                    tokenId = minTokenId;
-                }
-
-                authorizeCommit(_buyer, condition, groupId, tokenId, _offerId);
-
-                // Store the condition to be returned afterward on getReceipt function
-                lookups.exchangeCondition[_exchangeId] = condition;
-            }
-        }
-
-        commitToOfferInternal(_buyer, offer, _exchangeId, true);
-    }
-
-    /**
-     * @notice Commits to an offer. Helper function reused by commitToOffer and commitToPreMintedOffer.
+     * @notice Commits to an offer. Helper function reused by commitToOffer and onPremintedVoucherTransferred.
      *
      * Emits a BuyerCommitted event if successful.
      * Issues a voucher to the buyer address for non preminted offers.
@@ -264,7 +193,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         bool _isPreminted
     ) internal returns (uint256) {
         uint256 _offerId = _offer.id;
-        // Make sure offer is available, and isn't void, expired, or sold out
+        // Make sure offer is available, expired, or sold out
         OfferDates storage offerDates = fetchOfferDates(_offerId);
         require(block.timestamp >= offerDates.validFrom, OFFER_NOT_AVAILABLE);
         require(block.timestamp <= offerDates.validUntil, OFFER_HAS_EXPIRED);
@@ -554,6 +483,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * @notice Redeems a voucher.
      *
      * Emits a VoucherRedeemed event if successful.
+     * Emits TwinTransferred if twin transfer was successfull
+     * Emits TwinTransferFailed if twin transfer failed
+     * Emits TwinTransferSkipped if twin transfer was skipped when the number of twins is too high
      *
      * Reverts if
      * - The exchanges region of protocol is paused
@@ -650,7 +582,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
 
         // Set incoming voucher id if we are in the middle of a price discovery call
         if (ps.incomingVoucherCloneAddress != address(0)) {
-            ps.incomingVoucherId = _tokenId;
+            uint256 incomingVoucherId = ps.incomingVoucherId;
+            if (incomingVoucherId != _tokenId) {
+                require(incomingVoucherId == 0, INCOMING_VOUCHER_ALREADY_SET);
+                ps.incomingVoucherId = _tokenId;
+            }
         }
 
         // Notify watchers of state change
@@ -687,29 +623,71 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         require(ps.reentrancyStatus != ENTERED, REENTRANCY_GUARD);
 
         // Derive the offer id
-        uint256 offerId = _tokenId >> 128;
+        uint256 offerId = _tokenId >> 128; // ? pre 2.2. vouchers?
 
         // Derive the exchange id
         uint256 exchangeId = _tokenId & type(uint128).max;
 
         // Get the offer
-        (, Offer storage offer) = fetchOffer(offerId);
+        Offer storage offer = getValidOffer(offerId);
 
+        // Get the seller
         (, Seller storage seller, ) = fetchSeller(offer.sellerId);
 
-        address bosonVoucher = protocolLookups().cloneAddress[offer.sellerId];
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+        address bosonVoucher = getCloneAddress(lookups, offer.sellerId, offer.collectionIndex);
+
+        // Make sure that the voucher was issued on the clone that is making a call
+        require(msg.sender == bosonVoucher, ACCESS_DENIED);
+
+        (bool conditionExists, uint256 groupId) = getGroupIdByOffer(offerId);
+
+        if (conditionExists) {
+            // Get the condition
+            Condition storage condition = fetchCondition(groupId);
+            EvaluationMethod method = condition.method;
+
+            if (method != EvaluationMethod.None) {
+                uint256 tokenId = 0;
+
+                // Allow commiting only to unambigous conditions, i.e. conditions with a single token id
+                if (condition.method == EvaluationMethod.SpecificToken || condition.tokenType == TokenType.MultiToken) {
+                    uint256 minTokenId = condition.minTokenId;
+                    uint256 maxTokenId = condition.maxTokenId;
+
+                    require(minTokenId == maxTokenId || maxTokenId == 0, CANNOT_COMMIT); // legacy conditions have maxTokenId == 0
+
+                    // Uses token id from the condition
+                    tokenId = minTokenId;
+                }
+
+                authorizeCommit(_to, condition, groupId, tokenId, offerId);
+
+                // Store the condition to be returned afterward on getReceipt function
+                lookups.exchangeCondition[exchangeId] = condition;
+            }
+        }
 
         if (offer.priceType == PriceType.Discovery) {
             //  transaction start from `commitToPriceDiscoveryOffer`, should commit
             if (ps.incomingVoucherCloneAddress != address(0)) {
-                // Avoid reentrancy
-                require(ps.incomingVoucherId == 0, INCOMING_VOUCHER_ALREADY_SET);
+                // During price discovery, the voucher is firs transferred to the protocol, which should
+                // not resulte in a commit yet. The commit should happen when the voucher is transferred
+                // from the protocol to the buyer.
+                if (_to == address(this)) {
+                    // can someone buys on protocol's behalf? what happens then
 
-                // Store the information about incoming voucher
-                ps.incomingVoucherId = _tokenId;
+                    // Avoid reentrancy
+                    require(ps.incomingVoucherId == 0, INCOMING_VOUCHER_ALREADY_SET);
 
-                commitToOfferInternal(_to, offer, exchangeId, true);
-                committed = true;
+                    // Store the information about incoming voucher
+                    ps.incomingVoucherId = _tokenId;
+                } else {
+                    require(ps.incomingVoucherId == _tokenId, TOKEN_ID_MISMATCH);
+                    commitToOfferInternal(_to, offer, exchangeId, true);
+
+                    committed = true;
+                }
                 // Only seller can transfer voucher without calling commitToOfferInternal, this is necessary to deposit voucher into wrapper contracts
             } else if (_from != seller.assistant && _from != bosonVoucher) {
                 revert(ACCESS_DENIED);
@@ -920,6 +898,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * Emits ERC20 Transfer, ERC721 Transfer, or ERC1155 TransferSingle events in call stack if successful.
      * Emits TwinTransferred if twin transfer was successfull
      * Emits TwinTransferFailed if twin transfer failed
+     * Emits TwinTransferSkipped if twin transfer was skipped when the number of twins is too high
      *
      * If one of the twin transfers fails, the function will continue to transfer the remaining twins and
      * automatically raises a dispute for the exchange.
@@ -956,150 +935,167 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
             address sender = msgSender();
             uint256 twinCount = twinIds.length;
 
-            // Fetch twin: up to 20,000 gas
-            // Handle individual outcome: up to 120,000 gas
-            // Handle overall outcome: up to 200,000 gas
+            // SINGLE_TWIN_RESERVED_GAS = 160000
+            // MINIMAL_RESIDUAL_GAS = 230000
             // Next line would overflow if twinCount > (type(uint256).max - MINIMAL_RESIDUAL_GAS)/SINGLE_TWIN_RESERVED_GAS
-            // Oveflow happens for twinCount ~ 9.6x10^71, which is impossible to achieve
+            // Oveflow happens for twinCount ~ 7.2x10^71, which is impossible to achieve
             uint256 reservedGas = (twinCount - 1) * SINGLE_TWIN_RESERVED_GAS + MINIMAL_RESIDUAL_GAS;
 
-            // Visit the twins
-            for (uint256 i = 0; i < twinCount; ) {
-                // Get the twin
-                (, Twin storage twinS) = fetchTwin(twinIds[i]);
+            // If number of twins is too high, skip the transfer and mark the transfer as failed.
+            // Reserved gas is higher than the actual gas needed for succesful twin redeem.
+            // There is enough buffer that even if the reserved gas is above gas limit, the redeem will still succeed.
+            // This check was added to prevent the DoS attack where the attacker would create a bundle with a huge number of twins.
+            // For a normal operations this still allows for a bundle with more than 180 twins to be redeemed, which should be enough for practical purposes.
+            if (reservedGas > block.gaslimit) {
+                transferFailed = true;
 
-                // Use twin struct instead of individual variables to avoid stack too deep error
-                // Don't copy the whole twin to memory immediately, only the fields that are needed
-                Twin memory twinM;
-                twinM.tokenId = twinS.tokenId;
-                twinM.amount = twinS.amount;
+                emit TwinTransferSkipped(_exchange.id, twinCount, sender);
+            } else {
+                // Visit the twins
+                for (uint256 i = 0; i < twinCount; ) {
+                    // Get the twin
+                    (, Twin storage twinS) = fetchTwin(twinIds[i]);
 
-                bool success;
-                {
-                    twinM.tokenType = twinS.tokenType;
+                    // Use twin struct instead of individual variables to avoid stack too deep error
+                    // Don't copy the whole twin to memory immediately, only the fields that are needed
+                    Twin memory twinM;
+                    twinM.tokenId = twinS.tokenId;
+                    twinM.amount = twinS.amount;
 
-                    // Shouldn't decrement supply if twin supply is unlimited
-                    twinM.supplyAvailable = twinS.supplyAvailable;
-                    if (twinM.supplyAvailable != type(uint256).max) {
-                        // Decrement by 1 if token type is NonFungible otherwise decrement amount (i.e, tokenType is MultiToken or FungibleToken)
-                        twinM.supplyAvailable = twinM.tokenType == TokenType.NonFungibleToken
-                            ? twinM.supplyAvailable - 1
-                            : twinM.supplyAvailable - twinM.amount;
+                    bool success;
+                    {
+                        twinM.tokenType = twinS.tokenType;
 
-                        twinS.supplyAvailable = twinM.supplyAvailable;
+                        // Shouldn't decrement supply if twin supply is unlimited
+                        twinM.supplyAvailable = twinS.supplyAvailable;
+                        if (twinM.supplyAvailable != type(uint256).max) {
+                            // Decrement by 1 if token type is NonFungible otherwise decrement amount (i.e, tokenType is MultiToken or FungibleToken)
+                            twinM.supplyAvailable = twinM.tokenType == TokenType.NonFungibleToken
+                                ? twinM.supplyAvailable - 1
+                                : twinM.supplyAvailable - twinM.amount;
+
+                            twinS.supplyAvailable = twinM.supplyAvailable;
+                        }
+
+                        // Transfer the token from the seller's assistant to the buyer
+                        bytes memory data; // Calldata to transfer the twin
+
+                        if (twinM.tokenType == TokenType.FungibleToken) {
+                            // ERC-20 style transfer
+                            data = abi.encodeCall(IERC20.transferFrom, (assistant, sender, twinM.amount));
+                        } else if (twinM.tokenType == TokenType.NonFungibleToken) {
+                            // Token transfer order is ascending to avoid overflow when twin supply is unlimited
+                            if (twinM.supplyAvailable == type(uint256).max) {
+                                twinS.tokenId++;
+                            } else {
+                                // Token transfer order is descending
+                                twinM.tokenId += twinM.supplyAvailable;
+                            }
+                            // ERC-721 style transfer
+                            data = abi.encodeWithSignature(
+                                "safeTransferFrom(address,address,uint256,bytes)",
+                                assistant,
+                                sender,
+                                twinM.tokenId,
+                                ""
+                            );
+                        } else if (twinM.tokenType == TokenType.MultiToken) {
+                            // ERC-1155 style transfer
+                            data = abi.encodeWithSignature(
+                                "safeTransferFrom(address,address,uint256,uint256,bytes)",
+                                assistant,
+                                sender,
+                                twinM.tokenId,
+                                twinM.amount,
+                                ""
+                            );
+                        }
+                        // Make call only if there is enough gas and code at address exists.
+                        // If not, skip the call and mark the transfer as failed
+                        twinM.tokenAddress = twinS.tokenAddress;
+                        uint256 gasLeft = gasleft();
+                        if (gasLeft > reservedGas && twinM.tokenAddress.isContract()) {
+                            address to = twinM.tokenAddress;
+
+                            // Handle the return value with assembly to avoid return bomb attack
+                            bytes memory result;
+                            assembly {
+                                success := call(
+                                    sub(gasLeft, reservedGas), // gasleft()-reservedGas
+                                    to, // twin contract
+                                    0, // ether value
+                                    add(data, 0x20), // invocation calldata
+                                    mload(data), // calldata length
+                                    add(result, 0x20), // store return data at result
+                                    0x20 // store at most 32 bytes
+                                )
+
+                                let returndataSize := returndatasize()
+
+                                switch gt(returndataSize, 0x20)
+                                case 0 {
+                                    // Adjust result length in case it's shorter than 32 bytes
+                                    mstore(result, returndataSize)
+                                }
+                                case 1 {
+                                    // If return data is longer than 32 bytes, consider transfer unsuccesful
+                                    success := false
+                                }
+                            }
+
+                            // Check if result is empty or if result is a boolean and is true
+                            success =
+                                success &&
+                                (result.length == 0 || (result.length == 32 && abi.decode(result, (uint256)) == 1));
+                        }
                     }
 
-                    // Transfer the token from the seller's assistant to the buyer
-                    bytes memory data; // Calldata to transfer the twin
+                    twinM.id = twinS.id;
 
-                    if (twinM.tokenType == TokenType.FungibleToken) {
-                        // ERC-20 style transfer
-                        data = abi.encodeCall(IERC20.transferFrom, (assistant, sender, twinM.amount));
-                    } else if (twinM.tokenType == TokenType.NonFungibleToken) {
-                        // Token transfer order is ascending to avoid overflow when twin supply is unlimited
-                        if (twinM.supplyAvailable == type(uint256).max) {
-                            twinS.tokenId++;
-                        } else {
-                            // Token transfer order is descending
-                            twinM.tokenId += twinM.supplyAvailable;
-                        }
-                        // ERC-721 style transfer
-                        data = abi.encodeWithSignature(
-                            "safeTransferFrom(address,address,uint256,bytes)",
-                            assistant,
-                            sender,
-                            twinM.tokenId,
-                            ""
-                        );
-                    } else if (twinM.tokenType == TokenType.MultiToken) {
-                        // ERC-1155 style transfer
-                        data = abi.encodeWithSignature(
-                            "safeTransferFrom(address,address,uint256,uint256,bytes)",
-                            assistant,
-                            sender,
+                    // If token transfer failed
+                    if (!success) {
+                        transferFailed = true;
+
+                        emit TwinTransferFailed(
+                            twinM.id,
+                            twinM.tokenAddress,
+                            _exchange.id,
                             twinM.tokenId,
                             twinM.amount,
-                            ""
+                            sender
+                        );
+                    } else {
+                        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+                        uint256 exchangeId = _exchange.id;
+
+                        {
+                            // Store twin receipt on twinReceiptsByExchange
+                            TwinReceipt storage twinReceipt = lookups.twinReceiptsByExchange[exchangeId].push();
+                            twinReceipt.twinId = twinM.id;
+                            twinReceipt.tokenAddress = twinM.tokenAddress;
+                            twinReceipt.tokenId = twinM.tokenId;
+                            twinReceipt.amount = twinM.amount;
+                            twinReceipt.tokenType = twinM.tokenType;
+                        }
+                        if (twinM.tokenType == TokenType.NonFungibleToken) {
+                            updateNFTRanges(lookups, twinM, sellerId);
+                        }
+                        emit TwinTransferred(
+                            twinM.id,
+                            twinM.tokenAddress,
+                            exchangeId,
+                            twinM.tokenId,
+                            twinM.amount,
+                            sender
                         );
                     }
-                    // Make call only if there is enough gas and code at address exists.
-                    // If not, skip the call and mark the transfer as failed
-                    twinM.tokenAddress = twinS.tokenAddress;
-                    uint256 gasLeft = gasleft();
-                    if (gasLeft > reservedGas && twinM.tokenAddress.isContract()) {
-                        address to = twinM.tokenAddress;
 
-                        // Handle the return value with assembly to avoid return bomb attack
-                        bytes memory result;
-                        assembly {
-                            success := call(
-                                sub(gasLeft, reservedGas), // gasleft()-reservedGas
-                                to, // twin contract
-                                0, // ether value
-                                add(data, 0x20), // invocation calldata
-                                mload(data), // calldata length
-                                add(result, 0x20), // store return data at result
-                                0x20 // store at most 32 bytes
-                            )
+                    // Reduce minimum gas required for succesful execution
+                    reservedGas -= SINGLE_TWIN_RESERVED_GAS;
 
-                            let returndataSize := returndatasize()
-
-                            switch gt(returndataSize, 0x20)
-                            case 0 {
-                                // Adjust result length in case it's shorter than 32 bytes
-                                mstore(result, returndataSize)
-                            }
-                            case 1 {
-                                // If return data is longer than 32 bytes, consider transfer unsuccesful
-                                success := false
-                            }
-                        }
-
-                        // Check if result is empty or if result is a boolean and is true
-                        success =
-                            success &&
-                            (result.length == 0 || (result.length == 32 && abi.decode(result, (uint256)) == 1));
+                    unchecked {
+                        i++;
                     }
-                }
-
-                twinM.id = twinS.id;
-
-                // If token transfer failed
-                if (!success) {
-                    transferFailed = true;
-
-                    emit TwinTransferFailed(
-                        twinM.id,
-                        twinM.tokenAddress,
-                        _exchange.id,
-                        twinM.tokenId,
-                        twinM.amount,
-                        sender
-                    );
-                } else {
-                    ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-                    uint256 exchangeId = _exchange.id;
-
-                    {
-                        // Store twin receipt on twinReceiptsByExchange
-                        TwinReceipt storage twinReceipt = lookups.twinReceiptsByExchange[exchangeId].push();
-                        twinReceipt.twinId = twinM.id;
-                        twinReceipt.tokenAddress = twinM.tokenAddress;
-                        twinReceipt.tokenId = twinM.tokenId;
-                        twinReceipt.amount = twinM.amount;
-                        twinReceipt.tokenType = twinM.tokenType;
-                    }
-                    if (twinM.tokenType == TokenType.NonFungibleToken) {
-                        updateNFTRanges(lookups, twinM, sellerId);
-                    }
-                    emit TwinTransferred(twinM.id, twinM.tokenAddress, exchangeId, twinM.tokenId, twinM.amount, sender);
-                }
-
-                // Reduce minimum gas required for succesful execution
-                reservedGas -= SINGLE_TWIN_RESERVED_GAS;
-
-                unchecked {
-                    i++;
                 }
             }
         }
@@ -1214,7 +1210,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         Condition storage _condition,
         uint256 _tokenId
     ) internal view returns (bool) {
-        return (IERC721(_condition.tokenAddress).ownerOf(_tokenId) == _buyer);
+        return IERC721(_condition.tokenAddress).ownerOf(_tokenId) == _buyer;
     }
 
     /**
@@ -1333,7 +1329,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
     ) internal {
         // Get all ranges of twins that belong to the seller and to the same token address.
         TokenRange[] storage twinRanges = _lookups.twinRangesBySeller[_sellerId][_twin.tokenAddress];
-
         bool unlimitedSupply = _twin.supplyAvailable == type(uint256).max;
 
         uint256 rangeIndex = _lookups.rangeIdByTwin[_twin.id] - 1;
@@ -1341,10 +1336,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
 
         if (unlimitedSupply ? range.end == _twin.tokenId : range.start == _twin.tokenId) {
             uint256 lastIndex = twinRanges.length - 1;
-
             if (rangeIndex != lastIndex) {
                 // Replace range with last range
                 twinRanges[rangeIndex] = twinRanges[lastIndex];
+                _lookups.rangeIdByTwin[range.twinId] = rangeIndex + 1;
             }
 
             // Remove from ranges mapping

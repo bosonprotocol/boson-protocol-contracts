@@ -17,7 +17,7 @@ exports.RoleAssignments = {
   mumbai: {
     AdminAddress: {
       // do not change name
-      roles: [Role.ADMIN, Role.UPGRADER],
+      roles: [Role.ADMIN, Role.UPGRADER, Role.PAUSER],
     },
 
     // For minting vouchers
@@ -41,6 +41,19 @@ exports.RoleAssignments = {
   },
 
   mainnet: {
+    AdminAddress: {
+      // do not change name
+      roles: [Role.ADMIN, Role.UPGRADER],
+    },
+
+    // For minting vouchers
+    ProtocolDiamond: {
+      // contract name must match name in /addresses/<chainId>-<network>.json
+      roles: [Role.PROTOCOL],
+    },
+  },
+
+  goerli: {
     AdminAddress: {
       // do not change name
       roles: [Role.ADMIN, Role.UPGRADER],

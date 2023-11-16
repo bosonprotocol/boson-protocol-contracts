@@ -243,7 +243,8 @@ library FundsLib {
     }
 
     /**
-     * @notice Takes the exchange id and releases the funds to all intermediate resellers, depending on the state of the exchange.
+     * @notice Takes the exchange id and releases the funds to original seller if offer.priceType is Discovery
+     * and to all intermediate resellers in case of sequential commit, depending on the state of the exchange.
      * It is called only from releaseFunds. Protocol fee and royalties are calculated and returned to releaseFunds, where they are added to the total.
      *
      * Emits FundsReleased events for non zero payoffs.
@@ -270,7 +271,7 @@ library FundsLib {
 
             exchangeCosts = pe.exchangeCosts[_exchangeId];
 
-            // if no sequential commit happened, just return
+            // if price type was static and no sequential commit happened, just return
             if (exchangeCosts.length == 0) {
                 return (0, 0);
             }
@@ -355,7 +356,7 @@ library FundsLib {
     }
 
     /**
-     * @notice Forwared values to increaseAvailableFunds and emits notifies external listeners.
+     * @notice Forwards values to increaseAvailableFunds and emits notifies external listeners.
      *
      * Emits FundsReleased events
      *
@@ -406,6 +407,13 @@ library FundsLib {
         }
     }
 
+    /**
+     * @notice Same as transferFundsToProtocol(address _tokenAddress, address _from, uint256 _amount),
+     * but _from is message sender
+     *
+     * @param _tokenAddress - address of the token to be transferred
+     * @param _amount - amount to be transferred
+     */
     function transferFundsToProtocol(address _tokenAddress, uint256 _amount) internal {
         transferFundsToProtocol(_tokenAddress, EIP712Lib.msgSender(), _amount);
     }
@@ -421,6 +429,7 @@ library FundsLib {
      * - Contract at token address does not support ERC20 function transfer
      * - Available funds is less than amount to be decreased
      *
+     * @param _entityId - id of entity for which funds should be decreased, or 0 for protocol
      * @param _tokenAddress - address of the token to be transferred
      * @param _to - address of the recipient
      * @param _amount - amount to be transferred
@@ -441,6 +450,20 @@ library FundsLib {
         emit FundsWithdrawn(_entityId, _to, _tokenAddress, _amount, EIP712Lib.msgSender());
     }
 
+    /**
+     * @notice Tries to transfer native currency or tokens from the protocol to the recipient.
+     *
+     * Emits ERC20 Transfer event in call stack if ERC20 token is withdrawn and transfer is successful.
+     *
+     * Reverts if:
+     * - Transfer of native currency is not successful (i.e. recipient is a contract which reverted)
+     * - Contract at token address does not support ERC20 function transfer
+     * - Available funds is less than amount to be decreased
+     *
+     * @param _tokenAddress - address of the token to be transferred
+     * @param _to - address of the recipient
+     * @param _amount - amount to be transferred
+     */
     function transferFundsFromProtocol(address _tokenAddress, address payable _to, uint256 _amount) internal {
         // try to transfer the funds
         if (_tokenAddress == address(0)) {

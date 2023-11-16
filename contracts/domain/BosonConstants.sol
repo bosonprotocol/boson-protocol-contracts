@@ -125,6 +125,7 @@ string constant INVALID_RANGE_LENGTH = "Range length is too large or zero";
 string constant UNEXPECTED_ERC721_RECEIVED = "Unexpected ERC721 received";
 string constant FEE_AMOUNT_TOO_HIGH = "Fee amount is too high";
 string constant VOUCHER_NOT_RECEIVED = "Voucher not received";
+string constant NEGATIVE_PRICE_NOT_ALLOWED = "Negative price not allowed";
 
 // Revert Reasons: Twin related
 uint256 constant SINGLE_TWIN_RESERVED_GAS = 160000;
@@ -266,3 +267,5 @@ string constant INVALID_PRICE_TYPE = "Invalid price type";
 string constant INVALID_PRICE_DISCOVERY = "Invalid price discovery argument";
 string constant INCOMING_VOUCHER_ALREADY_SET = "Incoming voucher already set";
 string constant NEW_OWNER_AND_BUYER_MUST_MATCH = "New owner and buyer must match";
+string constant PRICE_DISCOVERY_CONTRACTS_NOT_SET = "PriceDiscoveryContract and Conduit must be set";
+string constant TOKEN_ID_NOT_SET = "Token id not set";

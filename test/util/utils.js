@@ -462,11 +462,8 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
   ];
 
   const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
-  // ToDO: why this commented?
-  //facetsToDeploy["SequentialCommitHandlerFacet"].constructorArgs = [wethAddress || ethers.constants.AddressZero];
-  //  facetsToDeploy["ExchangeHandlerFacet"].constructorArgs = [1];
-  //facetsToDeploy["PriceDiscoveryHandlerFacet"].constructorArgs = [wethAddress || ethers.constants.AddressZero];
-  // facetsToDeploy["SequentialCommitHandlerFacet"].constructorArgs = [wethAddress || ZeroAddress];
+  facetsToDeploy["SequentialCommitHandlerFacet"].constructorArgs[0] = wethAddress || ZeroAddress; // update only weth address
+  facetsToDeploy["PriceDiscoveryHandlerFacet"].constructorArgs[0] = wethAddress || ZeroAddress; // update only weth address
 
   // Cut the protocol handler facets into the Diamond
   await deployAndCutFacets(await protocolDiamond.getAddress(), facetsToDeploy, maxPriorityFeePerGas);

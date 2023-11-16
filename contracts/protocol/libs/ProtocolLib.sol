@@ -28,7 +28,6 @@ library ProtocolLib {
         address voucherBeacon;
         // Address of the Boson Beacon proxy implementation
         address beaconProxy;
-        address weth;
     }
 
     // Protocol limits storage
@@ -200,8 +199,6 @@ library ProtocolLib {
         mapping(uint256 => bytes32) sellerSalt;
         // seller salt => is used
         mapping(bytes32 => bool) isUsedSellerSalt;
-        // token id => price discovery contract
-        mapping(uint256 => address) priceDiscoveryContractByVoucher;
     }
 
     // Incrementing id counters

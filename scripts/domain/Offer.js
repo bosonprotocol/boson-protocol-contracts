@@ -145,7 +145,7 @@ class Offer {
       metadataHash,
       voided,
       collectionIndex: collectionIndex.toString(),
-      priceType,
+      priceType: Number(priceType),
     });
   }
 
@@ -287,10 +287,6 @@ class Offer {
     return booleanIsValid(this.voided);
   }
 
-  priceTypeIsValid() {
-    return enumIsValid(this.priceType, PriceType);
-  }
-
   /**
    * Is this Offer instance's collectionIndex field valid?
    * Must be a string representation of a big number
@@ -298,6 +294,14 @@ class Offer {
    */
   collectionIndexIsValid() {
     return bigNumberIsValid(this.collectionIndex);
+  }
+
+  /**
+   * Is this Offer instance's priceType field valid?
+   * @returns {boolean}
+   */
+  priceTypeIsValid() {
+    return enumIsValid(this.priceType, PriceType.Types);
   }
 
   /**

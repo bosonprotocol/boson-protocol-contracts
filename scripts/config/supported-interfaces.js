@@ -27,6 +27,8 @@ const interfaceImplementers = {
   ERC165Facet: "IERC165Extended",
   ConfigHandlerFacet: "IBosonConfigHandler",
   ProtocolInitializationHandlerFacet: "IBosonProtocolInitializationHandler",
+  SequentialCommitHandlerFacet: "IBosonSequentialCommitHandler",
+  PriceDiscoveryHandlerFacet: "IBosonPriceDiscoveryHandler",
 };
 
 let interfacesCache; // if getInterfaceIds is called multiple times (e.g. during tests), calculate ids only once and store them to cache

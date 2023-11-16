@@ -533,23 +533,6 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         return address(DiamondLib.diamondStorage().accessController);
     }
 
-    /**
-     * @notice Sets WETH address.
-     *
-     * Emits a WETHAddressChanged event if successful.
-     *
-     * Reverts if _weth is the zero address
-     *
-     * @dev Caller must have ADMIN role.
-     *
-     * @param _weth - the WETH contract address
-     */
-    function setWeth(address payable _weth) external override onlyRole(ADMIN) nonReentrant {
-        require(_weth != address(0), INVALID_ADDRESS);
-        protocolAddresses().token = _weth;
-        emit WethAddressChanged(_weth, msgSender());
-    }
-
     function checkNonZero(uint256 _value) internal pure {
         require(_value != 0, VALUE_ZERO_NOT_ALLOWED);
     }
