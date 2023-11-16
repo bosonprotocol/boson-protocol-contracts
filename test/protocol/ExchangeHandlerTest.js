@@ -842,7 +842,7 @@ describe("IBosonExchangeHandler", function () {
             .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
-          // Attempt to commit to the not availabe offer, expecting revert
+          // Attempt to commit to the not available offer, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), ++offerId, { value: price })
           ).to.revertedWith(RevertReasons.OFFER_NOT_AVAILABLE);
@@ -864,7 +864,7 @@ describe("IBosonExchangeHandler", function () {
           await offerHandler
             .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
-          // Commit to offer, so it's not availble anymore
+          // Commit to offer, so it's not available anymore
           await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), ++offerId, { value: price });
 
           // Attempt to commit to the sold out offer, expecting revert
@@ -1453,7 +1453,7 @@ describe("IBosonExchangeHandler", function () {
           await offerHandler
             .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
-          // Commit to offer, so it's not availble anymore
+          // Commit to offer, so it's not available anymore
           await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), ++offerId, { value: price });
 
           // Attempt to commit to the sold out offer, expecting revert
@@ -2420,7 +2420,7 @@ describe("IBosonExchangeHandler", function () {
           // add offer to group
           await groupHandler.connect(assistant).addOffersToGroup(groupId, [++offerId]);
 
-          // Commit to offer, so it's not availble anymore
+          // Commit to offer, so it's not available anymore
           await exchangeHandler
             .connect(buyer)
             .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price });

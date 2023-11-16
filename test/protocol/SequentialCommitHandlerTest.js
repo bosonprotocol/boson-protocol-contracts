@@ -425,7 +425,7 @@ describe("IBosonSequentialCommitHandler", function () {
               .connect(buyer2)
               .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 });
 
-            // Get the next exchange id and ensure it was incremented by the creation of the offer
+            // Get the next exchange id and ensure it was incremented
             const nextExchangeIdAfter = await exchangeHandler.connect(rando).getNextExchangeId();
             expect(nextExchangeIdAfter).to.equal(nextExchangeIdBefore);
           });
@@ -573,7 +573,7 @@ describe("IBosonSequentialCommitHandler", function () {
             });
 
             it("exchange id is invalid", async function () {
-              // An invalid offer id
+              // An invalid exchange id
               exchangeId = "666";
               tokenId = deriveTokenId(offer.id, exchangeId);
 
@@ -691,7 +691,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(buyer2)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
-              ).to.revertedWith(RevertReasons.VOUCHER_NOT_RECEIVED);
+              ).to.revertedWith(RevertReasons.TOKEN_ID_MISMATCH);
             });
           });
         });
@@ -1023,7 +1023,7 @@ describe("IBosonSequentialCommitHandler", function () {
               .connect(reseller)
               .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery);
 
-            // Get the next exchange id and ensure it was incremented by the creation of the offer
+            // Get the next exchange id and ensure it was incremented
             const nextExchangeIdAfter = await exchangeHandler.connect(rando).getNextExchangeId();
             expect(nextExchangeIdAfter).to.equal(nextExchangeIdBefore);
           });
@@ -1149,7 +1149,7 @@ describe("IBosonSequentialCommitHandler", function () {
             });
 
             it("exchange id is invalid", async function () {
-              // An invalid offer id
+              // An invalid exchange id
               exchangeId = "666";
               tokenId = deriveTokenId(offer.id, exchangeId);
 

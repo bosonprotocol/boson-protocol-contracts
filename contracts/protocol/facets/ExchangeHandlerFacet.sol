@@ -671,15 +671,23 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         if (offer.priceType == PriceType.Discovery) {
             //  transaction start from `commitToPriceDiscoveryOffer`, should commit
             if (ps.incomingVoucherCloneAddress != address(0)) {
-                // Avoid reentrancy
-                require(ps.incomingVoucherId == 0, INCOMING_VOUCHER_ALREADY_SET);
+                // During price discovery, the voucher is firs transferred to the protocol, which should
+                // not resulte in a commit yet. The commit should happen when the voucher is transferred
+                // from the protocol to the buyer.
+                if (_to == address(this)) {
+                    // can someone buys on protocol's behalf? what happens then
 
-                // Store the information about incoming voucher
-                ps.incomingVoucherId = _tokenId;
+                    // Avoid reentrancy
+                    require(ps.incomingVoucherId == 0, INCOMING_VOUCHER_ALREADY_SET);
 
-                commitToOfferInternal(_to, offer, exchangeId, true);
+                    // Store the information about incoming voucher
+                    ps.incomingVoucherId = _tokenId;
+                } else {
+                    require(ps.incomingVoucherId == _tokenId, TOKEN_ID_MISMATCH);
+                    commitToOfferInternal(_to, offer, exchangeId, true);
 
-                committed = true;
+                    committed = true;
+                }
                 // Only seller can transfer voucher without calling commitToOfferInternal, this is necessary to deposit voucher into wrapper contracts
             } else if (_from != seller.assistant && _from != bosonVoucher) {
                 revert(ACCESS_DENIED);

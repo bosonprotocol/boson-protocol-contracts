@@ -83,6 +83,12 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
         // Make sure buyer address is not zero address
         require(_buyer != address(0), INVALID_ADDRESS);
 
+        // Make sure caller provided price discovery data
+        require(
+            _priceDiscovery.priceDiscoveryContract != address(0) && _priceDiscovery.priceDiscoveryData.length > 0,
+            INVALID_PRICE_DISCOVERY
+        );
+
         uint256 exchangeId = _tokenId & type(uint128).max;
 
         // Exchange must exist
@@ -103,18 +109,13 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
             seller = currentBuyer.wallet;
         }
 
-        address sender = msgSender();
-        if (_priceDiscovery.side == Side.Bid) {
-            require(seller == sender, NOT_VOUCHER_HOLDER);
-        }
-
         // Fetch offer
         uint256 offerId = exchange.offerId;
         (, Offer storage offer) = fetchOffer(offerId);
 
         // First call price discovery and get actual price
         // It might be lower than submitted for buy orders and higher for sell orders
-        exchangeCost.price = fulfilOrder(_tokenId, offer, _priceDiscovery, _buyer);
+        exchangeCost.price = fulfilOrder(_tokenId, offer, _priceDiscovery, seller, _buyer);
 
         // Get token address
         address exchangeToken = offer.exchangeToken;
@@ -190,6 +191,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
 
         // Since exchange and voucher are passed by reference, they are updated
         uint256 buyerId = exchange.buyerId;
+        address sender = msgSender();
         if (exchangeCost.price > 0) emit FundsEncumbered(buyerId, exchangeToken, exchangeCost.price, sender);
         if (payout > 0) {
             emit FundsReleased(exchangeId, exchangeCost.resellerId, exchangeToken, payout, sender);

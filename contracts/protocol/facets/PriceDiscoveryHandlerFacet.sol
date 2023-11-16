@@ -76,6 +76,9 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
         uint256 _tokenIdOrOfferId,
         PriceDiscovery calldata _priceDiscovery
     ) external payable override exchangesNotPaused buyersNotPaused {
+        // Make sure buyer address is not zero address
+        require(_buyer != address(0), INVALID_ADDRESS);
+
         // Make sure caller provided price discovery data
         require(
             _priceDiscovery.priceDiscoveryContract != address(0) && _priceDiscovery.priceDiscoveryData.length > 0,
@@ -107,11 +110,18 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
 
         // Make sure offer type is price discovery. Otherwise, use commitToOffer
         require(offer.priceType == PriceType.Discovery, INVALID_PRICE_TYPE);
+        uint256 sellerId = offer.sellerId;
 
         uint256 actualPrice;
+        {
+            // Get seller address
+            address _seller;
+            (, Seller storage seller, ) = fetchSeller(sellerId);
+            _seller = seller.assistant;
 
-        // Calls price discovery contract and gets the actual price. Use token id if caller has provided one, otherwise use offer id and accepts any voucher.
-        actualPrice = fulfilOrder(isTokenId ? _tokenIdOrOfferId : 0, offer, _priceDiscovery, _buyer);
+            // Calls price discovery contract and gets the actual price. Use token id if caller has provided one, otherwise use offer id and accepts any voucher.
+            actualPrice = fulfilOrder(isTokenId ? _tokenIdOrOfferId : 0, offer, _priceDiscovery, _seller, _buyer);
+        }
 
         // Fetch token id on protocol status
         uint256 tokenId = protocolStatus().incomingVoucherId;
@@ -122,27 +132,49 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
         ExchangeCosts[] storage exchangeCosts = protocolEntities().exchangeCosts[exchangeId];
 
         // Calculate fees
-        uint256 protocolFeeAmount = getProtocolFee(offer.exchangeToken, actualPrice);
+        address exchangeToken = offer.exchangeToken;
+        uint256 protocolFeeAmount = getProtocolFee(exchangeToken, actualPrice);
 
-        // Calculate royalties
-        uint256 sellerId = offer.sellerId;
-        (, uint256 royaltyAmount) = IBosonVoucher(getCloneAddress(protocolLookups(), sellerId, offer.collectionIndex))
-            .royaltyInfo(exchangeId, actualPrice);
+        {
+            // Calculate royalties
+            (, uint256 royaltyAmount) = IBosonVoucher(
+                getCloneAddress(protocolLookups(), sellerId, offer.collectionIndex)
+            ).royaltyInfo(exchangeId, actualPrice);
 
-        // Verify that fees and royalties are not higher than the price.
-        require((protocolFeeAmount + royaltyAmount) <= actualPrice, FEE_AMOUNT_TOO_HIGH);
+            // Verify that fees and royalties are not higher than the price.
+            require((protocolFeeAmount + royaltyAmount) <= actualPrice, FEE_AMOUNT_TOO_HIGH);
 
-        // Store exchange costs so it can be released later. This is the first cost entry for this exchange.
-        exchangeCosts.push(
-            ExchangeCosts({
-                resellerId: sellerId,
-                price: actualPrice,
-                protocolFeeAmount: protocolFeeAmount,
-                royaltyAmount: royaltyAmount
-            })
-        );
-
+            // Store exchange costs so it can be released later. This is the first cost entry for this exchange.
+            exchangeCosts.push(
+                ExchangeCosts({
+                    resellerId: sellerId,
+                    price: actualPrice,
+                    protocolFeeAmount: protocolFeeAmount,
+                    royaltyAmount: royaltyAmount
+                })
+            );
+        }
         // Clear incoming voucher id and incoming voucher address
         clearPriceDiscoveryStorage();
+
+        (, uint256 buyerId) = getBuyerIdByWallet(_buyer);
+        if (actualPrice > 0) {
+            if (_priceDiscovery.side == Side.Ask) {
+                // Price discovery should send funds to the seller
+                // Nothing in escrow, take it from the seller's pool
+                FundsLib.decreaseAvailableFunds(sellerId, exchangeToken, actualPrice);
+
+                emit FundsEncumbered(sellerId, exchangeToken, actualPrice, msgSender());
+            } else {
+                // when bid side, we have full proceeds in escrow.
+                // If exchange token is 0, we need to unwrap it
+                if (exchangeToken == address(0)) {
+                    wNative.withdraw(actualPrice);
+                }
+                emit FundsEncumbered(buyerId, exchangeToken, actualPrice, msgSender());
+            }
+
+            // Not emitting BuyerCommitted since it's emitted in commitToOfferInternal
+        }
     }
 }

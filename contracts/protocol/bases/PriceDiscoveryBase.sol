@@ -52,6 +52,7 @@ contract PriceDiscoveryBase is ProtocolBase {
      * @param _tokenId - the id of the token. Accepts whatever token is sent by price discovery contract when this value is zero.
      * @param _offer - the fully populated BosonTypes.Offer struct
      * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
+     * @param _seller - the seller's address
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @return actualPrice - the actual price of the order
      */
@@ -59,6 +60,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         uint256 _tokenId,
         Offer storage _offer,
         PriceDiscovery calldata _priceDiscovery,
+        address _seller,
         address _buyer
     ) internal returns (uint256 actualPrice) {
         require(
@@ -86,7 +88,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         } else if (_priceDiscovery.side == Side.Ask) {
             return fulfilAskOrder(_tokenId, exchangeToken, _priceDiscovery, _buyer, bosonVoucher);
         } else {
-            return fulfilBidOrder(_tokenId, exchangeToken, _priceDiscovery, bosonVoucher);
+            return fulfilBidOrder(_tokenId, exchangeToken, _priceDiscovery, _seller, bosonVoucher);
         }
 
         // Gets new owner
@@ -227,6 +229,7 @@ contract PriceDiscoveryBase is ProtocolBase {
      * @param _tokenId - the id of the token
      * @param _exchangeToken - the address of the exchange token
      * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
+     * @param _seller - the seller's address
      * @param _bosonVoucher - the boson voucher contract
      * @return actualPrice - the actual price of the order
      */
@@ -234,13 +237,17 @@ contract PriceDiscoveryBase is ProtocolBase {
         uint256 _tokenId,
         address _exchangeToken,
         PriceDiscovery calldata _priceDiscovery,
+        address _seller,
         IBosonVoucher _bosonVoucher
     ) internal returns (uint256 actualPrice) {
         require(_tokenId != 0, TOKEN_ID_MANDATORY);
 
+        address sender = msgSender();
+        require(_seller == sender, NOT_VOUCHER_HOLDER);
+
         // Transfer seller's voucher to protocol
         // Don't need to use safe transfer from, since that protocol can handle the voucher
-        _bosonVoucher.transferFrom(msgSender(), address(this), _tokenId);
+        _bosonVoucher.transferFrom(sender, address(this), _tokenId);
 
         // Approve conduit to transfer voucher. There is no need to reset approval afterwards, since protocol is not the voucher owner anymore
         _bosonVoucher.approve(_priceDiscovery.conduit, _tokenId);
@@ -265,7 +272,7 @@ contract PriceDiscoveryBase is ProtocolBase {
             // Return the surplus to seller
             FundsLib.transferFundsFromProtocol(
                 address(0),
-                payable(msgSender()),
+                payable(sender),
                 protocolNativeBalanceAfter - protocolNativeBalanceBefore
             );
         }
