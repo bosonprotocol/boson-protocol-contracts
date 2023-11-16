@@ -691,7 +691,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(buyer2)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
-              ).to.revertedWith(RevertReasons.TOKEN_ID_MISMATCH);
+              ).to.revertedWith(RevertReasons.VOUCHER_NOT_RECEIVED);
             });
           });
         });

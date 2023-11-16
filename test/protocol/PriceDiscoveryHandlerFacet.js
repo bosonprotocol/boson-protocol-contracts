@@ -322,7 +322,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
           // Commit to offer
           await priceDiscoveryHandler
             .connect(buyer)
-            .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price });
+            .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price, gasPrice: 0 });
 
           // Get the exchange as a struct
           const [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchangeId);
@@ -432,7 +432,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             await expect(
               priceDiscoveryHandler
                 .connect(buyer)
-                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price, gasPrice: 0 })
             ).to.revertedWith(RevertReasons.REGION_PAUSED);
           });
 
@@ -1020,6 +1020,30 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               .connect(buyer)
               .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
           ).to.revertedWith(RevertReasons.UNEXPECTED_ERC721_RECEIVED);
+        });
+      });
+    });
+
+    context("👉 onPremintedVoucherTransferred()", async function () {
+      context("💔 Revert Reasons", async function () {
+        it("Only the initial owner can transfer the preminted voucher without starting the commit", async function () {
+          // Instead of deploying a mock contract, simulate the price discovery contract with EOA
+          const priceDiscoveryContract = rando;
+
+          // Transfer a preminted voucher to the price discovery contract
+          // Make sure it does not trigger the commit
+          const tokenId = deriveTokenId(offer.id, exchangeId);
+          await expect(
+            bosonVoucher.connect(assistant).transferFrom(assistant.address, priceDiscoveryContract.address, tokenId)
+          ).to.not.emit(priceDiscoveryHandler, "BuyerCommitted");
+
+          // Price discovery contract transfers the voucher to someone else without
+          // being invoked via commitToPriceDiscoveryOffer()
+          await expect(
+            bosonVoucher
+              .connect(priceDiscoveryContract)
+              .transferFrom(priceDiscoveryContract.address, buyer.address, tokenId)
+          ).to.be.revertedWith(RevertReasons.ACCESS_DENIED);
         });
       });
     });
