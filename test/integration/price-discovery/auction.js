@@ -160,10 +160,6 @@ describe("[@skip-on-coverage] auction integration", function () {
       let wrappedBosonVoucher;
 
       beforeEach(async function () {
-        // 1. Deploy Zora Auction
-        // const ZoraAuctionFactory = await ethers.getContractFactory("AuctionHouse");
-        // const zoraAuction = await ZoraAuctionFactory.deploy(weth.address);
-
         // 2. Create wrapped voucher
         const wrappedBosonVoucherFactory = await ethers.getContractFactory("ZoraWrapper");
         const wrappedBosonVoucher = await wrappedBosonVoucherFactory

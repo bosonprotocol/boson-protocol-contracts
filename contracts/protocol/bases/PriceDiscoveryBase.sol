@@ -122,6 +122,8 @@ contract PriceDiscoveryBase is ProtocolBase {
         address balanceToCheck = address(this);
 
         // Check balance before calling wrapper
+        bool isNative = _exchangeToken == address(0);
+        if (isNative) _exchangeToken = address(wNative);
         uint256 balanceBefore = getBalance(_exchangeToken, balanceToCheck);
 
         // Call the price discovery contract
@@ -130,13 +132,15 @@ contract PriceDiscoveryBase is ProtocolBase {
         // Check balance after the price discovery call
         uint256 balanceAfter = getBalance(_exchangeToken, balanceToCheck);
 
-        // Calculate actual price
-        actualPrice = balanceAfter - balanceBefore;
-
         // Verify that actual price is within the expected range
         if (_priceDiscovery.side == Side.Ask) {
+            require(balanceAfter <= balanceBefore, NEGATIVE_PRICE_NOT_ALLOWED);
+            actualPrice = balanceBefore - balanceAfter;
             require(actualPrice <= _priceDiscovery.price, PRICE_TOO_HIGH);
         } else {
+            require(balanceAfter >= balanceBefore, NEGATIVE_PRICE_NOT_ALLOWED);
+            actualPrice = balanceAfter - balanceBefore;
+            if (isNative) wNative.withdraw(actualPrice);
             require(actualPrice >= _priceDiscovery.price, PRICE_TOO_LOW);
         }
 

@@ -11,6 +11,7 @@ import { IERC165 } from "../../interfaces/IERC165.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC721Receiver } from "../../interfaces/IERC721Receiver.sol";
 
 /**
  * @title ZoraWrapper
@@ -41,7 +42,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * N.B. Although Zora Auction House can send ethers, it's preffered to receive
  * WETH instead. For that reason `receive` is not implemented, so it automatically sends WETH.
  */
-contract ZoraWrapper is BosonTypes, ERC721 {
+contract ZoraWrapper is BosonTypes, ERC721, IERC721Receiver {
     // Add safeTransferFrom to IERC20
     using SafeERC20 for IERC20;
 
@@ -59,6 +60,8 @@ contract ZoraWrapper is BosonTypes, ERC721 {
 
     // Mapping to cache exchange token address, so costly call to the protocol is not needed every time.
     mapping(uint256 => address) private cachedExchangeToken;
+
+    mapping(uint256 => address) private wrapper;
 
     /**
      * @notice Constructor
@@ -106,10 +109,12 @@ contract ZoraWrapper is BosonTypes, ERC721 {
         IERC721(voucherAddress).transferFrom(msg.sender, address(this), _tokenId);
 
         // Mint to itself, so it can be used with Zora Auction House
-        _mint(address(this), _tokenId);
+        _mint(address(this), _tokenId); // why not sender instead of address(this)?
 
         // Approves original token owner to operate on wrapped token
         _approve(msg.sender, _tokenId);
+
+        wrapper[_tokenId] = msg.sender;
     }
 
     /**
@@ -122,6 +127,7 @@ contract ZoraWrapper is BosonTypes, ERC721 {
      */
     function unwrap(uint256 _tokenId) external {
         address wrappedVoucherOwner = ownerOf(_tokenId);
+        if (wrappedVoucherOwner == address(this)) wrappedVoucherOwner = wrapper[_tokenId];
 
         // Either contract owner or protocol can unwrap
         // If contract owner is unwrapping, this is equivalent to canceled auction
@@ -149,6 +155,7 @@ contract ZoraWrapper is BosonTypes, ERC721 {
         }
 
         delete cachedExchangeToken[_tokenId]; // gas refund
+        delete wrapper[_tokenId];
 
         // Burn wrapped voucher
         _burn(_tokenId);
@@ -240,5 +247,14 @@ contract ZoraWrapper is BosonTypes, ERC721 {
     function getVoucherSymbol(address _voucherAddress) internal view returns (string memory) {
         string memory symbol = IERC721Metadata(_voucherAddress).symbol();
         return string.concat("W", symbol);
+    }
+
+    /**
+     * @dev See {IERC721Receiver-onERC721Received}.
+     *
+     * Always returns `IERC721Receiver.onERC721Received.selector`.
+     */
+    function onERC721Received(address, address, uint256, bytes calldata) public virtual override returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 }

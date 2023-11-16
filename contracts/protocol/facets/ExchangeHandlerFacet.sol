@@ -683,14 +683,27 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
                     // Store the information about incoming voucher
                     ps.incomingVoucherId = _tokenId;
                 } else {
-                    require(ps.incomingVoucherId == _tokenId, TOKEN_ID_MISMATCH);
+                    if (ps.incomingVoucherId == 0) {
+                        // Happens in wrapped voucher vase
+                        ps.incomingVoucherId = _tokenId;
+                    } else {
+                        // In other cases voucher was already once transferred to the protocol,
+                        // so ps.incomingVoucherId is set already. The incoming _tokenId must match.
+                        require(ps.incomingVoucherId == _tokenId, TOKEN_ID_MISMATCH);
+                    }
                     commitToOfferInternal(_to, offer, exchangeId, true);
 
                     committed = true;
                 }
                 // Only seller can transfer voucher without calling commitToOfferInternal, this is necessary to deposit voucher into wrapper contracts
             } else if (_from != seller.assistant && _from != bosonVoucher) {
-                revert(ACCESS_DENIED);
+                if (_to == seller.assistant || _to == bosonVoucher) {
+                    // Withdrawin non-committed voucher from wrapper contract
+                    return false;
+                } else {
+                    // Forbidden transfer since it would circumvent the price discovery mechanism
+                    revert(ACCESS_DENIED);
+                }
             }
         } else if (offer.priceType == PriceType.Static) {
             // If price type is static, transaction can start from anywhere
