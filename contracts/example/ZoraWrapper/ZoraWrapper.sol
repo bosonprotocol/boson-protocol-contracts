@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
+import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { ERC721 } from "./../support/ERC721.sol";
 import { IERC721Metadata } from "./../support/IERC721Metadata.sol";
@@ -40,7 +41,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * N.B. Although Zora Auction House can send ethers, it's preffered to receive
  * WETH instead. For that reason `receive` is not implemented, so it automatically sends WETH.
  */
-contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
+contract ZoraWrapper is BosonTypes, ERC721 {
     // Add safeTransferFrom to IERC20
     using SafeERC20 for IERC20;
 
@@ -78,7 +79,6 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
 
         // Approve Zora Auction House to transfer wrapped vouchers
         _setApprovalForAll(address(this), _zoraAuctionHouseAddress, true);
-        _setApprovalForAll(address(this), msg.sender, true); // msg.sender is the owner of this contract and must be approved to transfer wrapped vouchers to Auction House
     }
 
     /**
@@ -92,16 +92,14 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
     }
 
     /**
-     * @notice Wraps the voucher, transfer true voucher to itself and funds to the protocol.
+     * @notice Wraps the voucher, transfer true voucher to itself and approves the contract owner to operate on it.
      *
      * Reverts if:
      *  - caller is not the contract owner
      *
      * @param _tokenId The token id.
      */
-    function wrap(uint256 _tokenId) external onlyOwner {
-        // should wrapping be limited to onlyOwner?
-
+    function wrap(uint256 _tokenId) external {
         // Transfer voucher to this contract
         // Instead of msg.sender it could be voucherAddress, if vouchers were preminted to contract itself
         // Not using safeTransferFrom since this contract is the recipient and we are sure it can handle the vouchers
@@ -110,8 +108,8 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
         // Mint to itself, so it can be used with Zora Auction House
         _mint(address(this), _tokenId);
 
-        // Approves contract owner to operate on wrapped token
-        _approve(owner(), _tokenId);
+        // Approves original token owner to operate on wrapped token
+        _approve(msg.sender, _tokenId);
     }
 
     /**
@@ -133,7 +131,7 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
         );
 
         // If some token price is not know yet, update it now
-        if (pendingTokenId != 0) updatePendingTokenPrice(pendingTokenId);
+        if (pendingTokenId != 0) updatePendingTokenPrice();
 
         uint256 priceToPay = price[_tokenId];
 
@@ -142,7 +140,7 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
         delete pendingTokenId;
 
         // transfer voucher to voucher owner
-        IERC721(voucherAddress).safeTransferFrom(address(this), ownerOf(_tokenId), _tokenId);
+        IERC721(voucherAddress).safeTransferFrom(address(this), wrappedVoucherOwner, _tokenId);
 
         // Transfer token to protocol
         if (priceToPay > 0) {
@@ -169,18 +167,19 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
             // If recipient is address(this), it means the auction was canceled and price updating can be skipped
 
             // If some token price is not know yet, update it now
-            if (pendingTokenId != 0) updatePendingTokenPrice(pendingTokenId);
+            if (pendingTokenId != 0) updatePendingTokenPrice();
 
             // Store current balance and set the pending token id
-            price[pendingTokenId] = getCurrentBalance(_tokenId);
+            price[_tokenId] = getCurrentBalance(_tokenId);
             pendingTokenId = _tokenId;
         }
 
         super._beforeTokenTransfer(_from, _to, _tokenId);
     }
 
-    function updatePendingTokenPrice(uint256 _tokenId) internal {
-        price[pendingTokenId] = getCurrentBalance(_tokenId) - price[pendingTokenId];
+    function updatePendingTokenPrice() internal {
+        uint256 tokenId = pendingTokenId;
+        price[tokenId] = getCurrentBalance(tokenId) - price[tokenId];
     }
 
     /**
@@ -196,6 +195,16 @@ contract ZoraWrapper is BosonTypes, Ownable, ERC721 {
         // If exchange token is not known, get it from the protocol.
         if (exchangeToken == address(0)) {
             uint256 offerId = _tokenId >> 128; // OfferId is the first 128 bits of the token ID.
+
+            if (offerId == 0) {
+                // pre v2.2.0. Token does not have offerId, so we need to get it from the protocol.
+                // Get Boson exchange. Don't explicitly check if the exchange exists, since existance of the token implies it does.
+                uint256 exchangeId = _tokenId & type(uint128).max; // ExchangeId is the last 128 bits of the token ID.
+                (, BosonTypes.Exchange memory exchange, ) = IBosonExchangeHandler(protocolAddress).getExchange(
+                    exchangeId
+                );
+                offerId = exchange.offerId;
+            }
 
             // Get Boson offer. Don't explicitly check if the offer exists, since existance of the token implies it does.
             (, BosonTypes.Offer memory offer, , , , ) = IBosonOfferHandler(protocolAddress).getOffer(offerId);
