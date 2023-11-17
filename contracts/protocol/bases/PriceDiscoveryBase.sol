@@ -75,26 +75,15 @@ contract PriceDiscoveryBase is ProtocolBase {
         // Set incoming voucher clone address
         protocolStatus().incomingVoucherCloneAddress = address(bosonVoucher);
 
-        address exchangeToken = _offer.exchangeToken;
-        address owner;
-
-        if (_tokenId != 0) {
-            owner = bosonVoucher.ownerOf(_tokenId);
-        }
-
-        // Handle wrapper voucher, there is no difference between ask and bid
-        if (owner == _priceDiscovery.priceDiscoveryContract) {
-            handleWrapper(_tokenId, exchangeToken, _priceDiscovery);
-        } else if (_priceDiscovery.side == Side.Ask) {
-            return fulfilAskOrder(_tokenId, exchangeToken, _priceDiscovery, _buyer, bosonVoucher);
+        if (_priceDiscovery.side == Side.Ask) {
+            return fulfilAskOrder(_tokenId, _offer.exchangeToken, _priceDiscovery, _buyer, bosonVoucher);
+        } else if (_priceDiscovery.side == Side.Bid) {
+            return fulfilBidOrder(_tokenId, _offer.exchangeToken, _priceDiscovery, _seller, bosonVoucher);
         } else {
-            return fulfilBidOrder(_tokenId, exchangeToken, _priceDiscovery, _seller, bosonVoucher);
+            // _priceDiscovery.side == Side.Wrapper
+            // Handle wrapper voucher, there is no difference between ask and bid
+            return handleWrapper(_tokenId, _offer.exchangeToken, _priceDiscovery, bosonVoucher);
         }
-
-        // Gets new owner
-        owner = bosonVoucher.ownerOf(_tokenId);
-
-        require(owner == _buyer, NEW_OWNER_AND_BUYER_MUST_MATCH);
     }
 
     /*
@@ -103,46 +92,45 @@ contract PriceDiscoveryBase is ProtocolBase {
      * Reverts if:
      * - Token id not set by the caller
      * - Protocol balance doesn't increase by the expected amount.
-     *   Balance change must be equal or greater than the price set by the caller when side is Bid
-     *   Balance change must be equal or less than the price set by the caller when side is Ask
+     *   Balance change must be equal to the price set by the caller
      * - Token id sent to buyer and token id set by the caller don't match
      *
      * @param _tokenId - the id of the token
      * @param _exchangeToken - the address of the exchange contract
      * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
+     * @param _bosonVoucher - the boson voucher contract
      * @return actualPrice - the actual price of the order
      */
     function handleWrapper(
         uint256 _tokenId,
         address _exchangeToken,
-        PriceDiscovery calldata _priceDiscovery
+        PriceDiscovery calldata _priceDiscovery,
+        IBosonVoucher _bosonVoucher
     ) internal returns (uint256 actualPrice) {
         require(_tokenId != 0, TOKEN_ID_MANDATORY);
 
-        address balanceToCheck = address(this);
+        // If price discovery contract does not own the voucher, it cannot classify as the wrapper
+        address owner = _bosonVoucher.ownerOf(_tokenId);
+        require(owner == _priceDiscovery.priceDiscoveryContract, NOT_VOUCHER_HOLDER);
 
         // Check balance before calling wrapper
         bool isNative = _exchangeToken == address(0);
         if (isNative) _exchangeToken = address(wNative);
-        uint256 balanceBefore = getBalance(_exchangeToken, balanceToCheck);
+        uint256 balanceBefore = getBalance(_exchangeToken, address(this));
 
         // Call the price discovery contract
         _priceDiscovery.priceDiscoveryContract.functionCall(_priceDiscovery.priceDiscoveryData);
 
         // Check balance after the price discovery call
-        uint256 balanceAfter = getBalance(_exchangeToken, balanceToCheck);
+        uint256 balanceAfter = getBalance(_exchangeToken, address(this));
 
         // Verify that actual price is within the expected range
-        if (_priceDiscovery.side == Side.Ask) {
-            require(balanceAfter <= balanceBefore, NEGATIVE_PRICE_NOT_ALLOWED);
-            actualPrice = balanceBefore - balanceAfter;
-            require(actualPrice <= _priceDiscovery.price, PRICE_TOO_HIGH);
-        } else {
-            require(balanceAfter >= balanceBefore, NEGATIVE_PRICE_NOT_ALLOWED);
-            actualPrice = balanceAfter - balanceBefore;
-            if (isNative) wNative.withdraw(actualPrice);
-            require(actualPrice >= _priceDiscovery.price, PRICE_TOO_LOW);
-        }
+        require(balanceAfter >= balanceBefore, NEGATIVE_PRICE_NOT_ALLOWED);
+        actualPrice = balanceAfter - balanceBefore;
+        if (isNative) wNative.withdraw(actualPrice);
+        // when working with wrappers, price is already known, so the caller should set it exactly
+        // If protocol receive more than expected, it does not return the surplus to the caller
+        require(actualPrice == _priceDiscovery.price, PRICE_TOO_LOW);
 
         // Verify that token id provided by caller matches the token id that the price discovery contract has sent to buyer
         getAndVerifyTokenId(_tokenId);

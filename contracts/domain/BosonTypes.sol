@@ -324,6 +324,7 @@ contract BosonTypes {
 
     enum Side {
         Ask,
-        Bid
+        Bid,
+        Wrapper // Side is not relevant from the protocol perspective
     }
 }
