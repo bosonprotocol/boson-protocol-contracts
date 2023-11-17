@@ -715,8 +715,10 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             // Set _isCommitable to false
             _isCommittable = false;
 
+            address rangeOwner = _rangeByOfferId[_tokenId >> 128].owner;
+
             // Call protocol onPremintedVoucherTransferred
-            bool committed = onPremintedVoucherTransferred(_tokenId, payable(_to), _from);
+            bool committed = onPremintedVoucherTransferred(_tokenId, payable(_to), _from, rangeOwner);
 
             // Set committed status
             _committed[_tokenId] = committed;

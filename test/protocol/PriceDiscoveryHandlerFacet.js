@@ -399,7 +399,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
           // Commit to offer
           tx = await priceDiscoveryHandler
             .connect(rando)
-            .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price });
+            .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price, gasPrice: 0 });
 
           // Get the block timestamp of the confirmed tx
           block = await provider.getBlock(tx.blockNumber);
@@ -433,7 +433,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             await expect(
               priceDiscoveryHandler
                 .connect(buyer)
-                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price, gasPrice: 0 })
+                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
             ).to.revertedWith(RevertReasons.REGION_PAUSED);
           });
 
@@ -929,55 +929,42 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
       context("Wrapped voucher", async function () {
         const MASK = (1n << 128n) - 1n;
-        context("Zora auction", async function () {
-          let tokenId, zoraAuction, amount, auctionId;
+        context("Mock auction", async function () {
+          let tokenId, mockAuction, amount, auctionId;
 
           beforeEach(async function () {
-            // 1. Deploy Zora Auction
-            const ZoraAuctionFactory = await getContractFactory("AuctionHouse");
-            zoraAuction = await ZoraAuctionFactory.deploy(await weth.getAddress());
+            // 1. Deploy Mock Auction
+            const MockAuctionFactory = await getContractFactory("MockAuction");
+            mockAuction = await MockAuctionFactory.deploy(await weth.getAddress());
 
             tokenId = deriveTokenId(offer.id, 2);
           });
 
           it("Transfer can't happens outside protocol", async function () {
             // 2. Set approval for all
-            await bosonVoucher.connect(assistant).setApprovalForAll(await zoraAuction.getAddress(), true);
+            await bosonVoucher.connect(assistant).setApprovalForAll(await mockAuction.getAddress(), true);
 
             // 3. Create an auction
             const tokenContract = await bosonVoucher.getAddress();
-            const duration = oneWeek;
-            const reservePrice = 1;
-            const curator = ZeroAddress;
-            const curatorFeePercentage = 0;
             const auctionCurrency = offer.exchangeToken;
+            const curator = ZeroAddress;
 
-            await zoraAuction
-              .connect(assistant)
-              .createAuction(
-                tokenId,
-                tokenContract,
-                duration,
-                reservePrice,
-                curator,
-                curatorFeePercentage,
-                auctionCurrency
-              );
+            await mockAuction.connect(assistant).createAuction(tokenId, tokenContract, auctionCurrency, curator);
 
             // 4. Bid
             auctionId = 0;
             amount = 10;
-            await zoraAuction.connect(buyer).createBid(auctionId, amount, { value: amount });
+            await mockAuction.connect(buyer).createBid(auctionId, amount, { value: amount });
 
             // Set time forward
             await getCurrentBlockAndSetTimeForward(oneWeek);
 
             // Zora should be the owner of the token
-            expect(await bosonVoucher.ownerOf(tokenId)).to.equal(await zoraAuction.getAddress());
+            expect(await bosonVoucher.ownerOf(tokenId)).to.equal(await mockAuction.getAddress());
 
             // safe transfer from will fail on onPremintedTransferredHook and transaction should fail
-            await expect(zoraAuction.connect(rando).endAuction(auctionId)).to.be.revertedWith(
-              RevertReasons.ACCESS_DENIED
+            await expect(mockAuction.connect(rando).endAuction(auctionId)).to.be.revertedWith(
+              RevertReasons.VOUCHER_TRANSFER_NOT_ALLOWED
             );
 
             // Exchange doesn't exist
@@ -997,7 +984,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
                 .connect(assistant)
                 .deploy(
                   await bosonVoucher.getAddress(),
-                  await zoraAuction.getAddress(),
+                  await mockAuction.getAddress(),
                   await exchangeHandler.getAddress(),
                   await weth.getAddress()
                 );
@@ -1008,37 +995,23 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
               // 4. Create an auction
               const tokenContract = await wrappedBosonVoucher.getAddress();
-              const duration = oneWeek;
-              const reservePrice = 1;
               const curator = assistant.address;
-              const curatorFeePercentage = 0;
               const auctionCurrency = offer.exchangeToken;
 
-              await zoraAuction
-                .connect(assistant)
-                .createAuction(
-                  tokenId,
-                  tokenContract,
-                  duration,
-                  reservePrice,
-                  curator,
-                  curatorFeePercentage,
-                  auctionCurrency
-                );
+              await mockAuction.connect(assistant).createAuction(tokenId, tokenContract, auctionCurrency, curator);
 
               auctionId = 0;
-              await zoraAuction.connect(assistant).setAuctionApproval(auctionId, true);
             });
 
             it("Auction ends normally", async function () {
               // 5. Bid
               const amount = 10;
 
-              await zoraAuction.connect(buyer).createBid(auctionId, amount, { value: amount });
+              await mockAuction.connect(buyer).createBid(auctionId, amount, { value: amount });
 
               // 6. End auction
               await getCurrentBlockAndSetTimeForward(oneWeek);
-              await zoraAuction.connect(assistant).endAuction(auctionId);
+              await mockAuction.connect(assistant).endAuction(auctionId);
 
               expect(await wrappedBosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
               expect(await weth.balanceOf(await wrappedBosonVoucher.getAddress())).to.equal(amount);
@@ -1073,7 +1046,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
             it("Cancel auction", async function () {
               // 6. Cancel auction
-              await zoraAuction.connect(assistant).cancelAuction(auctionId);
+              await mockAuction.connect(assistant).cancelAuction(auctionId);
 
               // 7. Unwrap token
               const protocolBalanceBefore = await provider.getBalance(await exchangeHandler.getAddress());
@@ -1093,7 +1066,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               // How sensible is this scenario? Should it be prevented?
 
               // 6. Cancel auction
-              await zoraAuction.connect(assistant).cancelAuction(auctionId);
+              await mockAuction.connect(assistant).cancelAuction(auctionId);
 
               // 7. Unwrap token via commitToOffer
               const protocolBalanceBefore = await provider.getBalance(await exchangeHandler.getAddress());

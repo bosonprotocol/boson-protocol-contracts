@@ -432,7 +432,6 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
       token: bosonTokenAddress || (await bosonToken.getAddress()),
       voucherBeacon: await beacon.getAddress(),
       beaconProxy: ZeroAddress,
-      weth: wethAddress || ZeroAddress,
     },
     // Protocol limits
     {

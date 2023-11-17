@@ -11,7 +11,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x8e6fd8c4
+ * The ERC-165 identifier for this interface is: 0x0e1fefcb
  */
 interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents {
     /**
@@ -220,12 +220,14 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @param _tokenId - the voucher id
      * @param _to - the receiver address
      * @param _from - the address of current owner
+     * @param _rangeOwner - the address of the preminted range owner
      * @return committed - true if the voucher was committed
      */
     function onPremintedVoucherTransferred(
         uint256 _tokenId,
         address payable _to,
-        address _from
+        address _from,
+        address _rangeOwner
     ) external returns (bool committed);
 
     /**

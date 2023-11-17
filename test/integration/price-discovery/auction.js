@@ -1,7 +1,5 @@
 const { ethers } = require("hardhat");
-const { ZeroAddress, getContractFactory, getContractAt } = ethers;
-const { RevertReasons } = require("../../../scripts/config/revert-reasons");
-
+const { ZeroAddress, getContractFactory, getContractAt, provider } = ethers;
 const {
   deriveTokenId,
   getCurrentBlockAndSetTimeForward,
@@ -33,6 +31,7 @@ describe("[@skip-on-coverage] auction integration", function () {
   let assistant, buyer, DR, rando;
   let offer, offerDates;
   let exchangeHandler;
+  let priceDiscoveryHandler;
   let weth;
   let seller;
   let snapshotId;
@@ -57,7 +56,7 @@ describe("[@skip-on-coverage] auction integration", function () {
 
     ({
       signers: [assistant, buyer, DR, rando],
-      contractInstances: { accountHandler, offerHandler, fundsHandler, exchangeHandler },
+      contractInstances: { accountHandler, offerHandler, fundsHandler, exchangeHandler, priceDiscoveryHandler },
       extraReturnValues: { bosonVoucher },
     } = await setupTestEnvironment(contracts, { wethAddress: await weth.getAddress() }));
 
@@ -117,8 +116,11 @@ describe("[@skip-on-coverage] auction integration", function () {
       const ZoraAuctionFactory = await getContractFactory("AuctionHouse");
       zoraAuction = await ZoraAuctionFactory.deploy(await weth.getAddress());
 
-      // 2. Set approval for all
       tokenId = deriveTokenId(offer.id, 2);
+    });
+
+    it("Transfer can't happens outside protocol", async function () {
+      // 2. Set approval for all
       await bosonVoucher.connect(assistant).setApprovalForAll(await zoraAuction.getAddress(), true);
 
       // 3. Create an auction
@@ -138,16 +140,14 @@ describe("[@skip-on-coverage] auction integration", function () {
       amount = 10;
       await zoraAuction.connect(buyer).createBid(auctionId, amount, { value: amount });
 
-      // 5. Set time forward
+      // Set time forward
       await getCurrentBlockAndSetTimeForward(oneWeek);
 
       // Zora should be the owner of the token
       expect(await bosonVoucher.ownerOf(tokenId)).to.equal(await zoraAuction.getAddress());
-    });
 
-    it("Transfer can't happens outside protocol", async function () {
       // safe transfer from will fail on onPremintedTransferredHook and transaction should fail
-      await expect(zoraAuction.connect(rando).endAuction(auctionId)).to.be.revertedWith(RevertReasons.ACCESS_DENIED);
+      await expect(zoraAuction.connect(rando).endAuction(auctionId)).to.emit(zoraAuction, "AuctionCanceled");
 
       // Exchange doesn't exist
       const exchangeId = tokenId & MASK;
@@ -156,26 +156,30 @@ describe("[@skip-on-coverage] auction integration", function () {
       expect(exist).to.equal(false);
     });
 
-    it("Works with Zora auction wrapper", async function () {
+    context("Works with Zora auction wrapper", async function () {
       let wrappedBosonVoucher;
 
       beforeEach(async function () {
         // 2. Create wrapped voucher
         const wrappedBosonVoucherFactory = await ethers.getContractFactory("ZoraWrapper");
-        const wrappedBosonVoucher = await wrappedBosonVoucherFactory
+        wrappedBosonVoucher = await wrappedBosonVoucherFactory
           .connect(assistant)
-          .deploy(bosonVoucher.address, zoraAuction.address, exchangeHandler.address, weth.address);
+          .deploy(
+            await bosonVoucher.getAddress(),
+            await zoraAuction.getAddress(),
+            await exchangeHandler.getAddress(),
+            await weth.getAddress()
+          );
 
         // 3. Wrap voucher
-        tokenId = deriveTokenId(offer.id, 2);
-        await bosonVoucher.connect(assistant).setApprovalForAll(wrappedBosonVoucher.address, true);
+        await bosonVoucher.connect(assistant).setApprovalForAll(await wrappedBosonVoucher.getAddress(), true);
         await wrappedBosonVoucher.connect(assistant).wrap(tokenId);
 
         // 4. Create an auction
-        const tokenContract = wrappedBosonVoucher.address;
+        const tokenContract = await wrappedBosonVoucher.getAddress();
         const duration = oneWeek;
         const reservePrice = 1;
-        const curator = ethers.constants.AddressZero;
+        const curator = assistant.address;
         const curatorFeePercentage = 0;
         const auctionCurrency = offer.exchangeToken;
 
@@ -190,11 +194,13 @@ describe("[@skip-on-coverage] auction integration", function () {
             curatorFeePercentage,
             auctionCurrency
           );
+
+        auctionId = 0;
+        await zoraAuction.connect(assistant).setAuctionApproval(auctionId, true);
       });
 
       it("Auction ends normally", async function () {
         // 5. Bid
-        const auctionId = 0;
         const amount = 10;
 
         await zoraAuction.connect(buyer).createBid(auctionId, amount, { value: amount });
@@ -204,74 +210,80 @@ describe("[@skip-on-coverage] auction integration", function () {
         await zoraAuction.connect(assistant).endAuction(auctionId);
 
         expect(await wrappedBosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
-        expect(await weth.balanceOf(wrappedBosonVoucher.address)).to.equal(amount);
+        expect(await weth.balanceOf(await wrappedBosonVoucher.getAddress())).to.equal(amount);
 
         // 7. Commit to offer
         const calldata = wrappedBosonVoucher.interface.encodeFunctionData("unwrap", [tokenId]);
-        const priceDiscovery = new PriceDiscovery(amount, wrappedBosonVoucher.address, calldata, Side.Bid);
+        const priceDiscovery = new PriceDiscovery(
+          amount,
+          Side.Bid,
+          await wrappedBosonVoucher.getAddress(),
+          await wrappedBosonVoucher.getAddress(),
+          calldata
+        );
 
-        const protocolBalanceBefore = await ethers.provider.getBalance(exchangeHandler.address);
+        const protocolBalanceBefore = await provider.getBalance(await exchangeHandler.getAddress());
 
-        const tx = await exchangeHandler.connect(assistant).commitToOffer(buyer.address, offer.id, priceDiscovery);
-        const { timestamp } = await ethers.provider.getBlock(tx.blockNumber);
+        const tx = await priceDiscoveryHandler
+          .connect(assistant)
+          .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery);
+        const { timestamp } = await provider.getBlock(tx.blockNumber);
 
         expect(await bosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
-        expect(await ethers.provider.getBalance(exchangeHandler.address)).to.equal(protocolBalanceBefore.add(amount));
+        expect(await provider.getBalance(await exchangeHandler.getAddress())).to.equal(
+          protocolBalanceBefore + BigInt(amount)
+        );
 
-        const exchangeId = tokenId.and(MASK);
+        const exchangeId = tokenId & MASK;
         const [, , voucher] = await exchangeHandler.getExchange(exchangeId);
 
         expect(voucher.committedDate).to.equal(timestamp);
       });
 
       it("Cancel auction", async function () {
-        // 5. Bid
-        const auctionId = 0;
-        const amount = 10;
-
-        await zoraAuction.connect(buyer).createBid(auctionId, amount, { value: amount });
-
         // 6. Cancel auction
         await zoraAuction.connect(assistant).cancelAuction(auctionId);
 
         // 7. Unwrap token
-        const protocolBalanceBefore = await ethers.provider.getBalance(exchangeHandler.address);
+        const protocolBalanceBefore = await provider.getBalance(await exchangeHandler.getAddress());
         await wrappedBosonVoucher.connect(assistant).unwrap(tokenId);
 
         expect(await bosonVoucher.ownerOf(tokenId)).to.equal(assistant.address);
-        expect(await ethers.provider.getBalance(exchangeHandler.address)).to.equal(protocolBalanceBefore);
+        expect(await provider.getBalance(await exchangeHandler.getAddress())).to.equal(protocolBalanceBefore);
 
-        const exchangeId = tokenId.and(MASK);
+        const exchangeId = tokenId & MASK;
         const [exists, , voucher] = await exchangeHandler.getExchange(exchangeId);
 
         expect(exists).to.equal(false);
         expect(voucher.committedDate).to.equal(0);
       });
 
-      it("Cancel auction and unwrap via commitToOffer", async function () {
+      it("Cancel auction and unwrap via commitToPriceDiscoveryOffer", async function () {
         // How sensible is this scenario? Should it be prevented?
-
-        // 5. Bid
-        const auctionId = 0;
-        const amount = 10;
-
-        await zoraAuction.connect(buyer).createBid(auctionId, amount, { value: amount });
 
         // 6. Cancel auction
         await zoraAuction.connect(assistant).cancelAuction(auctionId);
 
         // 7. Unwrap token via commitToOffer
-        const protocolBalanceBefore = await ethers.provider.getBalance(exchangeHandler.address);
+        const protocolBalanceBefore = await provider.getBalance(await exchangeHandler.getAddress());
 
         const calldata = wrappedBosonVoucher.interface.encodeFunctionData("unwrap", [tokenId]);
-        const priceDiscovery = new PriceDiscovery(0, wrappedBosonVoucher.address, calldata, Side.Bid);
-        const tx = await exchangeHandler.connect(assistant).commitToOffer(assistant.address, offer.id, priceDiscovery);
-        const { timestamp } = await ethers.provider.getBlock(tx.blockNumber);
+        const priceDiscovery = new PriceDiscovery(
+          0,
+          Side.Bid,
+          await wrappedBosonVoucher.getAddress(),
+          await wrappedBosonVoucher.getAddress(),
+          calldata
+        );
+        const tx = await priceDiscoveryHandler
+          .connect(assistant)
+          .commitToPriceDiscoveryOffer(assistant.address, tokenId, priceDiscovery);
+        const { timestamp } = await provider.getBlock(tx.blockNumber);
 
         expect(await bosonVoucher.ownerOf(tokenId)).to.equal(assistant.address);
-        expect(await ethers.provider.getBalance(exchangeHandler.address)).to.equal(protocolBalanceBefore);
+        expect(await provider.getBalance(await exchangeHandler.getAddress())).to.equal(protocolBalanceBefore);
 
-        const exchangeId = tokenId.and(MASK);
+        const exchangeId = tokenId & MASK;
         const [exists, , voucher] = await exchangeHandler.getExchange(exchangeId);
 
         expect(exists).to.equal(true);

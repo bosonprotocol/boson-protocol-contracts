@@ -269,3 +269,4 @@ string constant INCOMING_VOUCHER_ALREADY_SET = "Incoming voucher already set";
 string constant NEW_OWNER_AND_BUYER_MUST_MATCH = "New owner and buyer must match";
 string constant PRICE_DISCOVERY_CONTRACTS_NOT_SET = "PriceDiscoveryContract and Conduit must be set";
 string constant TOKEN_ID_NOT_SET = "Token id not set";
+string constant VOUCHER_TRANSFER_NOT_ALLOWED = "Voucher transfer not allowed";

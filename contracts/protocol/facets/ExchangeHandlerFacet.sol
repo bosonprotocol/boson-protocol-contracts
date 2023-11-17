@@ -23,6 +23,7 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
  */
 contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, IERC721Receiver {
     using Address for address;
+    using Address for address payable;
 
     uint256 private immutable EXCHANGE_ID_2_2_0; // solhint-disable-line
 
@@ -607,12 +608,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
      * @param _tokenId - the voucher id
      * @param _to - the receiver address
      * @param _from - the address of current owner
+     * @param _rangeOwner - the address of the preminted range owner
      * @return committed - true if the voucher was committed
      */
     function onPremintedVoucherTransferred(
         uint256 _tokenId,
         address payable _to,
-        address _from
+        address _from,
+        address _rangeOwner
     ) external override buyersNotPaused exchangesNotPaused returns (bool committed) {
         // Cache protocol status for reference
         ProtocolLib.ProtocolStatus storage ps = protocolStatus();
@@ -623,16 +626,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
         require(ps.reentrancyStatus != ENTERED, REENTRANCY_GUARD);
 
         // Derive the offer id
-        uint256 offerId = _tokenId >> 128; // ? pre 2.2. vouchers?
+        uint256 offerId = _tokenId >> 128;
 
         // Derive the exchange id
         uint256 exchangeId = _tokenId & type(uint128).max;
 
         // Get the offer
         Offer storage offer = getValidOffer(offerId);
-
-        // Get the seller
-        (, Seller storage seller, ) = fetchSeller(offer.sellerId);
 
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
         address bosonVoucher = getCloneAddress(lookups, offer.sellerId, offer.collectionIndex);
@@ -651,7 +651,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
                 uint256 tokenId = 0;
 
                 // Allow commiting only to unambigous conditions, i.e. conditions with a single token id
-                if (condition.method == EvaluationMethod.SpecificToken || condition.tokenType == TokenType.MultiToken) {
+                if (method == EvaluationMethod.SpecificToken || condition.tokenType == TokenType.MultiToken) {
                     uint256 minTokenId = condition.minTokenId;
                     uint256 maxTokenId = condition.maxTokenId;
 
@@ -695,15 +695,28 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase, 
 
                     committed = true;
                 }
-                // Only seller can transfer voucher without calling commitToOfferInternal, this is necessary to deposit voucher into wrapper contracts
-            } else if (_from != seller.assistant && _from != bosonVoucher) {
-                if (_to == seller.assistant || _to == bosonVoucher) {
-                    // Withdrawin non-committed voucher from wrapper contract
-                    return false;
-                } else {
-                    // Forbidden transfer since it would circumvent the price discovery mechanism
-                    revert(ACCESS_DENIED);
+
+                return committed;
+            }
+
+            // If `onPremintedVoucherTransferred` is invoked without `commitToPriceDiscoveryOffer` first,
+            // we reach this point. This can happen in the following scenarios:
+            // 1. The preminted voucher owner is transferring the voucher to PD contract ["deposit"]
+            // 2. The PD is transferring the voucher back to the original owner ["withdraw"]. Happens if voucher was not sold.
+            // 3. The PD is transferring the voucher to the buyer ["buy"]. Happens if voucher was sold.
+            // 4. The preminted voucher owner is transferring the voucher "directly" to the buyer.
+
+            // 1. and 2. are allowed, while 3. and 4. and must revert. 3. and 4. should be executed via `commitToPriceDiscoveryOffer`
+            if (_from == _rangeOwner) {
+                // case 1. ["deposit"]
+                if (!_to.isContract()) {
+                    // Prevent direct transfer to EOA (case 4.)
+                    revert(VOUCHER_TRANSFER_NOT_ALLOWED);
                 }
+            } else {
+                // Case 2. ["withdraw"]
+                // Prevent transfer to the buyer (case 3.)
+                require(_to == _rangeOwner, VOUCHER_TRANSFER_NOT_ALLOWED);
             }
         } else if (offer.priceType == PriceType.Static) {
             // If price type is static, transaction can start from anywhere
