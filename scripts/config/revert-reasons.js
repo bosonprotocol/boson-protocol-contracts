@@ -119,7 +119,6 @@ exports.RevertReasons = {
   // Exchange related
   NO_SUCH_EXCHANGE: "NoSuchExchange",
   DISPUTE_PERIOD_NOT_ELAPSED: "DisputePeriodNotElapsed",
-  EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS: "ExchangeForBundledOffersExists",
   VOUCHER_NOT_REDEEMABLE: "VoucherNotRedeemable",
   VOUCHER_EXTENSION_NOT_VALID: "VoucherExtensionNotValid",
   VOUCHER_STILL_VALID: "VoucherStillValid",
@@ -138,7 +137,6 @@ exports.RevertReasons = {
   OFFER_EXPIRED_OR_VOIDED: "OfferExpiredOrVoided",
   OFFER_STILL_VALID: "OfferStillValid",
   AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN: "AmountExceedsRangeOrNothingToBurn",
-  NOT_COMMITTABLE: "NotCommittable",
   INVALID_TO_ADDRESS: "InvalidToAddress",
   EXTERNAL_CALL_FAILED: "ExternalCallFailed",
   INTERACTION_NOT_ALLOWED: "InteractionNotAllowed",
