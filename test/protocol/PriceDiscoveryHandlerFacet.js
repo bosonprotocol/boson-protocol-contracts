@@ -284,7 +284,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
         });
 
         it("should emit FundsEncumbered and BuyerCommitted events", async function () {
-          // Commit to offer with first buyer
+          // Commit to offer
           tx = await priceDiscoveryHandler
             .connect(buyer)
             .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price });
@@ -422,6 +422,35 @@ describe("IPriceDiscoveryHandlerFacet", function () {
           // Caller's balance should decrease
           const callerAfter = await provider.getBalance(rando.address);
           expect(callerAfter).to.equal(callerBefore - price);
+        });
+
+        it("Works if the buyer provides offerId instead of tokenId", async function () {
+          // Commit to offer
+          tx = await priceDiscoveryHandler
+            .connect(buyer)
+            .commitToPriceDiscoveryOffer(buyer.address, offer.id, priceDiscovery, { value: price });
+
+          // Get the block timestamp of the confirmed tx
+          block = await provider.getBlock(tx.blockNumber);
+
+          // Update the committed date in the expected exchange struct with the block timestamp of the tx
+          voucher.committedDate = block.timestamp.toString();
+          voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+
+          // Test for events
+          // Seller deposit
+          await expect(tx)
+            .to.emit(priceDiscoveryHandler, "FundsEncumbered")
+            .withArgs(seller.id, ZeroAddress, offer.sellerDeposit, expectedCloneAddress);
+
+          // Buyers funds - in ask order, they are taken from the seller deposit
+          await expect(tx)
+            .to.emit(priceDiscoveryHandler, "FundsEncumbered")
+            .withArgs(seller.id, ZeroAddress, price, buyer.address);
+
+          await expect(tx)
+            .to.emit(priceDiscoveryHandler, "BuyerCommitted")
+            .withArgs(offerId, newBuyer.id, exchangeId, exchange.toStruct(), voucher.toStruct(), expectedCloneAddress);
         });
 
         context("💔 Revert Reasons", async function () {
