@@ -5,6 +5,7 @@ pragma solidity 0.8.21;
 import "../interfaces/IERC20.sol";
 import "../interfaces/IERC721.sol";
 import "./Foreign721.sol";
+import { IERC721Receiver } from "../interfaces/IERC721Receiver.sol";
 
 /**
  * @dev Simple price discovery contract used in tests
@@ -153,4 +154,27 @@ contract PriceDiscoveryNoTransfer is PriceDiscovery {
      * @dev do nothing
      */
     function fulfilBuyOrder(Order memory _order) public payable override {}
+}
+
+/**
+ * @dev Simple bad price discovery contract used in tests
+ *
+ * This contract transfers the voucher to itself instead of the origina msg.sender
+ */
+contract PriceDiscoveryTransferElsewhere is PriceDiscovery, IERC721Receiver {
+    /**
+     * @dev invoke fulfilBuyOrder on itself, making it the msg.sender
+     */
+    function fulfilBuyOrderElsewhere(Order memory _order) public payable {
+        this.fulfilBuyOrder(_order);
+    }
+
+    /**
+     * @dev See {IERC721Receiver-onERC721Received}.
+     *
+     * Always returns `IERC721Receiver.onERC721Received.selector`.
+     */
+    function onERC721Received(address, address, uint256, bytes calldata) public virtual override returns (bytes4) {
+        return this.onERC721Received.selector;
+    }
 }

@@ -10,17 +10,19 @@ class PriceDiscovery {
   /*
     struct PriceDiscovery {
       uint256 price;
-      address priceDiscoveryContract;
-      bytes priceDiscoveryData;
       Side side;
+      address priceDiscoveryContract;
+      address conduit;
+      bytes priceDiscoveryData;
       }
   */
 
-  constructor(price, priceDiscoveryContract, priceDiscoveryData, side) {
+  constructor(price, side, priceDiscoveryContract, conduit, priceDiscoveryData) {
     this.price = price;
+    this.side = side;
     this.priceDiscoveryContract = priceDiscoveryContract;
     this.priceDiscoveryData = priceDiscoveryData;
-    this.side = side;
+    this.conduit = conduit;
   }
 
   /**
@@ -29,8 +31,8 @@ class PriceDiscovery {
    * @returns {PriceDiscovery}
    */
   static fromObject(o) {
-    const { price, priceDiscoveryContract, priceDiscoveryData, side } = o;
-    return new PriceDiscovery(price, priceDiscoveryContract, priceDiscoveryData, side);
+    const { price, side, priceDiscoveryContract, conduit, priceDiscoveryData } = o;
+    return new PriceDiscovery(price, side, priceDiscoveryContract, conduit, priceDiscoveryData);
   }
 
   /**
@@ -39,16 +41,17 @@ class PriceDiscovery {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let price, priceDiscoveryContract, priceDiscoveryData, side;
+    let price, side, priceDiscoveryContract, conduit, priceDiscoveryData;
 
     // destructure struct
-    [price, priceDiscoveryContract, priceDiscoveryData, side] = struct;
+    [price, side, priceDiscoveryContract, conduit, priceDiscoveryData] = struct;
 
     return PriceDiscovery.fromObject({
       price: price.toString(),
+      side,
       priceDiscoveryContract: priceDiscoveryContract,
+      conduit,
       priceDiscoveryData: priceDiscoveryData,
-      side: side,
     });
   }
 
@@ -73,7 +76,7 @@ class PriceDiscovery {
    * @returns {string}
    */
   toStruct() {
-    return [this.price, this.priceDiscoveryContract, this.priceDiscoveryData, this.side];
+    return [this.price, this.side, this.priceDiscoveryContract, this.conduit, this.priceDiscoveryData];
   }
 
   /**
@@ -94,12 +97,30 @@ class PriceDiscovery {
   }
 
   /**
+   * Is this PriceDiscovery instance's side field valid?
+   * Must be a number belonging to the Side enum
+   * @returns {boolean}
+   */
+  sideIsValid() {
+    return enumIsValid(this.side, Side.Types);
+  }
+
+  /**
    * Is this PriceDiscovery instance's priceDiscoveryContract field valid?
    * Must be a eip55 compliant Ethereum address
    * @returns {boolean}
    */
   priceDiscoveryContractIsValid() {
     return addressIsValid(this.priceDiscoveryContract);
+  }
+
+  /**
+   * Is this PriceDiscovery instance's conduit field valid?
+   * Must be a eip55 compliant Ethereum address
+   * @returns {boolean}
+   */
+  conduitIsValid() {
+    return addressIsValid(this.conduit);
   }
 
   /**
@@ -112,24 +133,16 @@ class PriceDiscovery {
   }
 
   /**
-   * Is this PriceDiscovery instance's side field valid?
-   * Must be a number belonging to the Side enum
-   * @returns {boolean}
-   */
-  sideIsValid() {
-    return enumIsValid(this.side, Side.Types);
-  }
-
-  /**
    * Is this PriceDiscovery instance valid?
    * @returns {boolean}
    */
   isValid() {
     return (
       this.priceIsValid() &&
+      this.sideIsValid() &&
       this.priceDiscoveryContractIsValid() &&
-      this.priceDiscoveryDataIsValid() &&
-      this.sideIsValid()
+      this.conduitIsValid() &&
+      this.priceDiscoveryDataIsValid()
     );
   }
 }

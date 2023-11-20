@@ -1429,7 +1429,7 @@ describe("IBosonVoucher", function () {
               assert.equal(tokenOwner, await rando.getAddress(), "Rando is not the owner");
             });
 
-            it("Should call commitToPreMintedOffer", async function () {
+            it("Should call onPremintedVoucherTransferred", async function () {
               const tx = await bosonVoucher
                 .connect(assistant)
                 [selector](await assistant.getAddress(), await rando.getAddress(), tokenId, ...additionalArgs);
@@ -1448,7 +1448,7 @@ describe("IBosonVoucher", function () {
               // Update the validUntilDate date in the expected exchange struct
               voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
-              // First transfer should call commitToPreMintedOffer
+              // First transfer should call onPremintedVoucherTransferred
               await expect(tx)
                 .to.emit(exchangeHandler, "BuyerCommitted")
                 .withArgs(
@@ -1462,21 +1462,21 @@ describe("IBosonVoucher", function () {
             });
 
             it("Second transfer should behave as normal voucher transfer", async function () {
-              // First transfer should call commitToPreMintedOffer, and not onVoucherTransferred
+              // First transfer should call onPremintedVoucherTransferred, and not onVoucherTransferred
               let tx = await bosonVoucher
                 .connect(assistant)
                 [selector](await assistant.getAddress(), await rando.getAddress(), tokenId, ...additionalArgs);
               await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
               await expect(tx).to.not.emit(exchangeHandler, "VoucherTransferred");
 
-              // Second transfer should call onVoucherTransferred, and not commitToPreMintedOffer
+              // Second transfer should call onVoucherTransferred, and not onPremintedVoucherTransferred
               tx = await bosonVoucher
                 .connect(rando)
                 [selector](await rando.getAddress(), await assistant.getAddress(), tokenId, ...additionalArgs);
               await expect(tx).to.emit(exchangeHandler, "VoucherTransferred");
               await expect(tx).to.not.emit(exchangeHandler, "BuyerCommitted");
 
-              // Next transfer should call onVoucherTransferred, and not commitToPreMintedOffer, even if seller is the owner
+              // Next transfer should call onVoucherTransferred, and not onPremintedVoucherTransferred, even if seller is the owner
               tx = await bosonVoucher
                 .connect(assistant)
                 [selector](await assistant.getAddress(), await rando.getAddress(), tokenId, ...additionalArgs);
@@ -1583,7 +1583,7 @@ describe("IBosonVoucher", function () {
                   bosonVoucher
                     .connect(rando)
                     [selector](await rando.getAddress(), await rando.getAddress(), tokenId, ...additionalArgs)
-                ).to.be.revertedWith(RevertReasons.NO_SILENT_MINT_ALLOWED);
+                ).to.be.revertedWith(RevertReasons.ERC721_CALLER_NOT_OWNER_OR_APPROVED);
               });
             });
           });

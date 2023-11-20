@@ -143,6 +143,13 @@ async function setNextBlockTimestamp(timestamp, mine = false) {
   if (mine) await provider.send("evm_mine", []);
 }
 
+async function getCurrentBlockAndSetTimeForward(seconds) {
+  const blockNumber = await provider.getBlockNumber();
+  const block = await provider.getBlock(blockNumber);
+  const newTime = block.timestamp + Number(seconds);
+  await setNextBlockTimestamp(newTime);
+}
+
 function getSignatureParameters(signature) {
   if (!isHexString(signature)) {
     throw new Error('Given value "'.concat(signature, '" is not a valid hex string.'));
@@ -331,7 +338,7 @@ async function getFacetsWithArgs(facetNames, config) {
   const facets = await getFacets(config);
   const keys = Object.keys(facets).filter((key) => facetNames.includes(key));
   return keys.reduce((obj, key) => {
-    obj[key] = facets[key];
+    obj[key] = { init: facets[key].init, constructorArgs: facets[key].constructorArgs };
     return obj;
   }, {});
 }
@@ -384,6 +391,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
     "ConfigHandlerFacet",
     "MetaTransactionsHandlerFacet",
     "SequentialCommitHandlerFacet",
+    "PriceDiscoveryHandlerFacet",
   ];
 
   const signers = await getSigners();
@@ -454,6 +462,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
 
   const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
   facetsToDeploy["SequentialCommitHandlerFacet"].constructorArgs[0] = wethAddress || ZeroAddress; // update only weth address
+  facetsToDeploy["PriceDiscoveryHandlerFacet"].constructorArgs[0] = wethAddress || ZeroAddress; // update only weth address
 
   // Cut the protocol handler facets into the Diamond
   await deployAndCutFacets(await protocolDiamond.getAddress(), facetsToDeploy, maxPriorityFeePerGas);
@@ -486,6 +495,17 @@ function deriveTokenId(offerId, exchangeId) {
   return (BigInt(offerId) << 128n) + BigInt(exchangeId);
 }
 
+function* incrementer() {
+  let i = 0;
+  while (true) {
+    const reset = yield (i++).toString();
+    if (reset) {
+      // reset to 0 instead of 1 to not count the reset call
+      i = 0;
+    }
+  }
+}
+
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
 exports.getEvent = getEvent;
 exports.eventEmittedWithArgs = eventEmittedWithArgs;
@@ -500,8 +520,10 @@ exports.paddingType = paddingType;
 exports.getFacetsWithArgs = getFacetsWithArgs;
 exports.compareOfferStructs = compareOfferStructs;
 exports.objectToArray = objectToArray;
+exports.deriveTokenId = deriveTokenId;
+exports.incrementer = incrementer;
+exports.getCurrentBlockAndSetTimeForward = getCurrentBlockAndSetTimeForward;
 exports.setupTestEnvironment = setupTestEnvironment;
 exports.getSnapshot = getSnapshot;
 exports.revertToSnapshot = revertToSnapshot;
-exports.deriveTokenId = deriveTokenId;
 exports.getSellerSalt = getSellerSalt;

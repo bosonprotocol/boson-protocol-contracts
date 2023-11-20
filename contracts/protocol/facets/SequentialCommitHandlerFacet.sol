@@ -72,93 +72,94 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
      * - Transfer of exchange token fails
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
-     * @param _exchangeId - the id of the exchange to commit to
+     * @param _tokenId - the id of the token to commit to
      * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
      */
     function sequentialCommitToOffer(
         address payable _buyer,
-        uint256 _exchangeId,
+        uint256 _tokenId,
         PriceDiscovery calldata _priceDiscovery
     ) external payable exchangesNotPaused buyersNotPaused nonReentrant {
         // Make sure buyer address is not zero address
         require(_buyer != address(0), INVALID_ADDRESS);
 
+        // Make sure caller provided price discovery data
+        require(
+            _priceDiscovery.priceDiscoveryContract != address(0) && _priceDiscovery.priceDiscoveryData.length > 0,
+            INVALID_PRICE_DISCOVERY
+        );
+
+        uint256 exchangeId = _tokenId & type(uint128).max;
+
         // Exchange must exist
-        (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
+        (Exchange storage exchange, Voucher storage voucher) = getValidExchange(exchangeId, ExchangeState.Committed);
 
         // Make sure the voucher is still valid
         require(block.timestamp <= voucher.validUntilDate, VOUCHER_HAS_EXPIRED);
 
         // Create a memory struct for sequential commit and populate it as we go
         // This is done to avoid stack too deep error, while still keeping the number of SLOADs to a minimum
-        SequentialCommit memory sequentialCommit;
+        ExchangeCosts memory exchangeCost;
 
         // Get current buyer address. This is actually the seller in sequential commit. Need to do it before voucher is transferred
         address seller;
-        sequentialCommit.resellerId = exchange.buyerId;
+        exchangeCost.resellerId = exchange.buyerId;
         {
-            (, Buyer storage currentBuyer) = fetchBuyer(sequentialCommit.resellerId);
+            (, Buyer storage currentBuyer) = fetchBuyer(exchangeCost.resellerId);
             seller = currentBuyer.wallet;
-        }
-
-        address sender = msgSender();
-        if (_priceDiscovery.side == Side.Bid) {
-            require(seller == sender, NOT_VOUCHER_HOLDER);
         }
 
         // Fetch offer
         uint256 offerId = exchange.offerId;
         (, Offer storage offer) = fetchOffer(offerId);
 
-        // Get token address
-        address exchangeToken = offer.exchangeToken;
-
         // First call price discovery and get actual price
         // It might be lower than submitted for buy orders and higher for sell orders
-        sequentialCommit.price = fulFilOrder(_exchangeId, exchangeToken, _priceDiscovery, _buyer, offer);
+        exchangeCost.price = fulfilOrder(_tokenId, offer, _priceDiscovery, seller, _buyer);
+
+        // Get token address
+        address exchangeToken = offer.exchangeToken;
 
         // Calculate the amount to be kept in escrow
         uint256 escrowAmount;
         uint256 payout;
         {
             // Get sequential commits for this exchange
-            SequentialCommit[] storage sequentialCommits = protocolEntities().sequentialCommits[_exchangeId];
+            ExchangeCosts[] storage exchangeCosts = protocolEntities().exchangeCosts[exchangeId];
 
             {
                 // Calculate fees
-                sequentialCommit.protocolFeeAmount = exchangeToken == protocolAddresses().token
-                    ? protocolFees().flatBoson
-                    : (protocolFees().percentage * sequentialCommit.price) / 10000;
+                exchangeCost.protocolFeeAmount = getProtocolFee(exchangeToken, exchangeCost.price);
 
                 // Calculate royalties
-                (, sequentialCommit.royaltyAmount) = IBosonVoucher(
+                (, exchangeCost.royaltyAmount) = IBosonVoucher(
                     getCloneAddress(protocolLookups(), offer.sellerId, offer.collectionIndex)
-                ).royaltyInfo(_exchangeId, sequentialCommit.price);
+                ).royaltyInfo(exchangeId, exchangeCost.price);
 
                 // Verify that fees and royalties are not higher than the price.
                 require(
-                    (sequentialCommit.protocolFeeAmount + sequentialCommit.royaltyAmount) <= sequentialCommit.price,
+                    (exchangeCost.protocolFeeAmount + exchangeCost.royaltyAmount) <= exchangeCost.price,
                     FEE_AMOUNT_TOO_HIGH
                 );
 
                 // Get price paid by current buyer
-                uint256 len = sequentialCommits.length;
-                uint256 currentPrice = len == 0 ? offer.price : sequentialCommits[len - 1].price;
+                uint256 len = exchangeCosts.length;
+                uint256 currentPrice = len == 0 ? offer.price : exchangeCosts[len - 1].price;
 
                 // Calculate the minimal amount to be kept in the escrow
                 escrowAmount =
                     Math.max(
-                        sequentialCommit.price,
-                        sequentialCommit.protocolFeeAmount + sequentialCommit.royaltyAmount + currentPrice
+                        exchangeCost.price,
+                        exchangeCost.protocolFeeAmount + exchangeCost.royaltyAmount + currentPrice
                     ) -
                     currentPrice;
 
-                // Update sequential commit
-                sequentialCommits.push(sequentialCommit);
+                // Store the exchange cost, so it can be used in calculations when releasing funds
+                exchangeCosts.push(exchangeCost);
             }
 
             // Make sure enough get escrowed
-            payout = sequentialCommit.price - escrowAmount;
+            payout = exchangeCost.price - escrowAmount;
 
             if (_priceDiscovery.side == Side.Ask) {
                 if (escrowAmount > 0) {
@@ -167,8 +168,8 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                     if (exchangeToken == address(0)) {
                         // If exchange is native currency, seller cannot directly approve protocol to transfer funds
                         // They need to approve wrapper contract, so protocol can pull funds from wrapper
-                        // But since protocol otherwise normally operates with native currency, needs to unwrap it (i.e. withdraw)
                         FundsLib.transferFundsToProtocol(address(wNative), seller, escrowAmount);
+                        // But since protocol otherwise normally operates with native currency, needs to unwrap it (i.e. withdraw)
                         wNative.withdraw(escrowAmount);
                     } else {
                         FundsLib.transferFundsToProtocol(exchangeToken, seller, escrowAmount);
@@ -176,8 +177,8 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                 }
             } else {
                 // when bid side, we have full proceeds in escrow. Keep minimal in, return the difference
-                if (sequentialCommit.price > 0 && exchangeToken == address(0)) {
-                    wNative.withdraw(sequentialCommit.price);
+                if (exchangeCost.price > 0 && exchangeToken == address(0)) {
+                    wNative.withdraw(exchangeCost.price);
                 }
 
                 if (payout > 0) {
@@ -186,38 +187,17 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
             }
         }
 
+        clearPriceDiscoveryStorage();
+
         // Since exchange and voucher are passed by reference, they are updated
         uint256 buyerId = exchange.buyerId;
-        if (sequentialCommit.price > 0) emit FundsEncumbered(buyerId, exchangeToken, sequentialCommit.price, sender);
+        address sender = msgSender();
+        if (exchangeCost.price > 0) emit FundsEncumbered(buyerId, exchangeToken, exchangeCost.price, sender);
         if (payout > 0) {
-            emit FundsReleased(_exchangeId, sequentialCommit.resellerId, exchangeToken, payout, sender);
-            emit FundsWithdrawn(sequentialCommit.resellerId, seller, exchangeToken, payout, sender);
+            emit FundsReleased(exchangeId, exchangeCost.resellerId, exchangeToken, payout, sender);
+            emit FundsWithdrawn(exchangeCost.resellerId, seller, exchangeToken, payout, sender);
         }
-        emit BuyerCommitted(offerId, buyerId, _exchangeId, exchange, voucher, sender);
+        emit BuyerCommitted(offerId, buyerId, exchangeId, exchange, voucher, sender);
         // No need to update exchange detail. Most fields stay as they are, and buyerId was updated at the same time voucher is transferred
-    }
-
-    /**
-     * @notice standard onERC721Received function
-     *
-     * During sequential commit to offer, we expect to receive the boson voucher, therefore we need to implement onERC721Received
-     * Alternative option, where vouchers are modified to not invoke onERC721Received when to is protocol is unsafe, since one can abuse it to send vouchers to protocol
-     * This should return true value only when protocol expects to receive the voucher
-     * Should revert if called from any other address or with any other token id
-
-     * @return - the ERC721 received function signature
-     */
-    function onERC721Received(
-        address,
-        address,
-        uint256 _tokenId,
-        bytes calldata
-    ) external view override returns (bytes4) {
-        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
-        require(
-            ps.incomingVoucherId == _tokenId && ps.incomingVoucherCloneAddress == msg.sender,
-            UNEXPECTED_ERC721_RECEIVED
-        );
-        return this.onERC721Received.selector;
     }
 }

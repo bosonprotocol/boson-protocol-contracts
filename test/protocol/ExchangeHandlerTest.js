@@ -92,6 +92,7 @@ describe("IBosonExchangeHandler", function () {
     adminDR,
     clerkDR,
     treasuryDR;
+
   let erc165,
     accessController,
     accountHandler,
@@ -841,7 +842,7 @@ describe("IBosonExchangeHandler", function () {
             .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
-          // Attempt to commit to the not availabe offer, expecting revert
+          // Attempt to commit to the not available offer, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), ++offerId, { value: price })
           ).to.revertedWith(RevertReasons.OFFER_NOT_AVAILABLE);
@@ -863,7 +864,7 @@ describe("IBosonExchangeHandler", function () {
           await offerHandler
             .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
-          // Commit to offer, so it's not availble anymore
+          // Commit to offer, so it's not available anymore
           await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), ++offerId, { value: price });
 
           // Attempt to commit to the sold out offer, expecting revert
@@ -893,7 +894,10 @@ describe("IBosonExchangeHandler", function () {
       });
     });
 
-    context("👉 commitToPremintedOffer()", async function () {
+    context("👉 onPremintedVoucherTransferred()", async function () {
+      // These tests are mainly for preminted vouchers of fixed price offers
+      // The part of onPremintedVoucherTransferred that is specific to
+      // price discovery offers is indirectly tested in `PriceDiscoveryHandlerFacet.js`
       let tokenId;
       beforeEach(async function () {
         // Reserve range
@@ -1364,7 +1368,14 @@ describe("IBosonExchangeHandler", function () {
         it("Caller is not the voucher contract, owned by the seller", async function () {
           // Attempt to commit to preminted offer, expecting revert
           await expect(
-            exchangeHandler.connect(rando).commitToPreMintedOffer(await buyer.getAddress(), offerId, tokenId)
+            exchangeHandler
+              .connect(rando)
+              .onPremintedVoucherTransferred(
+                tokenId,
+                await buyer.getAddress(),
+                await assistant.getAddress(),
+                await assistant.getAddress()
+              )
           ).to.revertedWith(RevertReasons.ACCESS_DENIED);
         });
 
@@ -1385,7 +1396,12 @@ describe("IBosonExchangeHandler", function () {
           await expect(
             exchangeHandler
               .connect(impersonatedBosonVoucher)
-              .commitToPreMintedOffer(await buyer.getAddress(), offerId, exchangeId)
+              .onPremintedVoucherTransferred(
+                tokenId,
+                await buyer.getAddress(),
+                await assistant.getAddress(),
+                await assistant.getAddress()
+              )
           ).to.revertedWith(RevertReasons.EXCHANGE_ALREADY_EXISTS);
         });
 
@@ -1450,7 +1466,7 @@ describe("IBosonExchangeHandler", function () {
           await offerHandler
             .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
-          // Commit to offer, so it's not availble anymore
+          // Commit to offer, so it's not available anymore
           await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), ++offerId, { value: price });
 
           // Attempt to commit to the sold out offer, expecting revert
@@ -2417,7 +2433,7 @@ describe("IBosonExchangeHandler", function () {
           // add offer to group
           await groupHandler.connect(assistant).addOffersToGroup(groupId, [++offerId]);
 
-          // Commit to offer, so it's not availble anymore
+          // Commit to offer, so it's not available anymore
           await exchangeHandler
             .connect(buyer)
             .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price });
@@ -5755,6 +5771,249 @@ describe("IBosonExchangeHandler", function () {
     });
 
     context("👉 onVoucherTransferred()", async function () {
+      // majority of lines from onVoucherTransferred() are tested in indirectly in
+      // `commitToPremintedOffer()`
+
+      beforeEach(async function () {
+        // Commit to offer, retrieving the event
+        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+
+        // Client used for tests
+        bosonVoucherCloneAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          admin.address
+        );
+        bosonVoucherClone = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
+
+        tokenId = deriveTokenId(offerId, exchange.id);
+      });
+
+      it("should emit an VoucherTransferred event when called by CLIENT-roled address", async function () {
+        // Get the next buyer id
+        nextAccountId = await accountHandler.connect(rando).getNextAccountId();
+
+        // Call onVoucherTransferred, expecting event
+        await expect(
+          bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId)
+        )
+          .to.emit(exchangeHandler, "VoucherTransferred")
+          .withArgs(offerId, exchange.id, nextAccountId, await bosonVoucherClone.getAddress());
+      });
+
+      it("should update exchange when new buyer (with existing, active account) is passed", async function () {
+        // Get the next buyer id
+        nextAccountId = await accountHandler.connect(rando).getNextAccountId();
+
+        // Create a buyer account for the new owner
+        await accountHandler.connect(newOwner).createBuyer(mockBuyer(await newOwner.getAddress()));
+
+        // Call onVoucherTransferred
+        await bosonVoucherClone
+          .connect(buyer)
+          .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId);
+
+        // Get the exchange
+        [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+
+        // Marshal response to entity
+        exchange = Exchange.fromStruct(response);
+        expect(exchange.isValid());
+
+        // Exchange's voucher expired flag should be true
+        assert.equal(exchange.buyerId, nextAccountId, "Exchange.buyerId not updated");
+      });
+
+      it("should update exchange when new buyer (no account) is passed", async function () {
+        // Get the next buyer id
+        nextAccountId = await accountHandler.connect(rando).getNextAccountId();
+
+        // Call onVoucherTransferred
+        await bosonVoucherClone
+          .connect(buyer)
+          .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId);
+
+        // Get the exchange
+        [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+
+        // Marshal response to entity
+        exchange = Exchange.fromStruct(response);
+        expect(exchange.isValid());
+
+        // Exchange's voucher expired flag should be true
+        assert.equal(exchange.buyerId, nextAccountId, "Exchange.buyerId not updated");
+      });
+
+      it("should be triggered when a voucher is transferred", async function () {
+        // Transfer voucher, expecting event
+        await expect(
+          bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId)
+        ).to.emit(exchangeHandler, "VoucherTransferred");
+      });
+
+      it("should not be triggered when a voucher is issued", async function () {
+        // Get the next exchange id
+        nextExchangeId = await exchangeHandler.getNextExchangeId();
+
+        // Create a buyer account
+        await accountHandler.connect(newOwner).createBuyer(mockBuyer(await newOwner.getAddress()));
+
+        // Grant PROTOCOL role to EOA address for test
+        await accessController.grantRole(Role.PROTOCOL, await rando.getAddress());
+
+        // Issue voucher, expecting no event
+        await expect(
+          bosonVoucherClone.connect(rando).issueVoucher(nextExchangeId, await buyer.getAddress())
+        ).to.not.emit(exchangeHandler, "VoucherTransferred");
+      });
+
+      it("should not be triggered when a voucher is burned", async function () {
+        // Grant PROTOCOL role to EOA address for test
+        await accessController.grantRole(Role.PROTOCOL, await rando.getAddress());
+
+        // Burn voucher, expecting no event
+        await expect(bosonVoucherClone.connect(rando).burnVoucher(tokenId)).to.not.emit(
+          exchangeHandler,
+          "VoucherTransferred"
+        );
+      });
+
+      it("Should not be triggered when from and to addresses are the same", async function () {
+        // Transfer voucher, expecting event
+        await expect(
+          bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await buyer.getAddress(), tokenId)
+        ).to.not.emit(exchangeHandler, "VoucherTransferred");
+      });
+
+      it("Should not be triggered when first transfer of preminted voucher happens", async function () {
+        // Transfer voucher, expecting event
+        await expect(
+          bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await buyer.getAddress(), tokenId)
+        ).to.not.emit(exchangeHandler, "VoucherTransferred");
+      });
+
+      it("should work with additional collections", async function () {
+        // Create a new collection
+        const externalId = `Brand1`;
+        voucherInitValues.collectionSalt = encodeBytes32String(externalId);
+        await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
+
+        offer.collectionIndex = 1;
+        offer.id = await offerHandler.getNextOfferId();
+        exchange.id = await exchangeHandler.getNextExchangeId();
+        bosonVoucherCloneAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          admin.address,
+          voucherInitValues.collectionSalt
+        );
+        bosonVoucherClone = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
+        const tokenId = deriveTokenId(offer.id, exchange.id);
+
+        // Create the offer
+        await offerHandler
+          .connect(assistant)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+        // Commit to offer, creating a new exchange
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: price });
+
+        // Get the next buyer id
+        nextAccountId = await accountHandler.connect(rando).getNextAccountId();
+
+        // Call onVoucherTransferred, expecting event
+        await expect(bosonVoucherClone.connect(buyer).transferFrom(buyer.address, newOwner.address, tokenId))
+          .to.emit(exchangeHandler, "VoucherTransferred")
+          .withArgs(offer.id, exchange.id, nextAccountId, await bosonVoucherClone.getAddress());
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("The buyers region of protocol is paused", async function () {
+          // Pause the buyers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Buyers]);
+
+          // Attempt to create a buyer, expecting revert
+          await expect(
+            bosonVoucherClone
+              .connect(buyer)
+              .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
+        it("Caller is not a clone address", async function () {
+          // Attempt to call onVoucherTransferred, expecting revert
+          await expect(
+            exchangeHandler.connect(rando).onVoucherTransferred(exchange.id, await newOwner.getAddress())
+          ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+        });
+
+        it("Caller is not a clone address associated with the seller", async function () {
+          // Create a new seller to get new clone
+          seller = mockSeller(
+            await rando.getAddress(),
+            await rando.getAddress(),
+            ZeroAddress,
+            await rando.getAddress()
+          );
+          expect(seller.isValid()).is.true;
+
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+          expectedCloneAddress = calculateCloneAddress(
+            await accountHandler.getAddress(),
+            beaconProxyAddress,
+            rando.address
+          );
+          const bosonVoucherClone2 = await getContractAt("IBosonVoucher", expectedCloneAddress);
+
+          // For the sake of test, mint token on bv2 with the id of token on bv1
+          // Temporarily grant PROTOCOL role to deployer account
+          await accessController.grantRole(Role.PROTOCOL, await deployer.getAddress());
+
+          const newBuyer = mockBuyer(await buyer.getAddress());
+          newBuyer.id = buyerId;
+          await bosonVoucherClone2.issueVoucher(exchange.id, newBuyer.wallet);
+
+          // Attempt to call onVoucherTransferred, expecting revert
+          await expect(
+            bosonVoucherClone2
+              .connect(buyer)
+              .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), exchange.id)
+          ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+        });
+
+        it("exchange id is invalid", async function () {
+          // An invalid exchange id
+          exchangeId = "666";
+
+          // Attempt to call onVoucherTransferred, expecting revert
+          await expect(
+            exchangeHandler.connect(fauxClient).onVoucherTransferred(exchangeId, await newOwner.getAddress())
+          ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+        });
+
+        it("exchange is not in committed state", async function () {
+          // Revoke the voucher
+          await exchangeHandler.connect(assistant).revokeVoucher(exchange.id);
+
+          // Attempt to call onVoucherTransferred, expecting revert
+          await expect(
+            exchangeHandler.connect(fauxClient).onVoucherTransferred(exchangeId, await newOwner.getAddress())
+          ).to.revertedWith(RevertReasons.INVALID_STATE);
+        });
+
+        it("Voucher has expired", async function () {
+          // Set time forward past the voucher's validUntilDate
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid) + Number(oneWeek));
+
+          // Attempt to call onVoucherTransferred, expecting revert
+          await expect(
+            exchangeHandler.connect(fauxClient).onVoucherTransferred(exchangeId, await newOwner.getAddress())
+          ).to.revertedWith(RevertReasons.VOUCHER_HAS_EXPIRED);
+        });
+      });
+    });
+
+    context("👉 onPremintedVoucherTransferred()", async function () {
       beforeEach(async function () {
         // Commit to offer, retrieving the event
         await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });

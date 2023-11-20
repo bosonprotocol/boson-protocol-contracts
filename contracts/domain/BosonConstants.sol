@@ -257,3 +257,16 @@ string constant RETRACT_DISPUTE = "retractDispute(uint256)";
 string constant RAISE_DISPUTE = "raiseDispute(uint256)";
 string constant ESCALATE_DISPUTE = "escalateDispute(uint256)";
 string constant RESOLVE_DISPUTE = "resolveDispute(uint256,uint256,bytes32,bytes32,uint8)";
+
+// Price discovery related
+string constant PRICE_TOO_HIGH = "Price discovery returned a price that is too high";
+string constant PRICE_TOO_LOW = "Price discovery returned a price that is too low";
+string constant TOKEN_ID_MANDATORY = "Token id is mandatory for bid orders";
+string constant TOKEN_ID_MISMATCH = "Token id mismatch";
+string constant INVALID_PRICE_TYPE = "Invalid price type";
+string constant INVALID_PRICE_DISCOVERY = "Invalid price discovery argument";
+string constant INCOMING_VOUCHER_ALREADY_SET = "Incoming voucher already set";
+string constant NEW_OWNER_AND_BUYER_MUST_MATCH = "New owner and buyer must match";
+string constant PRICE_DISCOVERY_CONTRACTS_NOT_SET = "PriceDiscoveryContract and Conduit must be set";
+string constant TOKEN_ID_NOT_SET = "Token id not set";
+string constant VOUCHER_TRANSFER_NOT_ALLOWED = "Voucher transfer not allowed";

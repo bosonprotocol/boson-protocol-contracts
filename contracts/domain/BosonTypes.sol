@@ -88,6 +88,11 @@ contract BosonTypes {
         Clerk // Deprecated.
     }
 
+    enum PriceType {
+        Static, // Default should always be at index 0. Never change this value.
+        Discovery
+    }
+
     struct AuthToken {
         uint256 tokenId;
         AuthTokenType tokenType;
@@ -152,6 +157,7 @@ contract BosonTypes {
         string metadataHash;
         bool voided;
         uint256 collectionIndex;
+        PriceType priceType;
     }
 
     struct OfferDates {
@@ -192,7 +198,7 @@ contract BosonTypes {
         ExchangeState state;
     }
 
-    struct SequentialCommit {
+    struct ExchangeCosts {
         uint256 resellerId;
         uint256 price;
         uint256 protocolFeeAmount;
@@ -310,13 +316,15 @@ contract BosonTypes {
 
     struct PriceDiscovery {
         uint256 price;
-        address priceDiscoveryContract;
-        bytes priceDiscoveryData;
         Side side;
+        address priceDiscoveryContract;
+        address conduit;
+        bytes priceDiscoveryData;
     }
 
     enum Side {
         Ask,
-        Bid
+        Bid,
+        Wrapper // Side is not relevant from the protocol perspective
     }
 }

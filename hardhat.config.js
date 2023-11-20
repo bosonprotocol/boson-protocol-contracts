@@ -196,7 +196,13 @@ module.exports = {
               yul: true,
             },
           },
+          outputSelection: {
+            "*": {
+              "*": ["evm.bytecode.object", "evm.deployedBytecode*"],
+            },
+          },
         },
+        viaIR: true,
       },
       {
         version: "0.8.21",

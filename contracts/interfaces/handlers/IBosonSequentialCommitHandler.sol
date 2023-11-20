@@ -4,16 +4,15 @@ pragma solidity 0.8.21;
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IBosonExchangeEvents } from "../events/IBosonExchangeEvents.sol";
 import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
-import { IERC721Receiver } from "../IERC721Receiver.sol";
 
 /**
  * @title ISequentialCommitHandler
  *
  * @notice Handles sequential commits.
  *
- * The ERC-165 identifier for this interface is: 0x1566334a
+ * The ERC-165 identifier for this interface is: 0x34780cc6
  */
-interface IBosonSequentialCommitHandler is IBosonExchangeEvents, IBosonFundsLibEvents, IERC721Receiver {
+interface IBosonSequentialCommitHandler is IBosonExchangeEvents, IBosonFundsLibEvents {
     /**
      * @notice Commits to an existing exchange. Price discovery is offloaded to external contract.
      *
