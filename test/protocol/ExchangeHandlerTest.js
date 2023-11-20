@@ -1370,7 +1370,12 @@ describe("IBosonExchangeHandler", function () {
           await expect(
             exchangeHandler
               .connect(rando)
-              .onPremintedVoucherTransferred(tokenId, await buyer.getAddress(), await assistant.getAddress())
+              .onPremintedVoucherTransferred(
+                tokenId,
+                await buyer.getAddress(),
+                await assistant.getAddress(),
+                await assistant.getAddress()
+              )
           ).to.revertedWith(RevertReasons.ACCESS_DENIED);
         });
 
@@ -1391,7 +1396,12 @@ describe("IBosonExchangeHandler", function () {
           await expect(
             exchangeHandler
               .connect(impersonatedBosonVoucher)
-              .onPremintedVoucherTransferred(tokenId, await buyer.getAddress(), await assistant.getAddress())
+              .onPremintedVoucherTransferred(
+                tokenId,
+                await buyer.getAddress(),
+                await assistant.getAddress(),
+                await assistant.getAddress()
+              )
           ).to.revertedWith(RevertReasons.EXCHANGE_ALREADY_EXISTS);
         });
 

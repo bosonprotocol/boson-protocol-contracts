@@ -462,6 +462,9 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             // An invalid token id
             exchangeId = "666";
             tokenId = deriveTokenId(offer.id, exchangeId);
+            order.tokenId = tokenId;
+            const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
+            priceDiscovery.priceDiscoveryData = priceDiscoveryData;
 
             // Attempt to commit, expecting revert
             await expect(
@@ -610,7 +613,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(buyer)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
-            ).to.revertedWith(RevertReasons.TOKEN_ID_MISMATCH);
+            ).to.revertedWith(RevertReasons.VOUCHER_NOT_RECEIVED);
           });
         });
       });
@@ -1020,7 +1023,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               const calldata = wrappedBosonVoucher.interface.encodeFunctionData("unwrap", [tokenId]);
               const priceDiscovery = new PriceDiscovery(
                 amount,
-                Side.Bid,
+                Side.Wrapper,
                 await wrappedBosonVoucher.getAddress(),
                 await wrappedBosonVoucher.getAddress(),
                 calldata
@@ -1074,7 +1077,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               const calldata = wrappedBosonVoucher.interface.encodeFunctionData("unwrap", [tokenId]);
               const priceDiscovery = new PriceDiscovery(
                 0,
-                Side.Bid,
+                Side.Wrapper,
                 await wrappedBosonVoucher.getAddress(),
                 await wrappedBosonVoucher.getAddress(),
                 calldata
@@ -1198,23 +1201,37 @@ describe("IPriceDiscoveryHandlerFacet", function () {
     context("👉 onPremintedVoucherTransferred()", async function () {
       context("💔 Revert Reasons", async function () {
         it("Only the initial owner can transfer the preminted voucher without starting the commit", async function () {
-          // Instead of deploying a mock contract, simulate the price discovery contract with EOA
-          const priceDiscoveryContract = rando;
+          const priceDiscoveryContractAddress = await priceDiscoveryContract.getAddress();
 
           // Transfer a preminted voucher to the price discovery contract
           // Make sure it does not trigger the commit
           const tokenId = deriveTokenId(offer.id, exchangeId);
           await expect(
-            bosonVoucher.connect(assistant).transferFrom(assistant.address, priceDiscoveryContract.address, tokenId)
+            bosonVoucher.connect(assistant).transferFrom(assistant.address, priceDiscoveryContractAddress, tokenId)
           ).to.not.emit(priceDiscoveryHandler, "BuyerCommitted");
 
-          // Price discovery contract transfers the voucher to someone else without
-          // being invoked via commitToPriceDiscoveryOffer()
+          // Call fulfilBuyOrder, which transfers the voucher to the buyer, expect revert
+          const order = {
+            seller: priceDiscoveryContractAddress,
+            buyer: buyer.address,
+            voucherContract: expectedCloneAddress,
+            tokenId: tokenId,
+            exchangeToken: offer.exchangeToken,
+            price: "0",
+          };
+
+          await expect(priceDiscoveryContract.fulfilBuyOrder(order)).to.be.revertedWith(
+            RevertReasons.VOUCHER_TRANSFER_NOT_ALLOWED
+          );
+        });
+
+        it("The preminted voucher cannot be transferred to EOA without starting the commit", async function () {
+          // Transfer a preminted voucher to rando EOA and expect revert
+          // Make sure it does not trigger the commit
+          const tokenId = deriveTokenId(offer.id, exchangeId);
           await expect(
-            bosonVoucher
-              .connect(priceDiscoveryContract)
-              .transferFrom(priceDiscoveryContract.address, buyer.address, tokenId)
-          ).to.be.revertedWith(RevertReasons.ACCESS_DENIED);
+            bosonVoucher.connect(assistant).transferFrom(assistant.address, rando.address, tokenId)
+          ).to.be.revertedWith(RevertReasons.VOUCHER_TRANSFER_NOT_ALLOWED);
         });
       });
     });

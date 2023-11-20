@@ -86,27 +86,22 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
         );
 
         bool isTokenId;
-        uint256 offerId;
+        uint256 offerId = _tokenIdOrOfferId >> 128;
+        // if `_tokenIdOrOfferId` is a token id, then upper 128 bits represent the offer id.
+        // Therefore, if `offerId` is not 0, then `_tokenIdOrOfferId` represents a token id
+        // and if `offerId` is 0, then `_tokenIdOrOfferId` represents an offer id.
+        // N.B. token ids, corresponding to exchanges from v2.2.0 and earlier, have zero upper 128 bits
+        // and it seems we could confuse them with offer ids. However, the offers frm that time are all
+        // of type PriceType.Static and therefore will never be used here.
 
-        // First try to fetch offer with _tokenIdOrOfferId
-        (bool exists, Offer storage offer) = fetchOffer(_tokenIdOrOfferId); // TODO: review behaviour of pre v2.2.0 offers
-
-        if (exists) {
-            // Make sure offer is not voided
-            require(!offer.voided, OFFER_HAS_BEEN_VOIDED);
-
-            // Set offer id if offer exists
+        if (offerId == 0) {
             offerId = _tokenIdOrOfferId;
         } else {
-            // Extract offerId from _tokenIdOrOfferId
-            offerId = _tokenIdOrOfferId >> 128;
-
-            // Fetch offer with offerId
-            offer = getValidOffer(offerId);
-
-            // Signalize that _tokenIdOrOfferId is a token id
             isTokenId = true;
         }
+
+        // Fetch offer with offerId
+        Offer storage offer = getValidOffer(offerId);
 
         // Make sure offer type is price discovery. Otherwise, use commitToOffer
         require(offer.priceType == PriceType.Discovery, INVALID_PRICE_TYPE);
@@ -166,7 +161,7 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
 
                 emit FundsEncumbered(sellerId, exchangeToken, actualPrice, msgSender());
             } else {
-                // when bid side, we have full proceeds in escrow.
+                // when bid side or wrapper, we have full proceeds in escrow.
                 // If exchange token is 0, we need to unwrap it
                 if (exchangeToken == address(0)) {
                     wNative.withdraw(actualPrice);
