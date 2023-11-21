@@ -3262,6 +3262,85 @@ describe("SellerHandler", function () {
       });
     });
 
+    context("👉 getSellersCollectionsPaginated()", async function () {
+      let externalId, expectedDefaultAddress, expectedCollectionAddress, additionalCollections;
+
+      beforeEach(async function () {
+        // Create a seller
+        await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+        expectedDefaultAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          admin.address
+        ); // default
+
+        additionalCollections = new CollectionList([]);
+        for (let i = 1; i <= 5; i++) {
+          externalId = `Brand${i}`;
+          voucherInitValues.collectionSalt = encodeBytes32String(externalId);
+          expectedCollectionAddress = calculateCloneAddress(
+            await accountHandler.getAddress(),
+            beaconProxyAddress,
+            admin.address,
+            voucherInitValues.collectionSalt
+          );
+          voucherInitValues.contractURI = `https://brand${i}.com`;
+
+          // Create a new collection
+          await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
+
+          // Add to expected collections
+          additionalCollections.collections.push(new Collection(expectedCollectionAddress, externalId));
+        }
+      });
+
+      it("should return correct collection list", async function () {
+        const limit = 3;
+        const offset = 1;
+
+        const expectedCollections = new CollectionList(additionalCollections.collections.slice(offset, offset + limit));
+
+        const [defaultVoucherAddress, collections] = await accountHandler
+          .connect(rando)
+          .getSellersCollectionsPaginated(seller.id, limit, offset);
+        const returnedCollections = CollectionList.fromStruct(collections);
+
+        expect(defaultVoucherAddress).to.equal(expectedDefaultAddress, "Wrong default voucher address");
+        expect(returnedCollections).to.deep.equal(expectedCollections, "Wrong additional collections");
+      });
+
+      it("Offset is more than number of collections", async function () {
+        const limit = 2;
+        const offset = 8;
+
+        const expectedCollections = new CollectionList([]); // empty
+
+        const [defaultVoucherAddress, collections] = await accountHandler
+          .connect(rando)
+          .getSellersCollectionsPaginated(seller.id, limit, offset);
+        const returnedCollections = CollectionList.fromStruct(collections);
+
+        expect(defaultVoucherAddress).to.equal(expectedDefaultAddress, "Wrong default voucher address");
+        expect(returnedCollections).to.deep.equal(expectedCollections, "Wrong additional collections");
+      });
+
+      it("Limit + offset is more than number of collections", async function () {
+        const limit = 7;
+        const offset = 2;
+
+        const expectedCollections = new CollectionList(additionalCollections.collections.slice(offset)); // everything after offset
+
+        const [defaultVoucherAddress, collections] = await accountHandler
+          .connect(rando)
+          .getSellersCollectionsPaginated(seller.id, limit, offset);
+        const returnedCollections = CollectionList.fromStruct(collections);
+
+        expect(defaultVoucherAddress).to.equal(expectedDefaultAddress, "Wrong default voucher address");
+        expect(returnedCollections).to.deep.equal(expectedCollections, "Wrong additional collections");
+      });
+    });
+
     context("👉 updateSellerSalt()", async function () {
       let newSellerSalt;
 
