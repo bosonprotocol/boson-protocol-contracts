@@ -1205,7 +1205,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(reseller)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
-              ).to.revertedWithCustomError(bosonErrors, RevertReasons.ERC721_CALLER_NOT_OWNER_OR_APPROVED);
+              ).to.revertedWith(RevertReasons.ERC721_CALLER_NOT_OWNER_OR_APPROVED);
             });
 
             it("price discovery sends less than expected", async function () {

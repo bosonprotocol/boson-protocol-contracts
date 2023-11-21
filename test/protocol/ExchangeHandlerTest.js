@@ -5965,14 +5965,14 @@ describe("IBosonExchangeHandler", function () {
             bosonVoucherClone
               .connect(buyer)
               .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId)
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("Caller is not a clone address", async function () {
           // Attempt to call onVoucherTransferred, expecting revert
           await expect(
             exchangeHandler.connect(rando).onVoucherTransferred(exchange.id, await newOwner.getAddress())
-          ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
         });
 
         it("Caller is not a clone address associated with the seller", async function () {
@@ -6006,7 +6006,7 @@ describe("IBosonExchangeHandler", function () {
             bosonVoucherClone2
               .connect(buyer)
               .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), exchange.id)
-          ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
         });
 
         it("exchange id is invalid", async function () {
@@ -6016,7 +6016,7 @@ describe("IBosonExchangeHandler", function () {
           // Attempt to call onVoucherTransferred, expecting revert
           await expect(
             exchangeHandler.connect(fauxClient).onVoucherTransferred(exchangeId, await newOwner.getAddress())
-          ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
         });
 
         it("exchange is not in committed state", async function () {
@@ -6026,7 +6026,7 @@ describe("IBosonExchangeHandler", function () {
           // Attempt to call onVoucherTransferred, expecting revert
           await expect(
             exchangeHandler.connect(fauxClient).onVoucherTransferred(exchangeId, await newOwner.getAddress())
-          ).to.revertedWith(RevertReasons.INVALID_STATE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_STATE);
         });
 
         it("Voucher has expired", async function () {
@@ -6036,7 +6036,7 @@ describe("IBosonExchangeHandler", function () {
           // Attempt to call onVoucherTransferred, expecting revert
           await expect(
             exchangeHandler.connect(fauxClient).onVoucherTransferred(exchangeId, await newOwner.getAddress())
-          ).to.revertedWith(RevertReasons.VOUCHER_HAS_EXPIRED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.VOUCHER_HAS_EXPIRED);
         });
       });
     });

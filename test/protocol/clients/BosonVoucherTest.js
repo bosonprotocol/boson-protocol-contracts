@@ -1592,7 +1592,7 @@ describe("IBosonVoucher", function () {
                   bosonVoucher
                     .connect(rando)
                     [selector](await rando.getAddress(), await rando.getAddress(), tokenId, ...additionalArgs)
-                ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.ERC721_CALLER_NOT_OWNER_OR_APPROVED);
+                ).to.be.revertedWith(RevertReasons.ERC721_CALLER_NOT_OWNER_OR_APPROVED);
               });
             });
           });

@@ -655,7 +655,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler, 
                     uint256 minTokenId = condition.minTokenId;
                     uint256 maxTokenId = condition.maxTokenId;
 
-                    if (minTokenId != maxTokenId && maxTokenId == 0) revert CannotCommit(); // legacy conditions have maxTokenId == 0
+                    if (minTokenId != maxTokenId && maxTokenId != 0) revert CannotCommit(); // legacy conditions have maxTokenId == 0
 
                     // Uses token id from the condition
                     tokenId = minTokenId;

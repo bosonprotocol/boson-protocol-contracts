@@ -325,7 +325,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         }
 
         // Token id cannot be zero at this point
-        if (_tokenId != 0) revert TokenIdNotSet();
+        if (_tokenId == 0) revert TokenIdNotSet();
 
         return _tokenId;
     }

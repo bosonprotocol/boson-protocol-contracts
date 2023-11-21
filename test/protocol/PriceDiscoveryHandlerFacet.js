@@ -503,7 +503,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(buyer)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ERC721_INVALID_TOKEN_ID);
+            ).to.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
           });
 
           it("offer is voided", async function () {
@@ -855,7 +855,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(assistant)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ERC721_INVALID_TOKEN_ID);
+            ).to.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
           });
 
           it("offer is voided", async function () {
@@ -938,7 +938,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(assistant)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ERC721_CALLER_NOT_OWNER_OR_APPROVED);
+            ).to.revertedWith(RevertReasons.ERC721_CALLER_NOT_OWNER_OR_APPROVED);
           });
 
           it("price discovery sends less than expected", async function () {
