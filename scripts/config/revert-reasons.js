@@ -214,4 +214,6 @@ exports.RevertReasons = {
   VOUCHER_NOT_RECEIVED: "VoucherNotReceived",
   UNEXPECTED_ERC721_RECEIVED: "UnexpectedERC721Received",
   FEE_AMOUNT_TOO_HIGH: "FeeAmountTooHigh",
+  INVALID_PRICE_DISCOVERY: "InvalidPriceDiscovery",
+  INVALID_CONDUIT_ADDRESS: "InvalidConduitAddress",
 };

@@ -647,6 +647,42 @@ describe("IPriceDiscoveryHandlerFacet", function () {
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.VOUCHER_NOT_RECEIVED);
           });
+
+          it("price discovery address is not set", async function () {
+            // An invalid price discovery address
+            priceDiscovery.priceDiscoveryContract = ZeroAddress;
+
+            // Attempt to commit, expecting revert
+            await expect(
+              priceDiscoveryHandler
+                .connect(buyer)
+                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_PRICE_DISCOVERY);
+          });
+
+          it("price discovery data is empty", async function () {
+            // An empty price discovery data
+            priceDiscovery.priceDiscoveryData = "0x";
+
+            // Attempt to commit, expecting revert
+            await expect(
+              priceDiscoveryHandler
+                .connect(buyer)
+                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_PRICE_DISCOVERY);
+          });
+
+          it("conduit address is not set", async function () {
+            // An invalid conduit address
+            priceDiscovery.conduit = ZeroAddress;
+
+            // Attempt to commit, expecting revert
+            await expect(
+              priceDiscoveryHandler
+                .connect(buyer)
+                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_CONDUIT_ADDRESS);
+          });
         });
       });
 
@@ -958,6 +994,42 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             await expect(
               priceDiscoveryHandler.connect(rando).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_VOUCHER_HOLDER);
+          });
+
+          it("price discovery address is not set", async function () {
+            // An invalid price discovery address
+            priceDiscovery.priceDiscoveryContract = ZeroAddress;
+
+            // Attempt to commit, expecting revert
+            await expect(
+              priceDiscoveryHandler
+                .connect(assistant)
+                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_PRICE_DISCOVERY);
+          });
+
+          it("price discovery data is empty", async function () {
+            // An empty price discovery data
+            priceDiscovery.priceDiscoveryData = "0x";
+
+            // Attempt to commit, expecting revert
+            await expect(
+              priceDiscoveryHandler
+                .connect(assistant)
+                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_PRICE_DISCOVERY);
+          });
+
+          it("conduit address is not set", async function () {
+            // An invalid conduit address
+            priceDiscovery.conduit = ZeroAddress;
+
+            // Attempt to commit, expecting revert
+            await expect(
+              priceDiscoveryHandler
+                .connect(assistant)
+                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_CONDUIT_ADDRESS);
           });
         });
       });
