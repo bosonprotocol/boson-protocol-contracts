@@ -254,6 +254,8 @@ interface BosonErrors {
     error InsufficientAvailableFunds();
     // Native token was sent when ERC20 was expected
     error NativeNotAllowed();
+    // Trying to deposit zero amount
+    error ZeroDepositNotAllowed();
 
     // Meta-Transactions related
     // Meta-transaction nonce is invalid
@@ -314,4 +316,32 @@ interface BosonErrors {
     error ExternalCallFailed();
     // Trying to interact with external contract in a way that could result in transferring assets from the contract
     error InteractionNotAllowed();
+
+    // Price discovery related
+    // Price discovery returned a price that is too low
+    error PriceTooLow();
+    // Token id is mandatory for bid orders and wrappers
+    error TokenIdMandatory();
+    // Incoming token id does not match the expected one
+    error TokenIdMismatch();
+    // Using price discovery for non-price discovery offer or using ordinary commit for price discovery offer
+    error InvalidPriceType();
+    // Missing price discovery contract address or data
+    error InvalidPriceDiscovery();
+    // Trying to set incoming voucher when it's already set, indicating reentrancy
+    error IncomingVoucherAlreadySet();
+    // Conduit address must be zero ()
+    error InvalidConduitAddress();
+    // Protocol does not know what token id to use
+    error TokenIdNotSet();
+    // Transferring a preminted voucher to wrong recipient
+    error VoucherTransferNotAllowed();
+    // Price discovery contract returned a negative price
+    error NegativePriceNotAllowed();
+    // Price discovery did not send the voucher to the protocol
+    error VoucherNotReceived();
+    // Either token with wrong id received or wrong voucher contract made the transfer
+    error UnexpectedERC721Received();
+    // Royalty fee exceeds the price
+    error FeeAmountTooHigh();
 }

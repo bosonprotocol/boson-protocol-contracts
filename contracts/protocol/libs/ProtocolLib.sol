@@ -116,6 +116,8 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.Twin) twins;
         //entity id => auth token
         mapping(uint256 => BosonTypes.AuthToken) authTokens;
+        // exchange id => sequential commit info
+        mapping(uint256 => BosonTypes.ExchangeCosts[]) exchangeCosts;
     }
 
     // Protocol lookups storage
@@ -247,6 +249,10 @@ library ProtocolLib {
         mapping(bytes32 => bool) initializedVersions;
         // Current protocol version
         bytes32 version;
+        // Incoming voucher id
+        uint256 incomingVoucherId;
+        // Incoming voucher clone address
+        address incomingVoucherCloneAddress;
     }
 
     /**

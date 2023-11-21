@@ -1281,11 +1281,17 @@ describe("IBosonDisputeHandler", function () {
           timeout = BigInt(disputedDate) + resolutionPeriod.toString();
         });
 
-        it("should emit a DisputeEscalated event", async function () {
+        it("should emit FundsEncumbered and DisputeEscalated events", async function () {
           // Escalate the dispute, testing for the event
-          await expect(
-            disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative })
-          )
+          const tx = await disputeHandler
+            .connect(buyer)
+            .escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
+
+          await expect(tx)
+            .to.emit(disputeHandler, "FundsEncumbered")
+            .withArgs(buyerId, ZeroAddress, buyerEscalationDepositNative, await buyer.getAddress());
+
+          await expect(tx)
             .to.emit(disputeHandler, "DisputeEscalated")
             .withArgs(exchangeId, disputeResolverId, await buyer.getAddress());
         });
@@ -1341,8 +1347,13 @@ describe("IBosonDisputeHandler", function () {
           // Protocol balance before
           const escrowBalanceBefore = await mockToken.balanceOf(await disputeHandler.getAddress());
 
-          // Escalate the dispute, testing for the event
-          await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId))
+          // Escalate the dispute, testing for the events
+          const tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId);
+          await expect(tx)
+            .to.emit(disputeHandler, "FundsEncumbered")
+            .withArgs(buyerId, await mockToken.getAddress(), buyerEscalationDepositToken, await buyer.getAddress());
+
+          await expect(tx)
             .to.emit(disputeHandler, "DisputeEscalated")
             .withArgs(exchangeId, disputeResolverId, await buyer.getAddress());
 

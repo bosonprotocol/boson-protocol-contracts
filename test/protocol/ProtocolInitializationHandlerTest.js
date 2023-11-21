@@ -688,6 +688,7 @@ describe("ProtocolInitializationHandler", async function () {
           voucherBeacon: await beacon.getAddress(),
         };
 
+        let doPreprocess = true; // Due to "hardhat-preprocessor" way of caching, we need a workaround to toggle preprocessing on and off
         // Make initial deployment (simulate v2.2.1)
         // The new config initialization deploys the same voucher proxy as initV2_3_0, which makes the initV2_3_0 test fail
         // One way to approach would be to checkout the contracts from the previous tag.
@@ -695,17 +696,19 @@ describe("ProtocolInitializationHandler", async function () {
         hre.config.preprocess = {
           eachLine: () => ({
             transform: (line) => {
-              if (
-                line.includes("address beaconProxy = address(new BeaconClientProxy{ salt: VOUCHER_PROXY_SALT }());")
-              ) {
-                // comment out the proxy deployment
-                line = "//" + line;
-              } else if (line.includes("setBeaconProxyAddress(beaconProxy)")) {
-                // set beacon proxy from config, not the deployed one
-                line = line.replace(
-                  "setBeaconProxyAddress(beaconProxy)",
-                  "setBeaconProxyAddress(_addresses.beaconProxy)"
-                );
+              if (doPreprocess) {
+                if (
+                  line.includes("address beaconProxy = address(new BeaconClientProxy{ salt: VOUCHER_PROXY_SALT }());")
+                ) {
+                  // comment out the proxy deployment
+                  line = "//" + line;
+                } else if (line.includes("setBeaconProxyAddress(beaconProxy)")) {
+                  // set beacon proxy from config, not the deployed one
+                  line = line.replace(
+                    "setBeaconProxyAddress(beaconProxy)",
+                    "setBeaconProxyAddress(_addresses.beaconProxy)"
+                  );
+                }
               }
               return line;
             },
@@ -729,10 +732,9 @@ describe("ProtocolInitializationHandler", async function () {
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // Deploy v2.3.0 facets
-        // Remove preprocess
-        hre.config.preprocess = {};
-        // Compile old version
-        await hre.run("compile");
+        // Skip preprocessing and compile new version
+        doPreprocess = false;
+        await hre.run("compile", { force: true });
 
         [{ contract: deployedProtocolInitializationHandlerFacet }, { contract: configHandler }] =
           await deployProtocolFacets(

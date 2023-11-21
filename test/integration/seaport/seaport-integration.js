@@ -1,6 +1,12 @@
 const { ethers } = require("hardhat");
 const { ZeroAddress, BigNumber, getContractAt, ZeroHash } = ethers;
-const { setupTestEnvironment, getEvent, calculateContractAddress, objectToArray } = require("../../util/utils");
+const {
+  setupTestEnvironment,
+  getEvent,
+  calculateBosonProxyAddress,
+  calculateCloneAddress,
+  objectToArray,
+} = require("../../util/utils");
 const { SEAPORT_ADDRESS } = require("../../util/constants");
 
 const {
@@ -14,7 +20,14 @@ const {
 const { assert, expect } = require("chai");
 let { seaportFixtures } = require("./fixtures.js");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
+const ItemType = require("./ItemTypeEnum");
 
+// This test checks whether the Boson Voucher contract can be used as the offerer in Seaport offers.
+// We need to handle funds internally on the protocol, and Seaport sends the money to the offerer's account.
+// Therefore, we need to use the BV contract as the offerer to manage funds.
+// Seaport allows offer creation in two ways: signing a message or calling an on-chain validate function.
+// Contract accounts cannot sign messages. Therefore, we have created a function on the BV contract that can run arbitrary methods,
+// which only the BV contract owner (assistant) can call.
 // Requirements to run this test:
 // - Seaport submodule contains a `artifacts` folder inside it. Run `git submodule update --init --recursive` to get it.
 // - Set hardhat config to hardhat-fork.config.js. e.g.:
@@ -75,7 +88,8 @@ describe("[@skip-on-coverage] Seaport integration", function () {
       .connect(assistant)
       .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, "0");
 
-    const voucherAddress = calculateContractAddress(await accountHandler.getAddress(), seller.id);
+    const beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
+    const voucherAddress = calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, seller.admin);
     bosonVoucher = await getContractAt("BosonVoucher", voucherAddress);
 
     // Pool needs to cover both seller deposit and price
@@ -85,15 +99,13 @@ describe("[@skip-on-coverage] Seaport integration", function () {
     });
 
     // Pre mint range
-    await offerHandler
-      .connect(assistant)
-      .reserveRange(offer.id, offer.quantityAvailable, await bosonVoucher.getAddress());
+    await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, voucherAddress);
     await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
 
     // Create seaport offer which tokenId 1
     const endDate = "0xff00000000000000000000000000";
-    const seaportOffer = seaportFixtures.getTestVoucher(1, await bosonVoucher.getAddress(), 1, 1);
-    const consideration = seaportFixtures.getTestToken(0, undefined, 1, 2, await bosonVoucher.getAddress());
+    const seaportOffer = seaportFixtures.getTestVoucher(ItemType.ERC721, 1, voucherAddress, 1, 1);
+    const consideration = seaportFixtures.getTestToken(ItemType.NATIVE, 0, undefined, 1, 2, voucherAddress);
     ({ order, orderHash, value } = await seaportFixtures.getOrder(
       bosonVoucher,
       undefined,

@@ -222,9 +222,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             if (_offer.buyerCancelPenalty > offerPrice) revert InvalidOfferPenalty();
 
             // Calculate and set the protocol fee
-            uint256 protocolFee = _offer.exchangeToken == protocolAddresses().token
-                ? protocolFees().flatBoson
-                : (protocolFees().percentage * offerPrice) / 10000;
+            uint256 protocolFee = getProtocolFee(_offer.exchangeToken, offerPrice);
 
             // Calculate the agent fee amount
             uint256 agentFeeAmount = (agent.feePercentage * offerPrice) / 10000;
@@ -256,6 +254,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         offer.metadataUri = _offer.metadataUri;
         offer.metadataHash = _offer.metadataHash;
         offer.collectionIndex = _offer.collectionIndex;
+        offer.priceType = _offer.priceType;
 
         // Get storage location for offer dates
         OfferDates storage offerDates = fetchOfferDates(_offer.id);

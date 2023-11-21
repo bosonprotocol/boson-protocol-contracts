@@ -5,7 +5,7 @@ import "../../domain/BosonConstants.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import "../../domain/BosonConstants.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
-import { ProtocolBase } from "../bases/OfferBase.sol";
+import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IBosonPauseHandler } from "../../interfaces/handlers/IBosonPauseHandler.sol";
 

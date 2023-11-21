@@ -64,6 +64,8 @@ const noArgFacetNames = [
   "TwinHandlerFacet",
   "PauseHandlerFacet",
   "ProtocolInitializationHandlerFacet", // args are generated on cutDiamond function
+  "SequentialCommitHandlerFacet",
+  "PriceDiscoveryHandlerFacet",
 ];
 
 async function getFacets(config) {
@@ -76,6 +78,14 @@ async function getFacets(config) {
 
   facetArgs["ConfigHandlerFacet"] = { init: ConfigHandlerFacetInitArgs };
   facetArgs["ExchangeHandlerFacet"] = { init: [], constructorArgs: [protocolConfig.EXCHANGE_ID_2_2_0[network]] };
+  facetArgs["SequentialCommitHandlerFacet"] = {
+    init: [],
+    constructorArgs: [protocolConfig.WrappedNative[network], protocolConfig.EXCHANGE_ID_2_2_0[network]],
+  };
+  facetArgs["PriceDiscoveryHandlerFacet"] = {
+    init: [],
+    constructorArgs: [protocolConfig.WrappedNative[network], protocolConfig.EXCHANGE_ID_2_2_0[network]],
+  };
 
   // metaTransactionsHandlerFacet initializer arguments.
   const MetaTransactionsHandlerFacetInitArgs = await getMetaTransactionsHandlerFacetInitArgs(

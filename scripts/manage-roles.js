@@ -92,7 +92,7 @@ async function main(env) {
 
       // Revoke role if previously granted
       if (hasRole) {
-        await accessController.revokeRole(role, config.address());
+        await accessController.revokeRole(role, config.address);
       }
 
       // Report status

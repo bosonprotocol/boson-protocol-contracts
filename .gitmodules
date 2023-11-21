@@ -1,3 +1,6 @@
 [submodule "submodules/seaport"]
 	path = submodules/seaport
 	url = git@github.com:ProjectOpenSea/seaport.git
+[submodule "submodules/lssvm"]
+	path = submodules/lssvm
+	url = https://github.com/sudoswap/lssvm

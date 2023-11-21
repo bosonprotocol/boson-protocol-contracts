@@ -394,13 +394,17 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(exchangeId, buyerId, seller.id, await buyer.getAddress());
       });
 
-      it("should emit a DisputeEscalated event", async function () {
-        // Raise and Escalate a dispute, testing for the event
-        await expect(
-          orchestrationHandler
-            .connect(buyer)
-            .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative })
-        )
+      it("should emit FundsEncumbered and DisputeEscalated event", async function () {
+        // Raise and Escalate a dispute, testing for the events
+        const tx = await orchestrationHandler
+          .connect(buyer)
+          .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative });
+
+        await expect(tx)
+          .to.emit(disputeHandler, "FundsEncumbered")
+          .withArgs(buyerId, ZeroAddress, buyerEscalationDepositNative, await buyer.getAddress());
+
+        await expect(tx)
           .to.emit(disputeHandler, "DisputeEscalated")
           .withArgs(exchangeId, disputeResolverId, await buyer.getAddress());
       });
@@ -459,8 +463,14 @@ describe("IBosonOrchestrationHandler", function () {
         // Protocol balance before
         const escrowBalanceBefore = await mockToken.balanceOf(protocolDiamondAddress);
 
-        // Escalate the dispute, testing for the event
-        await expect(orchestrationHandler.connect(buyer).raiseAndEscalateDispute(exchangeId))
+        // Escalate the dispute, testing for the events
+        const tx = await orchestrationHandler.connect(buyer).raiseAndEscalateDispute(exchangeId);
+
+        await expect(tx)
+          .to.emit(disputeHandler, "FundsEncumbered")
+          .withArgs(buyerId, await mockToken.getAddress(), buyerEscalationDepositToken, await buyer.getAddress());
+
+        await expect(tx)
           .to.emit(disputeHandler, "DisputeEscalated")
           .withArgs(exchangeId, disputeResolverId, await buyer.getAddress());
 

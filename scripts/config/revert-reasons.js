@@ -151,6 +151,7 @@ exports.RevertReasons = {
   TOKEN_AMOUNT_MISMATCH: "TokenAmountMismatch",
   NOTHING_TO_WITHDRAW: "NothingToWithdraw",
   NOT_AUTHORIZED: "NotAuthorized",
+  ZERO_DEPOSIT_NOT_ALLOWED: "ZeroDepositNotAllowed",
 
   // Outside the protocol revert reasons
   ERC20_EXCEEDS_BALANCE: "ERC20: transfer amount exceeds balance",
@@ -205,4 +206,12 @@ exports.RevertReasons = {
   INIT_ZERO_ADDRESS_NON_EMPTY_CALLDATA: "LibDiamondCut: _init is address(0) but _calldata is not empty",
   INIT_EMPTY_CALLDATA_NON_ZERO_ADDRESS: "LibDiamondCut: _calldata is empty but _init is not address(0)",
   INIT_ADDRESS_WITH_NO_CODE: "LibDiamondCut: _init address has no code",
+
+  // Price discovery related
+  PRICE_TOO_LOW: "PriceTooLow",
+  TOKEN_ID_MISMATCH: "TokenIdMismatch",
+  VOUCHER_TRANSFER_NOT_ALLOWED: "VoucherTransferNotAllowed",
+  VOUCHER_NOT_RECEIVED: "VoucherNotReceived",
+  UNEXPECTED_ERC721_RECEIVED: "UnexpectedERC721Received",
+  FEE_AMOUNT_TOO_HIGH: "FeeAmountTooHigh",
 };

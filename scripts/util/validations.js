@@ -126,6 +126,14 @@ function bytes4ArrayIsValid(bytes4Array) {
   return valid;
 }
 
+function bytesIsValid(bytes) {
+  let valid = false;
+  try {
+    valid = typeof bytes === "string" && bytes.startsWith("0x") && bytes.length % 2 === 0;
+  } catch (e) {}
+  return valid;
+}
+
 exports.bigNumberIsValid = bigNumberIsValid;
 exports.enumIsValid = enumIsValid;
 exports.addressIsValid = addressIsValid;
@@ -133,4 +141,5 @@ exports.booleanIsValid = booleanIsValid;
 exports.bigNumberArrayIsValid = bigNumberArrayIsValid;
 exports.stringIsValid = stringIsValid;
 exports.bytes4ArrayIsValid = bytes4ArrayIsValid;
+exports.bytesIsValid = bytesIsValid;
 exports.bytes32IsValid = bytes32IsValid;
