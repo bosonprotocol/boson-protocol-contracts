@@ -1,4 +1,11 @@
-const { bigNumberIsValid, addressIsValid, booleanIsValid, stringIsValid } = require("../util/validations.js");
+const {
+  bigNumberIsValid,
+  addressIsValid,
+  booleanIsValid,
+  stringIsValid,
+  enumIsValid,
+} = require("../util/validations.js");
+const PriceType = require("./PriceType.js");
 
 /**
  * Boson Protocol Domain Entity: Offer
@@ -19,6 +26,7 @@ class Offer {
             string metadataHash;
             bool voided;
             uint256 collectionIndex;
+            PriceType priceType;
         }
     */
 
@@ -33,7 +41,8 @@ class Offer {
     metadataUri,
     metadataHash,
     voided,
-    collectionIndex
+    collectionIndex,
+    priceType
   ) {
     this.id = id;
     this.sellerId = sellerId;
@@ -46,6 +55,7 @@ class Offer {
     this.metadataHash = metadataHash;
     this.voided = voided;
     this.collectionIndex = collectionIndex;
+    this.priceType = priceType;
   }
 
   /**
@@ -66,6 +76,7 @@ class Offer {
       metadataHash,
       voided,
       collectionIndex,
+      priceType,
     } = o;
 
     return new Offer(
@@ -79,7 +90,8 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
-      collectionIndex
+      collectionIndex,
+      priceType
     );
   }
 
@@ -99,7 +111,8 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
-      collectionIndex;
+      collectionIndex,
+      priceType;
 
     // destructure struct
     [
@@ -114,6 +127,7 @@ class Offer {
       metadataHash,
       voided,
       collectionIndex,
+      priceType,
     ] = struct;
     if (!collectionIndex) {
       collectionIndex = 0;
@@ -131,6 +145,7 @@ class Offer {
       metadataHash,
       voided,
       collectionIndex: collectionIndex.toString(),
+      priceType: Number(priceType),
     });
   }
 
@@ -167,6 +182,7 @@ class Offer {
       this.metadataHash,
       this.voided,
       this.collectionIndex,
+      this.priceType,
     ];
   }
 
@@ -281,6 +297,14 @@ class Offer {
   }
 
   /**
+   * Is this Offer instance's priceType field valid?
+   * @returns {boolean}
+   */
+  priceTypeIsValid() {
+    return enumIsValid(this.priceType, PriceType.Types);
+  }
+
+  /**
    * Is this Offer instance valid?
    * @returns {boolean}
    */
@@ -296,7 +320,8 @@ class Offer {
       this.metadataUriIsValid() &&
       this.metadataHashIsValid() &&
       this.voidedIsValid() &&
-      this.collectionIndexIsValid()
+      this.collectionIndexIsValid() &&
+      this.priceTypeIsValid()
     );
   }
 }

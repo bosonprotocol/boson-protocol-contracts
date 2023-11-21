@@ -1,5 +1,5 @@
-const hre = require("hardhat");
-const { ZeroAddress } = hre.ethers;
+const { ethers } = require("hardhat");
+const { ZeroAddress } = ethers;
 const { expect } = require("chai");
 
 const Agent = require("../../scripts/domain/Agent");

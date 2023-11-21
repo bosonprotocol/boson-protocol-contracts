@@ -32,9 +32,11 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      *
      * Reverts if:
      * - The funds region of protocol is paused
+     * - Amount to deposit is zero
      * - Seller id does not exist
      * - It receives some native currency (e.g. ETH), but token address is not zero
      * - It receives some native currency (e.g. ETH), and the amount does not match msg.value
+     * - It receives no native currency, but token address is zero
      * - Contract at token address does not support ERC20 function transferFrom
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      * - Received ERC20 token amount differs from the expected value
@@ -48,6 +50,8 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         address _tokenAddress,
         uint256 _amount
     ) external payable override fundsNotPaused nonReentrant {
+        require(_amount > 0, ZERO_DEPOSIT_NOT_ALLOWED);
+
         // Check seller exists in sellers mapping
         (bool exists, , ) = fetchSeller(_sellerId);
 
@@ -60,6 +64,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             require(_amount == msg.value, NATIVE_WRONG_AMOUNT);
         } else {
             // Transfer tokens from the caller
+            require(_tokenAddress != address(0), INVALID_ADDRESS);
             FundsLib.transferFundsToProtocol(_tokenAddress, _amount);
         }
 

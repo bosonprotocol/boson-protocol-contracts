@@ -1,6 +1,6 @@
 const { assert, expect } = require("chai");
-const hre = require("hardhat");
-const { getSigners, getContractAt, getContractFactory, Interface, ZeroAddress } = hre.ethers;
+const { ethers } = require("hardhat");
+const { getSigners, getContractAt, getContractFactory, Interface, ZeroAddress } = ethers;
 
 const Role = require("../../scripts/domain/Role");
 const Facet = require("../../scripts/domain/Facet");

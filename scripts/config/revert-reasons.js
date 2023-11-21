@@ -11,6 +11,7 @@ exports.RevertReasons = {
   // Pause related
   NOT_PAUSED: "Protocol is not currently paused",
   REGION_PAUSED: "This region of the protocol is currently paused",
+  ZERO_DEPOSIT_NOT_ALLOWED: "Zero deposit not allowed",
 
   // General
   INVALID_ADDRESS: "Invalid address",
@@ -130,6 +131,11 @@ exports.RevertReasons = {
   INVALID_RANGE_LENGTH: "Range length is too large or zero",
   EXCHANGE_ALREADY_EXISTS: "Exchange already exists",
 
+  // Sequential commit related
+  UNEXPECTED_ERC721_RECEIVED: "Unexpected ERC721 received",
+  FEE_AMOUNT_TOO_HIGH: "Fee amount is too high",
+  VOUCHER_NOT_RECEIVED: "Voucher not received",
+
   // Voucher related
   EXCHANGE_ID_IN_RESERVED_RANGE: "Exchange id falls within a pre-minted offer's range",
   NO_RESERVED_RANGE_FOR_OFFER: "Offer id not associated with a reserved range",
@@ -209,4 +215,10 @@ exports.RevertReasons = {
   INIT_ZERO_ADDRESS_NON_EMPTY_CALLDATA: "LibDiamondCut: _init is address(0) but _calldata is not empty",
   INIT_EMPTY_CALLDATA_NON_ZERO_ADDRESS: "LibDiamondCut: _calldata is empty but _init is not address(0)",
   INIT_ADDRESS_WITH_NO_CODE: "LibDiamondCut: _init address has no code",
+
+  // Price discovery related
+  PRICE_TOO_HIGH: "Price discovery returned a price that is too high",
+  PRICE_TOO_LOW: "Price discovery returned a price that is too low",
+  TOKEN_ID_MISMATCH: "Token id mismatch",
+  VOUCHER_TRANSFER_NOT_ALLOWED: "Voucher transfer not allowed",
 };

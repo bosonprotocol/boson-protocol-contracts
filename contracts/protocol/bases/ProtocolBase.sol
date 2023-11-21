@@ -685,6 +685,21 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
+     * @notice calculate the protocol fee for a given exchange
+     *
+     * @param _exchangeToken - the token used for the exchange
+     * @param _price - the price of the exchange
+     * @return protocolFee - the protocol fee
+     */
+    function getProtocolFee(address _exchangeToken, uint256 _price) internal view returns (uint256 protocolFee) {
+        // Calculate and set the protocol fee
+        return
+            _exchangeToken == protocolAddresses().token
+                ? protocolFees().flatBoson
+                : (protocolFees().percentage * _price) / 10000;
+    }
+
+    /**
      * @notice Fetches a clone address from storage by seller id and collection index
      * If the collection index is 0, the clone address is the seller's main collection,
      * otherwise it is the clone address of the additional collection at the given index.
