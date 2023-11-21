@@ -9,7 +9,7 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xbc1d7461
+ * The ERC-165 identifier for this interface is: 0x8946080b
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
     /**
@@ -383,7 +383,8 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     ) external view returns (bool exists, BosonTypes.Seller memory seller, BosonTypes.AuthToken memory authToken);
 
     /**
-     * @notice Gets the details about a seller's collections.
+     * @notice Gets the details about all seller's collections.
+     * In case seller has too many collections and this runs out of gas, pleas use getSellersCollectionsPaginated.
      *
      * @param _sellerId - the id of the seller to check
      * @return defaultVoucherAddress - the address of the default voucher contract for the seller
@@ -391,6 +392,22 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      */
     function getSellersCollections(
         uint256 _sellerId
+    ) external view returns (address defaultVoucherAddress, BosonTypes.Collection[] memory additionalCollections);
+
+    /**
+     * @notice Gets the details about all seller's collections.
+     * In case seller has too many collections and this runs out of gas, pleas use getSellersCollectionsPaginated.
+     *
+     * @param _sellerId - the id of the seller to check
+     * @param _limit - the maximum number of Collections that should be returned starting from the index defined by `_offset`. If `_offset` + `_limit` exceeds total number of collections, `_limit` is adjusted to return all remaining collections.
+     * @param _offset - the starting index from which to return collections. If `_offset` is greater than or equal to total number of collections, an empty list is returned.
+     * @return defaultVoucherAddress - the address of the default voucher contract for the seller
+     * @return additionalCollections - an array of additional collections that the seller has created
+     */
+    function getSellersCollectionsPaginated(
+        uint256 _sellerId,
+        uint256 _limit,
+        uint256 _offset
     ) external view returns (address defaultVoucherAddress, BosonTypes.Collection[] memory additionalCollections);
 
     /**
