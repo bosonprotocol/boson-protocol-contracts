@@ -6,7 +6,6 @@ const { subtask } = require("hardhat/config");
 const path = require("node:path");
 const { glob } = require("glob");
 const { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } = require("hardhat/builtin-tasks/task-names");
-const fs = require("fs");
 require("hardhat-preprocessor");
 
 subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS, async (_, { config }, runSuper) => {
@@ -34,14 +33,6 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS, async (_, { config }, runSuper) 
 
   return [...files, ...submodules, ...submodulesWithLib].map(path.normalize);
 });
-
-function getRemappings() {
-  return fs
-    .readFileSync("remappings.txt", "utf8")
-    .split("\n")
-    .filter(Boolean) // remove empty lines
-    .map((line) => line.trim().split("="));
-}
 
 module.exports = {
   ...defaultConfig,
