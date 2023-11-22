@@ -327,4 +327,9 @@ contract BosonTypes {
         Bid,
         Wrapper // Side is not relevant from the protocol perspective
     }
+
+    struct PremintParameters {
+        uint256 reservedRangeLength;
+        address to;
+    }
 }

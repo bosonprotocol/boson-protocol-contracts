@@ -37,20 +37,23 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Buyer cancel penalty is greater than price
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createOfferInternal(
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) internal {
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByAssistant(msgSender());
@@ -61,7 +64,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         _offer.id = offerId;
 
         // Store the offer
-        storeOffer(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
+        storeOffer(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId, _feeLimit);
     }
 
     /**
@@ -97,20 +100,23 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Buyer cancel penalty is greater than price
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      *
      * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function storeOffer(
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) internal {
         // validFrom date must be less than validUntil date
         require(_offerDates.validFrom < _offerDates.validUntil, OFFER_PERIOD_INVALID);
@@ -209,14 +215,14 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // Get storage location for offer fees
         OfferFees storage offerFees = fetchOfferFees(_offer.id);
 
-        // Get the agent
-        (bool agentExists, Agent storage agent) = fetchAgent(_agentId);
-
-        // Make sure agent exists if _agentId is not zero.
-        require(_agentId == 0 || agentExists, NO_SUCH_AGENT);
-
         // Operate in a block to avoid "stack too deep" error
         {
+            // Get the agent
+            (bool agentExists, Agent storage agent) = fetchAgent(_agentId);
+
+            // Make sure agent exists if _agentId is not zero.
+            require(_agentId == 0 || agentExists, NO_SUCH_AGENT);
+
             // Set variable to eliminate multiple SLOAD
             uint256 offerPrice = _offer.price;
 
@@ -233,16 +239,17 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
 
             // Sum of agent fee amount and protocol fee amount should be <= offer fee limit
             require((agentFeeAmount + protocolFee) <= totalOfferFeeLimit, AGENT_FEE_AMOUNT_TOO_HIGH);
+            require(agentFeeAmount + protocolFee <= _feeLimit, TOTAL_FEE_EXCEEDS_LIMIT);
 
             //Set offer fees props individually since calldata structs can't be copied to storage
             offerFees.protocolFee = protocolFee;
             offerFees.agentFee = agentFeeAmount;
-
-            // Store the agent id for the offer
-            protocolLookups().agentIdByOffer[_offer.id] = _agentId;
         }
 
+        // Store the agent id for the offer
+        protocolLookups().agentIdByOffer[_offer.id] = _agentId;
         // Get storage location for offer
+
         (, Offer storage offer) = fetchOffer(_offer.id);
 
         // Set offer props individually since memory structs can't be copied to storage

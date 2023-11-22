@@ -98,6 +98,7 @@ string constant INVALID_QUANTITY_AVAILABLE = "Invalid quantity available";
 string constant DR_UNSUPPORTED_FEE = "Dispute resolver does not accept this token";
 string constant AGENT_FEE_AMOUNT_TOO_HIGH = "Sum of agent fee amount and protocol fee amount should be <= offer fee limit";
 string constant NO_SUCH_COLLECTION = "No such collection";
+string constant TOTAL_FEE_EXCEEDS_LIMIT = "Sum of agent fee amount and protocol fee amount exceeds the limit set by the seller";
 
 // Revert Reasons: Group related
 string constant NO_SUCH_GROUP = "No such group";

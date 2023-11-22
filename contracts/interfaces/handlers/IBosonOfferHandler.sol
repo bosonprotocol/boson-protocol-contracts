@@ -9,7 +9,7 @@ import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x67991d09
+ * The ERC-165 identifier for this interface is: 0xe4c144b0
  */
 interface IBosonOfferHandler is IBosonOfferEvents {
     /**
@@ -38,20 +38,23 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - Collection does not exist
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createOffer(
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates,
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external;
 
     /**
@@ -89,13 +92,15 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * @param _offerDurations - the array of fully populated offer durations structs
      * @param _disputeResolverIds - the array of ids of chosen dispute resolvers (can be 0)
      * @param _agentIds - the array of ids of agents
+     * @param _feeLimits - the array of maximum fees that seller is willing to pay per exchange (for static offers)
      */
     function createOfferBatch(
         BosonTypes.Offer[] calldata _offers,
         BosonTypes.OfferDates[] calldata _offerDates,
         BosonTypes.OfferDurations[] calldata _offerDurations,
         uint256[] calldata _disputeResolverIds,
-        uint256[] calldata _agentIds
+        uint256[] calldata _agentIds,
+        uint256[] calldata _feeLimits
     ) external;
 
     /**
