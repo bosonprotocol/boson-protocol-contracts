@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import "../domain/BosonConstants.sol";
+import "../domain/BosonErrors.sol";
 import { TestFacetLib } from "./TestFacetLib.sol";
 import "../diamond/ProtocolDiamond.sol";
 
@@ -11,7 +12,7 @@ import "../diamond/ProtocolDiamond.sol";
  * @notice Contract for testing initializeable diamond contract
  *
  */
-contract TestInitializableDiamond is ProtocolDiamond {
+contract TestInitializableDiamond is ProtocolDiamond, BosonErrors {
     /**
      * @notice Constructor
      *
@@ -31,7 +32,7 @@ contract TestInitializableDiamond is ProtocolDiamond {
 
     modifier onlyUninitialized() {
         TestFacetLib.TestFacetStorage storage tfs = TestFacetLib.testFacetStorage();
-        require(!tfs.initialized, ALREADY_INITIALIZED);
+        if (tfs.initialized) revert AlreadyInitialized();
         tfs.initialized = true;
         _;
     }

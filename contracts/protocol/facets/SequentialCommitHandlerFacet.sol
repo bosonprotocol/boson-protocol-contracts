@@ -81,13 +81,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
         PriceDiscovery calldata _priceDiscovery
     ) external payable exchangesNotPaused buyersNotPaused nonReentrant {
         // Make sure buyer address is not zero address
-        require(_buyer != address(0), INVALID_ADDRESS);
-
-        // Make sure caller provided price discovery data
-        require(
-            _priceDiscovery.priceDiscoveryContract != address(0) && _priceDiscovery.priceDiscoveryData.length > 0,
-            INVALID_PRICE_DISCOVERY
-        );
+        if (_buyer == address(0)) revert InvalidAddress();
 
         uint256 exchangeId = _tokenId & type(uint128).max;
 
@@ -95,7 +89,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(exchangeId, ExchangeState.Committed);
 
         // Make sure the voucher is still valid
-        require(block.timestamp <= voucher.validUntilDate, VOUCHER_HAS_EXPIRED);
+        if (block.timestamp > voucher.validUntilDate) revert VoucherHasExpired();
 
         // Create a memory struct for sequential commit and populate it as we go
         // This is done to avoid stack too deep error, while still keeping the number of SLOADs to a minimum
@@ -137,10 +131,9 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                 ).royaltyInfo(exchangeId, exchangeCost.price);
 
                 // Verify that fees and royalties are not higher than the price.
-                require(
-                    (exchangeCost.protocolFeeAmount + exchangeCost.royaltyAmount) <= exchangeCost.price,
-                    FEE_AMOUNT_TOO_HIGH
-                );
+                if (exchangeCost.protocolFeeAmount + exchangeCost.royaltyAmount > exchangeCost.price) {
+                    revert FeeAmountTooHigh();
+                }
 
                 // Get price paid by current buyer
                 uint256 len = exchangeCosts.length;

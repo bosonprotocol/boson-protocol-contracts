@@ -32,7 +32,7 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents, IBosonFundsLibEvents 
 
         // Make sure the dispute period has not elapsed
         uint256 elapsed = block.timestamp - _voucher.redeemedDate;
-        require(elapsed < offerDurations.disputePeriod, DISPUTE_PERIOD_HAS_ELAPSED);
+        if (elapsed >= offerDurations.disputePeriod) revert DisputePeriodHasElapsed();
 
         // Make sure the caller is buyer associated with the exchange
         checkBuyer(_exchange.buyerId);
@@ -92,16 +92,16 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents, IBosonFundsLibEvents 
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
 
         // make sure the dispute not expired already
-        require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
+        if (block.timestamp > disputeDates.timeout) revert DisputeHasExpired();
 
         // Make sure the dispute is in the resolving state
-        require(dispute.state == DisputeState.Resolving, INVALID_STATE);
+        if (dispute.state != DisputeState.Resolving) revert InvalidState();
 
         // Fetch the dispute resolution terms from the storage
         DisputeResolutionTerms storage disputeResolutionTerms = fetchDisputeResolutionTerms(exchange.offerId);
 
         // absolute zero offers can be without DR. In that case we prevent escalation
-        require(disputeResolutionTerms.disputeResolverId > 0, ESCALATION_NOT_ALLOWED);
+        if (disputeResolutionTerms.disputeResolverId == 0) revert EscalationNotAllowed();
 
         // fetch offer to get info about dispute resolver id
         (, Offer storage offer) = fetchOffer(exchange.offerId);

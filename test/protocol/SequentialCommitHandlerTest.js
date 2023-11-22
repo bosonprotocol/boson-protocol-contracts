@@ -73,6 +73,7 @@ describe("IBosonSequentialCommitHandler", function () {
   let snapshotId;
   let priceDiscoveryContract;
   let tokenId;
+  let bosonErrors;
 
   before(async function () {
     accountId.next(true);
@@ -112,6 +113,8 @@ describe("IBosonSequentialCommitHandler", function () {
       protocolConfig: [, , { percentage: protocolFeePercentage }],
       diamondAddress: protocolDiamondAddress,
     } = await setupTestEnvironment(contracts, { wethAddress: await weth.getAddress() }));
+
+    bosonErrors = await getContractAt("BosonErrors", await configHandler.getAddress());
 
     // make all account the same
     assistant = admin;
@@ -388,7 +391,8 @@ describe("IBosonSequentialCommitHandler", function () {
               .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 });
 
             // Old buyer cannot redeem
-            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId)).to.be.revertedWith(
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId)).to.be.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.NOT_VOUCHER_HOLDER
             );
 
@@ -406,7 +410,8 @@ describe("IBosonSequentialCommitHandler", function () {
               .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 });
 
             // Old buyer cannot redeem
-            await expect(exchangeHandler.connect(buyer).cancelVoucher(exchangeId)).to.be.revertedWith(
+            await expect(exchangeHandler.connect(buyer).cancelVoucher(exchangeId)).to.be.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.NOT_VOUCHER_HOLDER
             );
 
@@ -470,7 +475,7 @@ describe("IBosonSequentialCommitHandler", function () {
             // Committing directly is not possible
             await expect(
               exchangeHandler.connect(buyer2).commitToOffer(buyer2.address, offerId, { value: price })
-            ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
 
             // Sequential commit to offer, retrieving the event
             await expect(
@@ -484,7 +489,8 @@ describe("IBosonSequentialCommitHandler", function () {
 
           it("It is possible to commit even if redemption period has not started yet", async function () {
             // Redemption not yet possible
-            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId)).to.revertedWith(
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.VOUCHER_NOT_REDEEMABLE
             );
 
@@ -505,7 +511,7 @@ describe("IBosonSequentialCommitHandler", function () {
             // Committing directly is not possible
             await expect(
               exchangeHandler.connect(buyer2).commitToOffer(buyer2.address, offerId, { value: price })
-            ).to.revertedWith(RevertReasons.OFFER_HAS_EXPIRED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_EXPIRED);
 
             // Sequential commit to offer, retrieving the event
             await expect(
@@ -526,7 +532,7 @@ describe("IBosonSequentialCommitHandler", function () {
             // Committing directly is not possible
             await expect(
               exchangeHandler.connect(buyer2).commitToOffer(buyer2.address, offerId, { value: price })
-            ).to.revertedWith(RevertReasons.OFFER_SOLD_OUT);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_SOLD_OUT);
 
             // Sequential commit to offer, retrieving the event
             await expect(
@@ -548,7 +554,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(buyer2)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
-              ).to.revertedWith(RevertReasons.REGION_PAUSED);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
             });
 
             it("The buyers region of protocol is paused", async function () {
@@ -560,7 +566,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(buyer2)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
-              ).to.revertedWith(RevertReasons.REGION_PAUSED);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
             });
 
             it("buyer address is the zero address", async function () {
@@ -569,7 +575,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(buyer2)
                   .sequentialCommitToOffer(ZeroAddress, exchangeId, priceDiscovery, { value: price2 })
-              ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
             });
 
             it("exchange id is invalid", async function () {
@@ -582,7 +588,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(buyer2)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
-              ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
             });
 
             it("voucher not valid anymore", async function () {
@@ -594,7 +600,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(buyer2)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
-              ).to.revertedWith(RevertReasons.VOUCHER_HAS_EXPIRED);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.VOUCHER_HAS_EXPIRED);
             });
 
             it("protocol fees to high", async function () {
@@ -608,7 +614,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(buyer2)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
-              ).to.revertedWith(RevertReasons.FEE_AMOUNT_TOO_HIGH);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_AMOUNT_TOO_HIGH);
             });
 
             it("insufficient values sent", async function () {
@@ -617,7 +623,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(buyer2)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price })
-              ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
             });
 
             it("price discovery does not send the voucher anywhere", async function () {
@@ -652,7 +658,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(buyer2)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
-              ).to.revertedWith(RevertReasons.TOKEN_ID_MISMATCH);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_ID_MISMATCH);
             });
 
             it("price discovery does not send the voucher to the protocol", async function () {
@@ -691,7 +697,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(buyer2)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
-              ).to.revertedWith(RevertReasons.VOUCHER_NOT_RECEIVED);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.VOUCHER_NOT_RECEIVED);
             });
           });
         });
@@ -986,7 +992,8 @@ describe("IBosonSequentialCommitHandler", function () {
               .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery);
 
             // Old buyer cannot redeem
-            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId)).to.be.revertedWith(
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId)).to.be.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.NOT_VOUCHER_HOLDER
             );
 
@@ -1004,7 +1011,8 @@ describe("IBosonSequentialCommitHandler", function () {
               .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery);
 
             // Old buyer cannot redeem
-            await expect(exchangeHandler.connect(buyer).cancelVoucher(exchangeId)).to.be.revertedWith(
+            await expect(exchangeHandler.connect(buyer).cancelVoucher(exchangeId)).to.be.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.NOT_VOUCHER_HOLDER
             );
 
@@ -1052,9 +1060,9 @@ describe("IBosonSequentialCommitHandler", function () {
             await offerHandler.connect(assistant).voidOffer(offerId);
 
             // Committing directly is not possible
-            await expect(exchangeHandler.connect(buyer2).commitToOffer(buyer2.address, offerId)).to.revertedWith(
-              RevertReasons.OFFER_HAS_BEEN_VOIDED
-            );
+            await expect(
+              exchangeHandler.connect(buyer2).commitToOffer(buyer2.address, offerId)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
 
             // Sequential commit to offer, retrieving the event
             await expect(
@@ -1066,7 +1074,8 @@ describe("IBosonSequentialCommitHandler", function () {
 
           it("It is possible to commit even if redemption period has not started yet", async function () {
             // Redemption not yet possible
-            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId)).to.revertedWith(
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.VOUCHER_NOT_REDEEMABLE
             );
 
@@ -1083,9 +1092,9 @@ describe("IBosonSequentialCommitHandler", function () {
             await setNextBlockTimestamp(Number(offerDates.validUntil) + 1);
 
             // Committing directly is not possible
-            await expect(exchangeHandler.connect(buyer2).commitToOffer(buyer2.address, offerId)).to.revertedWith(
-              RevertReasons.OFFER_HAS_EXPIRED
-            );
+            await expect(
+              exchangeHandler.connect(buyer2).commitToOffer(buyer2.address, offerId)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_EXPIRED);
 
             // Sequential commit to offer, retrieving the event
             await expect(
@@ -1104,7 +1113,7 @@ describe("IBosonSequentialCommitHandler", function () {
             // Committing directly is not possible
             await expect(
               exchangeHandler.connect(buyer2).commitToOffer(buyer2.address, offerId, { value: price })
-            ).to.revertedWith(RevertReasons.OFFER_SOLD_OUT);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_SOLD_OUT);
 
             // Sequential commit to offer, retrieving the event
             await expect(
@@ -1124,7 +1133,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(reseller)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
-              ).to.revertedWith(RevertReasons.REGION_PAUSED);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
             });
 
             it("The buyers region of protocol is paused", async function () {
@@ -1136,7 +1145,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(reseller)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
-              ).to.revertedWith(RevertReasons.REGION_PAUSED);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
             });
 
             it("buyer address is the zero address", async function () {
@@ -1145,7 +1154,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(reseller)
                   .sequentialCommitToOffer(ZeroAddress, exchangeId, priceDiscovery)
-              ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
             });
 
             it("exchange id is invalid", async function () {
@@ -1158,7 +1167,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(reseller)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
-              ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
             });
 
             it("voucher not valid anymore", async function () {
@@ -1170,7 +1179,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(reseller)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
-              ).to.revertedWith(RevertReasons.VOUCHER_HAS_EXPIRED);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.VOUCHER_HAS_EXPIRED);
             });
 
             it("protocol fees to high", async function () {
@@ -1184,7 +1193,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(reseller)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
-              ).to.revertedWith(RevertReasons.FEE_AMOUNT_TOO_HIGH);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_AMOUNT_TOO_HIGH);
             });
 
             it("voucher transfer not approved", async function () {
@@ -1208,14 +1217,14 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(reseller)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
-              ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
             });
 
             it("Only seller can call, if side is bid", async function () {
               // Sequential commit to offer, retrieving the event
               await expect(
                 sequentialCommitHandler.connect(rando).sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
-              ).to.revertedWith(RevertReasons.NOT_VOUCHER_HOLDER);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_VOUCHER_HOLDER);
             });
           });
         });
@@ -1525,7 +1534,7 @@ describe("IBosonSequentialCommitHandler", function () {
             sequentialCommitHandler
               .connect(buyer2)
               .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
-          ).to.revertedWith(RevertReasons.TOKEN_ID_MISMATCH);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_ID_MISMATCH);
         });
 
         it("Correct token id, wrong caller", async function () {
@@ -1567,7 +1576,7 @@ describe("IBosonSequentialCommitHandler", function () {
             sequentialCommitHandler
               .connect(buyer2)
               .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
-          ).to.revertedWith(RevertReasons.UNEXPECTED_ERC721_RECEIVED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNEXPECTED_ERC721_RECEIVED);
         });
 
         it("Random erc721 transfer", async function () {
@@ -1580,7 +1589,7 @@ describe("IBosonSequentialCommitHandler", function () {
           // Attempt to sequentially commit, expecting revert
           await expect(
             foreign721["safeTransferFrom(address,address,uint256)"](deployer.address, protocolDiamondAddress, tokenId)
-          ).to.revertedWith(RevertReasons.UNEXPECTED_ERC721_RECEIVED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNEXPECTED_ERC721_RECEIVED);
         });
       });
     });

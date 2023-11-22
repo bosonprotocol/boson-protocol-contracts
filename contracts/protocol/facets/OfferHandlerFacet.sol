@@ -108,13 +108,14 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         uint256[] calldata _agentIds
     ) external override offersNotPaused nonReentrant {
         // Number of offer dates structs, offer durations structs and _disputeResolverIds must match the number of offers
-        require(
-            _offers.length == _offerDates.length &&
-                _offers.length == _offerDurations.length &&
-                _offers.length == _disputeResolverIds.length &&
-                _offers.length == _agentIds.length,
-            ARRAY_LENGTH_MISMATCH
-        );
+        if (
+            _offers.length != _offerDates.length ||
+            _offers.length != _offerDurations.length ||
+            _offers.length != _disputeResolverIds.length ||
+            _offers.length != _agentIds.length
+        ) {
+            revert ArrayLengthMismatch();
+        }
 
         for (uint256 i = 0; i < _offers.length; ) {
             // Create offer and update structs values to represent true state
@@ -224,11 +225,11 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         OfferDates storage offerDates = fetchOfferDates(_offerId);
 
         // New valid until date must be greater than existing one
-        require(offerDates.validUntil < _validUntilDate, OFFER_PERIOD_INVALID);
+        if (offerDates.validUntil >= _validUntilDate) revert InvalidOfferPeriod();
 
         // If voucherRedeemableUntil is set, _validUntilDate must be less or equal than that
         if (offerDates.voucherRedeemableUntil > 0) {
-            require(_validUntilDate <= offerDates.voucherRedeemableUntil, OFFER_PERIOD_INVALID);
+            if (_validUntilDate > offerDates.voucherRedeemableUntil) revert InvalidOfferPeriod();
         }
 
         // Update the valid until property

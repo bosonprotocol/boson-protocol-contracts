@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
 import { IBosonGroupEvents } from "../events/IBosonGroupEvents.sol";
 import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
@@ -20,7 +21,8 @@ interface IBosonOrchestrationHandler is
     IBosonGroupEvents,
     IBosonOfferEvents,
     IBosonTwinEvents,
-    IBosonBundleEvents
+    IBosonBundleEvents,
+    BosonErrors
 {
     /**
      * @notice Raises a dispute and immediately escalates it.

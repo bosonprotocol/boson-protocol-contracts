@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { ZeroAddress, provider, zeroPadBytes, MaxUint256, parseUnits } = ethers;
+const { ZeroAddress, provider, zeroPadBytes, MaxUint256, parseUnits, getContractAt } = ethers;
 const { expect, assert } = require("chai");
 const Exchange = require("../../scripts/domain/Exchange");
 const Dispute = require("../../scripts/domain/Dispute");
@@ -83,6 +83,7 @@ describe("IBosonDisputeHandler", function () {
   let emptyAuthToken;
   let agentId;
   let snapshotId;
+  let bosonErrors;
 
   before(async function () {
     accountId.next(true);
@@ -114,6 +115,8 @@ describe("IBosonDisputeHandler", function () {
       },
       protocolConfig: [, , { buyerEscalationDepositPercentage }],
     } = await setupTestEnvironment(contracts));
+
+    bosonErrors = await getContractAt("BosonErrors", await accountHandler.getAddress());
 
     // make all account the same
     assistant = admin;
@@ -289,14 +292,16 @@ describe("IBosonDisputeHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to raise a dispute, expecting revert
-            await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.REGION_PAUSED
             );
           });
 
           it("Caller does not hold a voucher for the given exchange id", async function () {
             // Attempt to raise a dispute, expecting revert
-            await expect(disputeHandler.connect(rando).raiseDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(rando).raiseDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.NOT_VOUCHER_HOLDER
             );
           });
@@ -306,7 +311,8 @@ describe("IBosonDisputeHandler", function () {
             const exchangeId = "666";
 
             // Attempt to raise a dispute, expecting revert
-            await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.NO_SUCH_EXCHANGE
             );
           });
@@ -329,7 +335,8 @@ describe("IBosonDisputeHandler", function () {
             await exchangeHandler.connect(assistant).completeExchange(exchangeId);
 
             // Attempt to raise a dispute, expecting revert
-            await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_STATE
             );
           });
@@ -339,7 +346,8 @@ describe("IBosonDisputeHandler", function () {
             await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
             // Attempt to raise a dispute, expecting revert
-            await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_STATE
             );
           });
@@ -353,7 +361,8 @@ describe("IBosonDisputeHandler", function () {
             await setNextBlockTimestamp(Number(voucherRedeemedDate + BigInt(disputePeriod) + 1n));
 
             // Attempt to raise a dispute, expecting revert
-            await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.DISPUTE_PERIOD_HAS_ELAPSED
             );
           });
@@ -439,7 +448,8 @@ describe("IBosonDisputeHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to retract a dispute, expecting revert
-            await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.REGION_PAUSED
             );
           });
@@ -449,7 +459,8 @@ describe("IBosonDisputeHandler", function () {
             const exchangeId = "666";
 
             // Attempt to retract the dispute, expecting revert
-            await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.NO_SUCH_EXCHANGE
             );
           });
@@ -461,14 +472,16 @@ describe("IBosonDisputeHandler", function () {
             await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to retract the dispute, expecting revert
-            await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_STATE
             );
           });
 
           it("Caller is not the buyer for the given exchange id", async function () {
             // Attempt to retract the dispute, expecting revert
-            await expect(disputeHandler.connect(rando).retractDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(rando).retractDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.NOT_VOUCHER_HOLDER
             );
           });
@@ -478,7 +491,8 @@ describe("IBosonDisputeHandler", function () {
             await disputeHandler.connect(buyer).retractDispute(exchangeId);
 
             // Attempt to retract the dispute, expecting revert
-            await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_STATE
             );
           });
@@ -496,7 +510,8 @@ describe("IBosonDisputeHandler", function () {
           await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod) + 1);
 
           // Attempt to retract the dispute, expecting revert
-          await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.revertedWith(
+          await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.DISPUTE_HAS_EXPIRED
           );
         });
@@ -577,7 +592,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to extend a dispute timeout, expecting revert
             await expect(
               disputeHandler.connect(assistant).extendDisputeTimeout(exchangeId, newDisputeTimeout)
-            ).to.revertedWith(RevertReasons.REGION_PAUSED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
           });
 
           it("Exchange does not exist", async function () {
@@ -587,7 +602,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to extend the dispute timeout, expecting revert
             await expect(
               disputeHandler.connect(assistant).extendDisputeTimeout(exchangeId, newDisputeTimeout)
-            ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
           });
 
           it("Exchange is not in a disputed state", async function () {
@@ -599,14 +614,14 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to extend the dispute timeout, expecting revert
             await expect(
               disputeHandler.connect(assistant).extendDisputeTimeout(exchangeId, newDisputeTimeout)
-            ).to.revertedWith(RevertReasons.INVALID_STATE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_STATE);
           });
 
           it("Caller is not the seller", async function () {
             // Attempt to extend the dispute timeout, expecting revert
             await expect(
               disputeHandler.connect(rando).extendDisputeTimeout(exchangeId, newDisputeTimeout)
-            ).to.revertedWith(RevertReasons.NOT_ASSISTANT);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
           });
 
           it("Dispute has expired already", async function () {
@@ -616,7 +631,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to extend the dispute timeout, expecting revert
             await expect(
               disputeHandler.connect(assistant).extendDisputeTimeout(exchangeId, newDisputeTimeout)
-            ).to.revertedWith(RevertReasons.DISPUTE_HAS_EXPIRED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.DISPUTE_HAS_EXPIRED);
           });
 
           it("new dispute timeout is before the current dispute timeout", async function () {
@@ -625,7 +640,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to extend the dispute timeout, expecting revert
             await expect(
               disputeHandler.connect(assistant).extendDisputeTimeout(exchangeId, newDisputeTimeout)
-            ).to.revertedWith(RevertReasons.INVALID_DISPUTE_TIMEOUT);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_DISPUTE_TIMEOUT);
           });
 
           it("Dispute is in some state other than resolving", async function () {
@@ -635,7 +650,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to expire the dispute, expecting revert
             await expect(
               disputeHandler.connect(assistant).extendDisputeTimeout(exchangeId, newDisputeTimeout)
-            ).to.revertedWith(RevertReasons.INVALID_STATE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_STATE);
           });
         });
       });
@@ -718,7 +733,8 @@ describe("IBosonDisputeHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to expire a dispute, expecting revert
-            await expect(disputeHandler.connect(rando).expireDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(rando).expireDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.REGION_PAUSED
             );
           });
@@ -728,7 +744,8 @@ describe("IBosonDisputeHandler", function () {
             const exchangeId = "666";
 
             // Attempt to expire the dispute, expecting revert
-            await expect(disputeHandler.connect(rando).expireDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(rando).expireDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.NO_SUCH_EXCHANGE
             );
           });
@@ -740,14 +757,16 @@ describe("IBosonDisputeHandler", function () {
             await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to expire the dispute, expecting revert
-            await expect(disputeHandler.connect(rando).expireDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(rando).expireDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_STATE
             );
           });
 
           it("Dispute has not expired yet", async function () {
             // Attempt to expire the dispute, expecting revert
-            await expect(disputeHandler.connect(rando).expireDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(rando).expireDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.DISPUTE_STILL_VALID
             );
           });
@@ -762,7 +781,8 @@ describe("IBosonDisputeHandler", function () {
             await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
             // Attempt to expire the dispute, expecting revert
-            await expect(disputeHandler.connect(rando).expireDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(rando).expireDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.DISPUTE_STILL_VALID
             );
           });
@@ -772,7 +792,8 @@ describe("IBosonDisputeHandler", function () {
             await disputeHandler.connect(buyer).retractDispute(exchangeId);
 
             // Attempt to expire the dispute, expecting revert
-            await expect(disputeHandler.connect(rando).expireDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(rando).expireDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_STATE
             );
           });
@@ -1067,7 +1088,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to resolve a dispute, expecting revert
             await expect(
               disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWith(RevertReasons.REGION_PAUSED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
           });
 
           it("Specified buyer percent exceeds 100%", async function () {
@@ -1077,7 +1098,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to resolve the dispute, expecting revert
             await expect(
               disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWith(RevertReasons.INVALID_BUYER_PERCENT);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_BUYER_PERCENT);
           });
 
           it("Dispute has expired", async function () {
@@ -1087,7 +1108,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to resolve the dispute, expecting revert
             await expect(
               disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWith(RevertReasons.DISPUTE_HAS_EXPIRED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.DISPUTE_HAS_EXPIRED);
           });
 
           it("Exchange does not exist", async function () {
@@ -1097,7 +1118,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to resolve the dispute, expecting revert
             await expect(
               disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
           });
 
           it("Exchange is not in a disputed state", async function () {
@@ -1109,7 +1130,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to resolve the dispute, expecting revert
             await expect(
               disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWith(RevertReasons.INVALID_STATE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_STATE);
           });
 
           it("Caller is neither the seller nor the buyer for the given exchange id", async function () {
@@ -1117,7 +1138,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to resolve the dispute, expecting revert
             await expect(
               disputeHandler.connect(rando).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWith(RevertReasons.NOT_BUYER_OR_SELLER);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_BUYER_OR_SELLER);
 
             // Wallet with seller account, but not the seller in this exchange
             // Create a valid seller
@@ -1133,7 +1154,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to resolve the dispute, expecting revert
             await expect(
               disputeHandler.connect(other1).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWith(RevertReasons.NOT_BUYER_OR_SELLER);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_BUYER_OR_SELLER);
 
             // Wallet with buyer account, but not the buyer in this exchange
             // Create a valid buyer
@@ -1144,7 +1165,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to resolve the dispute, expecting revert
             await expect(
               disputeHandler.connect(other2).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWith(RevertReasons.NOT_BUYER_OR_SELLER);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_BUYER_OR_SELLER);
           });
 
           it("signature does not belong to the address of the other party", async function () {
@@ -1160,12 +1181,12 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to resolve the dispute, expecting revert
             await expect(
               disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
               disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
           });
 
           it("signature resolution does not match input buyerPercentBasisPoints ", async function () {
@@ -1175,29 +1196,29 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to resolve the dispute, expecting revert
             await expect(
               disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
           });
 
           it("signature has invalid field", async function () {
             // Attempt to resolve the dispute, expecting revert
             await expect(
               disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, "0")
-            ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
             await expect(
               disputeHandler
                 .connect(assistant)
                 .resolveDispute(exchangeId, buyerPercentBasisPoints, r, zeroPadBytes("0x", 32), v)
-            ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
             await expect(
               disputeHandler
                 .connect(assistant)
                 .resolveDispute(exchangeId, buyerPercentBasisPoints, zeroPadBytes("0x", 32), s, v)
-            ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
             await expect(
               disputeHandler
                 .connect(assistant)
                 .resolveDispute(exchangeId, buyerPercentBasisPoints, r, toHexString(MaxUint256), v)
-            ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
           });
 
           it("dispute state is neither resolving or escalated", async function () {
@@ -1207,7 +1228,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to resolve the dispute, expecting revert
             await expect(
               disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWith(RevertReasons.INVALID_STATE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_STATE);
           });
         });
       });
@@ -1352,7 +1373,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to escalate a dispute, expecting revert
             await expect(
               disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative })
-            ).to.revertedWith(RevertReasons.REGION_PAUSED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
           });
 
           it("Exchange does not exist", async function () {
@@ -1362,7 +1383,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to escalate the dispute, expecting revert
             await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId), {
               value: buyerEscalationDepositNative,
-            }).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+            }).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
           });
 
           it("Exchange is not in a disputed state", async function () {
@@ -1374,14 +1395,14 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to escalate the dispute, expecting revert
             await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId), {
               value: buyerEscalationDepositNative,
-            }).to.revertedWith(RevertReasons.INVALID_STATE);
+            }).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_STATE);
           });
 
           it("Caller is not the buyer for the given exchange id", async function () {
             // Attempt to retract the dispute, expecting revert
             await expect(disputeHandler.connect(rando).escalateDispute(exchangeId), {
               value: buyerEscalationDepositNative,
-            }).to.revertedWith(RevertReasons.NOT_VOUCHER_HOLDER);
+            }).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_VOUCHER_HOLDER);
           });
 
           it("Dispute has expired", async function () {
@@ -1391,7 +1412,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to escalate the dispute, expecting revert
             await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId), {
               value: buyerEscalationDepositNative,
-            }).to.revertedWith(RevertReasons.DISPUTE_HAS_EXPIRED);
+            }).to.revertedWithCustomError(bosonErrors, RevertReasons.DISPUTE_HAS_EXPIRED);
           });
 
           it("Dispute is in some state other than resolving", async function () {
@@ -1399,7 +1420,8 @@ describe("IBosonDisputeHandler", function () {
             await disputeHandler.connect(buyer).retractDispute(exchangeId);
 
             // Attempt to escalate the dispute, expecting revert
-            await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_STATE
             );
           });
@@ -1422,7 +1444,8 @@ describe("IBosonDisputeHandler", function () {
             await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
             // Attempt to escalate the dispute, expecting revert
-            await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.ESCALATION_NOT_ALLOWED
             );
           });
@@ -1433,7 +1456,7 @@ describe("IBosonDisputeHandler", function () {
               disputeHandler.connect(buyer).escalateDispute(exchangeId, {
                 value: BigInt(buyerEscalationDepositNative) - 1n,
               })
-            ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
           });
 
           it("Native currency sent together with ERC20 token transfer", async function () {
@@ -1444,7 +1467,7 @@ describe("IBosonDisputeHandler", function () {
               disputeHandler.connect(buyer).escalateDispute(exchangeId, {
                 value: 1n,
               })
-            ).to.revertedWith(RevertReasons.NATIVE_NOT_ALLOWED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NATIVE_NOT_ALLOWED);
           });
 
           it.skip("Token address is not a contract", async function () {
@@ -1520,7 +1543,8 @@ describe("IBosonDisputeHandler", function () {
             await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
             // Attempt to escalate the dispute, expecting revert
-            await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INSUFFICIENT_VALUE_RECEIVED
             );
           });
@@ -1599,7 +1623,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to decide a dispute, expecting revert
             await expect(
               disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints)
-            ).to.revertedWith(RevertReasons.REGION_PAUSED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
           });
 
           it("Specified buyer percent exceeds 100%", async function () {
@@ -1609,7 +1633,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to decide the dispute, expecting revert
             await expect(
               disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints)
-            ).to.revertedWith(RevertReasons.INVALID_BUYER_PERCENT);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_BUYER_PERCENT);
           });
 
           it("Exchange does not exist", async function () {
@@ -1619,7 +1643,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to decide the dispute, expecting revert
             await expect(
               disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints)
-            ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
           });
 
           it("Exchange is not in a disputed state", async function () {
@@ -1631,14 +1655,14 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to decide the dispute, expecting revert
             await expect(
               disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints)
-            ).to.revertedWith(RevertReasons.INVALID_STATE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_STATE);
           });
 
           it("Caller is not the dispute resolver for this dispute", async function () {
             // Attempt to decide the dispute, expecting revert
             await expect(
               disputeHandler.connect(rando).decideDispute(exchangeId, buyerPercentBasisPoints)
-            ).to.revertedWith(RevertReasons.NOT_DISPUTE_RESOLVER_ASSISTANT);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_DISPUTE_RESOLVER_ASSISTANT);
           });
 
           it("Dispute state is not escalated", async function () {
@@ -1656,7 +1680,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to decide the dispute, expecting revert
             await expect(
               disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints)
-            ).to.revertedWith(RevertReasons.INVALID_STATE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_STATE);
           });
 
           it("Dispute escalation response period has elapsed", async function () {
@@ -1666,7 +1690,7 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to decide the dispute, expecting revert
             await expect(
               disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints)
-            ).to.revertedWith(RevertReasons.DISPUTE_HAS_EXPIRED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.DISPUTE_HAS_EXPIRED);
           });
         });
       });
@@ -1757,7 +1781,8 @@ describe("IBosonDisputeHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to expire an escalated dispute, expecting revert
-            await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.REGION_PAUSED
             );
           });
@@ -1767,7 +1792,8 @@ describe("IBosonDisputeHandler", function () {
             const exchangeId = "666";
 
             // Attempt to expire the escalated dispute, expecting revert
-            await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.NO_SUCH_EXCHANGE
             );
           });
@@ -1779,14 +1805,16 @@ describe("IBosonDisputeHandler", function () {
             await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to expire the escalated dispute, expecting revert
-            await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_STATE
             );
           });
 
           it("Dispute escalation period has not passed yet", async function () {
             // Attempt to expire the escalated dispute, expecting revert
-            await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.DISPUTE_STILL_VALID
             );
           });
@@ -1805,7 +1833,8 @@ describe("IBosonDisputeHandler", function () {
 
             // dispute raised but not escalated
             // Attempt to expire the escalated dispute, expecting revert
-            await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_STATE
             );
 
@@ -1813,7 +1842,8 @@ describe("IBosonDisputeHandler", function () {
             await disputeHandler.connect(buyer).retractDispute(exchangeId);
 
             // Attempt to expire the retracted dispute, expecting revert
-            await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_STATE
             );
           });
@@ -1897,9 +1927,9 @@ describe("IBosonDisputeHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to refuse an escalated dispute, expecting revert
-            await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId)).to.revertedWith(
-              RevertReasons.REGION_PAUSED
-            );
+            await expect(
+              disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
           });
 
           it("Exchange does not exist", async function () {
@@ -1907,9 +1937,9 @@ describe("IBosonDisputeHandler", function () {
             const exchangeId = "666";
 
             // Attempt to refuse the escalated dispute, expecting revert
-            await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId)).to.revertedWith(
-              RevertReasons.NO_SUCH_EXCHANGE
-            );
+            await expect(
+              disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
           });
 
           it("Exchange is not in a disputed state", async function () {
@@ -1919,9 +1949,9 @@ describe("IBosonDisputeHandler", function () {
             await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to refuse the escalated dispute, expecting revert
-            await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId)).to.revertedWith(
-              RevertReasons.INVALID_STATE
-            );
+            await expect(
+              disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_STATE);
           });
 
           it("Dispute is in some state other than escalated", async function () {
@@ -1938,17 +1968,17 @@ describe("IBosonDisputeHandler", function () {
 
             // dispute raised but not escalated
             // Attempt to refuse the escalated dispute, expecting revert
-            await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId)).to.revertedWith(
-              RevertReasons.INVALID_STATE
-            );
+            await expect(
+              disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_STATE);
 
             // Retract the dispute, put it into RETRACTED state
             await disputeHandler.connect(buyer).retractDispute(exchangeId);
 
             // Attempt to refuse the retracted dispute, expecting revert
-            await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId)).to.revertedWith(
-              RevertReasons.INVALID_STATE
-            );
+            await expect(
+              disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_STATE);
           });
 
           it("Dispute escalation response period has elapsed", async function () {
@@ -1956,14 +1986,15 @@ describe("IBosonDisputeHandler", function () {
             await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod) + 1);
 
             // Attempt to refuse the escalated dispute, expecting revert
-            await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId)).to.revertedWith(
-              RevertReasons.DISPUTE_HAS_EXPIRED
-            );
+            await expect(
+              disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.DISPUTE_HAS_EXPIRED);
           });
 
           it("Caller is not the dispute resolver for this dispute", async function () {
             // Attempt to refuse the escalated dispute, expecting revert
-            await expect(disputeHandler.connect(rando).refuseEscalatedDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(rando).refuseEscalatedDispute(exchangeId)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.NOT_DISPUTE_RESOLVER_ASSISTANT
             );
           });
@@ -2489,7 +2520,8 @@ describe("IBosonDisputeHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to expire a dispute batch, expecting revert
-            await expect(disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire)).to.revertedWith(
+            await expect(disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.REGION_PAUSED
             );
           });
@@ -2501,7 +2533,8 @@ describe("IBosonDisputeHandler", function () {
             disputesToExpire.push("666");
 
             // Attempt to expire the disputes, expecting revert
-            await expect(disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire)).to.revertedWith(
+            await expect(disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.NO_SUCH_EXCHANGE
             );
           });
@@ -2513,14 +2546,16 @@ describe("IBosonDisputeHandler", function () {
             disputesToExpire.push("1");
 
             // Attempt to expire the disputes, expecting revert
-            await expect(disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire)).to.revertedWith(
+            await expect(disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_STATE
             );
           });
 
           it("Dispute has not expired yet", async function () {
             // Attempt to expire the disputes, expecting revert
-            await expect(disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire)).to.revertedWith(
+            await expect(disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.DISPUTE_STILL_VALID
             );
           });
@@ -2532,7 +2567,8 @@ describe("IBosonDisputeHandler", function () {
             await disputeHandler.connect(buyer).retractDispute("3");
 
             // Attempt to expire the disputes, expecting revert
-            await expect(disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire)).to.revertedWith(
+            await expect(disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_STATE
             );
           });

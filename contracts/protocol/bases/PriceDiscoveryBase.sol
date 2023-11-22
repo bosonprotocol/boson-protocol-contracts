@@ -63,10 +63,14 @@ contract PriceDiscoveryBase is ProtocolBase {
         address _seller,
         address _buyer
     ) internal returns (uint256 actualPrice) {
-        require(
-            _priceDiscovery.priceDiscoveryContract != address(0) && _priceDiscovery.conduit != address(0),
-            PRICE_DISCOVERY_CONTRACTS_NOT_SET
-        );
+        // Make sure caller provided price discovery data
+        if (_priceDiscovery.priceDiscoveryContract == address(0) || _priceDiscovery.priceDiscoveryData.length == 0) {
+            revert InvalidPriceDiscovery();
+        }
+
+        // If not dealing with wrapper, voucher is transferred using the conduit which must not be zero address
+        if (_priceDiscovery.side != Side.Wrapper && _priceDiscovery.conduit == address(0))
+            revert InvalidConduitAddress();
 
         IBosonVoucher bosonVoucher = IBosonVoucher(
             getCloneAddress(protocolLookups(), _offer.sellerId, _offer.collectionIndex)
@@ -128,7 +132,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
 
         uint256 protocolBalanceAfter = getBalance(_exchangeToken, address(this));
-        require(protocolBalanceBefore >= protocolBalanceAfter, NEGATIVE_PRICE_NOT_ALLOWED);
+        if (protocolBalanceBefore < protocolBalanceAfter) revert NegativePriceNotAllowed();
         actualPrice = protocolBalanceBefore - protocolBalanceAfter;
 
         // If token is ERC20, reset approval
@@ -140,7 +144,7 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         {
             // Make sure that the price discovery contract has transferred the voucher to the protocol
-            require(_bosonVoucher.ownerOf(_tokenId) == address(this), VOUCHER_NOT_RECEIVED);
+            if (_bosonVoucher.ownerOf(_tokenId) != address(this)) revert VoucherNotReceived();
 
             // Transfer voucher to buyer
             _bosonVoucher.transferFrom(address(this), _buyer, _tokenId);
@@ -182,10 +186,10 @@ contract PriceDiscoveryBase is ProtocolBase {
         address _seller,
         IBosonVoucher _bosonVoucher
     ) internal returns (uint256 actualPrice) {
-        require(_tokenId != 0, TOKEN_ID_MANDATORY);
+        if (_tokenId == 0) revert TokenIdMandatory();
 
         address sender = msgSender();
-        require(_seller == sender, NOT_VOUCHER_HOLDER);
+        if (_seller != sender) revert NotVoucherHolder();
 
         // Transfer seller's voucher to protocol
         // Don't need to use safe transfer from, since that protocol can handle the voucher
@@ -220,11 +224,11 @@ contract PriceDiscoveryBase is ProtocolBase {
         }
 
         // Calculate actual price
-        require(protocolBalanceAfter >= protocolBalanceBefore, NEGATIVE_PRICE_NOT_ALLOWED);
+        if (protocolBalanceAfter < protocolBalanceBefore) revert NegativePriceNotAllowed();
         actualPrice = protocolBalanceAfter - protocolBalanceBefore;
 
         // Make sure that balance change is at least the expected price
-        require(actualPrice >= _priceDiscovery.price, INSUFFICIENT_VALUE_RECEIVED);
+        if (actualPrice < _priceDiscovery.price) revert InsufficientValueReceived();
 
         // Verify that token id provided by caller matches the token id that the price discovery contract has sent to buyer
         getAndVerifyTokenId(_tokenId);
@@ -251,11 +255,11 @@ contract PriceDiscoveryBase is ProtocolBase {
         PriceDiscovery calldata _priceDiscovery,
         IBosonVoucher _bosonVoucher
     ) internal returns (uint256 actualPrice) {
-        require(_tokenId != 0, TOKEN_ID_MANDATORY);
+        if (_tokenId == 0) revert TokenIdMandatory();
 
         // If price discovery contract does not own the voucher, it cannot be classified as a wrapper
         address owner = _bosonVoucher.ownerOf(_tokenId);
-        require(owner == _priceDiscovery.priceDiscoveryContract, NOT_VOUCHER_HOLDER);
+        if (owner != _priceDiscovery.priceDiscoveryContract) revert NotVoucherHolder();
 
         // Check balance before calling wrapper
         bool isNative = _exchangeToken == address(0);
@@ -278,12 +282,12 @@ contract PriceDiscoveryBase is ProtocolBase {
         uint256 protocolBalanceAfter = getBalance(_exchangeToken, address(this));
 
         // Verify that actual price is within the expected range
-        require(protocolBalanceAfter >= protocolBalanceBefore, NEGATIVE_PRICE_NOT_ALLOWED);
+        if (protocolBalanceAfter < protocolBalanceBefore) revert NegativePriceNotAllowed();
         actualPrice = protocolBalanceAfter - protocolBalanceBefore;
 
         // when working with wrappers, price is already known, so the caller should set it exactly
         // If protocol receive more than expected, it does not return the surplus to the caller
-        require(actualPrice == _priceDiscovery.price, PRICE_TOO_LOW);
+        if (actualPrice != _priceDiscovery.price) revert PriceTooLow();
 
         // Verify that token id provided by caller matches the token id that the price discovery contract has sent to buyer
         getAndVerifyTokenId(_tokenId);
@@ -314,14 +318,14 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         // If caller has provided token id, it must match the token id that the price discovery send to the protocol
         if (_tokenId != 0) {
-            require(_tokenId == ps.incomingVoucherId, TOKEN_ID_MISMATCH);
+            if (_tokenId != ps.incomingVoucherId) revert TokenIdMismatch();
         } else {
             // If caller has not provided token id, use the one stored in onPremintedVoucherTransfer function
             _tokenId = ps.incomingVoucherId;
         }
 
         // Token id cannot be zero at this point
-        require(_tokenId != 0, TOKEN_ID_NOT_SET);
+        if (_tokenId == 0) revert TokenIdNotSet();
 
         return _tokenId;
     }

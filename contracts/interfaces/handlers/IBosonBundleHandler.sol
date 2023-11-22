@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonBundleEvents } from "../events/IBosonBundleEvents.sol";
 
 /**
@@ -11,7 +12,7 @@ import { IBosonBundleEvents } from "../events/IBosonBundleEvents.sol";
  *
  * The ERC-165 identifier for this interface is: 0x7b53dece
  */
-interface IBosonBundleHandler is IBosonBundleEvents {
+interface IBosonBundleHandler is BosonErrors, IBosonBundleEvents {
     /**
      * @notice Creates a Bundle.
      *

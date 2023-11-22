@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
@@ -117,11 +118,11 @@ library FundsLib {
      */
     function validateIncomingPayment(address _exchangeToken, uint256 _value) internal {
         if (_exchangeToken == address(0)) {
-            // if transfer is in the native currency, msg.value must match price
-            require(msg.value == _value, INSUFFICIENT_VALUE_RECEIVED);
+            // if transfer is in the native currency, msg.value must match offer price
+            if (msg.value != _value) revert BosonErrors.InsufficientValueReceived();
         } else {
             // when price is in an erc20 token, transferring the native currency is not allowed
-            require(msg.value == 0, NATIVE_NOT_ALLOWED);
+            if (msg.value != 0) revert BosonErrors.NativeNotAllowed();
 
             // if transfer is in ERC20 token, try to transfer the amount from buyer to the protocol
             transferFundsToProtocol(_exchangeToken, _value);
@@ -403,7 +404,8 @@ library FundsLib {
             uint256 protocolTokenBalanceAfter = IERC20(_tokenAddress).balanceOf(address(this));
 
             // make sure that expected amount of tokens was transferred
-            require(protocolTokenBalanceAfter - protocolTokenBalanceBefore == _amount, INSUFFICIENT_VALUE_RECEIVED);
+            if (protocolTokenBalanceAfter - protocolTokenBalanceBefore != _amount)
+                revert BosonErrors.InsufficientValueReceived();
         }
     }
 
@@ -469,7 +471,7 @@ library FundsLib {
         if (_tokenAddress == address(0)) {
             // transfer native currency
             (bool success, ) = _to.call{ value: _amount }("");
-            require(success, TOKEN_TRANSFER_FAILED);
+            if (!success) revert BosonErrors.TokenTransferFailed();
         } else {
             // transfer ERC20 tokens
             IERC20(_tokenAddress).safeTransfer(_to, _amount);
@@ -518,7 +520,7 @@ library FundsLib {
             uint256 entityFunds = availableFunds[_tokenAddress];
 
             // make sure that seller has enough funds in the pool and reduce the available funds
-            require(entityFunds >= _amount, INSUFFICIENT_AVAILABLE_FUNDS);
+            if (entityFunds < _amount) revert BosonErrors.InsufficientAvailableFunds();
 
             // Use unchecked to optimize execution cost. The math is safe because of the require above.
             unchecked {

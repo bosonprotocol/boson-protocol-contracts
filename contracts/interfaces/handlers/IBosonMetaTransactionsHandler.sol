@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonMetaTransactionsEvents } from "../events/IBosonMetaTransactionsEvents.sol";
 
 /**
@@ -11,7 +12,7 @@ import { IBosonMetaTransactionsEvents } from "../events/IBosonMetaTransactionsEv
  *
  * The ERC-165 identifier for this interface is: 0xb3e4e803
  */
-interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
+interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents, BosonErrors {
     /**
      * @notice Checks nonce and returns true if used already for a specific address.
      *

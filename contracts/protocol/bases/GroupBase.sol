@@ -36,10 +36,10 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
 
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByAssistant(sender);
-        require(exists, NOT_ASSISTANT);
+        if (!exists) revert NotAssistant();
 
         // condition must be valid
-        require(validateCondition(_condition), INVALID_CONDITION_PARAMETERS);
+        if (!validateCondition(_condition)) revert InvalidConditionParameters();
 
         // Get the next group and increment the counter
         uint256 groupId = protocolCounters().nextGroupId++;
@@ -50,7 +50,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
 
             // Offer should not belong to another group already
             (bool exist, ) = getGroupIdByOffer(_group.offerIds[i]);
-            require(!exist, OFFER_MUST_BE_UNIQUE);
+            if (exist) revert OfferMustBeUnique();
 
             // add to groupIdByOffer mapping
             lookups.groupIdByOffer[_group.offerIds[i]] = groupId;
@@ -188,7 +188,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
 
             // Offer should not belong to another group already
             (bool exist, ) = getGroupIdByOffer(offerId);
-            require(!exist, OFFER_MUST_BE_UNIQUE);
+            if (exist) revert OfferMustBeUnique();
 
             // add to groupIdByOffer mapping
             lookups.groupIdByOffer[offerId] = _groupId;
@@ -230,18 +230,18 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         uint256[] memory _offerIds
     ) internal view returns (uint256 sellerId, Group storage group) {
         // make sure that at least something will be updated
-        require(_offerIds.length != 0, NOTHING_UPDATED);
+        if (_offerIds.length == 0) revert NothingUpdated();
 
         // Get storage location for group
         bool exists;
         (exists, group) = fetchGroup(_groupId);
 
-        require(exists, NO_SUCH_GROUP);
+        if (!exists) revert NoSuchGroup();
 
         // Get seller id, we assume seller id exists if group exists
         (, sellerId) = getSellerIdByAssistant(msgSender());
 
         // Caller's seller id must match group seller id
-        require(sellerId == group.sellerId, NOT_ASSISTANT);
+        if (sellerId != group.sellerId) revert NotAssistant();
     }
 }

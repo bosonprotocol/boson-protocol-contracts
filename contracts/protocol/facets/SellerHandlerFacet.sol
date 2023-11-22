@@ -89,20 +89,21 @@ contract SellerHandlerFacet is SellerBase {
         AuthToken storage authToken;
 
         // Admin address or AuthToken data must be present. A seller can have one or the other
-        require(
-            (_seller.admin == address(0) && _authToken.tokenType != AuthTokenType.None) ||
-                (_seller.admin != address(0) && _authToken.tokenType == AuthTokenType.None),
-            ADMIN_OR_AUTH_TOKEN
-        );
-        require(_seller.clerk == address(0), CLERK_DEPRECATED);
+        if (
+            (_seller.admin == address(0) && _authToken.tokenType == AuthTokenType.None) ||
+            (_seller.admin != address(0) && _authToken.tokenType != AuthTokenType.None)
+        ) {
+            revert AdminOrAuthToken();
+        }
+        if (_seller.clerk != address(0)) revert ClerkDeprecated();
 
-        require(_authToken.tokenType != AuthTokenType.Custom, INVALID_AUTH_TOKEN_TYPE);
+        if (_authToken.tokenType == AuthTokenType.Custom) revert InvalidAuthTokenType();
 
         // Check Seller exists in sellers mapping
         (exists, seller, authToken) = fetchSeller(_seller.id);
 
         // Seller must already exist
-        require(exists, NO_SUCH_SELLER);
+        if (!exists) revert NoSuchSeller();
 
         // Get message sender
         address sender = msgSender();
@@ -124,8 +125,8 @@ contract SellerHandlerFacet is SellerBase {
             // If AuthToken data is different from the one in storage, then set it as pending update
             if (authToken.tokenType != _authToken.tokenType || authToken.tokenId != _authToken.tokenId) {
                 // Check that auth token is unique to this seller
-                uint256 check = lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId];
-                require(check == 0, AUTH_TOKEN_MUST_BE_UNIQUE);
+                if (lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] != 0)
+                    revert AuthTokenMustBeUnique();
 
                 // Auth token owner must approve the update to prevent front-running
                 authTokenPendingUpdate.tokenType = _authToken.tokenType;
@@ -141,7 +142,8 @@ contract SellerHandlerFacet is SellerBase {
 
         if (_seller.assistant != seller.assistant) {
             preUpdateSellerCheck(_seller.id, _seller.assistant, lookups);
-            require(_seller.assistant != address(0), INVALID_ADDRESS);
+            if (_seller.assistant == address(0)) revert InvalidAddress();
+
             // Assistant address owner must approve the update to prevent front-running
             sellerPendingUpdate.assistant = _seller.assistant;
             needsApproval = true;
@@ -150,7 +152,7 @@ contract SellerHandlerFacet is SellerBase {
         bool updateApplied;
 
         if (_seller.treasury != seller.treasury) {
-            require(_seller.treasury != address(0), INVALID_ADDRESS);
+            if (_seller.treasury == address(0)) revert InvalidAddress();
 
             // Update treasury
             seller.treasury = _seller.treasury;
@@ -182,7 +184,7 @@ contract SellerHandlerFacet is SellerBase {
             emit SellerUpdatePending(_seller.id, sellerPendingUpdate, authTokenPendingUpdate, sender);
         }
 
-        require(updateApplied || needsApproval, NO_UPDATE_APPLIED);
+        if (!updateApplied && !needsApproval) revert NoUpdateApplied();
     }
 
     /**
@@ -215,7 +217,7 @@ contract SellerHandlerFacet is SellerBase {
             (exists, sellerPendingUpdate, authTokenPendingUpdate) = fetchSellerPendingUpdate(_sellerId);
 
             // Be sure an update is pending
-            require(exists, NO_PENDING_UPDATE_FOR_ACCOUNT);
+            if (!exists) revert NoPendingUpdateForAccount();
         }
 
         bool updateApplied;
@@ -233,7 +235,7 @@ contract SellerHandlerFacet is SellerBase {
 
             // Approve admin update
             if (role == SellerUpdateFields.Admin && sellerPendingUpdate.admin != address(0)) {
-                require(sellerPendingUpdate.admin == sender, UNAUTHORIZED_CALLER_UPDATE);
+                if (sellerPendingUpdate.admin != sender) revert UnauthorizedCallerUpdate();
 
                 preUpdateSellerCheck(_sellerId, sender, lookups);
 
@@ -258,7 +260,7 @@ contract SellerHandlerFacet is SellerBase {
                 updateApplied = true;
             } else if (role == SellerUpdateFields.Assistant && sellerPendingUpdate.assistant != address(0)) {
                 // Approve assistant update
-                require(sellerPendingUpdate.assistant == sender, UNAUTHORIZED_CALLER_UPDATE);
+                if (sellerPendingUpdate.assistant != sender) revert UnauthorizedCallerUpdate();
 
                 preUpdateSellerCheck(_sellerId, sender, lookups);
 
@@ -292,13 +294,11 @@ contract SellerHandlerFacet is SellerBase {
                 // Approve auth token update
                 address authTokenContract = lookups.authTokenContracts[authTokenPendingUpdate.tokenType];
                 address tokenIdOwner = IERC721(authTokenContract).ownerOf(authTokenPendingUpdate.tokenId);
-                require(tokenIdOwner == sender, UNAUTHORIZED_CALLER_UPDATE);
+                if (tokenIdOwner != sender) revert UnauthorizedCallerUpdate();
 
                 // Check that auth token is unique to this seller
-                uint256 check = lookups.sellerIdByAuthToken[authTokenPendingUpdate.tokenType][
-                    authTokenPendingUpdate.tokenId
-                ];
-                require(check == 0, AUTH_TOKEN_MUST_BE_UNIQUE);
+                if (lookups.sellerIdByAuthToken[authTokenPendingUpdate.tokenType][authTokenPendingUpdate.tokenId] != 0)
+                    revert AuthTokenMustBeUnique();
 
                 // Delete old seller id by auth token mapping
                 delete lookups.sellerIdByAuthToken[authToken.tokenType][authToken.tokenId];
@@ -322,7 +322,7 @@ contract SellerHandlerFacet is SellerBase {
 
                 updateApplied = true;
             } else if (role == SellerUpdateFields.Clerk) {
-                revert(CLERK_DEPRECATED);
+                revert ClerkDeprecated();
             }
 
             unchecked {
@@ -363,7 +363,7 @@ contract SellerHandlerFacet is SellerBase {
         address assistant = msgSender();
 
         (bool exists, uint256 sellerId) = getSellerIdByAssistant(assistant);
-        require(exists, NO_SUCH_SELLER);
+        if (!exists) revert NoSuchSeller();
 
         Collection[] storage sellersAdditionalCollections = lookups.additionalCollections[sellerId];
         uint256 collectionIndex = sellersAdditionalCollections.length + 1; // 0 is reserved for the original collection
@@ -378,7 +378,7 @@ contract SellerHandlerFacet is SellerBase {
                 admin = IERC721(lookups.authTokenContracts[authToken.tokenType]).ownerOf(authToken.tokenId);
             }
             sellerSalt = keccak256(abi.encodePacked(admin, _voucherInitValues.collectionSalt));
-            require(!lookups.isUsedSellerSalt[sellerSalt], SELLER_SALT_NOT_UNIQUE);
+            if (lookups.isUsedSellerSalt[sellerSalt]) revert SellerSaltNotUnique();
             lookups.sellerSalt[sellerId] = sellerSalt;
             lookups.isUsedSellerSalt[sellerSalt] = true;
         }
@@ -422,14 +422,14 @@ contract SellerHandlerFacet is SellerBase {
         (bool exists, Seller storage seller, AuthToken storage authToken) = fetchSeller(_sellerId);
 
         // Seller must already exist
-        require(exists, NO_SUCH_SELLER);
+        if (!exists) revert NoSuchSeller();
 
         // Check that caller is authorized to call this function
         authorizeAdmin(lookups, authToken, seller.admin, admin);
 
         bytes32 sellerSalt = keccak256(abi.encodePacked(admin, _newSalt));
 
-        require(!lookups.isUsedSellerSalt[sellerSalt], SELLER_SALT_NOT_UNIQUE);
+        if (lookups.isUsedSellerSalt[sellerSalt]) revert SellerSaltNotUnique();
         lookups.isUsedSellerSalt[lookups.sellerSalt[_sellerId]] = false;
         lookups.sellerSalt[_sellerId] = sellerSalt;
         lookups.isUsedSellerSalt[sellerSalt] = true;
@@ -592,10 +592,8 @@ contract SellerHandlerFacet is SellerBase {
             uint256 check1 = _lookups.sellerIdByAssistant[_role];
             uint256 check2 = _lookups.sellerIdByAdmin[_role];
 
-            require(
-                (check1 == 0 || check1 == _sellerId) && (check2 == 0 || check2 == _sellerId),
-                SELLER_ADDRESS_MUST_BE_UNIQUE
-            );
+            if ((check1 != 0 && check1 != _sellerId) || (check2 != 0 && check2 != _sellerId))
+                revert SellerAddressMustBeUnique();
         }
     }
 
@@ -624,11 +622,11 @@ contract SellerHandlerFacet is SellerBase {
         address _sender
     ) internal view {
         if (_admin != address(0)) {
-            require(_admin == _sender, NOT_ADMIN);
+            if (_admin != _sender) revert NotAdmin();
         } else {
             address authTokenContract = _lookups.authTokenContracts[_authToken.tokenType];
             address tokenIdOwner = IERC721(authTokenContract).ownerOf(_authToken.tokenId);
-            require(tokenIdOwner == _sender, NOT_ADMIN);
+            if (tokenIdOwner != _sender) revert NotAdmin();
         }
     }
 }

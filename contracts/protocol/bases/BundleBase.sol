@@ -42,13 +42,11 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
 
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByAssistant(sender);
-        require(exists, NOT_ASSISTANT);
+        if (!exists) revert NotAssistant();
 
         // validate that offer ids and twin ids are not empty
-        require(
-            _bundle.offerIds.length > 0 && _bundle.twinIds.length > 0,
-            BUNDLE_REQUIRES_AT_LEAST_ONE_TWIN_AND_ONE_OFFER
-        );
+        if (_bundle.offerIds.length == 0 || _bundle.twinIds.length == 0)
+            revert BundleRequiresAtLeastOneTwinAndOneOffer();
 
         // Get the next bundle and increment the counter
         uint256 bundleId = protocolCounters().nextBundleId++;
@@ -62,11 +60,11 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
             offersTotalQuantityAvailable = calculateOffersTotalQuantity(offersTotalQuantityAvailable, offerId);
 
             (bool bundleByOfferExists, ) = fetchBundleIdByOffer(offerId);
-            require(!bundleByOfferExists, BUNDLE_OFFER_MUST_BE_UNIQUE);
+            if (bundleByOfferExists) revert BundleOfferMustBeUnique();
 
             (bool exchangeIdsForOfferExists, ) = getExchangeIdsByOffer(offerId);
             // make sure exchange does not already exist for this offer id.
-            require(!exchangeIdsForOfferExists, EXCHANGE_FOR_OFFER_EXISTS);
+            if (exchangeIdsForOfferExists) revert ExchangeForOfferExists();
 
             // Add to bundleIdByOffer mapping
             lookups.bundleIdByOffer[offerId] = bundleId;
@@ -81,7 +79,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
 
             // A twin can't belong to multiple bundles
             (bool bundleForTwinExist, ) = fetchBundleIdByTwin(twinId);
-            require(!bundleForTwinExist, BUNDLE_TWIN_MUST_BE_UNIQUE);
+            if (bundleForTwinExist) revert BundleTwinMustBeUnique();
 
             bundleSupplyChecks(offersTotalQuantityAvailable, twinId);
 
@@ -121,13 +119,13 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
         (exists, twin) = fetchTwin(_twinId);
 
         // Twin must already exist
-        require(exists, NO_SUCH_TWIN);
+        if (!exists) revert NoSuchTwin();
 
         // Get seller id, we assume seller id exists if twin exists
         (, uint256 sellerId) = getSellerIdByAssistant(msgSender());
 
         // Caller's seller id must match twin seller id
-        require(sellerId == twin.sellerId, NOT_ASSISTANT);
+        if (sellerId != twin.sellerId) revert NotAssistant();
     }
 
     /**
@@ -147,14 +145,13 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
         // twin is NonFungibleToken or bundle has an unlimited offer
         if (twin.tokenType == TokenType.NonFungibleToken || _offersTotalQuantity == type(uint256).max) {
             // the sum of all offers quantity should be less or equal twin supply
-            require(_offersTotalQuantity <= twin.supplyAvailable, INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS);
+            if (_offersTotalQuantity > twin.supplyAvailable) revert InsufficientTwinSupplyToCoverBundleOffers();
         } else {
             // twin is FungibleToken or MultiToken
             // the sum of all offers quantity multiplied by twin amount should be less or equal twin supply
-            require(
-                _offersTotalQuantity * twin.amount <= twin.supplyAvailable,
-                INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
-            );
+            if (_offersTotalQuantity * twin.amount > twin.supplyAvailable) {
+                revert InsufficientTwinSupplyToCoverBundleOffers();
+            }
         }
     }
 
