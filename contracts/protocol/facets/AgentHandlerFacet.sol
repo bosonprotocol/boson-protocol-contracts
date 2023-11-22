@@ -37,16 +37,16 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
      */
     function createAgent(Agent memory _agent) external agentsNotPaused nonReentrant {
         //Check for zero address
-        require(_agent.wallet != address(0), INVALID_ADDRESS);
+        if (_agent.wallet == address(0)) revert InvalidAddress();
 
         //Check active is not set to false
-        require(_agent.active, MUST_BE_ACTIVE);
+        if (!_agent.active) revert MustBeActive();
 
         // Get the next account id and increment the counter
         uint256 agentId = protocolCounters().nextAccountId++;
 
         //check that the wallet address is unique to one agent id
-        require(protocolLookups().agentIdByWallet[_agent.wallet] == 0, AGENT_ADDRESS_MUST_BE_UNIQUE);
+        if (protocolLookups().agentIdByWallet[_agent.wallet] != 0) revert AgentAddressMustBeUnique();
 
         _agent.id = agentId;
         storeAgent(_agent);
@@ -77,7 +77,7 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // Check for zero address
-        require(_agent.wallet != address(0), INVALID_ADDRESS);
+        if (_agent.wallet == address(0)) revert InvalidAddress();
 
         bool exists;
         Agent storage agent;
@@ -86,18 +86,18 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
         (exists, agent) = fetchAgent(_agent.id);
 
         // Agent must already exist
-        require(exists, NO_SUCH_AGENT);
+        if (!exists) revert NoSuchAgent();
 
         // Get message sender
         address sender = msgSender();
 
         // Check that msg.sender is the wallet address for this agent
-        require(agent.wallet == sender, NOT_AGENT_WALLET);
+        if (agent.wallet != sender) revert NotAgentWallet();
 
         // Check that the wallet address is not associated with another agent or is already associated with the agent passed in
         mapping(address => uint256) storage agentIds = lookups.agentIdByWallet;
-        uint256 check1 = agentIds[_agent.wallet];
-        require(check1 == 0 || check1 == _agent.id, AGENT_ADDRESS_MUST_BE_UNIQUE);
+        uint256 agentId = agentIds[_agent.wallet];
+        if (agentId != 0 && agentId != _agent.id) revert AgentAddressMustBeUnique();
 
         // Delete current mappings
         delete agentIds[sender];
@@ -129,10 +129,8 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
     function storeAgent(Agent memory _agent) internal {
         // Make sure agent fee percentage + protocol fee percentage is less than or equal the max.
         // This will lessen the likelihood that creation of offers using this agent will fail
-        require(
-            (_agent.feePercentage + protocolFees().percentage) <= protocolLimits().maxTotalOfferFeePercentage,
-            INVALID_AGENT_FEE_PERCENTAGE
-        );
+        if ((_agent.feePercentage + protocolFees().percentage) > protocolLimits().maxTotalOfferFeePercentage)
+            revert InvalidAgentFeePercentage();
 
         // Get storage location for agent
         (, Agent storage agent) = fetchAgent(_agent.id);

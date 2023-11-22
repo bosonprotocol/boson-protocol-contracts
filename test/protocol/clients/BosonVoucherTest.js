@@ -61,6 +61,7 @@ describe("IBosonVoucher", function () {
   let forwarder;
   let snapshotId;
   let beaconProxyAddress;
+  let bosonErrors;
 
   before(async function () {
     accountId.next(true);
@@ -91,6 +92,8 @@ describe("IBosonVoucher", function () {
     } = await setupTestEnvironment(contracts, {
       forwarderAddress: [await forwarder.getAddress()],
     }));
+
+    bosonErrors = await getContractAt("BosonErrors", await accountHandler.getAddress());
 
     // make all account the same
     assistant = admin;
@@ -269,7 +272,8 @@ describe("IBosonVoucher", function () {
       context("💔 Revert Reasons", async function () {
         it("should revert if caller does not have PROTOCOL role", async function () {
           // Expect revert if random user attempts to issue voucher
-          await expect(bosonVoucher.connect(rando).issueVoucher(0, buyerWallet)).to.be.revertedWith(
+          await expect(bosonVoucher.connect(rando).issueVoucher(0, buyerWallet)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.ACCESS_DENIED
           );
 
@@ -294,7 +298,8 @@ describe("IBosonVoucher", function () {
           await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, await assistant.getAddress());
 
           // Expect revert if random user attempts to issue voucher
-          await expect(bosonVoucher.connect(protocol).issueVoucher(tokenId, buyerWallet)).to.be.revertedWith(
+          await expect(bosonVoucher.connect(protocol).issueVoucher(tokenId, buyerWallet)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.EXCHANGE_ID_IN_RESERVED_RANGE
           );
         });
@@ -366,7 +371,7 @@ describe("IBosonVoucher", function () {
         it("caller does not have PROTOCOL role", async function () {
           await expect(
             bosonVoucher.connect(rando).reserveRange(offerId, start, length, await assistant.getAddress())
-          ).to.be.revertedWith(RevertReasons.ACCESS_DENIED);
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
         });
 
         it("Start id is not greater than zero for the first range", async function () {
@@ -376,7 +381,7 @@ describe("IBosonVoucher", function () {
           // Try to reserve range, it should fail
           await expect(
             bosonVoucher.connect(protocol).reserveRange(offerId, start, length, await assistant.getAddress())
-          ).to.be.revertedWith(RevertReasons.INVALID_RANGE_START);
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_RANGE_START);
         });
 
         it("Range length is zero", async function () {
@@ -386,7 +391,7 @@ describe("IBosonVoucher", function () {
           // Try to reserve range, it should fail
           await expect(
             bosonVoucher.connect(protocol).reserveRange(offerId, start, length, await assistant.getAddress())
-          ).to.be.revertedWith(RevertReasons.INVALID_RANGE_LENGTH);
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_RANGE_LENGTH);
         });
 
         it("Range length is too large, i.e., would cause an overflow", async function () {
@@ -397,7 +402,7 @@ describe("IBosonVoucher", function () {
           // Try to reserve range, it should fail
           await expect(
             bosonVoucher.connect(protocol).reserveRange(offerId, start, length, await assistant.getAddress())
-          ).to.be.revertedWith(RevertReasons.INVALID_RANGE_LENGTH);
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_RANGE_LENGTH);
         });
 
         it("Offer id is already associated with a range", async function () {
@@ -409,14 +414,14 @@ describe("IBosonVoucher", function () {
           // Try to reserve range for the same offer, it should fail
           await expect(
             bosonVoucher.connect(protocol).reserveRange(offerId, start, length, await assistant.getAddress())
-          ).to.be.revertedWith(RevertReasons.OFFER_RANGE_ALREADY_RESERVED);
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_RANGE_ALREADY_RESERVED);
         });
 
         it("_to address isn't contract address or contract owner address", async function () {
           // Try to reserve range for rando address, it should fail
           await expect(
             bosonVoucher.connect(protocol).reserveRange(offerId, start, length, await rando.getAddress())
-          ).to.be.revertedWith(RevertReasons.INVALID_TO_ADDRESS);
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_TO_ADDRESS);
         });
       });
     });
@@ -596,7 +601,8 @@ describe("IBosonVoucher", function () {
           offerId = 15;
 
           // Try to premint, it should fail
-          await expect(bosonVoucher.connect(assistant).preMint(offerId, amount)).to.be.revertedWith(
+          await expect(bosonVoucher.connect(assistant).preMint(offerId, amount)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_RESERVED_RANGE_FOR_OFFER
           );
         });
@@ -609,7 +615,8 @@ describe("IBosonVoucher", function () {
           amount = "990"; // length is 1000, already minted 50
 
           // Try to premint, it should fail
-          await expect(bosonVoucher.connect(assistant).preMint(offerId, amount)).to.be.revertedWith(
+          await expect(bosonVoucher.connect(assistant).preMint(offerId, amount)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_AMOUNT_TO_MINT
           );
         });
@@ -619,7 +626,8 @@ describe("IBosonVoucher", function () {
           await setNextBlockTimestamp(Number(BigInt(offerDates.validUntil) + 1n));
 
           // Try to premint, it should fail
-          await expect(bosonVoucher.connect(assistant).preMint(offerId, amount)).to.be.revertedWith(
+          await expect(bosonVoucher.connect(assistant).preMint(offerId, amount)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.OFFER_EXPIRED_OR_VOIDED
           );
         });
@@ -628,7 +636,8 @@ describe("IBosonVoucher", function () {
           await offerHandler.connect(assistant).voidOffer(offerId);
 
           // Try to premint, it should fail
-          await expect(bosonVoucher.connect(assistant).preMint(offerId, amount)).to.be.revertedWith(
+          await expect(bosonVoucher.connect(assistant).preMint(offerId, amount)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.OFFER_EXPIRED_OR_VOIDED
           );
         });
@@ -772,9 +781,9 @@ describe("IBosonVoucher", function () {
         assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
 
         // Second call should revert since there's nothing to burn
-        await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)).to.be.revertedWith(
-          RevertReasons.AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN
-        );
+        await expect(
+          bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN);
       });
 
       context("Test that require non-voided offer", function () {
@@ -869,9 +878,9 @@ describe("IBosonVoucher", function () {
           offerId = 15;
 
           // Try to burn, it should fail
-          await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)).to.be.revertedWith(
-            RevertReasons.NO_RESERVED_RANGE_FOR_OFFER
-          );
+          await expect(
+            bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.NO_RESERVED_RANGE_FOR_OFFER);
         });
 
         it("Offer is still valid", async function () {
@@ -884,9 +893,9 @@ describe("IBosonVoucher", function () {
           await bosonVoucher.connect(assistant).preMint(offerId, 10);
 
           // Try to burn, it should fail
-          await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)).to.be.revertedWith(
-            RevertReasons.OFFER_STILL_VALID
-          );
+          await expect(
+            bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_STILL_VALID);
         });
 
         it("Nothing to burn", async function () {
@@ -894,9 +903,9 @@ describe("IBosonVoucher", function () {
           await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount);
 
           // Try to burn, it should fail
-          await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)).to.be.revertedWith(
-            RevertReasons.AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN
-          );
+          await expect(
+            bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN);
         });
       });
     });
@@ -1432,7 +1441,7 @@ describe("IBosonVoucher", function () {
               assert.equal(tokenOwner, await rando.getAddress(), "Rando is not the owner");
             });
 
-            it("Should call commitToPreMintedOffer", async function () {
+            it("Should call onPremintedVoucherTransferred", async function () {
               const tx = await bosonVoucher
                 .connect(assistant)
                 [selector](await assistant.getAddress(), await rando.getAddress(), tokenId, ...additionalArgs);
@@ -1451,7 +1460,7 @@ describe("IBosonVoucher", function () {
               // Update the validUntilDate date in the expected exchange struct
               voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
-              // First transfer should call commitToPreMintedOffer
+              // First transfer should call onPremintedVoucherTransferred
               await expect(tx)
                 .to.emit(exchangeHandler, "BuyerCommitted")
                 .withArgs(
@@ -1465,21 +1474,21 @@ describe("IBosonVoucher", function () {
             });
 
             it("Second transfer should behave as normal voucher transfer", async function () {
-              // First transfer should call commitToPreMintedOffer, and not onVoucherTransferred
+              // First transfer should call onPremintedVoucherTransferred, and not onVoucherTransferred
               let tx = await bosonVoucher
                 .connect(assistant)
                 [selector](await assistant.getAddress(), await rando.getAddress(), tokenId, ...additionalArgs);
               await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
               await expect(tx).to.not.emit(exchangeHandler, "VoucherTransferred");
 
-              // Second transfer should call onVoucherTransferred, and not commitToPreMintedOffer
+              // Second transfer should call onVoucherTransferred, and not onPremintedVoucherTransferred
               tx = await bosonVoucher
                 .connect(rando)
                 [selector](await rando.getAddress(), await assistant.getAddress(), tokenId, ...additionalArgs);
               await expect(tx).to.emit(exchangeHandler, "VoucherTransferred");
               await expect(tx).to.not.emit(exchangeHandler, "BuyerCommitted");
 
-              // Next transfer should call onVoucherTransferred, and not commitToPreMintedOffer, even if seller is the owner
+              // Next transfer should call onVoucherTransferred, and not onPremintedVoucherTransferred, even if seller is the owner
               tx = await bosonVoucher
                 .connect(assistant)
                 [selector](await assistant.getAddress(), await rando.getAddress(), tokenId, ...additionalArgs);
@@ -1556,7 +1565,7 @@ describe("IBosonVoucher", function () {
                   bosonVoucher
                     .connect(assistant)
                     [selector](await assistant.getAddress(), await rando.getAddress(), tokenId, ...additionalArgs)
-                ).to.be.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
+                ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
               });
 
               it("Transfer preminted voucher, where offer has expired", async function () {
@@ -1568,7 +1577,7 @@ describe("IBosonVoucher", function () {
                   bosonVoucher
                     .connect(assistant)
                     [selector](await assistant.getAddress(), await rando.getAddress(), tokenId, ...additionalArgs)
-                ).to.be.revertedWith(RevertReasons.OFFER_HAS_EXPIRED);
+                ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_EXPIRED);
               });
 
               it("Transfer preminted voucher, but from is not the voucher owner", async function () {
@@ -1586,7 +1595,7 @@ describe("IBosonVoucher", function () {
                   bosonVoucher
                     .connect(rando)
                     [selector](await rando.getAddress(), await rando.getAddress(), tokenId, ...additionalArgs)
-                ).to.be.revertedWith(RevertReasons.NO_SILENT_MINT_ALLOWED);
+                ).to.be.revertedWith(RevertReasons.ERC721_CALLER_NOT_OWNER_OR_APPROVED);
               });
             });
           });
@@ -1747,9 +1756,9 @@ describe("IBosonVoucher", function () {
             royaltyPercentage = "1500"; //15%
 
             // royalty percentage too high, expecting revert
-            await expect(bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage)).to.be.revertedWith(
-              RevertReasons.ROYALTY_FEE_INVALID
-            );
+            await expect(
+              bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage)
+            ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.ROYALTY_FEE_INVALID);
           });
         });
       });
@@ -1850,7 +1859,7 @@ describe("IBosonVoucher", function () {
           // royalty percentage too high, expecting revert
           await expect(
             accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
-          ).to.be.revertedWith(RevertReasons.ROYALTY_FEE_INVALID);
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.ROYALTY_FEE_INVALID);
         });
       });
     });
@@ -2014,7 +2023,10 @@ describe("IBosonVoucher", function () {
 
     it("should revert if caller does not have PROTOCOL role", async function () {
       // Expect revert if random user attempts to burn voucher
-      await expect(bosonVoucher.connect(rando).burnVoucher(0)).to.be.revertedWith(RevertReasons.ACCESS_DENIED);
+      await expect(bosonVoucher.connect(rando).burnVoucher(0)).to.be.revertedWithCustomError(
+        bosonErrors,
+        RevertReasons.ACCESS_DENIED
+      );
 
       // Grant PROTOCOL role to random user address
       await accessController.grantRole(Role.PROTOCOL, await rando.getAddress());
@@ -2052,9 +2064,9 @@ describe("IBosonVoucher", function () {
 
     context("💔 Revert Reasons", async function () {
       it("should revert if caller does not have PROTOCOL role", async function () {
-        await expect(bosonVoucher.connect(rando).transferOwnership(await assistant.getAddress())).to.be.revertedWith(
-          RevertReasons.ACCESS_DENIED
-        );
+        await expect(
+          bosonVoucher.connect(rando).transferOwnership(await assistant.getAddress())
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
       });
 
       it("Even the current owner cannot transfer the ownership", async function () {
@@ -2062,9 +2074,9 @@ describe("IBosonVoucher", function () {
         await bosonVoucher.connect(protocol).transferOwnership(await assistant.getAddress());
 
         // owner tries to transfer, it should fail
-        await expect(bosonVoucher.connect(assistant).transferOwnership(await rando.getAddress())).to.be.revertedWith(
-          RevertReasons.ACCESS_DENIED
-        );
+        await expect(
+          bosonVoucher.connect(assistant).transferOwnership(await rando.getAddress())
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
       });
 
       it("Current owner cannot renounce the ownership", async function () {
@@ -2074,7 +2086,10 @@ describe("IBosonVoucher", function () {
         const ownable = await getContractAt("OwnableUpgradeable", await bosonVoucher.getAddress());
 
         // owner tries to renounce ownership, it should fail
-        await expect(ownable.connect(assistant).renounceOwnership()).to.be.revertedWith(RevertReasons.ACCESS_DENIED);
+        await expect(ownable.connect(assistant).renounceOwnership()).to.be.revertedWithCustomError(
+          bosonErrors,
+          RevertReasons.ACCESS_DENIED
+        );
       });
 
       it("Transferring ownership to 0 is not allowed", async function () {
@@ -2180,9 +2195,9 @@ describe("IBosonVoucher", function () {
 
     context("💔 Revert Reasons", async function () {
       it("_to is the zero address", async function () {
-        await expect(bosonVoucher.connect(assistant).callExternalContract(ZeroAddress, calldata)).to.be.revertedWith(
-          RevertReasons.INVALID_ADDRESS
-        );
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(ZeroAddress, calldata)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
       });
 
       it("Caller is not the contract owner", async function () {
@@ -2211,9 +2226,9 @@ describe("IBosonVoucher", function () {
 
         // transfer
         calldata = erc20.interface.encodeFunctionData("transfer", [await assistant.getAddress(), 20]);
-        await expect(bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)).to.be.revertedWith(
-          RevertReasons.INTERACTION_NOT_ALLOWED
-        );
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INTERACTION_NOT_ALLOWED);
 
         // transferFrom
         calldata = erc20.interface.encodeFunctionData("transferFrom", [
@@ -2221,24 +2236,24 @@ describe("IBosonVoucher", function () {
           await assistant.getAddress(),
           20,
         ]);
-        await expect(bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)).to.be.revertedWith(
-          RevertReasons.INTERACTION_NOT_ALLOWED
-        );
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INTERACTION_NOT_ALLOWED);
 
         // approve
         calldata = erc20.interface.encodeFunctionData("approve", [await assistant.getAddress(), 20]);
-        await expect(bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)).to.be.revertedWith(
-          RevertReasons.INTERACTION_NOT_ALLOWED
-        );
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INTERACTION_NOT_ALLOWED);
 
         // DAI
         const dai = await getContractAt("DAIAliases", ZeroAddress);
 
         // push
         calldata = dai.interface.encodeFunctionData("push", [await assistant.getAddress(), 20]);
-        await expect(bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)).to.be.revertedWith(
-          RevertReasons.INTERACTION_NOT_ALLOWED
-        );
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INTERACTION_NOT_ALLOWED);
 
         // move
         calldata = dai.interface.encodeFunctionData("move", [
@@ -2246,9 +2261,9 @@ describe("IBosonVoucher", function () {
           await assistant.getAddress(),
           20,
         ]);
-        await expect(bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)).to.be.revertedWith(
-          RevertReasons.INTERACTION_NOT_ALLOWED
-        );
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INTERACTION_NOT_ALLOWED);
 
         // ERC721
         const erc721Address = await erc721.getAddress();
@@ -2258,9 +2273,9 @@ describe("IBosonVoucher", function () {
           await assistant.getAddress(),
           20,
         ]);
-        await expect(bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)).to.be.revertedWith(
-          RevertReasons.INTERACTION_NOT_ALLOWED
-        );
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INTERACTION_NOT_ALLOWED);
 
         // transferFrom
         calldata = erc721.interface.encodeFunctionData("safeTransferFrom(address,address,uint256)", [
@@ -2268,21 +2283,21 @@ describe("IBosonVoucher", function () {
           await assistant.getAddress(),
           20,
         ]);
-        await expect(bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)).to.be.revertedWith(
-          RevertReasons.INTERACTION_NOT_ALLOWED
-        );
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INTERACTION_NOT_ALLOWED);
 
         // approve
         calldata = erc721.interface.encodeFunctionData("approve", [await assistant.getAddress(), 20]);
-        await expect(bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)).to.be.revertedWith(
-          RevertReasons.INTERACTION_NOT_ALLOWED
-        );
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INTERACTION_NOT_ALLOWED);
 
         // setApprovalForAll
         calldata = erc721.interface.encodeFunctionData("setApprovalForAll", [await assistant.getAddress(), true]);
-        await expect(bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)).to.be.revertedWith(
-          RevertReasons.INTERACTION_NOT_ALLOWED
-        );
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INTERACTION_NOT_ALLOWED);
       });
     });
   });
@@ -2304,9 +2319,9 @@ describe("IBosonVoucher", function () {
 
       it("should revert if operator is zero address", async function () {
         // Expect revert if random user attempts to set approval
-        await expect(bosonVoucher.connect(assistant).setApprovalForAllToContract(ZeroAddress, true)).to.revertedWith(
-          RevertReasons.INVALID_ADDRESS
-        );
+        await expect(
+          bosonVoucher.connect(assistant).setApprovalForAllToContract(ZeroAddress, true)
+        ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
       });
     });
   });

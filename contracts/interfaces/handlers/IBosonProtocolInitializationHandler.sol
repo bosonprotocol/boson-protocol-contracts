@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.21;
 
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import "../events/IBosonProtocolInitializationEvents.sol";
 import "../events/IBosonConfigEvents.sol";
 
@@ -11,7 +12,7 @@ import "../events/IBosonConfigEvents.sol";
  *
  * The ERC-165 identifier for this interface is: 0x0d8e6e2c
  */
-interface IBosonProtocolInitializationHandler is IBosonProtocolInitializationEvents, IBosonConfigEvents {
+interface IBosonProtocolInitializationHandler is IBosonProtocolInitializationEvents, IBosonConfigEvents, BosonErrors {
     /**
      * @notice Gets the current protocol version.
      *

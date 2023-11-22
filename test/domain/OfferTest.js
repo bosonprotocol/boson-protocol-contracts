@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const { getSigners, parseUnits, ZeroAddress } = hre.ethers;
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
+const PriceType = require("../../scripts/domain/PriceType");
 const RoyaltyInfo = require("../../scripts/domain/RoyaltyInfo");
 
 /**
@@ -22,6 +23,7 @@ describe("Offer", function () {
     metadataHash,
     voided,
     collectionIndex,
+    priceType,
     royaltyInfo;
 
   beforeEach(async function () {
@@ -39,6 +41,7 @@ describe("Offer", function () {
     metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
     voided = false;
     collectionIndex = "2";
+    priceType = PriceType.Static;
     royaltyInfo = new RoyaltyInfo(
       accounts.slice(0, 3).map((a) => a.address),
       ["16", "32", "64"]
@@ -60,6 +63,7 @@ describe("Offer", function () {
         metadataHash,
         voided,
         collectionIndex,
+        priceType,
         royaltyInfo
       );
       expect(offer.idIsValid()).is.true;
@@ -73,6 +77,7 @@ describe("Offer", function () {
       expect(offer.metadataHashIsValid()).is.true;
       expect(offer.voidedIsValid()).is.true;
       expect(offer.collectionIndexIsValid()).is.true;
+      expect(offer.priceTypeIsValid()).is.true;
       expect(offer.royaltyInfoIsValid()).is.true;
       expect(offer.isValid()).is.true;
     });
@@ -93,6 +98,7 @@ describe("Offer", function () {
         metadataHash,
         voided,
         collectionIndex,
+        priceType,
         royaltyInfo
       );
       expect(offer.isValid()).is.true;
@@ -335,6 +341,43 @@ describe("Offer", function () {
       expect(offer.isValid()).is.true;
     });
 
+    it("Always present, priceType must be a valid PriceType", async function () {
+      // Invalid field value
+      offer.priceType = "zedzdeadbaby";
+      expect(offer.priceTypeIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Invalid field value
+      offer.priceType = new Date();
+      expect(offer.priceTypeIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Invalid field value
+      offer.priceType = 12;
+      expect(offer.priceTypeIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Invalid field value
+      offer.priceType = "0";
+      expect(offer.priceTypeIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Invalid field value
+      offer.priceType = "126";
+      expect(offer.priceTypeIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Valid field value
+      offer.priceType = PriceType.Static;
+      expect(offer.priceTypeIsValid()).is.true;
+      expect(offer.isValid()).is.true;
+
+      // Valid field value
+      offer.priceType = PriceType.Discovery;
+      expect(offer.priceTypeIsValid()).is.true;
+      expect(offer.isValid()).is.true;
+    });
+
     it("Always present, royaltyInfo must be a RoyaltyInfo instance", async function () {
       // Invalid field value
       offer.royaltyInfo = 12;
@@ -357,7 +400,6 @@ describe("Offer", function () {
       // Valid field value
       offer.royaltyInfo = new RoyaltyInfo([], []);
       expect(offer.royaltyInfoIsValid()).is.true;
-      expect(offer.isValid()).is.true;
     });
   });
 
@@ -379,6 +421,7 @@ describe("Offer", function () {
         metadataHash,
         voided,
         collectionIndex,
+        priceType,
         royaltyInfo
       );
       expect(offer.isValid()).is.true;
@@ -396,6 +439,7 @@ describe("Offer", function () {
         metadataHash,
         voided,
         collectionIndex,
+        priceType,
         royaltyInfo,
       };
     });
@@ -427,6 +471,7 @@ describe("Offer", function () {
           offer.metadataHash,
           offer.voided,
           offer.collectionIndex,
+          offer.priceType,
           offer.royaltyInfo.toStruct(),
         ];
 

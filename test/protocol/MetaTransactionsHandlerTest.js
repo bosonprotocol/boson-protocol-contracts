@@ -109,6 +109,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   let facetNames;
   let protocolDiamondAddress;
   let snapshotId;
+  let bosonErrors;
 
   before(async function () {
     accountId.next(true);
@@ -162,6 +163,8 @@ describe("IBosonMetaTransactionsHandler", function () {
       extraReturnValues: { accessController },
       diamondAddress: protocolDiamondAddress,
     } = await setupTestEnvironment(contracts));
+
+    bosonErrors = await getContractAt("BosonErrors", protocolDiamondAddress);
 
     // make all account the same
     assistant = admin;
@@ -392,7 +395,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Attempt to set new max offer per group, expecting revert
           await expect(
             metaTransactionsHandler.connect(rando).setAllowlistedFunctions(functionHashList, true)
-          ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
         });
       });
     });
@@ -672,7 +675,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               s,
               v
             )
-          ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.MUST_BE_ACTIVE);
         });
 
         it("Should allow different signers to use same nonce", async () => {
@@ -806,7 +809,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   s,
                   v
                 )
-            ).to.revertedWith(RevertReasons.REGION_PAUSED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
           });
 
           it("Should fail when function name is not allowlisted", async function () {
@@ -846,7 +849,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 s,
                 v
               )
-            ).to.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.FUNCTION_NOT_ALLOWLISTED);
           });
 
           it("Should fail when function name is not allowlisted - incorrect name", async function () {
@@ -883,7 +886,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 s,
                 v
               )
-            ).to.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.FUNCTION_NOT_ALLOWLISTED);
           });
 
           it("Should fail when function name is incorrect", async function () {
@@ -920,7 +923,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 s,
                 v
               )
-            ).to.revertedWith(RevertReasons.INVALID_FUNCTION_NAME);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_FUNCTION_NAME);
           });
 
           it("Should fail when function name is incorrect, even if selector is correct [collision]", async function () {
@@ -963,7 +966,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 s,
                 v
               )
-            ).to.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.FUNCTION_NOT_ALLOWLISTED);
           });
 
           it("Should fail when replaying a transaction", async function () {
@@ -1007,7 +1010,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 s,
                 v
               )
-            ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
           });
 
           it("Should fail when Signer and Signature do not match", async function () {
@@ -1042,7 +1045,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 s,
                 v
               )
-            ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
           });
 
           it("Should fail if signature is invalid", async function () {
@@ -1076,7 +1079,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 s,
                 "0" // invalid v signature component
               )
-            ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
 
             // Execute meta transaction, expecting revert.
             await expect(
@@ -1089,7 +1092,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 toHexString(MaxUint256), // invalid s signature component
                 v
               )
-            ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
 
             // Execute meta transaction, expecting revert.
             await expect(
@@ -1102,7 +1105,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 zeroPadBytes("0x", 32), // invalid s signature component
                 v
               )
-            ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
 
             // Execute meta transaction, expecting revert.
             await expect(
@@ -1115,7 +1118,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 s,
                 v
               )
-            ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
           });
         });
       });
@@ -1244,7 +1247,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               s,
               v
             )
-          ).to.revertedWith(RevertReasons.FUNCTION_NOT_ALLOWLISTED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.FUNCTION_NOT_ALLOWLISTED);
         });
 
         it("Returns default revert reason if called function reverts without a reason", async function () {
@@ -1456,7 +1459,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 s,
                 v
               )
-            ).to.revertedWith(RevertReasons.REENTRANCY_GUARD);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REENTRANCY_GUARD);
 
             [, buyerStruct] = await accountHandler.getBuyer(buyerId);
             const buyerAfter = Buyer.fromStruct(buyerStruct);
@@ -1530,7 +1533,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   s,
                   v
                 )
-            ).to.revertedWith(RevertReasons.REENTRANCY_GUARD);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REENTRANCY_GUARD);
           });
         });
       });
@@ -1761,7 +1764,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 s,
                 v
               )
-            ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_OFFER);
           });
 
           context("💔 Revert Reasons", async function () {
@@ -1805,7 +1808,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   s,
                   v
                 )
-              ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
             });
 
             it("Should fail when Signer and Signature do not match", async function () {
@@ -1832,7 +1835,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   s,
                   v
                 )
-              ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
             });
           });
         });
@@ -1988,7 +1991,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 s,
                 v
               )
-            ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_OFFER);
           });
 
           it("does not modify revert reasons - invalid tokenId", async function () {
@@ -2027,7 +2030,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 s,
                 v
               )
-            ).to.revertedWith(RevertReasons.INVALID_TOKEN_ID);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_TOKEN_ID);
           });
 
           context("💔 Revert Reasons", async function () {
@@ -2071,7 +2074,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   s,
                   v
                 )
-              ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
             });
 
             it("Should fail when Signer and Signature do not match", async function () {
@@ -2098,7 +2101,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   s,
                   v
                 )
-              ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
             });
           });
         });
@@ -2209,7 +2212,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   s,
                   v
                 )
-              ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
             });
 
             context("💔 Revert Reasons", async function () {
@@ -2252,7 +2255,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                     s,
                     v
                   )
-                ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
               });
 
               it("Should fail when Signer and Signature do not match", async function () {
@@ -2279,7 +2282,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                     s,
                     v
                   )
-                ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
               });
             });
           });
@@ -2363,7 +2366,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   s,
                   v
                 )
-              ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
             });
 
             context("💔 Revert Reasons", async function () {
@@ -2406,7 +2409,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                     s,
                     v
                   )
-                ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
               });
 
               it("Should fail when Signer and Signature do not match", async function () {
@@ -2433,7 +2436,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                     s,
                     v
                   )
-                ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
               });
             });
           });
@@ -2526,7 +2529,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   s,
                   v
                 )
-              ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
             });
 
             context("💔 Revert Reasons", async function () {
@@ -2569,7 +2572,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                     s,
                     v
                   )
-                ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
               });
 
               it("Should fail when Signer and Signature do not match", async function () {
@@ -2596,7 +2599,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                     s,
                     v
                   )
-                ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
               });
             });
           });
@@ -2691,7 +2694,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   s,
                   v
                 )
-              ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
             });
 
             context("💔 Revert Reasons", async function () {
@@ -2734,7 +2737,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                     s,
                     v
                   )
-                ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
               });
 
               it("Should fail when Signer and Signature do not match", async function () {
@@ -2761,7 +2764,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                     s,
                     v
                   )
-                ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
               });
             });
           });
@@ -2878,7 +2881,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   s,
                   v
                 )
-              ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
             });
 
             context("💔 Revert Reasons", async function () {
@@ -2921,7 +2924,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                     s,
                     v
                   )
-                ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
               });
 
               it("Should fail when Signer and Signature do not match", async function () {
@@ -2948,7 +2951,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                     s,
                     v
                   )
-                ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
               });
             });
           });
@@ -3043,7 +3046,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   s,
                   v
                 )
-              ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
             });
 
             context("💔 Revert Reasons", async function () {
@@ -3086,7 +3089,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                     s,
                     v
                   )
-                ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
               });
 
               it("Should fail when Signer and Signature do not match", async function () {
@@ -3113,7 +3116,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                     s,
                     v
                   )
-                ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
               });
             });
           });
@@ -3283,7 +3286,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   s,
                   v
                 )
-              ).to.revertedWith(RevertReasons.INVALID_BUYER_PERCENT);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_BUYER_PERCENT);
             });
 
             context("💔 Revert Reasons", async function () {
@@ -3330,7 +3333,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                     s,
                     v
                   )
-                ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
               });
 
               it("Should fail when Signer and Signature do not match", async function () {
@@ -3357,7 +3360,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                     s,
                     v
                   )
-                ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
               });
             });
           });
@@ -3462,7 +3465,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.from = await assistant.getAddress();
           message.contractAddress = await offerHandler.getAddress();
           message.functionName =
-            "createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool,uint256,(address[],uint256[])),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256)";
+            "createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool,uint256,uint8,(address[],uint256[])),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256)";
           message.functionSignature = functionSignature;
         });
 
@@ -3539,7 +3542,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               s,
               v
             )
-          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_PERIOD_INVALID);
         });
 
         context("💔 Revert Reasons", async function () {
@@ -3575,7 +3578,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 s,
                 v
               )
-            ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
           });
 
           it("Should fail when Signer and Signature do not match", async function () {
@@ -3602,7 +3605,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 s,
                 v
               )
-            ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
           });
         });
       });
@@ -3939,7 +3942,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 s,
                 v
               )
-            ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
           });
         });
 
@@ -3985,7 +3988,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 s,
                 v
               )
-            ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
           });
 
           it("Should fail when Signer and Signature do not match", async function () {
@@ -4012,7 +4015,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 s,
                 v
               )
-            ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
           });
         });
       });

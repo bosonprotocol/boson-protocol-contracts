@@ -206,16 +206,16 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
 
         // Nonce should be unused
-        require(!pmti.usedNonce[_userAddress][_nonce], NONCE_USED_ALREADY);
+        if (pmti.usedNonce[_userAddress][_nonce]) revert NonceUsedAlready();
 
         // Function must be allowlisted
         bytes32 functionNameHash = keccak256(abi.encodePacked(_functionName));
-        require(pmti.isAllowlisted[functionNameHash], FUNCTION_NOT_ALLOWLISTED);
+        if (!pmti.isAllowlisted[functionNameHash]) revert FunctionNotAllowlisted();
 
         // Function name must correspond to selector
         bytes4 destinationFunctionSig = convertBytesToBytes4(_functionSignature);
         bytes4 functionNameSig = bytes4(functionNameHash);
-        require(destinationFunctionSig == functionNameSig, INVALID_FUNCTION_NAME);
+        if (destinationFunctionSig != functionNameSig) revert InvalidFunctionName();
     }
 
     /**
@@ -320,7 +320,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         // Make sure that protocol is not reentered through meta transactions
         // Cannot use modifier `nonReentrant` since it also changes reentrancyStatus to `ENTERED`,
         // but that then breaks meta transaction functionality
-        require(protocolStatus().reentrancyStatus != ENTERED, REENTRANCY_GUARD);
+        if (protocolStatus().reentrancyStatus == ENTERED) revert ReentrancyGuard();
 
         validateTx(_functionName, _functionSignature, _nonce, _userAddress);
 
@@ -333,10 +333,8 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
             ? bytes(_functionSignature[4:])
             : _functionSignature;
 
-        require(
-            EIP712Lib.verify(_userAddress, hashMetaTransaction(metaTx), _sigR, _sigS, _sigV),
-            SIGNER_AND_SIGNATURE_DO_NOT_MATCH
-        );
+        if (!EIP712Lib.verify(_userAddress, hashMetaTransaction(metaTx), _sigR, _sigS, _sigV))
+            revert SignerAndSignatureDoNotMatch();
 
         return executeTx(_userAddress, _functionName, _functionSignature, _nonce);
     }

@@ -9,6 +9,9 @@ const DEFAULT_ROYALTY_RECIPIENT = "Treasury";
 
 const SEAPORT_ADDRESS = "0x00000000000001ad428e4906aE43D8F9852d0dD6"; // 1.4
 const ROYALTY_REGISTRY_ADDRESS = "0x28EdFcF0Be7E86b07493466e7631a213bDe8eEF2";
+const SEAPORT_ADDRESS_4 = "0x00000000000001ad428e4906aE43D8F9852d0dD6"; // 1.4
+const SEAPORT_ADDRESS_5 = "0x00000000000000ADc04C56Bf30aC9d3c0aAF14dC"; // 1.5
+
 const tipMultiplier = 1n; // use 1 in tests
 const tipSuggestion = 1500000000n; // ethers.js always returns this constant, it does not vary per block
 const maxPriorityFeePerGas = tipSuggestion * tipMultiplier;
@@ -23,3 +26,5 @@ exports.maxPriorityFeePerGas = maxPriorityFeePerGas;
 exports.DEFAULT_ROYALTY_RECIPIENT = DEFAULT_ROYALTY_RECIPIENT;
 exports.ROYALTY_REGISTRY_ADDRESS = ROYALTY_REGISTRY_ADDRESS;
 exports.SEAPORT_ADDRESS = SEAPORT_ADDRESS;
+exports.SEAPORT_ADDRESS_4 = SEAPORT_ADDRESS_4;
+exports.SEAPORT_ADDRESS_5 = SEAPORT_ADDRESS_5;

@@ -32,9 +32,11 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      *
      * Reverts if:
      * - The funds region of protocol is paused
+     * - Amount to deposit is zero
      * - Seller id does not exist
      * - It receives some native currency (e.g. ETH), but token address is not zero
      * - It receives some native currency (e.g. ETH), and the amount does not match msg.value
+     * - It receives no native currency, but token address is zero
      * - Contract at token address does not support ERC20 function transferFrom
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      * - Received ERC20 token amount differs from the expected value
@@ -48,18 +50,21 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         address _tokenAddress,
         uint256 _amount
     ) external payable override fundsNotPaused nonReentrant {
+        if (_amount == 0) revert ZeroDepositNotAllowed();
+
         // Check seller exists in sellers mapping
         (bool exists, , ) = fetchSeller(_sellerId);
 
         // Seller must exist
-        require(exists, NO_SUCH_SELLER);
+        if (!exists) revert NoSuchSeller();
 
         if (msg.value != 0) {
             // Receiving native currency
-            require(_tokenAddress == address(0), NATIVE_WRONG_ADDRESS);
-            require(_amount == msg.value, NATIVE_WRONG_AMOUNT);
+            if (_tokenAddress != address(0)) revert NativeWrongAddress();
+            if (_amount != msg.value) revert NativeWrongAmount();
         } else {
             // Transfer tokens from the caller
+            if (_tokenAddress == address(0)) revert InvalidAddress();
             FundsLib.transferFundsToProtocol(_tokenAddress, _amount);
         }
 
@@ -115,7 +120,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
                     destinationAddress = sender;
                 } else {
                     // In this branch, caller is neither buyer, assistant or agent or does not match the _entityId
-                    revert(NOT_AUTHORIZED);
+                    revert NotAuthorized();
                 }
             }
         }
@@ -279,7 +284,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // Make sure that the data is complete
-        require(_tokenList.length == _tokenAmounts.length, TOKEN_AMOUNT_MISMATCH);
+        if (_tokenList.length != _tokenAmounts.length) revert TokenAmountMismatch();
 
         // Two possible options: withdraw all, or withdraw only specified tokens and amounts
         if (_tokenList.length == 0) {
@@ -289,7 +294,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             address[] memory tokenList = lookups.tokenList[_entityId];
 
             // Make sure that at least something will be withdrawn
-            require(tokenList.length != 0, NOTHING_TO_WITHDRAW);
+            if (tokenList.length == 0) revert NothingToWithdraw();
 
             // Get entity's availableFunds storage pointer
             mapping(address => uint256) storage entityFunds = lookups.availableFunds[_entityId];
@@ -307,7 +312,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         } else {
             for (uint256 i = 0; i < _tokenList.length; ) {
                 // Make sure that at least something will be withdrawn
-                require(_tokenAmounts[i] > 0, NOTHING_TO_WITHDRAW);
+                if (_tokenAmounts[i] == 0) revert NothingToWithdraw();
 
                 // Transfer funds
                 FundsLib.transferFundsFromProtocol(_entityId, _tokenList[i], _destinationAddress, _tokenAmounts[i]);

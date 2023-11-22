@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
 import { IBosonGroupEvents } from "../events/IBosonGroupEvents.sol";
 import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
@@ -13,14 +14,15 @@ import { IBosonBundleEvents } from "../events/IBosonBundleEvents.sol";
  *
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  *
- * The ERC-165 identifier for this interface is: 0x45899b92
+ * The ERC-165 identifier for this interface is: 0x41858729
  */
 interface IBosonOrchestrationHandler is
     IBosonAccountEvents,
     IBosonGroupEvents,
     IBosonOfferEvents,
     IBosonTwinEvents,
-    IBosonBundleEvents
+    IBosonBundleEvents,
+    BosonErrors
 {
     /**
      * @notice Raises a dispute and immediately escalates it.

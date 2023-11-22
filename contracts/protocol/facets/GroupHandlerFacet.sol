@@ -97,7 +97,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
 
             // Offer should belong to the group
             (, uint256 groupId) = getGroupIdByOffer(offerId);
-            require(_groupId == groupId, OFFER_NOT_IN_GROUP);
+            if (_groupId != groupId) revert OfferNotInGroup();
 
             // Remove groupIdByOffer mapping
             delete lookups.groupIdByOffer[offerId];
@@ -153,11 +153,11 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
         Condition calldata _condition
     ) external override groupsNotPaused nonReentrant {
         // Validate condition parameters
-        require(validateCondition(_condition), INVALID_CONDITION_PARAMETERS);
+        if (!validateCondition(_condition)) revert InvalidConditionParameters();
 
         // Verify group exists
         (bool exists, Group storage group) = fetchGroup(_groupId);
-        require(exists, NO_SUCH_GROUP);
+        if (!exists) revert NoSuchGroup();
 
         // Get message sender
         address sender = msgSender();
@@ -166,7 +166,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
         (, uint256 sellerId) = getSellerIdByAssistant(sender);
 
         // Caller's seller id must match group seller id
-        require(sellerId == group.sellerId, NOT_ASSISTANT);
+        if (sellerId != group.sellerId) revert NotAssistant();
 
         // Store new condition
         storeCondition(_groupId, _condition);

@@ -6,7 +6,7 @@ import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { ERC721 } from "./support/ERC721.sol";
+import { ERC721 } from "./../support/ERC721.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**

@@ -77,10 +77,10 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         // If dispute was escalated, make sure that escalation period is not over yet
         if (dispute.state == DisputeState.Escalated) {
             // make sure the dispute escalation period not expired already
-            require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
+            if (block.timestamp > disputeDates.timeout) revert DisputeHasExpired();
         } else {
             // If dispute is not escalated, make sure the it is in the resolving state
-            require(dispute.state == DisputeState.Resolving, INVALID_STATE);
+            if (dispute.state != DisputeState.Resolving) revert InvalidState();
         }
 
         // Finalize the dispute
@@ -126,19 +126,19 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         address sender = msgSender();
 
         // Caller must be seller's assistant address
-        require(seller.assistant == sender, NOT_ASSISTANT);
+        if (seller.assistant != sender) revert NotAssistant();
 
         // Fetch the dispute, it exists if exchange is in Disputed state
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
 
         // Dispute must be in a resolving state
-        require(dispute.state == DisputeState.Resolving, INVALID_STATE);
+        if (dispute.state != DisputeState.Resolving) revert InvalidState();
 
         // If expired already, it cannot be extended
-        require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
+        if (block.timestamp > disputeDates.timeout) revert DisputeHasExpired();
 
         // New dispute timeout should be after the current dispute timeout
-        require(_newDisputeTimeout > disputeDates.timeout, INVALID_DISPUTE_TIMEOUT);
+        if (_newDisputeTimeout <= disputeDates.timeout) revert InvalidDisputeTimeout();
 
         // Update the timeout
         disputeDates.timeout = _newDisputeTimeout;
@@ -169,10 +169,10 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
 
         // Make sure the dispute is in the resolving state
-        require(dispute.state == DisputeState.Resolving, INVALID_STATE);
+        if (dispute.state != DisputeState.Resolving) revert InvalidState();
 
         // make sure the dispute not expired already
-        require(block.timestamp > disputeDates.timeout, DISPUTE_STILL_VALID);
+        if (block.timestamp <= disputeDates.timeout) revert DisputeStillValid();
 
         // Finalize the dispute
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Retracted, 0);
@@ -238,7 +238,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         uint8 _sigV
     ) external override nonReentrant {
         // buyer should get at most 100%
-        require(_buyerPercent <= 10000, INVALID_BUYER_PERCENT);
+        if (_buyerPercent > 10000) revert InvalidBuyerPercent();
 
         // Get the exchange, should be in disputed state
         (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
@@ -247,10 +247,10 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
 
         // Make sure the dispute is in the resolving or escalated state
-        require(dispute.state == DisputeState.Resolving || dispute.state == DisputeState.Escalated, INVALID_STATE);
+        if (dispute.state != DisputeState.Resolving && dispute.state != DisputeState.Escalated) revert InvalidState();
 
         // Make sure the dispute not expired already
-        require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
+        if (block.timestamp > disputeDates.timeout) revert DisputeHasExpired();
 
         // wrap the code in a separate block to avoid stack too deep error
         {
@@ -272,7 +272,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
             } else {
                 uint256 buyerId;
                 (exists, buyerId) = getBuyerIdByWallet(msgSender());
-                require(exists && buyerId == exchange.buyerId, NOT_BUYER_OR_SELLER);
+                if (!exists || buyerId != exchange.buyerId) revert NotBuyerOrSeller();
 
                 // caller is the buyer
                 // get the seller's address, which should be the signer of the resolution
@@ -281,10 +281,8 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
             }
 
             // verify that the signature belongs to the expectedSigner
-            require(
-                EIP712Lib.verify(expectedSigner, hashResolution(_exchangeId, _buyerPercent), _sigR, _sigS, _sigV),
-                SIGNER_AND_SIGNATURE_DO_NOT_MATCH
-            );
+            if (!EIP712Lib.verify(expectedSigner, hashResolution(_exchangeId, _buyerPercent), _sigR, _sigS, _sigV))
+                revert SignerAndSignatureDoNotMatch();
         }
 
         // finalize the dispute
@@ -342,7 +340,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      */
     function decideDispute(uint256 _exchangeId, uint256 _buyerPercent) external override nonReentrant {
         // Buyer should get at most 100%
-        require(_buyerPercent <= 10000, INVALID_BUYER_PERCENT);
+        if (_buyerPercent > 10000) revert InvalidBuyerPercent();
 
         // Make sure the dispute is valid and the caller is the dispute resolver
         (Exchange storage exchange, Dispute storage dispute, DisputeDates storage disputeDates) = disputeResolverChecks(
@@ -406,10 +404,10 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
 
         // Make sure the dispute is in the escalated state
-        require(dispute.state == DisputeState.Escalated, INVALID_STATE);
+        if (dispute.state != DisputeState.Escalated) revert InvalidState();
 
         // make sure the dispute escalation has expired already
-        require(block.timestamp > disputeDates.timeout, DISPUTE_STILL_VALID);
+        if (block.timestamp <= disputeDates.timeout) revert DisputeStillValid();
 
         // Finalize the dispute
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Refused, 0);
@@ -543,20 +541,18 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         (, dispute, disputeDates) = fetchDispute(_exchangeId);
 
         // Make sure the dispute is in the escalated state
-        require(dispute.state == DisputeState.Escalated, INVALID_STATE);
+        if (dispute.state != DisputeState.Escalated) revert InvalidState();
 
         // Make sure the dispute escalation period not expired already
-        require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
+        if (block.timestamp > disputeDates.timeout) revert DisputeHasExpired();
 
         // Fetch the offer to get the info who the seller is
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // get dispute resolver id to check if caller is the dispute resolver
         uint256 disputeResolverId = protocolLookups().disputeResolverIdByAssistant[msgSender()];
-        require(
-            disputeResolverId == fetchDisputeResolutionTerms(offer.id).disputeResolverId,
-            NOT_DISPUTE_RESOLVER_ASSISTANT
-        );
+        if (disputeResolverId != fetchDisputeResolutionTerms(offer.id).disputeResolverId)
+            revert NotDisputeResolverAssistant();
     }
 
     /**

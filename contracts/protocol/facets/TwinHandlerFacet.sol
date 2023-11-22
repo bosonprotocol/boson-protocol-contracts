@@ -62,7 +62,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
 
         // Get storage location for twin
         (bool exists, Twin memory twin) = fetchTwin(_twinId);
-        require(exists, NO_SUCH_TWIN);
+        if (!exists) revert NoSuchTwin();
 
         // Get message sender
         address sender = msgSender();
@@ -70,11 +70,11 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
         // Get seller id
         (, uint256 sellerId) = getSellerIdByAssistant(sender);
         // Caller's seller id must match twin seller id
-        require(sellerId == twin.sellerId, NOT_ASSISTANT);
+        if (sellerId != twin.sellerId) revert NotAssistant();
 
         // Check if there are bundles for this twin
         (bool bundleForTwinExist, ) = fetchBundleIdByTwin(_twinId);
-        require(!bundleForTwinExist, BUNDLE_FOR_TWIN_EXISTS);
+        if (bundleForTwinExist) revert BundleForTwinExists();
 
         // Delete struct
         delete protocolEntities().twins[_twinId];

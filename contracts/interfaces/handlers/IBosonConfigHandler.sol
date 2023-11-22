@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonConfigEvents } from "../events/IBosonConfigEvents.sol";
 
 /**
@@ -11,7 +12,7 @@ import { IBosonConfigEvents } from "../events/IBosonConfigEvents.sol";
  *
  * The ERC-165 identifier for this interface is: 0x7899c7b9
  */
-interface IBosonConfigHandler is IBosonConfigEvents {
+interface IBosonConfigHandler is IBosonConfigEvents, BosonErrors {
     /**
      * @notice Sets the Boson Token (ERC-20 contract) address.
      *

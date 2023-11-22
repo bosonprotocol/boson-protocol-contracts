@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import "../domain/BosonConstants.sol";
+import { BosonErrors } from "../domain/BosonErrors.sol";
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { TestFacetLib } from "./TestFacetLib.sol";
 
@@ -13,10 +14,10 @@ import { TestFacetLib } from "./TestFacetLib.sol";
  * @author Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-contract Test3Facet {
+contract Test3Facet is BosonErrors {
     modifier onlyUninitialized() {
         TestFacetLib.TestFacetStorage storage tfs = TestFacetLib.testFacetStorage();
-        require(!tfs.initialized, ALREADY_INITIALIZED);
+        if (tfs.initialized) revert AlreadyInitialized();
         tfs.initialized = true;
         _;
     }

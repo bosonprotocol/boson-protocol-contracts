@@ -1,5 +1,5 @@
-const hre = require("hardhat");
-const { getContractAt, ZeroAddress, getSigners, MaxUint256, provider, parseUnits } = hre.ethers;
+const { ethers } = require("hardhat");
+const { getContractAt, ZeroAddress, getSigners, MaxUint256, provider, parseUnits } = ethers;
 const { assert, expect } = require("chai");
 
 const Offer = require("../../scripts/domain/Offer");
@@ -105,6 +105,7 @@ describe("IBosonOfferHandler", function () {
   let returnedAgentId;
   let snapshotId;
   let beaconProxyAddress;
+  let bosonErrors;
 
   before(async function () {
     // get interface Ids
@@ -144,6 +145,8 @@ describe("IBosonOfferHandler", function () {
         { percentage: protocolFeePercentage, flatBoson: protocolFeeFlatBoson, buyerEscalationDepositPercentage },
       ],
     } = await setupTestEnvironment(contracts, { bosonTokenAddress: await bosonToken.getAddress() }));
+
+    bosonErrors = await getContractAt("BosonErrors", await configHandler.getAddress());
 
     // make all account the same
     assistant = admin;
@@ -544,7 +547,7 @@ describe("IBosonOfferHandler", function () {
         // Attempt to Create an offer, expecting revert
         await expect(
           offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-        ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
+        ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_NOT_APPROVED);
 
         // add seller to allow list
         allowedSellersToAdd = ["1"]; // existing seller is "1", DR is "2", new seller is "3"
@@ -660,14 +663,14 @@ describe("IBosonOfferHandler", function () {
           // Attempt to create an offer expecting revert
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("Caller not assistant of any seller", async function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.NOT_ASSISTANT);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
         });
 
         it("Valid from date is greater than valid until date", async function () {
@@ -678,7 +681,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_PERIOD_INVALID);
         });
 
         it("Valid until date is not in the future", async function () {
@@ -695,7 +698,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_PERIOD_INVALID);
         });
 
         it("Buyer cancel penalty is greater than price", async function () {
@@ -705,7 +708,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_PENALTY_INVALID);
         });
 
         it("Offer cannot be voided at the time of the creation", async function () {
@@ -715,7 +718,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_MUST_BE_ACTIVE);
         });
 
         it("Both voucher expiration date and voucher expiration period are defined", async function () {
@@ -726,7 +729,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
         it("Neither of voucher expiration date and voucher expiration period are defined", async function () {
@@ -737,7 +740,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
         it("Voucher redeemable period is fixed, but it ends before it starts", async function () {
@@ -748,7 +751,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
         it("Voucher redeemable period is fixed, but it ends before offer expires", async function () {
@@ -760,7 +763,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
         it("Dispute period is less than minimum dispute period", async function () {
@@ -770,7 +773,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_PERIOD);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_DISPUTE_PERIOD);
         });
 
         it("Resolution period is less than minimum resolution period", async function () {
@@ -780,7 +783,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
 
         it("Resolution period is greater than protocol max resolution period", async function () {
@@ -791,7 +794,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
 
         it("Available quantity is set to zero", async function () {
@@ -801,7 +804,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_QUANTITY_AVAILABLE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_QUANTITY_AVAILABLE);
         });
 
         it("Dispute resolver wallet is not registered", async function () {
@@ -811,7 +814,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
         it("Dispute resolver wallet is not registered", async function () {
@@ -822,7 +825,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
         // TODO - revisit when account deactivations are supported
@@ -842,7 +845,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_DISPUTE_RESOLVER);
 
           // after activation it should be possible to create the offer
           await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
@@ -861,7 +864,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
         // TODO - revisit when account deactivations are supported
@@ -884,7 +887,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_DISPUTE_RESOLVER);
 
           // after activation it should be possible to create the offer
           await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
@@ -912,7 +915,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_NOT_APPROVED);
         });
 
         it("Dispute resolver does not accept fees in the exchange token", async function () {
@@ -922,7 +925,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.DR_UNSUPPORTED_FEE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.DR_UNSUPPORTED_FEE);
         });
 
         it("Collection does not exist", async function () {
@@ -932,7 +935,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.NO_SUCH_COLLECTION);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_COLLECTION);
 
           // Create a new collection
           const externalId = "Brand1";
@@ -945,7 +948,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-          ).to.revertedWith(RevertReasons.NO_SUCH_COLLECTION);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_COLLECTION);
         });
 
         context("With royalty info", async function () {
@@ -967,7 +970,7 @@ describe("IBosonOfferHandler", function () {
               offerHandler
                 .connect(assistant)
                 .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-            ).to.revertedWith(RevertReasons.INVALID_ROYALTY_RECIPIENT);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_RECIPIENT);
           });
 
           it("Royalty percentage is less that the value decided by the admin", async function () {
@@ -979,7 +982,7 @@ describe("IBosonOfferHandler", function () {
               offerHandler
                 .connect(assistant)
                 .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-            ).to.revertedWith(RevertReasons.INVALID_ROYALTY_PERCENTAGE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
           });
 
           it("Total royalty percentage is more than max royalty percentage", async function () {
@@ -991,7 +994,7 @@ describe("IBosonOfferHandler", function () {
               offerHandler
                 .connect(assistant)
                 .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-            ).to.revertedWith(RevertReasons.INVALID_ROYALTY_PERCENTAGE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
           });
         });
       });
@@ -1117,7 +1120,7 @@ describe("IBosonOfferHandler", function () {
               offerHandler
                 .connect(assistant)
                 .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
-            ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_AGENT);
           });
 
           it("Sum of agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
@@ -1138,7 +1141,7 @@ describe("IBosonOfferHandler", function () {
               offerHandler
                 .connect(assistant)
                 .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agent.id)
-            ).to.revertedWith(RevertReasons.AGENT_FEE_AMOUNT_TOO_HIGH);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.AGENT_FEE_AMOUNT_TOO_HIGH);
           });
         });
       });
@@ -1192,7 +1195,10 @@ describe("IBosonOfferHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to void an offer expecting revert
-          await expect(offerHandler.connect(assistant).voidOffer(id)).to.revertedWith(RevertReasons.REGION_PAUSED);
+          await expect(offerHandler.connect(assistant).voidOffer(id)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.REGION_PAUSED
+          );
         });
 
         it("Offer does not exist", async function () {
@@ -1200,19 +1206,28 @@ describe("IBosonOfferHandler", function () {
           id = "444";
 
           // Attempt to void the offer, expecting revert
-          await expect(offerHandler.connect(assistant).voidOffer(id)).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+          await expect(offerHandler.connect(assistant).voidOffer(id)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.NO_SUCH_OFFER
+          );
 
           // Set invalid id
           id = "0";
 
           // Attempt to void the offer, expecting revert
-          await expect(offerHandler.connect(assistant).voidOffer(id)).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+          await expect(offerHandler.connect(assistant).voidOffer(id)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.NO_SUCH_OFFER
+          );
         });
 
         it("Caller is not seller", async function () {
           // caller is not the assistant of any seller
           // Attempt to update the offer, expecting revert
-          await expect(offerHandler.connect(rando).voidOffer(id)).to.revertedWith(RevertReasons.NOT_ASSISTANT);
+          await expect(offerHandler.connect(rando).voidOffer(id)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.NOT_ASSISTANT
+          );
 
           // caller is an assistant of another seller
           // Create a valid seller, then set fields in tests directly
@@ -1229,7 +1244,10 @@ describe("IBosonOfferHandler", function () {
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           // Attempt to update the offer, expecting revert
-          await expect(offerHandler.connect(rando).voidOffer(id)).to.revertedWith(RevertReasons.NOT_ASSISTANT);
+          await expect(offerHandler.connect(rando).voidOffer(id)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.NOT_ASSISTANT
+          );
         });
 
         it("Offer already voided", async function () {
@@ -1237,7 +1255,8 @@ describe("IBosonOfferHandler", function () {
           await offerHandler.connect(assistant).voidOffer(id);
 
           // Attempt to void the offer again, expecting revert
-          await expect(offerHandler.connect(assistant).voidOffer(id)).to.revertedWith(
+          await expect(offerHandler.connect(assistant).voidOffer(id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.OFFER_HAS_BEEN_VOIDED
           );
         });
@@ -1289,9 +1308,9 @@ describe("IBosonOfferHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
             // Attempt to extend an offer expecting revert
-            await expect(offerHandler.connect(assistant).extendOffer(offer.id, offerDates.validUntil)).to.revertedWith(
-              RevertReasons.REGION_PAUSED
-            );
+            await expect(
+              offerHandler.connect(assistant).extendOffer(offer.id, offerDates.validUntil)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
           });
 
           it("Offer does not exist", async function () {
@@ -1299,23 +1318,24 @@ describe("IBosonOfferHandler", function () {
             id = "444";
 
             // Attempt to void the offer, expecting revert
-            await expect(offerHandler.connect(assistant).extendOffer(id, offerDates.validUntil)).to.revertedWith(
-              RevertReasons.NO_SUCH_OFFER
-            );
+            await expect(
+              offerHandler.connect(assistant).extendOffer(id, offerDates.validUntil)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_OFFER);
 
             // Set invalid id
             id = "0";
 
             // Attempt to void the offer, expecting revert
-            await expect(offerHandler.connect(assistant).extendOffer(id, offerDates.validUntil)).to.revertedWith(
-              RevertReasons.NO_SUCH_OFFER
-            );
+            await expect(
+              offerHandler.connect(assistant).extendOffer(id, offerDates.validUntil)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_OFFER);
           });
 
           it("Caller is not seller", async function () {
             // caller is not the assistant of any seller
             // Attempt to update the offer, expecting revert
-            await expect(offerHandler.connect(rando).extendOffer(id, offerDates.validUntil)).to.revertedWith(
+            await expect(offerHandler.connect(rando).extendOffer(id, offerDates.validUntil)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.NOT_ASSISTANT
             );
 
@@ -1334,7 +1354,8 @@ describe("IBosonOfferHandler", function () {
             await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
             // Attempt to update the offer, expecting revert
-            await expect(offerHandler.connect(rando).extendOffer(id, offerDates.validUntil)).to.revertedWith(
+            await expect(offerHandler.connect(rando).extendOffer(id, offerDates.validUntil)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.NOT_ASSISTANT
             );
           });
@@ -1344,26 +1365,26 @@ describe("IBosonOfferHandler", function () {
             await offerHandler.connect(assistant).voidOffer(id);
 
             // Attempt to update an offer, expecting revert
-            await expect(offerHandler.connect(assistant).extendOffer(offer.id, offerDates.validUntil)).to.revertedWith(
-              RevertReasons.OFFER_HAS_BEEN_VOIDED
-            );
+            await expect(
+              offerHandler.connect(assistant).extendOffer(offer.id, offerDates.validUntil)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
           });
 
           it("New valid until date is lower than the existing valid until date", async function () {
             // Make the valid until date the same as the existing offer
             offerDates.validUntil = (BigInt(offerDates.validUntil) - 10000n).toString();
 
-            await expect(offerHandler.connect(assistant).extendOffer(offer.id, offerDates.validUntil)).to.revertedWith(
-              RevertReasons.OFFER_PERIOD_INVALID
-            );
+            await expect(
+              offerHandler.connect(assistant).extendOffer(offer.id, offerDates.validUntil)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_PERIOD_INVALID);
 
             // Make new the valid until date less than existing one
             offerDates.validUntil = (BigInt(offerDates.validUntil) - 1n).toString();
 
             // Attempt to update an offer, expecting revert
-            await expect(offerHandler.connect(assistant).extendOffer(offer.id, offerDates.validUntil)).to.revertedWith(
-              RevertReasons.OFFER_PERIOD_INVALID
-            );
+            await expect(
+              offerHandler.connect(assistant).extendOffer(offer.id, offerDates.validUntil)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_PERIOD_INVALID);
           });
 
           it("Valid until date is not in the future", async function () {
@@ -1371,9 +1392,9 @@ describe("IBosonOfferHandler", function () {
             offerDates.validUntil = (BigInt(offerDates.validFrom) - oneMonth * 6n).toString(); // 6 months ago
 
             // Attempt to update an offer, expecting revert
-            await expect(offerHandler.connect(assistant).extendOffer(offer.id, offerDates.validUntil)).to.revertedWith(
-              RevertReasons.OFFER_PERIOD_INVALID
-            );
+            await expect(
+              offerHandler.connect(assistant).extendOffer(offer.id, offerDates.validUntil)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_PERIOD_INVALID);
           });
         });
       });
@@ -1425,9 +1446,9 @@ describe("IBosonOfferHandler", function () {
             offerDates.validUntil = BigInt(offerDates.voucherRedeemableUntil) + oneWeek.toString(); // one week after voucherRedeemableUntil
 
             // Attempt to update an offer, expecting revert
-            await expect(offerHandler.connect(assistant).extendOffer(offer.id, offerDates.validUntil)).to.revertedWith(
-              RevertReasons.OFFER_PERIOD_INVALID
-            );
+            await expect(
+              offerHandler.connect(assistant).extendOffer(offer.id, offerDates.validUntil)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_PERIOD_INVALID);
           });
         });
       });
@@ -1618,7 +1639,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to reserve a range, expecting revert
           await expect(
             offerHandler.connect(assistant).reserveRange(id, length, await assistant.getAddress())
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("The exchanges region of protocol is paused", async function () {
@@ -1628,7 +1649,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to reserve a range, expecting revert
           await expect(
             offerHandler.connect(assistant).reserveRange(id, length, await assistant.getAddress())
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("Offer does not exist", async function () {
@@ -1638,7 +1659,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to reserve a range, expecting revert
           await expect(
             offerHandler.connect(assistant).reserveRange(id, length, await assistant.getAddress())
-          ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_OFFER);
 
           // Set invalid id
           id = "0";
@@ -1646,7 +1667,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to reserve a range, expecting revert
           await expect(
             offerHandler.connect(assistant).reserveRange(id, length, await assistant.getAddress())
-          ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_OFFER);
         });
 
         it("Offer already voided", async function () {
@@ -1656,7 +1677,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to reserve a range, expecting revert
           await expect(
             offerHandler.connect(assistant).reserveRange(id, length, await assistant.getAddress())
-          ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
         });
 
         it("Caller is not seller", async function () {
@@ -1664,7 +1685,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to reserve a range, expecting revert
           await expect(
             offerHandler.connect(rando).reserveRange(id, length, await assistant.getAddress())
-          ).to.revertedWith(RevertReasons.NOT_ASSISTANT);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
 
           // caller is an assistant of another seller
           // Create a valid seller, then set fields in tests directly
@@ -1683,7 +1704,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to reserve a range, expecting revert
           await expect(
             offerHandler.connect(rando).reserveRange(id, length, await assistant.getAddress())
-          ).to.revertedWith(RevertReasons.NOT_ASSISTANT);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
         });
 
         it("Range length is zero", async function () {
@@ -1693,7 +1714,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to reserve a range, expecting revert
           await expect(
             offerHandler.connect(assistant).reserveRange(id, length, await assistant.getAddress())
-          ).to.revertedWith(RevertReasons.INVALID_RANGE_LENGTH);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_RANGE_LENGTH);
         });
 
         it("Range length is greater than quantity available", async function () {
@@ -1703,7 +1724,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to reserve a range, expecting revert
           await expect(
             offerHandler.connect(assistant).reserveRange(id, length, await assistant.getAddress())
-          ).to.revertedWith(RevertReasons.INVALID_RANGE_LENGTH);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_RANGE_LENGTH);
         });
 
         it("Range length is greater than maximum allowed range length", async function () {
@@ -1719,7 +1740,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to reserve a range, expecting revert
           await expect(
             offerHandler.connect(assistant).reserveRange(nextOfferId, length, await assistant.getAddress())
-          ).to.revertedWith(RevertReasons.INVALID_RANGE_LENGTH);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_RANGE_LENGTH);
         });
 
         it("Call to BosonVoucher.reserveRange() reverts", async function () {
@@ -1729,14 +1750,14 @@ describe("IBosonOfferHandler", function () {
           // Attempt to reserve the same range again, expecting revert
           await expect(
             offerHandler.connect(assistant).reserveRange(id, length, await assistant.getAddress())
-          ).to.revertedWith(RevertReasons.OFFER_RANGE_ALREADY_RESERVED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_RANGE_ALREADY_RESERVED);
         });
 
         it("_to address isn't contract address or contract owner address", async function () {
           // Try to reserve range for rando address, it should fail
           await expect(
             offerHandler.connect(assistant).reserveRange(id, length, await rando.getAddress())
-          ).to.be.revertedWith(RevertReasons.INVALID_TO_ADDRESS);
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_TO_ADDRESS);
         });
       });
     });
@@ -2368,7 +2389,7 @@ describe("IBosonOfferHandler", function () {
           offerHandler
             .connect(assistant)
             .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-        ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
+        ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_NOT_APPROVED);
 
         // add seller to allow list
         allowedSellersToAdd = ["1"]; // existing seller is "1", DR is "2", new seller is "3"
@@ -2392,7 +2413,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("Caller not assistant of any seller", async function () {
@@ -2401,7 +2422,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(rando)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.NOT_ASSISTANT);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
         });
 
         it("Valid from date is greater than valid until date in some offer", async function () {
@@ -2414,7 +2435,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_PERIOD_INVALID);
         });
 
         it("Valid until date is not in the future in some offer", async function () {
@@ -2431,7 +2452,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_PERIOD_INVALID);
         });
 
         it("Buyer cancel penalty is greater than price", async function () {
@@ -2443,7 +2464,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_PENALTY_INVALID);
         });
 
         it("No offer cannot be voided at the time of the creation", async function () {
@@ -2455,7 +2476,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_MUST_BE_ACTIVE);
         });
 
         it("Dispute valid duration is 0 for some offer", async function () {
@@ -2467,7 +2488,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
 
         it("For some offer, both voucher expiration date and voucher expiration period are defined", async function () {
@@ -2481,7 +2502,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
         it("For some offer, neither of voucher expiration date and voucher expiration period are defined", async function () {
@@ -2494,7 +2515,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
         it("For some offer, voucher redeemable period is fixed, but it ends before it starts", async function () {
@@ -2507,7 +2528,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
         it("For some offer, voucher redeemable period is fixed, but it ends before offer expires", async function () {
@@ -2521,7 +2542,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
         it("For some offer, Dispute period is less than minimum dispute period", async function () {
@@ -2533,7 +2554,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_PERIOD);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_DISPUTE_PERIOD);
         });
 
         it("For some offer, resolution period is less than minimum dispute period", async function () {
@@ -2545,7 +2566,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
 
         it("For some offer, available quantity is set to zero", async function () {
@@ -2557,7 +2578,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.INVALID_QUANTITY_AVAILABLE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_QUANTITY_AVAILABLE);
         });
 
         it("For some offer, dispute resolver wallet is not registered", async function () {
@@ -2569,7 +2590,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
         // TODO - revisit when account deactivations are supported
@@ -2594,7 +2615,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_DISPUTE_RESOLVER);
 
           // after activation it should be possible to create the offer
           await accountHandler.connect(deployer).activateDisputeResolver(nextAccountId);
@@ -2617,7 +2638,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
         // TODO - revisit when account deactivations are supported
@@ -2643,7 +2664,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_DISPUTE_RESOLVER);
 
           // after activation it should be possible to create the offer
           await accountHandler.connect(deployer).activateDisputeResolver(nextAccountId);
@@ -2675,7 +2696,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_NOT_APPROVED);
         });
 
         it("For some offer, dispute resolver does not accept fees in the exchange token", async function () {
@@ -2687,7 +2708,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.DR_UNSUPPORTED_FEE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.DR_UNSUPPORTED_FEE);
         });
 
         it("Number of dispute dates does not match the number of offers", async function () {
@@ -2699,7 +2720,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.ARRAY_LENGTH_MISMATCH);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ARRAY_LENGTH_MISMATCH);
 
           // Make dispute dates shorter
           offerDatesList = offerDatesList.slice(0, -2);
@@ -2709,7 +2730,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.ARRAY_LENGTH_MISMATCH);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ARRAY_LENGTH_MISMATCH);
         });
 
         it("Number of dispute durations does not match the number of offers", async function () {
@@ -2721,7 +2742,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.ARRAY_LENGTH_MISMATCH);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ARRAY_LENGTH_MISMATCH);
 
           // Make dispute durations shorter
           offerDurationsList = offerDurationsList.slice(0, -2);
@@ -2731,7 +2752,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.ARRAY_LENGTH_MISMATCH);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ARRAY_LENGTH_MISMATCH);
         });
 
         it("Number of dispute resolvers does not match the number of offers", async function () {
@@ -2743,7 +2764,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.ARRAY_LENGTH_MISMATCH);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ARRAY_LENGTH_MISMATCH);
 
           // Make dispute durations shorter
           disputeResolverIds = disputeResolverIds.slice(0, -2);
@@ -2753,7 +2774,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.ARRAY_LENGTH_MISMATCH);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ARRAY_LENGTH_MISMATCH);
         });
 
         it("For some offer, collection does not exist", async function () {
@@ -2765,7 +2786,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.NO_SUCH_COLLECTION);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_COLLECTION);
 
           // Create a new collection
           const externalId = "Brand1";
@@ -2780,7 +2801,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.NO_SUCH_COLLECTION);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_COLLECTION);
         });
 
         it("Royalty recipient is not on seller's allow list", async function () {
@@ -2792,7 +2813,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.INVALID_ROYALTY_RECIPIENT);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_RECIPIENT);
         });
 
         it("Royalty percentage is less that the value decided by the admin", async function () {
@@ -2804,7 +2825,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.INVALID_ROYALTY_PERCENTAGE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
         });
 
         it("Total royalty percentage is more than max royalty percentage", async function () {
@@ -2816,7 +2837,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-          ).to.revertedWith(RevertReasons.INVALID_ROYALTY_PERCENTAGE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
         });
       });
 
@@ -2954,7 +2975,7 @@ describe("IBosonOfferHandler", function () {
               offerHandler
                 .connect(assistant)
                 .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, nonZeroAgentIds)
-            ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_AGENT);
           });
 
           it("Sum of agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
@@ -2980,7 +3001,7 @@ describe("IBosonOfferHandler", function () {
               offerHandler
                 .connect(assistant)
                 .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, nonZeroAgentIds)
-            ).to.revertedWith(RevertReasons.AGENT_FEE_AMOUNT_TOO_HIGH);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.AGENT_FEE_AMOUNT_TOO_HIGH);
           });
         });
       });
@@ -3049,7 +3070,8 @@ describe("IBosonOfferHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to void offer batch, expecting revert
-          await expect(offerHandler.connect(assistant).voidOfferBatch(offersToVoid)).to.revertedWith(
+          await expect(offerHandler.connect(assistant).voidOfferBatch(offersToVoid)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.REGION_PAUSED
           );
         });
@@ -3059,7 +3081,8 @@ describe("IBosonOfferHandler", function () {
           offersToVoid = ["1", "432", "2"];
 
           // Attempt to void the offer, expecting revert
-          await expect(offerHandler.connect(assistant).voidOfferBatch(offersToVoid)).to.revertedWith(
+          await expect(offerHandler.connect(assistant).voidOfferBatch(offersToVoid)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_SUCH_OFFER
           );
 
@@ -3067,7 +3090,8 @@ describe("IBosonOfferHandler", function () {
           offersToVoid = ["1", "2", "0"];
 
           // Attempt to void the offer, expecting revert
-          await expect(offerHandler.connect(assistant).voidOfferBatch(offersToVoid)).to.revertedWith(
+          await expect(offerHandler.connect(assistant).voidOfferBatch(offersToVoid)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_SUCH_OFFER
           );
         });
@@ -3075,7 +3099,8 @@ describe("IBosonOfferHandler", function () {
         it("Caller is not seller", async function () {
           // caller is not the assistant of any seller
           // Attempt to update the offer, expecting revert
-          await expect(offerHandler.connect(rando).voidOfferBatch(offersToVoid)).to.revertedWith(
+          await expect(offerHandler.connect(rando).voidOfferBatch(offersToVoid)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NOT_ASSISTANT
           );
 
@@ -3094,7 +3119,8 @@ describe("IBosonOfferHandler", function () {
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           // Attempt to update the offer, expecting revert
-          await expect(offerHandler.connect(rando).voidOfferBatch(offersToVoid)).to.revertedWith(
+          await expect(offerHandler.connect(rando).voidOfferBatch(offersToVoid)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NOT_ASSISTANT
           );
         });
@@ -3104,7 +3130,8 @@ describe("IBosonOfferHandler", function () {
           await offerHandler.connect(assistant).voidOffer("1");
 
           // Attempt to void the offer again, expecting revert
-          await expect(offerHandler.connect(assistant).voidOfferBatch(offersToVoid)).to.revertedWith(
+          await expect(offerHandler.connect(assistant).voidOfferBatch(offersToVoid)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.OFFER_HAS_BEEN_VOIDED
           );
 
@@ -3112,7 +3139,8 @@ describe("IBosonOfferHandler", function () {
           offersToVoid = ["1", "4", "1"];
 
           // Attempt to void the offer again, expecting revert
-          await expect(offerHandler.connect(assistant).voidOfferBatch(offersToVoid)).to.revertedWith(
+          await expect(offerHandler.connect(assistant).voidOfferBatch(offersToVoid)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.OFFER_HAS_BEEN_VOIDED
           );
         });
@@ -3177,7 +3205,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to void offer batch, expecting revert
           await expect(
             offerHandler.connect(assistant).extendOfferBatch(offersToExtend, newValidUntilDate)
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("Offer does not exist", async function () {
@@ -3187,7 +3215,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to extend the offers, expecting revert
           await expect(
             offerHandler.connect(assistant).extendOfferBatch(offersToExtend, newValidUntilDate)
-          ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_OFFER);
 
           // Set invalid id
           offersToExtend = ["1", "2", "0"];
@@ -3195,15 +3223,15 @@ describe("IBosonOfferHandler", function () {
           // Attempt to extend the offers, expecting revert
           await expect(
             offerHandler.connect(assistant).extendOfferBatch(offersToExtend, newValidUntilDate)
-          ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_OFFER);
         });
 
         it("Caller is not seller", async function () {
           // caller is not the assistant of any seller
           // Attempt to extend the offers, expecting revert
-          await expect(offerHandler.connect(rando).extendOfferBatch(offersToExtend, newValidUntilDate)).to.revertedWith(
-            RevertReasons.NOT_ASSISTANT
-          );
+          await expect(
+            offerHandler.connect(rando).extendOfferBatch(offersToExtend, newValidUntilDate)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
 
           // caller is an assistant of another seller
           seller = mockSeller(
@@ -3219,9 +3247,9 @@ describe("IBosonOfferHandler", function () {
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           // Attempt to extend the offers, expecting revert
-          await expect(offerHandler.connect(rando).extendOfferBatch(offersToExtend, newValidUntilDate)).to.revertedWith(
-            RevertReasons.NOT_ASSISTANT
-          );
+          await expect(
+            offerHandler.connect(rando).extendOfferBatch(offersToExtend, newValidUntilDate)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
         });
 
         it("Offers are not extendable, since one of them it's voided", async function () {
@@ -3231,7 +3259,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to extend the offers, expecting revert
           await expect(
             offerHandler.connect(assistant).extendOfferBatch(offersToExtend, newValidUntilDate)
-          ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
         });
 
         it("New valid until date is lower than the existing valid until date", async function () {
@@ -3240,7 +3268,7 @@ describe("IBosonOfferHandler", function () {
 
           await expect(
             offerHandler.connect(assistant).extendOfferBatch(offersToExtend, newValidUntilDate)
-          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_PERIOD_INVALID);
 
           // Make new the valid until date less than existing one
           newValidUntilDate = (BigInt(newValidUntilDate) - 1n).toString(); // less that validUntilDate of offer 5
@@ -3248,7 +3276,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to extend the offers, expecting revert
           await expect(
             offerHandler.connect(assistant).extendOfferBatch(offersToExtend, newValidUntilDate)
-          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_PERIOD_INVALID);
         });
 
         it("Valid until date is not in the future", async function () {
@@ -3258,7 +3286,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to extend the offers, expecting revert
           await expect(
             offerHandler.connect(assistant).extendOfferBatch(offersToExtend, newValidUntilDate)
-          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_PERIOD_INVALID);
         });
 
         it("Offer has voucherRedeemableUntil set and new valid until date is greater than that", async function () {
@@ -3277,7 +3305,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to extend the offers, expecting revert
           await expect(
             offerHandler.connect(assistant).extendOfferBatch(offersToExtend, newValidUntilDate)
-          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_PERIOD_INVALID);
         });
       });
     });

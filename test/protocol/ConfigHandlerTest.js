@@ -37,6 +37,7 @@ describe("IBosonConfigHandler", function () {
   let protocolFeePercentage, protocolFeeFlatBoson;
   let erc165, protocolDiamond, accessController, configHandler;
   let snapshotId;
+  let bosonErrors;
 
   before(async function () {
     // get interface Ids
@@ -78,6 +79,8 @@ describe("IBosonConfigHandler", function () {
 
     // Cast Diamond to IBosonConfigHandler
     configHandler = await getContractAt("IBosonConfigHandler", await protocolDiamond.getAddress());
+
+    bosonErrors = await getContractAt("BosonErrors", await protocolDiamond.getAddress());
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -275,14 +278,15 @@ describe("IBosonConfigHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("caller is not the admin", async function () {
             // Attempt to set new token address, expecting revert
-            await expect(configHandler.connect(rando).setTokenAddress(await token.getAddress())).to.revertedWith(
-              RevertReasons.ACCESS_DENIED
-            );
+            await expect(
+              configHandler.connect(rando).setTokenAddress(await token.getAddress())
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
           });
 
           it("token address is the zero address", async function () {
             // Attempt to set new token address, expecting revert
-            await expect(configHandler.connect(deployer).setTokenAddress(ZeroAddress)).to.revertedWith(
+            await expect(configHandler.connect(deployer).setTokenAddress(ZeroAddress)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_ADDRESS
             );
           });
@@ -314,14 +318,15 @@ describe("IBosonConfigHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("caller is not the admin", async function () {
             // Attempt to set new treasury address, expecting revert
-            await expect(configHandler.connect(rando).setTreasuryAddress(await treasury.getAddress())).to.revertedWith(
-              RevertReasons.ACCESS_DENIED
-            );
+            await expect(
+              configHandler.connect(rando).setTreasuryAddress(await treasury.getAddress())
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
           });
 
           it("treasury address is the zero address", async function () {
             // Attempt to set new treasury address, expecting revert
-            await expect(configHandler.connect(deployer).setTreasuryAddress(ZeroAddress)).to.revertedWith(
+            await expect(configHandler.connect(deployer).setTreasuryAddress(ZeroAddress)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_ADDRESS
             );
           });
@@ -355,14 +360,14 @@ describe("IBosonConfigHandler", function () {
             // Attempt to set new beacon address, expecting revert
             await expect(
               configHandler.connect(rando).setVoucherBeaconAddress(await beacon.getAddress())
-            ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
           });
 
           it("voucher beacon address is the zero address", async function () {
             // Attempt to set new beacon address, expecting revert
-            await expect(configHandler.connect(deployer).setVoucherBeaconAddress(ZeroAddress)).to.revertedWith(
-              RevertReasons.INVALID_ADDRESS
-            );
+            await expect(
+              configHandler.connect(deployer).setVoucherBeaconAddress(ZeroAddress)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
           });
         });
       });
@@ -392,14 +397,15 @@ describe("IBosonConfigHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("caller is not the admin", async function () {
             // Attempt to set new proxy address, expecting revert
-            await expect(configHandler.connect(rando).setBeaconProxyAddress(await proxy.getAddress())).to.revertedWith(
-              RevertReasons.ACCESS_DENIED
-            );
+            await expect(
+              configHandler.connect(rando).setBeaconProxyAddress(await proxy.getAddress())
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
           });
 
           it("beacon proxy address is the zero address", async function () {
             // Attempt to set new proxy address, expecting revert
-            await expect(configHandler.connect(deployer).setBeaconProxyAddress(ZeroAddress)).to.revertedWith(
+            await expect(configHandler.connect(deployer).setBeaconProxyAddress(ZeroAddress)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_ADDRESS
             );
           });
@@ -431,9 +437,9 @@ describe("IBosonConfigHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("caller is not the admin", async function () {
             // Attempt to set new protocol fee precentage, expecting revert
-            await expect(configHandler.connect(rando).setProtocolFeePercentage(protocolFeePercentage)).to.revertedWith(
-              RevertReasons.ACCESS_DENIED
-            );
+            await expect(
+              configHandler.connect(rando).setProtocolFeePercentage(protocolFeePercentage)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
           });
 
           it("protocolFeePercentage must be less than 10000", async function () {
@@ -441,7 +447,7 @@ describe("IBosonConfigHandler", function () {
             protocolFeePercentage = 10001;
             await expect(
               configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage)
-            ).to.revertedWith(RevertReasons.FEE_PERCENTAGE_INVALID);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_PERCENTAGE_INVALID);
           });
         });
       });
@@ -471,9 +477,9 @@ describe("IBosonConfigHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("caller is not the admin", async function () {
             // Attempt to set new voucher address, expecting revert
-            await expect(configHandler.connect(rando).setProtocolFeeFlatBoson(protocolFeeFlatBoson)).to.revertedWith(
-              RevertReasons.ACCESS_DENIED
-            );
+            await expect(
+              configHandler.connect(rando).setProtocolFeeFlatBoson(protocolFeeFlatBoson)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
           });
         });
       });
@@ -507,14 +513,14 @@ describe("IBosonConfigHandler", function () {
             // Attempt to set new value, expecting revert
             await expect(
               configHandler.connect(rando).setMaxEscalationResponsePeriod(maxEscalationResponsePeriod)
-            ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
           });
 
           it("maxEscalationResponsePeriod is zero", async function () {
             maxEscalationResponsePeriod = 0;
             await expect(
               configHandler.connect(deployer).setMaxEscalationResponsePeriod(maxEscalationResponsePeriod)
-            ).to.revertedWith(RevertReasons.VALUE_ZERO_NOT_ALLOWED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.VALUE_ZERO_NOT_ALLOWED);
           });
         });
       });
@@ -550,7 +556,7 @@ describe("IBosonConfigHandler", function () {
             // Attempt to set new buyer escalation deposit percentage, expecting revert
             await expect(
               configHandler.connect(rando).setBuyerEscalationDepositPercentage(buyerEscalationDepositPercentage)
-            ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
           });
 
           it("protocolFeePercentage must be less than 10000", async function () {
@@ -558,7 +564,7 @@ describe("IBosonConfigHandler", function () {
             buyerEscalationDepositPercentage = 10001;
             await expect(
               configHandler.connect(deployer).setBuyerEscalationDepositPercentage(buyerEscalationDepositPercentage)
-            ).to.revertedWith(RevertReasons.FEE_PERCENTAGE_INVALID);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_PERCENTAGE_INVALID);
           });
         });
       });
@@ -592,7 +598,7 @@ describe("IBosonConfigHandler", function () {
             // Attempt to set new value for Max Total Offer Fee Percentage, expecting revert
             await expect(
               configHandler.connect(rando).setMaxTotalOfferFeePercentage(maxTotalOfferFeePercentage)
-            ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
           });
 
           it("maxTotalOfferFeePercentage must be less than 10000", async function () {
@@ -600,7 +606,7 @@ describe("IBosonConfigHandler", function () {
             maxTotalOfferFeePercentage = 10001;
             await expect(
               configHandler.connect(deployer).setMaxTotalOfferFeePercentage(maxTotalOfferFeePercentage)
-            ).to.revertedWith(RevertReasons.FEE_PERCENTAGE_INVALID);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_PERCENTAGE_INVALID);
           });
         });
       });
@@ -630,24 +636,24 @@ describe("IBosonConfigHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("caller is not the admin", async function () {
             // Attempt to set new value for Max Royalty Percentage, expecting revert
-            await expect(configHandler.connect(rando).setMaxRoyaltyPercentage(maxRoyaltyPercentage)).to.revertedWith(
-              RevertReasons.ACCESS_DENIED
-            );
+            await expect(
+              configHandler.connect(rando).setMaxRoyaltyPercentage(maxRoyaltyPercentage)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
           });
 
           it("maxRoyaltyPercentage must be less than 10000", async function () {
             // Attempt to set new value for Max Royalty Percentage, expecting revert
             maxRoyaltyPercentage = 10001;
-            await expect(configHandler.connect(deployer).setMaxRoyaltyPercentage(maxRoyaltyPercentage)).to.revertedWith(
-              RevertReasons.FEE_PERCENTAGE_INVALID
-            );
+            await expect(
+              configHandler.connect(deployer).setMaxRoyaltyPercentage(maxRoyaltyPercentage)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_PERCENTAGE_INVALID);
           });
 
           it("maxRoyaltyPercentage is zero", async function () {
             maxRoyaltyPercentage = 0;
-            await expect(configHandler.connect(deployer).setMaxRoyaltyPercentage(maxRoyaltyPercentage)).to.revertedWith(
-              RevertReasons.VALUE_ZERO_NOT_ALLOWED
-            );
+            await expect(
+              configHandler.connect(deployer).setMaxRoyaltyPercentage(maxRoyaltyPercentage)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.VALUE_ZERO_NOT_ALLOWED);
           });
         });
       });
@@ -687,7 +693,7 @@ describe("IBosonConfigHandler", function () {
             // Attempt to set new auth token contract, expecting revert
             await expect(
               configHandler.connect(rando).setAuthTokenContract(AuthTokenType.ENS, await authTokenContract.getAddress())
-            ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
           });
 
           it("_authTokenType is None", async function () {
@@ -696,7 +702,7 @@ describe("IBosonConfigHandler", function () {
               configHandler
                 .connect(deployer)
                 .setAuthTokenContract(AuthTokenType.None, await authTokenContract.getAddress())
-            ).to.revertedWith(RevertReasons.INVALID_AUTH_TOKEN_TYPE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_AUTH_TOKEN_TYPE);
           });
 
           it("_authTokenType is Custom", async function () {
@@ -705,14 +711,14 @@ describe("IBosonConfigHandler", function () {
               configHandler
                 .connect(deployer)
                 .setAuthTokenContract(AuthTokenType.Custom, await authTokenContract.getAddress())
-            ).to.revertedWith(RevertReasons.INVALID_AUTH_TOKEN_TYPE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_AUTH_TOKEN_TYPE);
           });
 
           it("_authTokenContract is the zero address", async function () {
             // Attempt to set new auth token contract, expecting revert
             await expect(
               configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.ENS, ZeroAddress)
-            ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
           });
         });
       });
@@ -742,16 +748,16 @@ describe("IBosonConfigHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("caller is not the admin", async function () {
             // Attempt to set new value, expecting revert
-            await expect(configHandler.connect(rando).setMinResolutionPeriod(minResolutionPeriod)).to.revertedWith(
-              RevertReasons.ACCESS_DENIED
-            );
+            await expect(
+              configHandler.connect(rando).setMinResolutionPeriod(minResolutionPeriod)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
           });
 
           it("minResolutionPeriod is zero", async function () {
             minResolutionPeriod = 0;
-            await expect(configHandler.connect(deployer).setMinResolutionPeriod(minResolutionPeriod)).to.revertedWith(
-              RevertReasons.VALUE_ZERO_NOT_ALLOWED
-            );
+            await expect(
+              configHandler.connect(deployer).setMinResolutionPeriod(minResolutionPeriod)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.VALUE_ZERO_NOT_ALLOWED);
           });
 
           it("minResolutionPeriod is greater than maxResolutionPeriod", async function () {
@@ -759,9 +765,9 @@ describe("IBosonConfigHandler", function () {
             await configHandler.connect(deployer).setMaxResolutionPeriod(maxResolutionPeriod);
 
             minResolutionPeriod = maxResolutionPeriod + 1n;
-            await expect(configHandler.connect(deployer).setMinResolutionPeriod(minResolutionPeriod)).to.revertedWith(
-              RevertReasons.INVALID_RESOLUTION_PERIOD
-            );
+            await expect(
+              configHandler.connect(deployer).setMinResolutionPeriod(minResolutionPeriod)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_RESOLUTION_PERIOD);
           });
         });
       });
@@ -791,16 +797,16 @@ describe("IBosonConfigHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("caller is not the admin", async function () {
             // Attempt to set new value, expecting revert
-            await expect(configHandler.connect(rando).setMaxResolutionPeriod(maxResolutionPeriod)).to.revertedWith(
-              RevertReasons.ACCESS_DENIED
-            );
+            await expect(
+              configHandler.connect(rando).setMaxResolutionPeriod(maxResolutionPeriod)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
           });
 
           it("maxResolutionPeriod is zero", async function () {
             maxResolutionPeriod = 0;
-            await expect(configHandler.connect(deployer).setMaxResolutionPeriod(maxResolutionPeriod)).to.revertedWith(
-              RevertReasons.VALUE_ZERO_NOT_ALLOWED
-            );
+            await expect(
+              configHandler.connect(deployer).setMaxResolutionPeriod(maxResolutionPeriod)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.VALUE_ZERO_NOT_ALLOWED);
           });
 
           it("maxResolutionPeriod is less than minResolutionPeriod", async function () {
@@ -808,9 +814,9 @@ describe("IBosonConfigHandler", function () {
             await configHandler.connect(deployer).setMinResolutionPeriod(minResolutionPeriod);
 
             const maxResolutionPeriod = minResolutionPeriod - 1n;
-            await expect(configHandler.connect(deployer).setMaxResolutionPeriod(maxResolutionPeriod)).to.revertedWith(
-              RevertReasons.INVALID_RESOLUTION_PERIOD
-            );
+            await expect(
+              configHandler.connect(deployer).setMaxResolutionPeriod(maxResolutionPeriod)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_RESOLUTION_PERIOD);
           });
         });
       });
@@ -840,16 +846,17 @@ describe("IBosonConfigHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("caller is not the admin", async function () {
             // Attempt to set new value, expecting revert
-            await expect(configHandler.connect(rando).setMinDisputePeriod(minDisputePeriod)).to.revertedWith(
+            await expect(configHandler.connect(rando).setMinDisputePeriod(minDisputePeriod)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.ACCESS_DENIED
             );
           });
 
           it("minDisputePeriod is zero", async function () {
             minDisputePeriod = 0;
-            await expect(configHandler.connect(deployer).setMinDisputePeriod(minDisputePeriod)).to.revertedWith(
-              RevertReasons.VALUE_ZERO_NOT_ALLOWED
-            );
+            await expect(
+              configHandler.connect(deployer).setMinDisputePeriod(minDisputePeriod)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.VALUE_ZERO_NOT_ALLOWED);
           });
         });
       });
@@ -886,14 +893,14 @@ describe("IBosonConfigHandler", function () {
             // Attempt to set new value, expecting revert
             await expect(
               configHandler.connect(rando).setAccessControllerAddress(await newAccessController.getAddress())
-            ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
           });
 
           it("_accessControllerAddress is the zero address", async function () {
             // Attempt to set new value, expecting revert
-            await expect(configHandler.connect(deployer).setAccessControllerAddress(ZeroAddress)).to.revertedWith(
-              RevertReasons.INVALID_ADDRESS
-            );
+            await expect(
+              configHandler.connect(deployer).setAccessControllerAddress(ZeroAddress)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
           });
         });
       });

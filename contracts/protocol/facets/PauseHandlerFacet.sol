@@ -5,7 +5,7 @@ import "../../domain/BosonConstants.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import "../../domain/BosonConstants.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
-import { ProtocolBase } from "../bases/OfferBase.sol";
+import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IBosonPauseHandler } from "../../interfaces/handlers/IBosonPauseHandler.sol";
 
@@ -54,7 +54,7 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
         ProtocolLib.ProtocolStatus storage status = protocolStatus();
 
         // Make sure the protocol is paused
-        require(status.pauseScenario > 0, NOT_PAUSED);
+        if (status.pauseScenario == 0) revert NotPaused();
 
         togglePause(_regions, false);
 

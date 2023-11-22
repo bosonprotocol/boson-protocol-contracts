@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { ZeroAddress, provider } = ethers;
+const { ZeroAddress, provider, getContractAt } = ethers;
 const { expect } = require("chai");
 
 const {
@@ -37,6 +37,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
   let buyerEscalationDepositPercentage, redeemedDate;
   let snapshotId;
   let beaconProxyAddress;
+  let bosonErrors;
 
   before(async function () {
     accountId.next(true);
@@ -57,6 +58,8 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler },
       protocolConfig: [, , { buyerEscalationDepositPercentage }],
     } = await setupTestEnvironment(contracts));
+
+    bosonErrors = await getContractAt("BosonErrors", await accountHandler.getAddress());
 
     // make all account the same
     assistant = admin;
@@ -269,7 +272,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
         // Attempt to withdraw funds with old buyer wallet, should fail
         await expect(
           fundsHandler.connect(buyer).withdrawFunds(buyerAccount.id, [ZeroAddress], [buyerPayoff])
-        ).to.revertedWith(RevertReasons.NOT_AUTHORIZED);
+        ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_AUTHORIZED);
 
         // Attempt to withdraw funds with new buyer wallet, should succeed
         await expect(fundsHandler.connect(rando).withdrawFunds(buyerAccount.id, [ZeroAddress], [buyerPayoff]))
@@ -304,7 +307,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
         // Attempt to withdraw funds with old seller assistant, should fail
         await expect(
           fundsHandler.connect(assistant).withdrawFunds(seller.id, [ZeroAddress], [sellerPayoff])
-        ).to.revertedWith(RevertReasons.NOT_AUTHORIZED);
+        ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_AUTHORIZED);
 
         // Attempt to withdraw funds with new seller assistant, should succeed
         await expect(fundsHandler.connect(rando).withdrawFunds(seller.id, [ZeroAddress], [sellerPayoff]))
@@ -338,7 +341,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
         // Attempt to withdraw funds with old agent wallet, should fail
         await expect(
           fundsHandler.connect(agent).withdrawFunds(agentAccount.id, [ZeroAddress], [agentPayoff])
-        ).to.revertedWith(RevertReasons.NOT_AUTHORIZED);
+        ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_AUTHORIZED);
 
         // Attempt to withdraw funds with new agent wallet, should fail
         await expect(fundsHandler.connect(rando).withdrawFunds(agentAccount.id, [ZeroAddress], [agentPayoff]))
@@ -356,7 +359,8 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
           .withArgs(buyerAccount.id, buyerAccount.toStruct(), await buyer.getAddress());
 
         // Attempt to raise a dispute with old buyer wallet, should fail
-        await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId)).to.revertedWith(
+        await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId)).to.revertedWithCustomError(
+          bosonErrors,
           RevertReasons.NOT_VOUCHER_HOLDER
         );
 
@@ -448,7 +452,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
           // Attempt to resolve a dispute with old seller assistant, should fail
           await expect(
             disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercent, r, s, v)
-          ).to.revertedWith(RevertReasons.NOT_BUYER_OR_SELLER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_BUYER_OR_SELLER);
 
           // Attempt to resolve a dispute with new seller assistant, should succeed
           await expect(disputeHandler.connect(rando).resolveDispute(exchangeId, buyerPercent, r, s, v))
@@ -475,9 +479,9 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
           );
 
           // Attempt to resolve a dispute with old buyer wallet, should fail
-          await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, r, s, v)).to.revertedWith(
-            RevertReasons.NOT_BUYER_OR_SELLER
-          );
+          await expect(
+            disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, r, s, v)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_BUYER_OR_SELLER);
 
           // Attempt to resolve a dispute with new buyer wallet, should succeed
           await expect(disputeHandler.connect(rando).resolveDispute(exchangeId, buyerPercent, r, s, v))
@@ -506,7 +510,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
           // Attempt to resolve a dispute with old buyer wallet, should fail
           await expect(
             disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercent, r, s, v)
-          ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
         });
 
         it("If the seller assistant address was changed, the buyer should not be able to resolve a dispute with the old signature", async function () {
@@ -543,9 +547,9 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
           );
 
           // Attempt to resolve a dispute with old buyer wallet, should fail
-          await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, r, s, v)).to.revertedWith(
-            RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH
-          );
+          await expect(
+            disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, r, s, v)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
         });
 
         it("Buyer should be able to retract dispute after updating wallet address", async function () {
@@ -558,7 +562,8 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
             .withArgs(buyerAccount.id, buyerAccount.toStruct(), await buyer.getAddress());
 
           // Attempt to retract a dispute with old buyer, should fail
-          await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.be.revertedWith(
+          await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NOT_VOUCHER_HOLDER
           );
 
@@ -592,9 +597,9 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
             const buyerPercent = "1234";
 
             // Attempt to decide a dispute with old dispute resolver assistant, should fail
-            await expect(disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercent)).to.revertedWith(
-              RevertReasons.NOT_DISPUTE_RESOLVER_ASSISTANT
-            );
+            await expect(
+              disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercent)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_DISPUTE_RESOLVER_ASSISTANT);
 
             // Attempt to decide a dispute with new dispute resolver assistant, should fail
             await expect(disputeHandler.connect(rando).decideDispute(exchangeId, buyerPercent))
@@ -604,9 +609,9 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
 
           it("Dispute resolver should be able to refuse to decide a dispute after change the assistant address", async function () {
             // Attempt to refuse to decide a dispute with old dispute resolver assistant, should fail
-            await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId)).to.revertedWith(
-              RevertReasons.NOT_DISPUTE_RESOLVER_ASSISTANT
-            );
+            await expect(
+              disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_DISPUTE_RESOLVER_ASSISTANT);
 
             // Attempt to refuse a dispute with new dispute resolver assistant, should fail
             await expect(disputeHandler.connect(rando).refuseEscalatedDispute(exchangeId))

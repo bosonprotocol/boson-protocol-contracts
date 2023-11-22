@@ -24,21 +24,13 @@ const Receipt = require("../../scripts/domain/Receipt");
 const Voucher = require("../../scripts/domain/Voucher");
 const Dispute = require("../../scripts/domain/Dispute");
 const RoyaltyInfo = require("../../scripts/domain/RoyaltyInfo");
-const { applyPercentage } = require("../../test/util/utils.js");
+const { applyPercentage, incrementer } = require("../../test/util/utils.js");
 const { oneWeek, oneMonth } = require("./constants.js");
+const PriceType = require("../../scripts/domain/PriceType");
 let DisputeResolver = require("../../scripts/domain/DisputeResolver.js");
 let Seller = require("../../scripts/domain/Seller");
 const { ZeroHash } = require("ethers");
 
-function* incrementer() {
-  let i = 0;
-  while (true) {
-    const reset = yield (i++).toString();
-    if (reset) {
-      i = 0;
-    }
-  }
-}
 const accountId = incrementer();
 
 function mockOfferDurations() {
@@ -84,6 +76,7 @@ async function mockOffer({ refreshModule } = {}) {
   const metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
   const voided = false;
   const collectionIndex = "0";
+  const priceType = PriceType.Static;
   const royaltyInfo = new RoyaltyInfo([], []);
 
   // Create a valid offer, then set fields in tests directly
@@ -99,6 +92,7 @@ async function mockOffer({ refreshModule } = {}) {
     metadataHash,
     voided,
     collectionIndex,
+    priceType,
     royaltyInfo
   );
 

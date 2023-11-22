@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonFundsEvents } from "../events/IBosonFundsEvents.sol";
 import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
 
@@ -12,7 +13,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * The ERC-165 identifier for this interface is: 0x2f4a64d7
  */
-interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
+interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents, BosonErrors {
     /**
      * @notice Receives funds from the caller, maps funds to the seller id and stores them so they can be used during the commitToOffer.
      *
@@ -20,9 +21,11 @@ interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
      *
      * Reverts if:
      * - The funds region of protocol is paused
+     * - Amount to deposit is zero
      * - Seller id does not exist
      * - It receives some native currency (e.g. ETH), but token address is not zero
      * - It receives some native currency (e.g. ETH), and the amount does not match msg.value
+     * - It receives no native currency, but token address is zero
      * - Contract at token address does not support ERC20 function transferFrom
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      * - Received ERC20 token amount differs from the expected value

@@ -28,6 +28,7 @@ const Bundle = require("../../scripts/domain/Bundle");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const DisputeState = require("../../scripts/domain/DisputeState");
 const Group = require("../../scripts/domain/Group");
+const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const GatingType = require("../../scripts/domain/GatingType");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
@@ -92,6 +93,7 @@ describe("IBosonExchangeHandler", function () {
     adminDR,
     clerkDR,
     treasuryDR;
+
   let erc165,
     accessController,
     accountHandler,
@@ -131,6 +133,7 @@ describe("IBosonExchangeHandler", function () {
   let protocolDiamondAddress;
   let snapshotId;
   let tokenId;
+  let bosonErrors;
 
   before(async function () {
     accountId.next(true);
@@ -173,9 +176,7 @@ describe("IBosonExchangeHandler", function () {
       diamondAddress: protocolDiamondAddress,
     } = await setupTestEnvironment(contracts));
 
-    // // Voucher contract
-    // const bosonVoucherProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
-    // bosonVoucher = await getContractAt("IBosonVoucher", bosonVoucherProxyAddress);
+    bosonErrors = await getContractAt("BosonErrors", protocolDiamondAddress);
 
     [deployer] = await getSigners();
 
@@ -188,7 +189,7 @@ describe("IBosonExchangeHandler", function () {
     [foreign20, foreign721, foreign1155] = await deployMockTokens(["Foreign20", "Foreign721", "Foreign1155"]);
 
     // Get the beacon proxy address
-    beaconProxyAddress = await calculateBosonProxyAddress(await configHandler.getAddress());
+    beaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -309,6 +310,8 @@ describe("IBosonExchangeHandler", function () {
       offer.quantityAvailable = "10";
       disputeResolverId = mo.disputeResolverId;
       offer.royaltyInfo = new RoyaltyInfo([seller.treasury], [voucherInitValues.royaltyPercentage]);
+
+      offerDurations.voucherValid = (oneMonth * 12n).toString();
 
       // Check if domains are valid
       expect(offer.isValid()).is.true;
@@ -789,7 +792,7 @@ describe("IBosonExchangeHandler", function () {
           // Attempt to create an exchange, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("The buyers region of protocol is paused", async function () {
@@ -799,14 +802,14 @@ describe("IBosonExchangeHandler", function () {
           // Attempt to create a buyer, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("buyer.address is the zero address", async function () {
           // Attempt to commit, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(ZeroAddress, offerId, { value: price })
-          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
         });
 
         it("offer id is invalid", async function () {
@@ -816,7 +819,7 @@ describe("IBosonExchangeHandler", function () {
           // Attempt to commit, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })
-          ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_OFFER);
         });
 
         it("offer is voided", async function () {
@@ -826,7 +829,7 @@ describe("IBosonExchangeHandler", function () {
           // Attempt to commit to the voided offer, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })
-          ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
         });
 
         it("offer is not yet available for commits", async function () {
@@ -842,10 +845,10 @@ describe("IBosonExchangeHandler", function () {
             .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
-          // Attempt to commit to the not availabe offer, expecting revert
+          // Attempt to commit to the not available offer, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), ++offerId, { value: price })
-          ).to.revertedWith(RevertReasons.OFFER_NOT_AVAILABLE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_NOT_AVAILABLE);
         });
 
         it("offer has expired", async function () {
@@ -855,7 +858,7 @@ describe("IBosonExchangeHandler", function () {
           // Attempt to commit to the expired offer, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })
-          ).to.revertedWith(RevertReasons.OFFER_HAS_EXPIRED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_EXPIRED);
         });
 
         it("offer sold", async function () {
@@ -864,13 +867,13 @@ describe("IBosonExchangeHandler", function () {
           await offerHandler
             .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
-          // Commit to offer, so it's not availble anymore
+          // Commit to offer, so it's not available anymore
           await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), ++offerId, { value: price });
 
           // Attempt to commit to the sold out offer, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })
-          ).to.revertedWith(RevertReasons.OFFER_SOLD_OUT);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_SOLD_OUT);
         });
 
         it("Offer belongs to a group with condition", async function () {
@@ -889,12 +892,15 @@ describe("IBosonExchangeHandler", function () {
 
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })
-          ).to.revertedWith(RevertReasons.GROUP_HAS_CONDITION);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.GROUP_HAS_CONDITION);
         });
       });
     });
 
-    context("👉 commitToPremintedOffer()", async function () {
+    context("👉 onPremintedVoucherTransferred()", async function () {
+      // These tests are mainly for preminted vouchers of fixed price offers
+      // The part of onPremintedVoucherTransferred that is specific to
+      // price discovery offers is indirectly tested in `PriceDiscoveryHandlerFacet.js`
       let tokenId;
       beforeEach(async function () {
         // Reserve range
@@ -1347,7 +1353,7 @@ describe("IBosonExchangeHandler", function () {
             bosonVoucher
               .connect(assistant)
               .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("The buyers region of protocol is paused", async function () {
@@ -1359,14 +1365,21 @@ describe("IBosonExchangeHandler", function () {
             bosonVoucher
               .connect(assistant)
               .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("Caller is not the voucher contract, owned by the seller", async function () {
           // Attempt to commit to preminted offer, expecting revert
           await expect(
-            exchangeHandler.connect(rando).commitToPreMintedOffer(await buyer.getAddress(), offerId, tokenId)
-          ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+            exchangeHandler
+              .connect(rando)
+              .onPremintedVoucherTransferred(
+                tokenId,
+                await buyer.getAddress(),
+                await assistant.getAddress(),
+                await assistant.getAddress()
+              )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
         });
 
         it("Exchange exists already", async function () {
@@ -1386,8 +1399,13 @@ describe("IBosonExchangeHandler", function () {
           await expect(
             exchangeHandler
               .connect(impersonatedBosonVoucher)
-              .commitToPreMintedOffer(await buyer.getAddress(), offerId, exchangeId)
-          ).to.revertedWith(RevertReasons.EXCHANGE_ALREADY_EXISTS);
+              .onPremintedVoucherTransferred(
+                tokenId,
+                await buyer.getAddress(),
+                await assistant.getAddress(),
+                await assistant.getAddress()
+              )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.EXCHANGE_ALREADY_EXISTS);
         });
 
         it("offer is voided", async function () {
@@ -1399,7 +1417,7 @@ describe("IBosonExchangeHandler", function () {
             bosonVoucher
               .connect(assistant)
               .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
         });
 
         it("offer is not yet available for commits", async function () {
@@ -1430,7 +1448,7 @@ describe("IBosonExchangeHandler", function () {
             bosonVoucher
               .connect(assistant)
               .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWith(RevertReasons.OFFER_NOT_AVAILABLE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_NOT_AVAILABLE);
         });
 
         it("offer has expired", async function () {
@@ -1442,7 +1460,7 @@ describe("IBosonExchangeHandler", function () {
             bosonVoucher
               .connect(assistant)
               .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWith(RevertReasons.OFFER_HAS_EXPIRED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_EXPIRED);
         });
 
         it("should not be able to commit directly if whole offer preminted", async function () {
@@ -1451,13 +1469,13 @@ describe("IBosonExchangeHandler", function () {
           await offerHandler
             .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
-          // Commit to offer, so it's not availble anymore
+          // Commit to offer, so it's not available anymore
           await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), ++offerId, { value: price });
 
           // Attempt to commit to the sold out offer, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })
-          ).to.revertedWith(RevertReasons.OFFER_SOLD_OUT);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_SOLD_OUT);
         });
 
         it("buyer does not meet condition for commit", async function () {
@@ -1486,7 +1504,7 @@ describe("IBosonExchangeHandler", function () {
             bosonVoucher
               .connect(assistant)
               .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
         });
 
         it("Offer is part of a group with condition [ERC721, specificToken, gating per address] with length > 1", async function () {
@@ -1517,7 +1535,7 @@ describe("IBosonExchangeHandler", function () {
             bosonVoucher
               .connect(assistant)
               .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
         });
 
         it("Offer is part of a group with condition [ERC721, specificToken, gating per tokenId] with length > 1", async function () {
@@ -1548,7 +1566,7 @@ describe("IBosonExchangeHandler", function () {
             bosonVoucher
               .connect(assistant)
               .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
         });
 
         it("Offer is part of a group with condition [ERC1155, gating per address] with length > 1", async function () {
@@ -1579,7 +1597,7 @@ describe("IBosonExchangeHandler", function () {
             bosonVoucher
               .connect(assistant)
               .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
         });
 
         it("Offer is part of a group with condition [ERC1155, gating per tokenId] with length > 1", async function () {
@@ -1610,7 +1628,7 @@ describe("IBosonExchangeHandler", function () {
             bosonVoucher
               .connect(assistant)
               .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
         });
       });
     });
@@ -1673,7 +1691,7 @@ describe("IBosonExchangeHandler", function () {
               exchangeHandler
                 .connect(buyer)
                 .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
-            ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
           });
 
           it("buyer has exhausted allowable commits", async function () {
@@ -1692,7 +1710,7 @@ describe("IBosonExchangeHandler", function () {
               exchangeHandler
                 .connect(buyer)
                 .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
-            ).to.revertedWith(RevertReasons.MAX_COMMITS_REACHED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.MAX_COMMITS_REACHED);
           });
 
           it("Group doesn't exist", async function () {
@@ -1705,7 +1723,7 @@ describe("IBosonExchangeHandler", function () {
               exchangeHandler
                 .connect(buyer)
                 .commitToConditionalOffer(await buyer.getAddress(), ++offerId, 0, { value: price })
-            ).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_GROUP);
           });
 
           it("Caller sends non-zero tokenId", async function () {});
@@ -1713,7 +1731,7 @@ describe("IBosonExchangeHandler", function () {
             exchangeHandler
               .connect(buyer)
               .commitToConditionalOffer(await buyer.getAddress(), offerId, 1, { value: price })
-          ).to.revertedWith(RevertReasons.INVALID_TOKEN_ID);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_TOKEN_ID);
         });
       });
 
@@ -1780,7 +1798,7 @@ describe("IBosonExchangeHandler", function () {
               exchangeHandler
                 .connect(buyer)
                 .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
-            ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
           });
 
           it("buyer has exhausted allowable commits", async function () {
@@ -1799,7 +1817,7 @@ describe("IBosonExchangeHandler", function () {
               exchangeHandler
                 .connect(buyer)
                 .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price })
-            ).to.revertedWith(RevertReasons.MAX_COMMITS_REACHED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.MAX_COMMITS_REACHED);
           });
 
           it("Caller sends non-zero tokenId", async function () {
@@ -1807,7 +1825,7 @@ describe("IBosonExchangeHandler", function () {
               exchangeHandler
                 .connect(buyer)
                 .commitToConditionalOffer(await buyer.getAddress(), offerId, 1, { value: price })
-            ).to.revertedWith(RevertReasons.INVALID_TOKEN_ID);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_TOKEN_ID);
           });
         });
       });
@@ -1908,7 +1926,7 @@ describe("IBosonExchangeHandler", function () {
               exchangeHandler
                 .connect(buyer)
                 .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-            ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
           });
 
           it("max commits per token id reached", async function () {
@@ -1924,7 +1942,7 @@ describe("IBosonExchangeHandler", function () {
               exchangeHandler
                 .connect(buyer)
                 .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-            ).to.revertedWith(RevertReasons.MAX_COMMITS_REACHED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.MAX_COMMITS_REACHED);
           });
 
           it("token id not in condition range", async function () {
@@ -1934,7 +1952,7 @@ describe("IBosonExchangeHandler", function () {
               exchangeHandler
                 .connect(buyer)
                 .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-            ).to.revertedWith(RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
           });
         });
       });
@@ -2036,7 +2054,7 @@ describe("IBosonExchangeHandler", function () {
               exchangeHandler
                 .connect(buyer)
                 .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-            ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
           });
 
           it("max commits per token id reached", async function () {
@@ -2052,7 +2070,7 @@ describe("IBosonExchangeHandler", function () {
               exchangeHandler
                 .connect(buyer)
                 .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-            ).to.revertedWith(RevertReasons.MAX_COMMITS_REACHED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.MAX_COMMITS_REACHED);
           });
 
           it("token id not in condition range", async function () {
@@ -2062,7 +2080,7 @@ describe("IBosonExchangeHandler", function () {
               exchangeHandler
                 .connect(buyer)
                 .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-            ).to.revertedWith(RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
           });
         });
       });
@@ -2139,7 +2157,7 @@ describe("IBosonExchangeHandler", function () {
               exchangeHandler
                 .connect(buyer)
                 .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-            ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
           });
 
           it("buyer has exhausted allowable commits", async function () {
@@ -2158,7 +2176,7 @@ describe("IBosonExchangeHandler", function () {
               exchangeHandler
                 .connect(buyer)
                 .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-            ).to.revertedWith(RevertReasons.MAX_COMMITS_REACHED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.MAX_COMMITS_REACHED);
           });
         });
       });
@@ -2248,14 +2266,14 @@ describe("IBosonExchangeHandler", function () {
               exchangeHandler
                 .connect(buyer)
                 .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-            ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
           });
 
           it("buyer does not meet condition for commit", async function () {
             // Attempt to commit, expecting revert
             await expect(
               exchangeHandler.connect(rando).commitToConditionalOffer(rando.address, offerId, tokenId, { value: price })
-            ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
           });
 
           it("max commits per token id reached", async function () {
@@ -2271,7 +2289,7 @@ describe("IBosonExchangeHandler", function () {
               exchangeHandler
                 .connect(buyer)
                 .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-            ).to.revertedWith(RevertReasons.MAX_COMMITS_REACHED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.MAX_COMMITS_REACHED);
           });
 
           it("token id not in condition range", async function () {
@@ -2281,7 +2299,7 @@ describe("IBosonExchangeHandler", function () {
               exchangeHandler
                 .connect(buyer)
                 .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-            ).to.revertedWith(RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
           });
         });
       });
@@ -2325,7 +2343,7 @@ describe("IBosonExchangeHandler", function () {
             exchangeHandler
               .connect(buyer)
               .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("The buyers region of protocol is paused", async function () {
@@ -2337,14 +2355,14 @@ describe("IBosonExchangeHandler", function () {
             exchangeHandler
               .connect(buyer)
               .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("await buyer.getAddress() is the zero address", async function () {
           // Attempt to commit, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToConditionalOffer(ZeroAddress, offerId, tokenId, { value: price })
-          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
         });
 
         it("offer id is invalid", async function () {
@@ -2356,7 +2374,7 @@ describe("IBosonExchangeHandler", function () {
             exchangeHandler
               .connect(buyer)
               .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-          ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_OFFER);
         });
 
         it("offer is voided", async function () {
@@ -2368,7 +2386,7 @@ describe("IBosonExchangeHandler", function () {
             exchangeHandler
               .connect(buyer)
               .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-          ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
         });
 
         it("offer is not yet available for commits", async function () {
@@ -2393,7 +2411,7 @@ describe("IBosonExchangeHandler", function () {
             exchangeHandler
               .connect(buyer)
               .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-          ).to.revertedWith(RevertReasons.OFFER_NOT_AVAILABLE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_NOT_AVAILABLE);
         });
 
         it("offer has expired", async function () {
@@ -2405,7 +2423,7 @@ describe("IBosonExchangeHandler", function () {
             exchangeHandler
               .connect(buyer)
               .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-          ).to.revertedWith(RevertReasons.OFFER_HAS_EXPIRED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_EXPIRED);
         });
 
         it("offer sold", async function () {
@@ -2418,7 +2436,7 @@ describe("IBosonExchangeHandler", function () {
           // add offer to group
           await groupHandler.connect(assistant).addOffersToGroup(groupId, [++offerId]);
 
-          // Commit to offer, so it's not availble anymore
+          // Commit to offer, so it's not available anymore
           await exchangeHandler
             .connect(buyer)
             .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price });
@@ -2428,7 +2446,7 @@ describe("IBosonExchangeHandler", function () {
             exchangeHandler
               .connect(buyer)
               .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-          ).to.revertedWith(RevertReasons.OFFER_SOLD_OUT);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_SOLD_OUT);
         });
 
         it("Group without condition", async function () {
@@ -2457,7 +2475,7 @@ describe("IBosonExchangeHandler", function () {
             exchangeHandler
               .connect(buyer)
               .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-          ).to.revertedWith(RevertReasons.GROUP_HAS_NO_CONDITION);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.GROUP_HAS_NO_CONDITION);
         });
       });
     });
@@ -2570,7 +2588,8 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(assistant).completeExchange(exchangeId)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).completeExchange(exchangeId)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.REGION_PAUSED
           );
         });
@@ -2580,7 +2599,8 @@ describe("IBosonExchangeHandler", function () {
           exchangeId = "666";
 
           // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(assistant).completeExchange(exchangeId)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).completeExchange(exchangeId)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -2593,7 +2613,8 @@ describe("IBosonExchangeHandler", function () {
           assert.equal(response, ExchangeState.Committed, "Exchange state is incorrect");
 
           // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(assistant).completeExchange(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).completeExchange(exchange.id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_STATE
           );
         });
@@ -2603,7 +2624,8 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(buyer).cancelVoucher(exchange.id);
 
           // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(assistant).completeExchange(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).completeExchange(exchange.id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_STATE
           );
         });
@@ -2616,7 +2638,8 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
           // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(rando).completeExchange(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(rando).completeExchange(exchange.id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.DISPUTE_PERIOD_NOT_ELAPSED
           );
         });
@@ -2632,7 +2655,8 @@ describe("IBosonExchangeHandler", function () {
           await accountHandler.connect(rando).createBuyer(mockBuyer(await rando.getAddress()));
 
           // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(rando).completeExchange(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(rando).completeExchange(exchange.id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.DISPUTE_PERIOD_NOT_ELAPSED
           );
         });
@@ -2645,7 +2669,8 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
           // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(assistant).completeExchange(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).completeExchange(exchange.id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.DISPUTE_PERIOD_NOT_ELAPSED
           );
         });
@@ -2775,9 +2800,9 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(buyer).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(
+            exchangeHandler.connect(buyer).completeExchangeBatch(exchangesToComplete)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("exchange id is invalid", async function () {
@@ -2788,9 +2813,9 @@ describe("IBosonExchangeHandler", function () {
           exchangesToComplete = [exchangeId, ...exchangesToComplete];
 
           // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(assistant).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
-            RevertReasons.NO_SUCH_EXCHANGE
-          );
+          await expect(
+            exchangeHandler.connect(assistant).completeExchangeBatch(exchangesToComplete)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
         });
 
         it("exchange is not in redeemed state", async function () {
@@ -2805,9 +2830,9 @@ describe("IBosonExchangeHandler", function () {
           exchangesToComplete = [exchangeId, ...exchangesToComplete];
 
           // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(assistant).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
-            RevertReasons.INVALID_STATE
-          );
+          await expect(
+            exchangeHandler.connect(assistant).completeExchangeBatch(exchangesToComplete)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_STATE);
         });
 
         it("caller is not buyer and offer dispute period has not elapsed", async function () {
@@ -2823,9 +2848,9 @@ describe("IBosonExchangeHandler", function () {
           exchangesToComplete = [exchangeId, ...exchangesToComplete];
 
           // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(rando).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
-            RevertReasons.DISPUTE_PERIOD_NOT_ELAPSED
-          );
+          await expect(
+            exchangeHandler.connect(rando).completeExchangeBatch(exchangesToComplete)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.DISPUTE_PERIOD_NOT_ELAPSED);
         });
 
         it("caller is seller's assistant and offer dispute period has not elapsed", async function () {
@@ -2838,9 +2863,9 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
 
           // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(assistant).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
-            RevertReasons.DISPUTE_PERIOD_NOT_ELAPSED
-          );
+          await expect(
+            exchangeHandler.connect(assistant).completeExchangeBatch(exchangesToComplete)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.DISPUTE_PERIOD_NOT_ELAPSED);
         });
       });
     });
@@ -2909,7 +2934,8 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(assistant).revokeVoucher(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).revokeVoucher(exchange.id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.REGION_PAUSED
           );
         });
@@ -2919,7 +2945,8 @@ describe("IBosonExchangeHandler", function () {
           exchangeId = "666";
 
           // Attempt to revoke the voucher, expecting revert
-          await expect(exchangeHandler.connect(assistant).revokeVoucher(exchangeId)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).revokeVoucher(exchangeId)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -2929,14 +2956,16 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(buyer).cancelVoucher(exchange.id);
 
           // Attempt to revoke the voucher, expecting revert
-          await expect(exchangeHandler.connect(assistant).revokeVoucher(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(assistant).revokeVoucher(exchange.id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_STATE
           );
         });
 
         it("caller is not seller's assistant", async function () {
           // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(rando).revokeVoucher(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(rando).revokeVoucher(exchange.id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NOT_ASSISTANT
           );
         });
@@ -3024,7 +3053,8 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(buyer).cancelVoucher(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(buyer).cancelVoucher(exchange.id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.REGION_PAUSED
           );
         });
@@ -3034,7 +3064,8 @@ describe("IBosonExchangeHandler", function () {
           exchangeId = "666";
 
           // Attempt to cancel the voucher, expecting revert
-          await expect(exchangeHandler.connect(buyer).cancelVoucher(exchangeId)).to.revertedWith(
+          await expect(exchangeHandler.connect(buyer).cancelVoucher(exchangeId)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -3053,7 +3084,8 @@ describe("IBosonExchangeHandler", function () {
           assert.equal(response, ExchangeState.Redeemed, "Exchange state is incorrect");
 
           // Attempt to cancel the voucher, expecting revert
-          await expect(exchangeHandler.connect(buyer).cancelVoucher(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(buyer).cancelVoucher(exchange.id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_STATE
           );
         });
@@ -3063,14 +3095,16 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(assistant).revokeVoucher(exchange.id);
 
           // Attempt to cancel the voucher, expecting revert
-          await expect(exchangeHandler.connect(buyer).cancelVoucher(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(buyer).cancelVoucher(exchange.id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_STATE
           );
         });
 
         it("caller does not own voucher", async function () {
           // Attempt to cancel the voucher, expecting revert
-          await expect(exchangeHandler.connect(rando).cancelVoucher(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(rando).cancelVoucher(exchange.id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NOT_VOUCHER_HOLDER
           );
         });
@@ -3081,7 +3115,8 @@ describe("IBosonExchangeHandler", function () {
           await mockMetaTransactionsHandler.setAsMetaTransactionAndCurrentSenderAs(ZeroAddress);
 
           // Attempt to cancel the voucher, expecting revert
-          await expect(exchangeHandler.connect(rando).cancelVoucher(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(rando).cancelVoucher(exchange.id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_ADDRESS
           );
         });
@@ -3142,7 +3177,8 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(buyer).expireVoucher(exchangeId)).to.revertedWith(
+          await expect(exchangeHandler.connect(buyer).expireVoucher(exchangeId)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.REGION_PAUSED
           );
         });
@@ -3155,7 +3191,8 @@ describe("IBosonExchangeHandler", function () {
           exchangeId = "666";
 
           // Attempt to cancel the voucher, expecting revert
-          await expect(exchangeHandler.connect(buyer).expireVoucher(exchangeId)).to.revertedWith(
+          await expect(exchangeHandler.connect(buyer).expireVoucher(exchangeId)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -3174,7 +3211,8 @@ describe("IBosonExchangeHandler", function () {
           assert.equal(response, ExchangeState.Redeemed, "Exchange state is incorrect");
 
           // Attempt to expire the voucher, expecting revert
-          await expect(exchangeHandler.connect(buyer).expireVoucher(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(buyer).expireVoucher(exchange.id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_STATE
           );
         });
@@ -3187,14 +3225,16 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(assistant).revokeVoucher(exchange.id);
 
           // Attempt to expire the voucher, expecting revert
-          await expect(exchangeHandler.connect(buyer).expireVoucher(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(buyer).expireVoucher(exchange.id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_STATE
           );
         });
 
         it("Redemption period has not yet elapsed", async function () {
           // Attempt to cancel the voucher, expecting revert
-          await expect(exchangeHandler.connect(rando).expireVoucher(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(rando).expireVoucher(exchange.id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.VOUCHER_STILL_VALID
           );
 
@@ -3202,7 +3242,8 @@ describe("IBosonExchangeHandler", function () {
           await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid));
 
           // Attempt to cancel the voucher, expecting revert
-          await expect(exchangeHandler.connect(rando).expireVoucher(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(rando).expireVoucher(exchange.id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.VOUCHER_STILL_VALID
           );
         });
@@ -3293,7 +3334,8 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId)).to.revertedWith(
+          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.REGION_PAUSED
           );
         });
@@ -3303,7 +3345,8 @@ describe("IBosonExchangeHandler", function () {
           exchangeId = "666";
 
           // Attempt to redeem the voucher, expecting revert
-          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId)).to.revertedWith(
+          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -3313,21 +3356,24 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(assistant).revokeVoucher(exchange.id);
 
           // Attempt to redeem the voucher, expecting revert
-          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_STATE
           );
         });
 
         it("caller does not own voucher", async function () {
           // Attempt to redeem the voucher, expecting revert
-          await expect(exchangeHandler.connect(rando).redeemVoucher(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(rando).redeemVoucher(exchange.id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NOT_VOUCHER_HOLDER
           );
         });
 
         it("current time is prior to offer's voucherRedeemableFrom", async function () {
           // Attempt to redeem the voucher, expecting revert
-          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.VOUCHER_NOT_REDEEMABLE
           );
         });
@@ -3337,7 +3383,8 @@ describe("IBosonExchangeHandler", function () {
           await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid) + 1);
 
           // Attempt to redeem the voucher, expecting revert
-          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
+          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.VOUCHER_NOT_REDEEMABLE
           );
         });
@@ -5711,9 +5758,9 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(assistant).extendVoucher(exchange.id, validUntilDate)).to.revertedWith(
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(
+            exchangeHandler.connect(assistant).extendVoucher(exchange.id, validUntilDate)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("exchange id is invalid", async function () {
@@ -5721,9 +5768,9 @@ describe("IBosonExchangeHandler", function () {
           exchangeId = "666";
 
           // Attempt to extend voucher, expecting revert
-          await expect(exchangeHandler.connect(assistant).extendVoucher(exchangeId, validUntilDate)).to.revertedWith(
-            RevertReasons.NO_SUCH_EXCHANGE
-          );
+          await expect(
+            exchangeHandler.connect(assistant).extendVoucher(exchangeId, validUntilDate)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
         });
 
         it("exchange is not in committed state", async function () {
@@ -5731,16 +5778,16 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(buyer).cancelVoucher(exchange.id);
 
           // Attempt to extend voucher, expecting revert
-          await expect(exchangeHandler.connect(assistant).extendVoucher(exchange.id, validUntilDate)).to.revertedWith(
-            RevertReasons.INVALID_STATE
-          );
+          await expect(
+            exchangeHandler.connect(assistant).extendVoucher(exchange.id, validUntilDate)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_STATE);
         });
 
         it("caller is not seller's assistant", async function () {
           // Attempt to extend voucher, expecting revert
-          await expect(exchangeHandler.connect(rando).extendVoucher(exchange.id, validUntilDate)).to.revertedWith(
-            RevertReasons.NOT_ASSISTANT
-          );
+          await expect(
+            exchangeHandler.connect(rando).extendVoucher(exchange.id, validUntilDate)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
         });
 
         it("new date is not later than the current one", async function () {
@@ -5748,14 +5795,17 @@ describe("IBosonExchangeHandler", function () {
           validUntilDate = BigInt(voucher.validUntilDate) - oneMonth;
 
           // Attempt to extend voucher, expecting revert
-          await expect(exchangeHandler.connect(assistant).extendVoucher(exchange.id, validUntilDate)).to.revertedWith(
-            RevertReasons.VOUCHER_EXTENSION_NOT_VALID
-          );
+          await expect(
+            exchangeHandler.connect(assistant).extendVoucher(exchange.id, validUntilDate)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.VOUCHER_EXTENSION_NOT_VALID);
         });
       });
     });
 
     context("👉 onVoucherTransferred()", async function () {
+      // majority of lines from onVoucherTransferred() are tested in indirectly in
+      // `commitToPremintedOffer()`
+
       beforeEach(async function () {
         // Commit to offer, retrieving the event
         await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
@@ -5919,14 +5969,14 @@ describe("IBosonExchangeHandler", function () {
             bosonVoucherClone
               .connect(buyer)
               .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId)
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("Caller is not a clone address", async function () {
           // Attempt to call onVoucherTransferred, expecting revert
           await expect(
             exchangeHandler.connect(rando).onVoucherTransferred(exchange.id, await newOwner.getAddress())
-          ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
         });
 
         it("Caller is not a clone address associated with the seller", async function () {
@@ -5960,7 +6010,7 @@ describe("IBosonExchangeHandler", function () {
             bosonVoucherClone2
               .connect(buyer)
               .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), exchange.id)
-          ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
         });
 
         it("exchange id is invalid", async function () {
@@ -5970,7 +6020,7 @@ describe("IBosonExchangeHandler", function () {
           // Attempt to call onVoucherTransferred, expecting revert
           await expect(
             exchangeHandler.connect(fauxClient).onVoucherTransferred(exchangeId, await newOwner.getAddress())
-          ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
         });
 
         it("exchange is not in committed state", async function () {
@@ -5980,7 +6030,7 @@ describe("IBosonExchangeHandler", function () {
           // Attempt to call onVoucherTransferred, expecting revert
           await expect(
             exchangeHandler.connect(fauxClient).onVoucherTransferred(exchangeId, await newOwner.getAddress())
-          ).to.revertedWith(RevertReasons.INVALID_STATE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_STATE);
         });
 
         it("Voucher has expired", async function () {
@@ -5990,7 +6040,247 @@ describe("IBosonExchangeHandler", function () {
           // Attempt to call onVoucherTransferred, expecting revert
           await expect(
             exchangeHandler.connect(fauxClient).onVoucherTransferred(exchangeId, await newOwner.getAddress())
-          ).to.revertedWith(RevertReasons.VOUCHER_HAS_EXPIRED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.VOUCHER_HAS_EXPIRED);
+        });
+      });
+    });
+
+    context("👉 onPremintedVoucherTransferred()", async function () {
+      beforeEach(async function () {
+        // Commit to offer, retrieving the event
+        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+
+        // Client used for tests
+        bosonVoucherCloneAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          admin.address
+        );
+        bosonVoucherClone = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
+
+        tokenId = deriveTokenId(offerId, exchange.id);
+      });
+
+      it("should emit an VoucherTransferred event when called by CLIENT-roled address", async function () {
+        // Get the next buyer id
+        nextAccountId = await accountHandler.connect(rando).getNextAccountId();
+
+        // Call onVoucherTransferred, expecting event
+        await expect(
+          bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId)
+        )
+          .to.emit(exchangeHandler, "VoucherTransferred")
+          .withArgs(offerId, exchange.id, nextAccountId, await bosonVoucherClone.getAddress());
+      });
+
+      it("should update exchange when new buyer (with existing, active account) is passed", async function () {
+        // Get the next buyer id
+        nextAccountId = await accountHandler.connect(rando).getNextAccountId();
+
+        // Create a buyer account for the new owner
+        await accountHandler.connect(newOwner).createBuyer(mockBuyer(await newOwner.getAddress()));
+
+        // Call onVoucherTransferred
+        await bosonVoucherClone
+          .connect(buyer)
+          .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId);
+
+        // Get the exchange
+        [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+
+        // Marshal response to entity
+        exchange = Exchange.fromStruct(response);
+        expect(exchange.isValid());
+
+        // Exchange's voucher expired flag should be true
+        assert.equal(exchange.buyerId, nextAccountId, "Exchange.buyerId not updated");
+      });
+
+      it("should update exchange when new buyer (no account) is passed", async function () {
+        // Get the next buyer id
+        nextAccountId = await accountHandler.connect(rando).getNextAccountId();
+
+        // Call onVoucherTransferred
+        await bosonVoucherClone
+          .connect(buyer)
+          .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId);
+
+        // Get the exchange
+        [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+
+        // Marshal response to entity
+        exchange = Exchange.fromStruct(response);
+        expect(exchange.isValid());
+
+        // Exchange's voucher expired flag should be true
+        assert.equal(exchange.buyerId, nextAccountId, "Exchange.buyerId not updated");
+      });
+
+      it("should be triggered when a voucher is transferred", async function () {
+        // Transfer voucher, expecting event
+        await expect(
+          bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId)
+        ).to.emit(exchangeHandler, "VoucherTransferred");
+      });
+
+      it("should not be triggered when a voucher is issued", async function () {
+        // Get the next exchange id
+        nextExchangeId = await exchangeHandler.getNextExchangeId();
+
+        // Create a buyer account
+        await accountHandler.connect(newOwner).createBuyer(mockBuyer(await newOwner.getAddress()));
+
+        // Grant PROTOCOL role to EOA address for test
+        await accessController.grantRole(Role.PROTOCOL, await rando.getAddress());
+
+        // Issue voucher, expecting no event
+        await expect(
+          bosonVoucherClone.connect(rando).issueVoucher(nextExchangeId, await buyer.getAddress())
+        ).to.not.emit(exchangeHandler, "VoucherTransferred");
+      });
+
+      it("should not be triggered when a voucher is burned", async function () {
+        // Grant PROTOCOL role to EOA address for test
+        await accessController.grantRole(Role.PROTOCOL, await rando.getAddress());
+
+        // Burn voucher, expecting no event
+        await expect(bosonVoucherClone.connect(rando).burnVoucher(tokenId)).to.not.emit(
+          exchangeHandler,
+          "VoucherTransferred"
+        );
+      });
+
+      it("Should not be triggered when from and to addresses are the same", async function () {
+        // Transfer voucher, expecting event
+        await expect(
+          bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await buyer.getAddress(), tokenId)
+        ).to.not.emit(exchangeHandler, "VoucherTransferred");
+      });
+
+      it("Should not be triggered when first transfer of preminted voucher happens", async function () {
+        // Transfer voucher, expecting event
+        await expect(
+          bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await buyer.getAddress(), tokenId)
+        ).to.not.emit(exchangeHandler, "VoucherTransferred");
+      });
+
+      it("should work with additional collections", async function () {
+        // Create a new collection
+        const externalId = `Brand1`;
+        voucherInitValues.collectionSalt = encodeBytes32String(externalId);
+        await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
+
+        offer.collectionIndex = 1;
+        offer.id = await offerHandler.getNextOfferId();
+        exchange.id = await exchangeHandler.getNextExchangeId();
+        bosonVoucherCloneAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          admin.address,
+          voucherInitValues.collectionSalt
+        );
+        bosonVoucherClone = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
+        const tokenId = deriveTokenId(offer.id, exchange.id);
+
+        // Create the offer
+        await offerHandler
+          .connect(assistant)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+        // Commit to offer, creating a new exchange
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: price });
+
+        // Get the next buyer id
+        nextAccountId = await accountHandler.connect(rando).getNextAccountId();
+
+        // Call onVoucherTransferred, expecting event
+        await expect(bosonVoucherClone.connect(buyer).transferFrom(buyer.address, newOwner.address, tokenId))
+          .to.emit(exchangeHandler, "VoucherTransferred")
+          .withArgs(offer.id, exchange.id, nextAccountId, await bosonVoucherClone.getAddress());
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("The buyers region of protocol is paused", async function () {
+          // Pause the buyers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Buyers]);
+
+          // Attempt to create a buyer, expecting revert
+          await expect(
+            bosonVoucherClone
+              .connect(buyer)
+              .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+        });
+
+        it("Caller is not a clone address", async function () {
+          // Attempt to call onVoucherTransferred, expecting revert
+          await expect(
+            exchangeHandler.connect(rando).onVoucherTransferred(exchange.id, await newOwner.getAddress())
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
+        });
+
+        it("Caller is not a clone address associated with the seller", async function () {
+          // Create a new seller to get new clone
+          seller = mockSeller(
+            await rando.getAddress(),
+            await rando.getAddress(),
+            ZeroAddress,
+            await rando.getAddress()
+          );
+          expect(seller.isValid()).is.true;
+
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+          expectedCloneAddress = calculateCloneAddress(
+            await accountHandler.getAddress(),
+            beaconProxyAddress,
+            rando.address
+          );
+          const bosonVoucherClone2 = await getContractAt("IBosonVoucher", expectedCloneAddress);
+
+          // For the sake of test, mint token on bv2 with the id of token on bv1
+          // Temporarily grant PROTOCOL role to deployer account
+          await accessController.grantRole(Role.PROTOCOL, await deployer.getAddress());
+
+          const newBuyer = mockBuyer(await buyer.getAddress());
+          newBuyer.id = buyerId;
+          await bosonVoucherClone2.issueVoucher(exchange.id, newBuyer.wallet);
+
+          // Attempt to call onVoucherTransferred, expecting revert
+          await expect(
+            bosonVoucherClone2
+              .connect(buyer)
+              .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), exchange.id)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
+        });
+
+        it("exchange id is invalid", async function () {
+          // An invalid exchange id
+          exchangeId = "666";
+
+          // Attempt to call onVoucherTransferred, expecting revert
+          await expect(
+            exchangeHandler.connect(fauxClient).onVoucherTransferred(exchangeId, await newOwner.getAddress())
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
+        });
+
+        it("exchange is not in committed state", async function () {
+          // Revoke the voucher
+          await exchangeHandler.connect(assistant).revokeVoucher(exchange.id);
+
+          // Attempt to call onVoucherTransferred, expecting revert
+          await expect(
+            exchangeHandler.connect(fauxClient).onVoucherTransferred(exchangeId, await newOwner.getAddress())
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_STATE);
+        });
+
+        it("Voucher has expired", async function () {
+          // Set time forward past the voucher's validUntilDate
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid) + Number(oneWeek));
+
+          // Attempt to call onVoucherTransferred, expecting revert
+          await expect(
+            exchangeHandler.connect(fauxClient).onVoucherTransferred(exchangeId, await newOwner.getAddress())
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.VOUCHER_HAS_EXPIRED);
         });
       });
     });
@@ -7076,7 +7366,8 @@ describe("IBosonExchangeHandler", function () {
 
       context("💔 Revert Reasons", async function () {
         it("Exchange is not in a final state", async function () {
-          await expect(exchangeHandler.connect(rando).getReceipt(exchange.id)).to.be.revertedWith(
+          await expect(exchangeHandler.connect(rando).getReceipt(exchange.id)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.EXCHANGE_IS_NOT_IN_A_FINAL_STATE
           );
         });
@@ -7084,7 +7375,8 @@ describe("IBosonExchangeHandler", function () {
         it("Exchange id is invalid", async function () {
           const invalidExchangeId = "666";
 
-          await expect(exchangeHandler.connect(rando).getReceipt(invalidExchangeId)).to.be.revertedWith(
+          await expect(exchangeHandler.connect(rando).getReceipt(invalidExchangeId)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -7092,7 +7384,7 @@ describe("IBosonExchangeHandler", function () {
     });
 
     context("👉 isEligibleToCommit()", async function () {
-      context("✋ No condition", async function () {
+      context("✋ No group", async function () {
         it("buyer is eligible, no commits yet", async function () {
           const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
             buyer.address,
@@ -7121,6 +7413,62 @@ describe("IBosonExchangeHandler", function () {
             expect(commitCount).to.equal(0);
             expect(maxCommits).to.equal(0);
           }
+        });
+      });
+
+      context("✋ Condition None", async function () {
+        beforeEach(async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+
+          // Create Condition
+          condition = new Condition(EvaluationMethod.None, 0, ZeroAddress, 0, 0, 0, 0, 0);
+          // expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+          await groupHandler.connect(assistant).createGroup(group, condition);
+        });
+
+        it("buyer is eligible, no commits yet", async function () {
+          const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+            buyer.address,
+            offerId,
+            0
+          );
+
+          expect(isEligible).to.be.true;
+          expect(commitCount).to.equal(0);
+          expect(maxCommits).to.equal(condition.maxCommits);
+        });
+
+        it("buyer is eligible, with existing commits", async function () {
+          // Commit to offer the maximum number of times
+          for (let i = 0; i < Number(condition.maxCommits); i++) {
+            // Commit to offer.
+            await exchangeHandler
+              .connect(buyer)
+              .commitToConditionalOffer(await buyer.getAddress(), offerId, 0, { value: price });
+
+            const [isEligible, commitCount, maxCommits] = await exchangeHandler.isEligibleToCommit(
+              buyer.address,
+              offerId,
+              0
+            );
+
+            expect(isEligible).to.equal(i + 1 < Number(condition.maxCommits));
+            expect(commitCount).to.equal(i + 1);
+            expect(maxCommits).to.equal(condition.maxCommits);
+          }
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("Caller sends non-zero tokenId", async function () {});
+          await expect(exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, 1)).to.revertedWith(
+            RevertReasons.INVALID_TOKEN_ID
+          );
         });
       });
 
@@ -7193,9 +7541,9 @@ describe("IBosonExchangeHandler", function () {
 
         context("💔 Revert Reasons", async function () {
           it("Caller sends non-zero tokenId", async function () {});
-          await expect(exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, 1)).to.revertedWith(
-            RevertReasons.INVALID_TOKEN_ID
-          );
+          await expect(
+            exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, 1)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_TOKEN_ID);
         });
       });
 
@@ -7274,9 +7622,9 @@ describe("IBosonExchangeHandler", function () {
 
         context("💔 Revert Reasons", async function () {
           it("Caller sends non-zero tokenId", async function () {
-            await expect(exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, 1)).to.revertedWith(
-              RevertReasons.INVALID_TOKEN_ID
-            );
+            await expect(
+              exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, 1)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_TOKEN_ID);
           });
         });
       });
@@ -7394,7 +7742,7 @@ describe("IBosonExchangeHandler", function () {
             tokenId = "666";
             await expect(
               exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, tokenId)
-            ).to.revertedWith(RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
           });
         });
       });
@@ -7513,7 +7861,7 @@ describe("IBosonExchangeHandler", function () {
 
             await expect(
               exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, tokenId)
-            ).to.revertedWith(RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
           });
         });
       });
@@ -7703,7 +8051,7 @@ describe("IBosonExchangeHandler", function () {
             // Attempt to commit, expecting revert
             await expect(
               exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, tokenId)
-            ).to.revertedWith(RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
           });
         });
       });
@@ -7712,17 +8060,17 @@ describe("IBosonExchangeHandler", function () {
         it("offer does not exist", async function () {
           offerId = "999";
 
-          await expect(exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, 0)).to.revertedWith(
-            RevertReasons.NO_SUCH_OFFER
-          );
+          await expect(
+            exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, 0)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_OFFER);
         });
 
         it("offer is voided", async function () {
           await offerHandler.connect(assistant).voidOffer(offerId);
 
-          await expect(exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, 0)).to.revertedWith(
-            RevertReasons.OFFER_HAS_BEEN_VOIDED
-          );
+          await expect(
+            exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, 0)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
         });
       });
     });

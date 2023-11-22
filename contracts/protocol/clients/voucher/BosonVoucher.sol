@@ -53,10 +53,10 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
     // Map an offerId to a Range for pre-minted offers
     mapping(uint256 => Range) private _rangeByOfferId;
 
-    // Premint status, used only temporarly in transfers
-    bool private _isCommitable;
+    // Used only temporarly in transfers
+    bool private _isCommittable;
 
-    // Tell if preminted voucher has already been _committed
+    // Tell if voucher has already been _committed
     mapping(uint256 => bool) private _committed;
 
     /**
@@ -116,7 +116,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
 
         // Revert if exchange id falls within a reserved range
         uint256 rangeStart = range.start;
-        require(_tokenId < rangeStart || _tokenId >= rangeStart + range.length, EXCHANGE_ID_IN_RESERVED_RANGE);
+        if (_tokenId >= rangeStart && _tokenId < rangeStart + range.length) revert ExchangeIdInReservedRange();
 
         // Issue voucher is called only during commitToOffer (in protocol), so token can be set as committed
         _committed[_tokenId] = true;
@@ -157,23 +157,23 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      */
     function reserveRange(uint256 _offerId, uint256 _start, uint256 _length, address _to) external onlyRole(PROTOCOL) {
         // _to must be the contract address or the contract owner (operator)
-        require(_to == address(this) || _to == owner(), INVALID_TO_ADDRESS);
+        if (_to != address(this) && _to != owner()) revert InvalidToAddress();
 
         // Prevent reservation of an empty range
-        require(_length > 0, INVALID_RANGE_LENGTH);
+        if (_length == 0) revert InvalidRangeLength();
 
         // Adjust start id to include offer id
-        require(_start > 0, INVALID_RANGE_START);
+        if (_start == 0) revert InvalidRangeStart();
         _start += (_offerId << 128);
 
         // Prevent overflow in issueVoucher and preMint
-        require(_start <= type(uint256).max - _length, INVALID_RANGE_LENGTH);
+        if (_start > type(uint256).max - _length) revert InvalidRangeLength();
 
         // Get storage slot for the range
         Range storage range = _rangeByOfferId[_offerId];
 
         // Revert if the offer id is already associated with a range
-        require(range.length == 0, OFFER_RANGE_ALREADY_RESERVED);
+        if (range.length != 0) revert OfferRangeAlreadyReserved();
 
         // Store the reserved range
         range.start = _start;
@@ -219,14 +219,14 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         Range storage range = _rangeByOfferId[_offerId];
 
         // Revert if id not associated with a range
-        require(range.length != 0, NO_RESERVED_RANGE_FOR_OFFER);
+        if (range.length == 0) revert NoReservedRangeForOffer();
 
         // Revert if no more to mint in range
-        require(range.length >= range.minted + _amount, INVALID_AMOUNT_TO_MINT);
+        if (range.length < range.minted + _amount) revert InvalidAmountToMint();
 
         // Make sure that offer is not expired or voided
         (Offer memory offer, OfferDates memory offerDates) = getBosonOffer(_offerId);
-        require(!offer.voided && block.timestamp <= offerDates.validUntil, OFFER_EXPIRED_OR_VOIDED);
+        if (offer.voided || block.timestamp > offerDates.validUntil) revert OfferExpiredOrVoided();
 
         // Get the first token to mint
         uint256 start = range.start + range.minted;
@@ -282,11 +282,11 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         Range storage range = _rangeByOfferId[_offerId];
 
         // Revert if id not associated with a range
-        require(range.length != 0, NO_RESERVED_RANGE_FOR_OFFER);
+        if (range.length == 0) revert NoReservedRangeForOffer();
 
         // Make sure that offer is either expired or voided
         (Offer memory offer, OfferDates memory offerDates) = getBosonOffer(_offerId);
-        require(offer.voided || block.timestamp > offerDates.validUntil, OFFER_STILL_VALID);
+        if (!offer.voided && block.timestamp <= offerDates.validUntil) revert OfferStillValid();
 
         // Get the first token to burn
         uint256 start = range.lastBurnedTokenId == 0 ? range.start : range.lastBurnedTokenId + 1;
@@ -295,7 +295,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         uint256 end = start + _amount;
 
         // End should be greater than start
-        require(end > start && end <= range.start + range.minted, AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN);
+        if (end <= start || end > range.start + range.minted) revert AmountExceedsRangeOrNothingToBurn();
 
         // Burn the range
         address rangeOwner = range.owner;
@@ -367,10 +367,13 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             // If _tokenId exists, it does not matter if vouchers were preminted or not
             return super.ownerOf(_tokenId);
         } else {
-            bool committable;
             // If _tokenId does not exist, but offer is committable, report contract owner as token owner
-            (committable, owner) = getPreMintStatus(_tokenId);
-            if (committable) return owner;
+            bool committable = isTokenCommittable(_tokenId);
+
+            if (committable) {
+                owner = _rangeByOfferId[_tokenId >> 128].owner;
+                return owner;
+            }
 
             // Otherwise revert
             revert(ERC721_INVALID_TOKEN_ID);
@@ -385,11 +388,15 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         address _to,
         uint256 _tokenId
     ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
-        (bool committable, ) = getPreMintStatus(_tokenId);
+        bool committable = isTokenCommittable(_tokenId);
 
         if (committable) {
-            // If offer is committable, temporarily update _owners, so transfer succeeds
-            silentMintAndSetPremintStatus(_from, _tokenId);
+            if (_from == address(this) || _from == owner()) {
+                // If offer is committable, temporarily update _owners, so transfer succeeds
+                silentMint(_from, _tokenId);
+            }
+
+            _isCommittable = true;
         }
 
         super.transferFrom(_from, _to, _tokenId);
@@ -404,11 +411,15 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         uint256 _tokenId,
         bytes memory _data
     ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
-        (bool committable, ) = getPreMintStatus(_tokenId);
+        bool committable = isTokenCommittable(_tokenId);
 
         if (committable) {
-            // If offer is committable, temporarily update _owners, so transfer succeeds
-            silentMintAndSetPremintStatus(_from, _tokenId);
+            if (_from == address(this) || _from == owner()) {
+                // If offer is committable, temporarily update _owners, so transfer succeeds
+                silentMint(_from, _tokenId);
+            }
+
+            _isCommittable = true;
         }
 
         super.safeTransferFrom(_from, _to, _tokenId, _data);
@@ -457,7 +468,8 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         (bool exists, Offer memory offer) = getBosonOfferByExchangeId(exchangeId);
 
         if (!exists) {
-            (bool committable, ) = getPreMintStatus(_tokenId);
+            bool committable = isTokenCommittable(_tokenId);
+
             if (committable) {
                 uint256 offerId = _tokenId >> 128;
                 exists = true;
@@ -504,7 +516,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * N.B. In the future it might be possible to renounce ownership via seller deactivation in the protocol.
      */
     function renounceOwnership() public pure override {
-        revert(ACCESS_DENIED);
+        revert AccessDenied();
     }
 
     /**
@@ -540,12 +552,12 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * @return result - result of the call
      */
     function callExternalContract(address _to, bytes calldata _data) external payable onlyOwner returns (bytes memory) {
-        require(_to != address(0), INVALID_ADDRESS);
+        if (_to == address(0)) revert InvalidAddress();
 
         // Check if _to supports `balanceOf` method and revert if it does
         // This works with all contracts that implement this method even if they don't necessary implement ERC20 interface
         try IERC20(_to).balanceOf(address(this)) returns (uint256) {
-            revert(INTERACTION_NOT_ALLOWED);
+            revert InteractionNotAllowed();
         } catch {}
 
         return _to.functionCallWithValue(_data, msg.value, FUNCTION_CALL_NOT_SUCCESSFUL);
@@ -562,7 +574,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * @param _approved - true to approve the operator in question, false to revoke approval
      */
     function setApprovalForAllToContract(address _operator, bool _approved) external onlyOwner {
-        require(_operator != address(0), INVALID_ADDRESS);
+        if (_operator == address(0)) revert InvalidAddress();
 
         _setApprovalForAll(address(this), _operator, _approved);
     }
@@ -609,7 +621,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         bool isPreminted;
         if (!_exists(_tokenId)) {
             // might not exists or is preminted
-            (isPreminted, ) = getPreMintStatus(_tokenId);
+            isPreminted = isTokenCommittable(_tokenId);
             if (!isPreminted) {
                 return (address(0), 0);
             }
@@ -657,47 +669,36 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * @param - this parameter is ignored, but required to match the signature of the parent method
      */
     function _beforeTokenTransfer(address _from, address _to, uint256 _tokenId, uint256) internal override {
-        // Derive the exchange id
-        uint256 exchangeId = _tokenId & type(uint128).max;
-        if (_isCommitable) {
-            // If is committable, invoke commitToPreMintedOffer on the protocol
-
+        // If is committable, invoke onPremintedVoucherTransferred on the protocol
+        if (_isCommittable) {
             // Set _isCommitable to false
-            _isCommitable = false;
+            _isCommittable = false;
 
-            // Set the preminted token as committed
-            _committed[_tokenId] = true;
+            address rangeOwner = _rangeByOfferId[_tokenId >> 128].owner;
 
-            // Derive the offer id
-            uint256 offerId = _tokenId >> 128;
+            // Call protocol onPremintedVoucherTransferred
+            bool committed = onPremintedVoucherTransferred(_tokenId, payable(_to), _from, rangeOwner);
 
-            // If this is a transfer of preminted token, treat it differently
-            address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-            IBosonExchangeHandler(protocolDiamond).commitToPreMintedOffer(payable(_to), offerId, exchangeId);
+            // Set committed status
+            _committed[_tokenId] = committed;
         } else if (_from != address(0) && _to != address(0) && _from != _to) {
             // Update the buyer associated with the voucher in the protocol
             // Only when transferring, not when minting or burning
-            onVoucherTransferred(exchangeId, payable(_to));
+            onVoucherTransferred(_tokenId, payable(_to));
         }
     }
 
     /**
-     * @dev Determines if a token is pre-minted and committable via transfer hook
+     * @notice Verify if token is committable.
      *
-     * Committable means:
-     * - does not yet have an owner
-     * - in a reserved range
-     * - has been pre-minted
-     * - has not been already burned
+     * @param _tokenId - the tokenId of the voucher that is being transferred
      *
-     * @param _tokenId - the token id to check
-     * @return committable - whether the token is committable
-     * @return owner - the token owner
+     * @return committable - true if the voucher is committable
      */
-    function getPreMintStatus(uint256 _tokenId) public view returns (bool committable, address owner) {
-        // Not committable if _committed already or if token has an owner
-
-        if (!_committed[_tokenId]) {
+    function isTokenCommittable(uint256 _tokenId) public view returns (bool committable) {
+        if (_committed[_tokenId]) {
+            return false;
+        } else {
             // it might be a pre-minted token. Preminted tokens have offerId in the upper 128 bits
             uint256 offerId = _tokenId >> 128;
 
@@ -716,9 +717,8 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
                     start + range.minted - 1 >= _tokenId &&
                     _tokenId > range.lastBurnedTokenId
                 ) {
-                    // Has it been pre-minted and not burned yet?
+                    // Has it been pre-minted, not burned yet
                     committable = true;
-                    owner = range.owner;
                 }
             }
         }
@@ -777,14 +777,30 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
     /*
      * Updates owners, but do not emit Transfer event. Event was already emited during pre-mint.
      */
-    function silentMintAndSetPremintStatus(address _from, uint256 _tokenId) internal {
-        require(_from == owner() || _from == address(this), NO_SILENT_MINT_ALLOWED);
+    function silentMint(address _from, uint256 _tokenId) internal {
+        if (_from != owner() && _from != address(this)) revert NoSilentMintAllowed();
 
         // update data, so transfer will succeed
         getERC721UpgradeableStorage()._owners[_tokenId] = _from;
+    }
 
-        // Update commitable status
-        _isCommitable = true;
+    /*
+     * Override ERC721Upgradeable._isApprovedOrOwner to check for pre-minted tokens
+     */
+    function _isApprovedOrOwner(address spender, uint256 tokenId) internal view override returns (bool) {
+        address owner = ownerOf(tokenId);
+        return (spender == owner || isApprovedForAll(owner, spender) || getApproved(tokenId) == spender);
+    }
+
+    /*
+     **
+     * @dev Reverts if the `_tokenId` has not been minted yet and is not a pre-minted token.
+     */
+    function _requireMinted(uint256 _tokenId) internal view override {
+        // If token is committable, it is a pre-minted token
+        bool committable = isTokenCommittable(_tokenId);
+
+        require(_exists(_tokenId) || committable, "ERC721: invalid token ID");
     }
 }
 

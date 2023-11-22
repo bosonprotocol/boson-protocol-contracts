@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { getSigners, ZeroAddress, getContractFactory } = ethers;
+const { getSigners, ZeroAddress, getContractFactory, getContractAt } = ethers;
 const { gasLimit } = require("../../../environments");
 const { deployProtocolClientImpls } = require("../../../scripts/util/deploy-protocol-client-impls.js");
 const { deployProtocolClientBeacons } = require("../../../scripts/util/deploy-protocol-client-beacons.js");
@@ -14,6 +14,7 @@ describe("IClientExternalAddresses", function () {
   let voucherImplementation, protocolAddress;
   let snapshotId;
   let protocolDiamondAddress;
+  let bosonErrors;
 
   before(async function () {
     // Specify contracts needed for this test
@@ -24,6 +25,8 @@ describe("IClientExternalAddresses", function () {
       diamondAddress: protocolDiamondAddress,
       extraReturnValues: { beacon },
     } = await setupTestEnvironment(contracts));
+
+    bosonErrors = await getContractAt("BosonErrors", protocolDiamondAddress);
 
     [deployer] = await getSigners();
 
@@ -62,14 +65,16 @@ describe("IClientExternalAddresses", function () {
       context("💔 Revert Reasons", async function () {
         it("caller is not the admin", async function () {
           // Attempt to set new implementation, expecting revert
-          await expect(beacon.connect(rando).setImplementation(voucherImplementation)).to.revertedWith(
+          await expect(beacon.connect(rando).setImplementation(voucherImplementation)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.ACCESS_DENIED
           );
         });
 
         it("implementation address is the zero address", async function () {
           // Attempt to set new implementation, expecting revert
-          await expect(beacon.connect(deployer).setImplementation(ZeroAddress)).to.revertedWith(
+          await expect(beacon.connect(deployer).setImplementation(ZeroAddress)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_ADDRESS
           );
         });
@@ -100,14 +105,16 @@ describe("IClientExternalAddresses", function () {
       context("💔 Revert Reasons", async function () {
         it("caller is not the admin", async function () {
           // Attempt to set new protocol address, expecting revert
-          await expect(beacon.connect(rando).setProtocolAddress(protocolAddress)).to.revertedWith(
+          await expect(beacon.connect(rando).setProtocolAddress(protocolAddress)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.ACCESS_DENIED
           );
         });
 
         it("protocol address is the zero address", async function () {
           // Attempt to set new protocol address, expecting revert
-          await expect(beacon.connect(deployer).setProtocolAddress(ZeroAddress)).to.revertedWith(
+          await expect(beacon.connect(deployer).setProtocolAddress(ZeroAddress)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_ADDRESS
           );
         });
@@ -124,7 +131,7 @@ describe("IClientExternalAddresses", function () {
           const protocolClientArgs = [ZeroAddress];
           await expect(
             deployProtocolClientBeacons(protocolClientImpls, protocolClientArgs, maxPriorityFeePerGas)
-          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
         });
 
         it("_impl address is the zero address", async function () {
@@ -133,9 +140,9 @@ describe("IClientExternalAddresses", function () {
 
           // Deploy the ClientBeacon for BosonVoucher
           const ClientBeacon = await getContractFactory("BosonClientBeacon");
-          await expect(ClientBeacon.deploy(...protocolClientArgs, ZeroAddress, { gasLimit })).to.revertedWith(
-            RevertReasons.INVALID_ADDRESS
-          );
+          await expect(
+            ClientBeacon.deploy(...protocolClientArgs, ZeroAddress, { gasLimit })
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
         });
       });
     });

@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
@@ -18,7 +19,7 @@ import { IClientExternalAddresses } from "../../interfaces/clients/IClientExtern
  *
  * Boson client contracts include BosonVoucher
  */
-abstract contract BeaconClientBase is BosonTypes {
+abstract contract BeaconClientBase is BosonTypes, BosonErrors {
     /**
      * @dev Modifier that checks that the caller has a specific role.
      *
@@ -30,7 +31,7 @@ abstract contract BeaconClientBase is BosonTypes {
      * @param _role - the role to check
      */
     modifier onlyRole(bytes32 _role) {
-        require(BeaconClientLib.hasRole(_role), ACCESS_DENIED);
+        if (!BeaconClientLib.hasRole(_role)) revert AccessDenied();
         _;
     }
 
@@ -78,12 +79,30 @@ abstract contract BeaconClientBase is BosonTypes {
     /**
      * @notice Informs protocol of new buyer associated with an exchange
      *
-     * @param _exchangeId - the id of the exchange
+     * @param _tokenId - the voucher id
      * @param _newBuyer - the address of the new buyer
      */
-    function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer) internal {
+    function onVoucherTransferred(uint256 _tokenId, address payable _newBuyer) internal {
         address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-        IBosonExchangeHandler(protocolDiamond).onVoucherTransferred(_exchangeId, _newBuyer);
+        IBosonExchangeHandler(protocolDiamond).onVoucherTransferred(_tokenId, _newBuyer);
+    }
+
+    /**
+     * @notice Informs protocol of a pre-minted voucher transfer
+     *
+     * @param _tokenId - the voucher id
+     * @param _to - the address of the new buyer
+     * @param _from - the address of current owner
+     * @param _rangeOwner - the address of the preminted range owner
+     */
+    function onPremintedVoucherTransferred(
+        uint256 _tokenId,
+        address payable _to,
+        address _from,
+        address _rangeOwner
+    ) internal returns (bool) {
+        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
+        return IBosonExchangeHandler(protocolDiamond).onPremintedVoucherTransferred(_tokenId, _to, _from, _rangeOwner);
     }
 
     /**

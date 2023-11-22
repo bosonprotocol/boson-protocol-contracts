@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
 
 /**
@@ -11,7 +12,7 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * The ERC-165 identifier for this interface is: 0x890d5d20
  */
-interface IBosonAccountHandler is IBosonAccountEvents {
+interface IBosonAccountHandler is IBosonAccountEvents, BosonErrors {
     /**
      * @notice Creates a seller.
      *
