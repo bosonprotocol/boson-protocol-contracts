@@ -217,7 +217,8 @@ library FundsLib {
                 _exchangeId,
                 exchange.state,
                 price,
-                exchangeToken
+                exchangeToken,
+                offer
             );
             sellerPayoff += sequentialRoyalties;
             protocolFee += sequentialProtocolFee;
@@ -254,15 +255,17 @@ library FundsLib {
      * @param _exchangeState - state of the exchange
      * @param _initialPrice - initial price of the offer
      * @param _exchangeToken - address of the token used for the exchange
+     * @param _offer - offer struct
      * @return protocolFee - protocol fee from secondary sales
-     * @return royalties - royalties from secondary sales
+     * @return sellerRoyalties - royalties from secondary sales collected for the seller
      */
     function releaseFundsToIntermediateSellers(
         uint256 _exchangeId,
         BosonTypes.ExchangeState _exchangeState,
         uint256 _initialPrice,
-        address _exchangeToken
-    ) internal returns (uint256 protocolFee, uint256 royalties) {
+        address _exchangeToken,
+        BosonTypes.Offer storage _offer
+    ) internal returns (uint256 protocolFee, uint256 sellerRoyalties) {
         BosonTypes.ExchangeCosts[] storage exchangeCosts;
 
         // calculate effective price multiplier
@@ -310,20 +313,20 @@ library FundsLib {
         uint256 resellerBuyPrice = _initialPrice; // the price that reseller paid for the voucher
         address msgSender = EIP712Lib.msgSender();
         uint256 len = exchangeCosts.length;
-        for (uint256 i = 0; i < len; i++) {
-            BosonTypes.ExchangeCosts storage sc = exchangeCosts[i];
+        for (uint256 i = 0; i < len; ) {
+            BosonTypes.ExchangeCosts storage secondaryCommit = exchangeCosts[i];
 
             // amount to be released
             uint256 currentResellerAmount;
 
             // inside the scope to avoid stack too deep error
             {
-                uint256 price = sc.price;
-                uint256 protocolFeeAmount = sc.protocolFeeAmount;
-                uint256 royaltyAmount = sc.royaltyAmount;
+                uint256 price = secondaryCommit.price;
+                uint256 protocolFeeAmount = secondaryCommit.protocolFeeAmount;
+                uint256 royaltyAmount = secondaryCommit.royaltyAmount;
 
                 protocolFee += protocolFeeAmount;
-                royalties += royaltyAmount;
+                sellerRoyalties += distributeRoyalties(_offer, secondaryCommit.royaltyInfoIndex, price);
 
                 // secondary price without protocol fee and royalties
                 uint256 reducedSecondaryPrice = price - protocolFeeAmount - royaltyAmount;
@@ -343,17 +346,46 @@ library FundsLib {
             if (currentResellerAmount > 0) {
                 increaseAvailableFundsAndEmitEvent(
                     _exchangeId,
-                    sc.resellerId,
+                    secondaryCommit.resellerId,
                     _exchangeToken,
                     currentResellerAmount,
                     msgSender
                 );
             }
+
+            unchecked {
+                i++;
+            }
         }
 
-        // protocolFee and royalties can be multiplied by effectivePriceMultiplier just at the end
+        // protocolFee and sellerRoyalties can be multiplied by effectivePriceMultiplier just at the end
         protocolFee = (protocolFee * effectivePriceMultiplier) / 10000;
-        royalties = (royalties * effectivePriceMultiplier) / 10000;
+        sellerRoyalties = (sellerRoyalties * effectivePriceMultiplier) / 10000;
+    }
+
+    function distributeRoyalties(
+        BosonTypes.Offer storage _offer,
+        uint256 _royaltyInfoIndex,
+        uint256 _price
+    ) internal returns (uint256 sellerRoyalties) {
+        address exchangeToken = _offer.exchangeToken;
+        BosonTypes.RoyaltyInfo storage _royaltyInfo = _offer.royaltyInfo[_royaltyInfoIndex];
+        uint256 len = _royaltyInfo.recipients.length;
+        for (uint256 i = 0; i < len; ) {
+            address payable recipient = _royaltyInfo.recipients[i];
+            uint256 amount = (_royaltyInfo.bps[i] * _price) / 10000;
+            if (recipient == address(0)) {
+                // goes to seller's treasury
+                sellerRoyalties = amount;
+            } else {
+                // try to transfer the funds. Or better make it available to withdraw?
+                FundsLib.transferFundsFromProtocol(exchangeToken, recipient, amount);
+            }
+
+            unchecked {
+                i++;
+            }
+        }
     }
 
     /**

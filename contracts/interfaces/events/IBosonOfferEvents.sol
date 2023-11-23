@@ -35,4 +35,10 @@ interface IBosonOfferEvents {
         address owner,
         address indexed executedBy
     );
+    event OfferRoyaltyInfoUpdated(
+        uint256 indexed offerId,
+        uint256 indexed sellerId,
+        BosonTypes.RoyaltyInfo royaltyInfo,
+        address indexed executedBy
+    );
 }

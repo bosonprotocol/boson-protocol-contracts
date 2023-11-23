@@ -97,10 +97,9 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
             revert InvalidRoyaltyPercentage();
         RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[sellerId];
         RoyaltyRecipient storage defaultRoyaltyRecipient = royaltyRecipients.push();
-        defaultRoyaltyRecipient.wallet = _seller.treasury;
+        // We don't store the defaultRoyaltyRecipient.wallet, since it's always the trasury
         defaultRoyaltyRecipient.minRoyaltyPercentage = _voucherInitValues.royaltyPercentage;
         defaultRoyaltyRecipient.externalId = DEFAULT_ROYALTY_RECIPIENT;
-        lookups.royaltyRecipientIndexBySellerAndRecipient[sellerId][_seller.treasury] = 1; // start with 1, as 0 is the default value
 
         // Calculate seller salt and check that it is unique
         bytes32 sellerSalt = keccak256(abi.encodePacked(sender, _voucherInitValues.collectionSalt));

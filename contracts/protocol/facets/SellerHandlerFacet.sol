@@ -154,9 +154,7 @@ contract SellerHandlerFacet is SellerBase {
             if (_seller.treasury != seller.treasury) {
                 if (_seller.treasury == address(0)) revert InvalidAddress();
 
-                // Delete old treasury index mapping
-                delete lookups.royaltyRecipientIndexBySellerAndRecipient[_seller.id][seller.treasury];
-
+                // Check if new treasury is already a royalty recipient
                 uint256 royaltyRecipientId = lookups.royaltyRecipientIndexBySellerAndRecipient[_seller.id][
                     _seller.treasury
                 ];
@@ -174,7 +172,6 @@ contract SellerHandlerFacet is SellerBase {
                     }
                     delete royaltyRecipients[lastRoyaltyRecipientsId];
                 }
-                lookups.royaltyRecipientIndexBySellerAndRecipient[_seller.id][_seller.treasury] = 1;
 
                 // Update treasury
                 seller.treasury = _seller.treasury;
@@ -490,13 +487,16 @@ contract SellerHandlerFacet is SellerBase {
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // Make sure admin is the caller and get the sender's address
-        (, address sender) = validateAdminStatus(lookups, _sellerId);
+        (Seller storage seller, address sender) = validateAdminStatus(lookups, _sellerId);
+        address treasury = seller.treasury;
 
         RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
-        for (uint256 i = 0; i < _royaltyRecipients.length; i++) {
+        for (uint256 i = 0; i < _royaltyRecipients.length; ) {
             // No uniqueness check for externalIds since they are not used in the protocol
-            if (lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][_royaltyRecipients[i].wallet] != 0)
-                revert RecipientNotUnique();
+            if (
+                _royaltyRecipients[i].wallet == treasury ||
+                lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][_royaltyRecipients[i].wallet] != 0
+            ) revert RecipientNotUnique();
 
             if (_royaltyRecipients[i].minRoyaltyPercentage > protocolLimits().maxRoyaltyPercentage)
                 revert InvalidRoyaltyPercentage();
@@ -505,6 +505,10 @@ contract SellerHandlerFacet is SellerBase {
             lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
                 _royaltyRecipients[i].wallet
             ] = royaltyRecipients.length; // can be optimized to use counter instead of array length
+
+            unchecked {
+                i++;
+            }
         }
 
         emit RoyaltyRecipientsChanged(_sellerId, royaltyRecipients, sender);
@@ -539,39 +543,48 @@ contract SellerHandlerFacet is SellerBase {
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // Make sure admin is the caller and get the seller
-        (Seller storage seller, ) = validateAdminStatus(lookups, _sellerId);
-
+        address treasury;
+        {
+            (Seller storage seller, ) = validateAdminStatus(lookups, _sellerId);
+            treasury = seller.treasury;
+        }
         if (_royaltyRecipientIds.length != _royaltyRecipients.length) revert ArrayLengthMismatch();
 
         RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
         // uint256 royaltyRecipientIdsLength = _royaltyRecipientIds.length; // TODO can be optimized?
         uint256 royaltyRecipientsLength = royaltyRecipients.length;
-        for (uint256 i = 0; i < _royaltyRecipientIds.length; i++) {
+        for (uint256 i = 0; i < _royaltyRecipientIds.length; ) {
             uint256 royaltyRecipientId = _royaltyRecipientIds[i];
 
-            if (royaltyRecipientId >= royaltyRecipientsLength) revert InvalidRoyaltyRecipientId();
-            if (royaltyRecipientId == 0) {
-                if (_royaltyRecipients[i].wallet != seller.treasury) revert WrongDefaultRecipient();
-            } else {
-                uint256 royaltyRecipientIndex = lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
-                    _royaltyRecipients[i].wallet
+            if (royaltyRecipientId >= royaltyRecipientsLength || royaltyRecipientId == 0)
+                revert InvalidRoyaltyRecipientId();
+
+            if (_royaltyRecipients[i].wallet == treasury) revert RecipientNotUnique();
+
+            uint256 royaltyRecipientIndex = lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
+                _royaltyRecipients[i].wallet
+            ];
+            if (royaltyRecipientIndex == 0) {
+                // update index
+                lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][_royaltyRecipients[i].wallet] =
+                    royaltyRecipientId +
+                    1;
+                delete lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
+                    royaltyRecipients[royaltyRecipientId].wallet
                 ];
-                if (royaltyRecipientIndex == 0) {
-                    // update index
-                    lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][_royaltyRecipients[i].wallet] =
-                        royaltyRecipientId +
-                        1;
-                    delete lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
-                        royaltyRecipients[royaltyRecipientId].wallet
-                    ];
-                } else {
-                    if (royaltyRecipientIndex - 1 != royaltyRecipientId) revert RecipientNotUnique();
-                }
+            } else {
+                // If "updating" the existing recipient with itself, do nothing
+                if (royaltyRecipientIndex - 1 != royaltyRecipientId) revert RecipientNotUnique();
             }
+
             if (_royaltyRecipients[i].minRoyaltyPercentage > protocolLimits().maxRoyaltyPercentage)
                 revert InvalidRoyaltyPercentage();
 
             royaltyRecipients[royaltyRecipientId] = _royaltyRecipients[i];
+
+            unchecked {
+                i++;
+            }
         }
 
         emit RoyaltyRecipientsChanged(_sellerId, royaltyRecipients, msgSender());
@@ -611,7 +624,7 @@ contract SellerHandlerFacet is SellerBase {
         uint256 previousId = royaltyRecipients.length; // this is 1 more than the max id. This is used to ensure that royaltyRecipients is sorted in ascending order
         uint256 lastRoyaltyRecipientsId = previousId - 1; // will never underflow, since at least default recipient always exists
 
-        for (uint256 i = _royaltyRecipientIds.length; i > 0; i--) {
+        for (uint256 i = _royaltyRecipientIds.length; i > 0; ) {
             uint256 royaltyRecipientId = _royaltyRecipientIds[i - 1];
 
             if (royaltyRecipientId >= previousId) revert RoyaltyRecipientIdsNotSorted(); // this also ensures that royaltyRecipientId will never be out of bounds
@@ -632,6 +645,10 @@ contract SellerHandlerFacet is SellerBase {
 
             // Update previous id
             previousId = royaltyRecipientId;
+
+            unchecked {
+                i--;
+            }
         }
 
         emit RoyaltyRecipientsChanged(_sellerId, royaltyRecipients, sender);

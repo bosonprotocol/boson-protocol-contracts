@@ -250,24 +250,8 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             // Make sure that supplied royalties ok
             // Operate in a block to avoid "stack too deep" error
             {
-                if (_offer.royaltyInfo.recipients.length != _offer.royaltyInfo.bps.length) revert ArrayLengthMismatch();
-
-                RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_offer.sellerId];
-
-                uint256 totalRoyalties;
-                for (uint256 i = 0; i < _offer.royaltyInfo.recipients.length; i++) {
-                    uint256 royaltyRecipientId = lookups.royaltyRecipientIndexBySellerAndRecipient[_offer.sellerId][
-                        _offer.royaltyInfo.recipients[i]
-                    ];
-                    if (royaltyRecipientId == 0) revert InvalidRoyaltyRecipient();
-
-                    if (_offer.royaltyInfo.bps[i] < royaltyRecipients[royaltyRecipientId - 1].minRoyaltyPercentage)
-                        revert InvalidRoyaltyPercentage();
-
-                    totalRoyalties += _offer.royaltyInfo.bps[i];
-                }
-
-                if (totalRoyalties > limits.maxRoyaltyPercentage) revert InvalidRoyaltyPercentage();
+                if (_offer.royaltyInfo.length != 1) revert InvalidRoyaltyInfo();
+                validateRoyaltyInfo(lookups, limits, _offer.sellerId, _offer.royaltyInfo[0]);
             }
         }
         // Get storage location for offer
@@ -285,7 +269,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         offer.metadataHash = _offer.metadataHash;
         offer.collectionIndex = _offer.collectionIndex;
         offer.priceType = _offer.priceType;
-        offer.royaltyInfo = _offer.royaltyInfo;
+        offer.royaltyInfo.push(_offer.royaltyInfo[0]);
 
         // Get storage location for offer dates
         OfferDates storage offerDates = fetchOfferDates(_offer.id);
@@ -378,5 +362,54 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
 
         // Notify external observers
         emit RangeReserved(_offerId, offer.sellerId, _startId, _startId + _length - 1, _to, sender);
+    }
+
+    /**
+     * @notice Validates that royalty info struct contains valid data
+     *
+     * Reverts if:
+     * - Royalty recipient is not on seller's allow list
+     * - Royalty percentage is less that the value decided by the admin
+     * - Total royalty percentage is more than max royalty percentage
+     *
+     * @param _lookups -  the storage pointer to protocol lookups
+     * @param _limits - the storage pointer to protocol limits
+     * @param _sellerId - the id of the seller
+     * @param _royaltyInfo - the royalty info struct
+     */
+    function validateRoyaltyInfo(
+        ProtocolLib.ProtocolLookups storage _lookups,
+        ProtocolLib.ProtocolLimits storage _limits,
+        uint256 _sellerId,
+        RoyaltyInfo memory _royaltyInfo
+    ) internal view {
+        if (_royaltyInfo.recipients.length != _royaltyInfo.bps.length) revert ArrayLengthMismatch();
+
+        RoyaltyRecipient[] storage royaltyRecipients = _lookups.royaltyRecipientsBySeller[_sellerId];
+
+        uint256 totalRoyalties;
+        for (uint256 i = 0; i < _royaltyInfo.recipients.length; ) {
+            uint256 royaltyRecipientId;
+
+            if (_royaltyInfo.recipients[i] == address(0)) {
+                royaltyRecipientId = 1;
+            } else {
+                royaltyRecipientId = _lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
+                    _royaltyInfo.recipients[i]
+                ];
+                if (royaltyRecipientId == 0) revert InvalidRoyaltyRecipient();
+            }
+
+            if (_royaltyInfo.bps[i] < royaltyRecipients[royaltyRecipientId - 1].minRoyaltyPercentage)
+                revert InvalidRoyaltyPercentage();
+
+            totalRoyalties += _royaltyInfo.bps[i];
+
+            unchecked {
+                i++;
+            }
+        }
+
+        if (totalRoyalties > _limits.maxRoyaltyPercentage) revert InvalidRoyaltyPercentage();
     }
 }

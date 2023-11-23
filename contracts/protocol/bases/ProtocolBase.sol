@@ -730,20 +730,30 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
      * @param _queryId - if _isPreminted this is offer id, else is the exchange id
      * @param _isPreminted - indicates if the query is for preminted voucher
      * @return royaltyInfo - list of royalty recipients and corresponding bps
+     * @return royaltyInfoIndex - index of the royalty info
+     * @return treasury - the seller's treasury address
      */
     function fetchExchangeRoyalties(
         uint256 _queryId,
         bool _isPreminted
-    ) internal view returns (RoyaltyInfo storage royaltyInfo) {
+    ) internal view returns (RoyaltyInfo storage royaltyInfo, uint256 royaltyInfoIndex, address treasury) {
+        RoyaltyInfo[] storage royaltyInfoAll;
         if (!_isPreminted) {
             (bool exists, Exchange storage exchange) = fetchExchange(_queryId);
             if (!exists) revert NoSuchExchange();
-
-            // not using fetchOffer to reduce gas costs (limitation of royalty registry)
-            return protocolEntities().offers[exchange.offerId].royaltyInfo;
+            _queryId = exchange.offerId;
         }
 
-        return protocolEntities().offers[_queryId].royaltyInfo;
+        // not using fetchOffer to reduce gas costs (limitation of royalty registry)
+        Offer storage offer;
+        offer = protocolEntities().offers[_queryId];
+        (, Seller storage seller, ) = fetchSeller(offer.sellerId);
+        treasury = seller.treasury;
+        royaltyInfoAll = protocolEntities().offers[_queryId].royaltyInfo;
+
+        royaltyInfoIndex = royaltyInfoAll.length - 1;
+        // get the last royalty info
+        return (royaltyInfoAll[royaltyInfoIndex], royaltyInfoIndex, treasury);
     }
 
     /**

@@ -10,7 +10,7 @@ import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x7ee17ba9
+ * The ERC-165 identifier for this interface is: 0x7481f095
  */
 interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
     /**
@@ -195,6 +195,42 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      *  @param _validUntilDate - new valid until date
      */
     function extendOfferBatch(uint256[] calldata _offerIds, uint256 _validUntilDate) external;
+
+    /**
+     * @notice Sets new valid royalty info.
+     *
+     * Emits an OfferRoyaltyInfoUpdated event if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - Offer does not exist
+     * - Caller is not the assistant of the offer
+     * - New royalty info is invalid
+     *
+     *  @param _offerId - the id of the offer to be updated
+     *  @param _royaltyInfo - new royalty info
+     */
+    function updateOfferRoyaltyRecipients(uint256 _offerId, BosonTypes.RoyaltyInfo calldata _royaltyInfo) external;
+
+    /**
+     * @notice Sets new valid until date for a batch of offers.
+     *
+     * Emits an OfferExtended event for every offer if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - For any of the offers:
+     *   - Offer does not exist
+     *   - Caller is not the assistant of the offer
+     *   - New royalty info is invalid
+     *
+     *  @param _offerIds - list of ids of the offers to extend
+     *  @param _royaltyInfo - new royalty info
+     */
+    function updateOfferRoyaltyRecipientsBatch(
+        uint256[] calldata _offerIds,
+        BosonTypes.RoyaltyInfo calldata _royaltyInfo
+    ) external;
 
     /**
      * @notice Gets the details about a given offer.

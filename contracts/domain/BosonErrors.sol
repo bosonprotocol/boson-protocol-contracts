@@ -164,12 +164,12 @@ interface BosonErrors {
     error RecipientNotUnique();
     // Trying to access an out of bounds royalty recipient
     error InvalidRoyaltyRecipientId();
-    // Trying to replace the default recipient (treasury) with another address
-    error WrongDefaultRecipient();
     // Array of royalty recipients is not sorted by id
     error RoyaltyRecipientIdsNotSorted();
     // Trying to remove the default recipient (treasury)
     error CannotRemoveDefaultRecipient();
+    // Supplying to many Royalty info structs
+    error InvalidRoyaltyInfo();
 
     // Group related
     // Group does not exist

@@ -158,7 +158,7 @@ contract BosonTypes {
         bool voided;
         uint256 collectionIndex;
         PriceType priceType;
-        RoyaltyInfo royaltyInfo;
+        RoyaltyInfo[] royaltyInfo;
     }
 
     struct OfferDates {
@@ -204,6 +204,7 @@ contract BosonTypes {
         uint256 price;
         uint256 protocolFeeAmount;
         uint256 royaltyAmount;
+        uint256 royaltyInfoIndex;
     }
 
     struct Voucher {

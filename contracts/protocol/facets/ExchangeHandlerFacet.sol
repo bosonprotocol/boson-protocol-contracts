@@ -881,14 +881,14 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler, 
         bool _isPreminted
     ) external view returns (address receiver, uint256 royaltyPercentage) {
         // EIP2981 returns only 1 recipient. Summ all bps and return treasury address as recipient
-        RoyaltyInfo storage royaltyInfo = fetchExchangeRoyalties(_queryId, _isPreminted);
+        (RoyaltyInfo storage royaltyInfo, , address treasury) = fetchExchangeRoyalties(_queryId, _isPreminted);
 
         uint256 recipientLength = royaltyInfo.recipients.length;
         if (recipientLength == 0) return (address(0), uint256(0));
 
         uint256 totalBps = getTotalRoyaltyPercentage(royaltyInfo.bps);
 
-        return (royaltyInfo.recipients[0], totalBps);
+        return (royaltyInfo.recipients[0] == address(0) ? treasury : royaltyInfo.recipients[0], totalBps);
     }
 
     /**
@@ -907,7 +907,22 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler, 
         uint256 _queryId,
         bool _isPreminted
     ) external view returns (RoyaltyInfo memory royaltyInfo) {
-        return fetchExchangeRoyalties(_queryId, _isPreminted);
+        address treasury;
+        (royaltyInfo, , treasury) = fetchExchangeRoyalties(_queryId, _isPreminted);
+
+        for (uint256 i = 0; i < royaltyInfo.recipients.length; ) {
+            if (royaltyInfo.recipients[i] == address(0)) {
+                // get treasury address!
+                royaltyInfo.recipients[i] = payable(treasury);
+                break;
+            }
+
+            unchecked {
+                i++;
+            }
+        }
+
+        return royaltyInfo;
     }
 
     /**
