@@ -589,7 +589,7 @@ describe("IBosonOfferHandler", function () {
             .withArgs(
               nextOfferId,
               offer.sellerId,
-              offer.toStruct(),
+              compareOfferStructs.bind(offer.toStruct()),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,

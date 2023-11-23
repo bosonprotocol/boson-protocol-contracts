@@ -264,7 +264,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                     if (_offer.royaltyInfo.bps[i] < royaltyRecipients[royaltyRecipientId - 1].minRoyaltyPercentage)
                         revert InvalidRoyaltyPercentage();
 
-                    totalRoyalties = _offer.royaltyInfo.bps[i];
+                    totalRoyalties += _offer.royaltyInfo.bps[i];
                 }
 
                 if (totalRoyalties > limits.maxRoyaltyPercentage) revert InvalidRoyaltyPercentage();

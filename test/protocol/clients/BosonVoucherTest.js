@@ -1696,88 +1696,6 @@ describe("IBosonVoucher", function () {
         await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: offer.price });
       });
 
-      context("setRoyaltyPercentage()", function () {
-        beforeEach(async function () {
-          // give ownership to assistant
-          await bosonVoucher.connect(protocol).transferOwnership(await assistant.getAddress());
-        });
-
-        it("should emit RoyaltyPercentageChanged event", async function () {
-          royaltyPercentage = "0"; //0%
-          await expect(bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage))
-            .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-            .withArgs(royaltyPercentage);
-        });
-
-        it("should set a royalty fee percentage", async function () {
-          // First, set royalty fee as 0
-          royaltyPercentage = "0"; //0%
-          await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
-
-          let receiver, royaltyAmount;
-          [receiver, royaltyAmount] = await bosonVoucher.connect(rando).royaltyInfo(exchangeId, offerPrice);
-
-          // Expectations
-          let expectedRecipient = seller.treasury;
-          let expectedRoyaltyAmount = "0";
-
-          assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
-          assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
-
-          // Now, set royalty fee as 10%
-          royaltyPercentage = "1000"; //10%
-          await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
-
-          [receiver, royaltyAmount] = await bosonVoucher.connect(rando).royaltyInfo(exchangeId, offerPrice);
-
-          // Expectations
-          expectedRecipient = seller.treasury;
-          expectedRoyaltyAmount = applyPercentage(offerPrice, royaltyPercentage);
-
-          assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
-          assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
-        });
-
-        context("💔 Revert Reasons", async function () {
-          it("should revert if caller is not the owner", async function () {
-            // random caller
-            await expect(bosonVoucher.connect(rando).setRoyaltyPercentage(royaltyPercentage)).to.be.revertedWith(
-              RevertReasons.OWNABLE_NOT_OWNER
-            );
-
-            // protocol as the caller
-            await expect(bosonVoucher.connect(protocol).setRoyaltyPercentage(royaltyPercentage)).to.be.revertedWith(
-              RevertReasons.OWNABLE_NOT_OWNER
-            );
-          });
-
-          it("should revert if royaltyPercentage is greater than max royalty percentage defined in the protocol", async function () {
-            // Set royalty fee as 15% (protocol limit is 10%)
-            royaltyPercentage = "1500"; //15%
-
-            // royalty percentage too high, expecting revert
-            await expect(
-              bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage)
-            ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.ROYALTY_FEE_INVALID);
-          });
-        });
-      });
-
-      context("getRoyaltyPercentage()", function () {
-        it("should return the royalty fee percentage", async function () {
-          // give ownership to assistant
-          await bosonVoucher.connect(protocol).transferOwnership(await assistant.getAddress());
-
-          royaltyPercentage = "1000"; //10%
-          await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
-
-          expect(await bosonVoucher.connect(rando).getRoyaltyPercentage()).to.equal(
-            royaltyPercentage,
-            "Invalid royalty percentage"
-          );
-        });
-      });
-
       context("royaltyInfo()", function () {
         beforeEach(async function () {
           // give ownership to assistant
@@ -2370,7 +2288,7 @@ describe("IBosonVoucher", function () {
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
-      disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
+      disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", "0")];
 
       // Make empty seller list, so every seller is allowed
       const sellerAllowList = [];
@@ -2389,7 +2307,7 @@ describe("IBosonVoucher", function () {
         .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, agentId);
       await fundsHandler
         .connect(admin)
-        .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
+        .depositFunds(seller.id, ZeroAddress, offer.sellerDeposit, { value: offer.sellerDeposit });
       await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
 
       exchangeId = "1";
@@ -2471,7 +2389,7 @@ describe("IBosonVoucher", function () {
           .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, agentId);
         await fundsHandler
           .connect(admin)
-          .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
+          .depositFunds(seller.id, ZeroAddress, offer.sellerDeposit, { value: offer.sellerDeposit });
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
 
         // Set inexistent exchangeId
@@ -2501,7 +2419,7 @@ describe("IBosonVoucher", function () {
           .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, agentId);
         await fundsHandler
           .connect(admin)
-          .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
+          .depositFunds(seller.id, ZeroAddress, offer.sellerDeposit, { value: offer.sellerDeposit });
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
 
         // Set exchangeId
@@ -2510,7 +2428,7 @@ describe("IBosonVoucher", function () {
         const [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offerPrice);
 
         // Expectations
-        let expectedRecipient = ethers.constants.AddressZero;
+        let expectedRecipient = ZeroAddress;
         let expectedRoyaltyAmount = "0";
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
@@ -2529,7 +2447,7 @@ describe("IBosonVoucher", function () {
           .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, agentId);
         await fundsHandler
           .connect(admin)
-          .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
+          .depositFunds(seller.id, ZeroAddress, offer.sellerDeposit, { value: offer.sellerDeposit });
         await offerHandler.connect(assistant).reserveRange(offer.id, 20, assistant.address);
         await bosonVoucher.connect(assistant).preMint(offer.id, 20);
 
@@ -2553,7 +2471,7 @@ describe("IBosonVoucher", function () {
         let [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
-        let expectedRecipient = ethers.constants.AddressZero;
+        let expectedRecipient = ZeroAddress;
         let expectedRoyaltyAmount = "0";
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
@@ -2566,7 +2484,7 @@ describe("IBosonVoucher", function () {
 
         let [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
         // Expectations
-        let expectedRecipient = ethers.constants.AddressZero;
+        let expectedRecipient = ZeroAddress;
         let expectedRoyaltyAmount = "0";
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
@@ -2579,7 +2497,7 @@ describe("IBosonVoucher", function () {
         const [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
-        let expectedRecipient = ethers.constants.AddressZero;
+        let expectedRecipient = ZeroAddress;
         let expectedRoyaltyAmount = "0";
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");

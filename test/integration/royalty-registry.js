@@ -1,5 +1,5 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
+const { ethers } = require("hardhat");
+const { ZeroAddress, getContractAt, getSigners, parseUnits } = ethers;
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond");
 const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
@@ -28,18 +28,18 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
 
   before(async function () {
     let protocolTreasury;
-    [deployer, protocol, assistant, protocolTreasury, buyer, DR, other1, other2] = await ethers.getSigners();
+    [deployer, protocol, assistant, protocolTreasury, buyer, DR, other1, other2] = await getSigners();
 
-    royaltyRegistry = await ethers.getContractAt("RoyaltyEngineV1", ROYALTY_REGISTRY_ADDRESS);
+    royaltyRegistry = await getContractAt("RoyaltyEngineV1", ROYALTY_REGISTRY_ADDRESS);
 
     // Deploy diamond
     let [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
 
     // Cast Diamond to contract interfaces
-    const accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-    offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
-    const fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
-    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
+    const accountHandler = await getContractAt("IBosonAccountHandler", protocolDiamond.address);
+    offerHandler = await getContractAt("IBosonOfferHandler", protocolDiamond.address);
+    const fundsHandler = await getContractAt("IBosonFundsHandler", protocolDiamond.address);
+    exchangeHandler = await getContractAt("IBosonExchangeHandler", protocolDiamond.address);
 
     // Grant roles
     await accessController.grantRole(Role.PROTOCOL, protocol.address);
@@ -54,7 +54,7 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
     const [beacon] = beacons;
     const [proxy] = proxies;
 
-    const protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    const protocolFeeFlatBoson = parseUnits("0.01", "ether").toString();
     const buyerEscalationDepositPercentage = "1000"; // 10%
 
     [bosonToken] = await deployMockTokens();
@@ -126,7 +126,7 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
 
     const disputeResolver = mockDisputeResolver(DR.address, DR.address, DR.address, DR.address, true);
 
-    const disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
+    const disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", "0")];
     const sellerAllowList = [];
 
     await accountHandler.connect(DR).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -142,11 +142,11 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
       .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, "0");
 
     const voucherAddress = calculateContractAddress(accountHandler.address, seller.id);
-    bosonVoucher = await ethers.getContractAt("BosonVoucher", voucherAddress);
+    bosonVoucher = await getContractAt("BosonVoucher", voucherAddress);
 
     // Pool needs to cover both seller deposit and price
-    const pool = ethers.BigNumber.from(offer.sellerDeposit).add(offer.price);
-    await fundsHandler.connect(assistant).depositFunds(seller.id, ethers.constants.AddressZero, pool, {
+    const pool = BigInt(offer.sellerDeposit) + BigInt(offer.price);
+    await fundsHandler.connect(assistant).depositFunds(seller.id, ZeroAddress, pool, {
       value: pool,
     });
 

@@ -886,11 +886,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler, 
         uint256 recipientLength = royaltyInfo.recipients.length;
         if (recipientLength == 0) return (address(0), uint256(0));
 
-        uint256 totalBps;
-
-        for (uint256 i = 0; i < recipientLength; i++) {
-            totalBps += royaltyInfo.bps[i];
-        }
+        uint256 totalBps = getTotalRoyaltyPercentage(royaltyInfo.bps);
 
         return (royaltyInfo.recipients[0], totalBps);
     }
@@ -1458,29 +1454,5 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler, 
         if (method == EvaluationMethod.Threshold && !isMultitoken) {
             if (_tokenId != 0) revert InvalidTokenId();
         }
-    }
-
-    /**
-     * @notice Internal helper to get royalty information and sellerfor a chosen exchange.
-     *
-     * Reverts if exchange does not exist.
-     *
-     * @param _queryId - if _isPreminted this is offer id, else is the exchange id
-     * @param _isPreminted - indicates if the query is for preminted voucher
-     * @return royaltyInfo - list of royalty recipients and corresponding bps
-     */
-    function fetchExchangeRoyalties(
-        uint256 _queryId,
-        bool _isPreminted
-    ) internal view returns (RoyaltyInfo storage royaltyInfo) {
-        if (!_isPreminted) {
-            (bool exists, Exchange storage exchange) = fetchExchange(_queryId);
-            if (!exists) revert NoSuchExchange();
-
-            // not using fetchOffer to reduce gas costs (limitation of royalty registry)
-            return protocolEntities().offers[exchange.offerId].royaltyInfo;
-        }
-
-        return protocolEntities().offers[_queryId].royaltyInfo;
     }
 }

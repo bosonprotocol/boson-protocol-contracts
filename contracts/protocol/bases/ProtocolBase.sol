@@ -721,4 +721,41 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
                 ? _lookups.cloneAddress[_sellerId]
                 : _lookups.additionalCollections[_sellerId][_collectionIndex - 1].collectionAddress;
     }
+
+    /**
+     * @notice Internal helper to get royalty information and sellerfor a chosen exchange.
+     *
+     * Reverts if exchange does not exist.
+     *
+     * @param _queryId - if _isPreminted this is offer id, else is the exchange id
+     * @param _isPreminted - indicates if the query is for preminted voucher
+     * @return royaltyInfo - list of royalty recipients and corresponding bps
+     */
+    function fetchExchangeRoyalties(
+        uint256 _queryId,
+        bool _isPreminted
+    ) internal view returns (RoyaltyInfo storage royaltyInfo) {
+        if (!_isPreminted) {
+            (bool exists, Exchange storage exchange) = fetchExchange(_queryId);
+            if (!exists) revert NoSuchExchange();
+
+            // not using fetchOffer to reduce gas costs (limitation of royalty registry)
+            return protocolEntities().offers[exchange.offerId].royaltyInfo;
+        }
+
+        return protocolEntities().offers[_queryId].royaltyInfo;
+    }
+
+    /**
+     * @notice Helper function that calculates the total royalty percentage for a given exchange
+     *
+     * @param _bps - storage slot for array of royalty percentages
+     * @return totalBps - the total royalty percentage
+     */
+    function getTotalRoyaltyPercentage(uint256[] storage _bps) internal view returns (uint256 totalBps) {
+        uint256 bpsLength = _bps.length;
+        for (uint256 i = 0; i < bpsLength; i++) {
+            totalBps += _bps[i];
+        }
+    }
 }

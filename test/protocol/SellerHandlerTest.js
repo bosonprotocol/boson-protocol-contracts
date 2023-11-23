@@ -3764,7 +3764,7 @@ describe("SellerHandler", function () {
 
           it("caller does not own auth token", async function () {
             // update seller to use auth token
-            seller.admin = ethers.constants.AddressZero;
+            seller.admin = ZeroAddress;
             await accountHandler.connect(admin).updateSeller(seller, authToken);
             await accountHandler.connect(authTokenOwner).optInToSellerUpdate(seller.id, [SellerUpdateFields.AuthToken]);
 
@@ -3891,7 +3891,7 @@ describe("SellerHandler", function () {
 
           it("caller does not own auth token", async function () {
             // update seller to use auth token
-            seller.admin = ethers.constants.AddressZero;
+            seller.admin = ZeroAddress;
             await accountHandler.connect(admin).updateSeller(seller, authToken);
             await accountHandler.connect(authTokenOwner).optInToSellerUpdate(seller.id, [SellerUpdateFields.AuthToken]);
 
@@ -4037,7 +4037,7 @@ describe("SellerHandler", function () {
             // Attempt to remove royalty recipients expecting revert
             await expect(
               accountHandler.connect(admin).removeRoyaltyRecipients(seller.id, royaltyRecipientIds)
-            ).to.revertedWith(RevertReasons.REGION_PAUSED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
           });
 
           it("seller does not exist", async function () {
@@ -4058,7 +4058,7 @@ describe("SellerHandler", function () {
 
           it("caller does not own auth token", async function () {
             // update seller to use auth token
-            seller.admin = ethers.constants.AddressZero;
+            seller.admin = ZeroAddress;
             await accountHandler.connect(admin).updateSeller(seller, authToken);
             await accountHandler.connect(authTokenOwner).optInToSellerUpdate(seller.id, [SellerUpdateFields.AuthToken]);
 

@@ -3130,7 +3130,7 @@ describe("IBosonOrchestrationHandler", function () {
               orchestrationHandler
                 .connect(assistant)
                 .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
-            ).to.revertedWith(RevertReasons.INVALID_ROYALTY_RECIPIENT);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_RECIPIENT);
           });
 
           it("Royalty percentage is less that the value decided by the admin", async function () {
@@ -3142,7 +3142,7 @@ describe("IBosonOrchestrationHandler", function () {
               orchestrationHandler
                 .connect(assistant)
                 .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
-            ).to.revertedWith(RevertReasons.INVALID_ROYALTY_PERCENTAGE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
           });
 
           it("Total royalty percentage is more than max royalty percentage", async function () {
@@ -3154,7 +3154,7 @@ describe("IBosonOrchestrationHandler", function () {
               orchestrationHandler
                 .connect(assistant)
                 .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
-            ).to.revertedWith(RevertReasons.INVALID_ROYALTY_PERCENTAGE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
           });
         });
       });

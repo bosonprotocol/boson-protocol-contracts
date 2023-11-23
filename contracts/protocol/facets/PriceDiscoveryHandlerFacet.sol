@@ -126,9 +126,8 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
 
         {
             // Calculate royalties
-            (, uint256 royaltyAmount) = IBosonVoucher(
-                getCloneAddress(protocolLookups(), sellerId, offer.collectionIndex)
-            ).royaltyInfo(exchangeId, actualPrice);
+            RoyaltyInfo storage royaltyInfo = fetchExchangeRoyalties(exchangeId, false); // even though this was technically a preminted voucher, we already have a valid exchange at this point
+            uint256 royaltyAmount = (getTotalRoyaltyPercentage(royaltyInfo.bps) * actualPrice) / 10000;
 
             // Verify that fees and royalties are not higher than the price.
             if (protocolFeeAmount + royaltyAmount > actualPrice) revert FeeAmountTooHigh();
