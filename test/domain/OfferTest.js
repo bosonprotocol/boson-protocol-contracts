@@ -3,7 +3,7 @@ const { getSigners, parseUnits, ZeroAddress } = hre.ethers;
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
 const PriceType = require("../../scripts/domain/PriceType");
-const { RoyaltyInfo, RoyaltyInfoList } = require("../../scripts/domain/RoyaltyInfo");
+const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo");
 
 /**
  *  Test the Offer domain entity
@@ -42,12 +42,12 @@ describe("Offer", function () {
     voided = false;
     collectionIndex = "2";
     priceType = PriceType.Static;
-    royaltyInfo = new RoyaltyInfoList([
+    royaltyInfo = [
       new RoyaltyInfo(
         accounts.slice(0, 3).map((a) => a.address),
         ["16", "32", "64"]
       ),
-    ]);
+    ];
   });
 
   context("📋 Constructor", async function () {
@@ -392,15 +392,17 @@ describe("Offer", function () {
       expect(offer.isValid()).is.false;
 
       // Valid field value
-      offer.royaltyInfo = new RoyaltyInfo(
-        accounts.slice(0, 3).map((a) => a.address),
-        ["16", "32", "64"]
-      );
+      offer.royaltyInfo = [
+        new RoyaltyInfo(
+          accounts.slice(0, 3).map((a) => a.address),
+          ["16", "32", "64"]
+        ),
+      ];
       expect(offer.royaltyInfoIsValid()).is.true;
       expect(offer.isValid()).is.true;
 
       // Valid field value
-      offer.royaltyInfo = new RoyaltyInfo([], []);
+      offer.royaltyInfo = [new RoyaltyInfo([], [])];
       expect(offer.royaltyInfoIsValid()).is.true;
     });
   });
@@ -474,7 +476,7 @@ describe("Offer", function () {
           offer.voided,
           offer.collectionIndex,
           offer.priceType,
-          offer.royaltyInfo.toStruct(),
+          royaltyInfo.map((ri) => ri.toStruct()),
         ];
 
         // Get struct

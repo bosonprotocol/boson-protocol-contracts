@@ -19,7 +19,7 @@ const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Range = require("../../scripts/domain/Range");
 const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
-const { RoyaltyInfo, RoyaltyInfoList } = require("../../scripts/domain/RoyaltyInfo");
+const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const {
@@ -825,6 +825,7 @@ describe("IBosonOrchestrationHandler", function () {
         // ERC2981 Royalty fee is 0%
         voucherInitValues.royaltyPercentage = "0"; //0%
         expect(voucherInitValues.isValid()).is.true;
+        offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
         // Create a seller and an offer
         await orchestrationHandler
@@ -890,6 +891,7 @@ describe("IBosonOrchestrationHandler", function () {
         // ERC2981 Royalty fee is 10%
         voucherInitValues.royaltyPercentage = "1000"; //10%
         expect(voucherInitValues.isValid()).is.true;
+        offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
         // Create a seller and an offer
         await orchestrationHandler
@@ -1260,7 +1262,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("Should allow creation of an offer with royalty recipients", async function () {
         // Add royalty info to the offer
-        offer.royaltyInfo = new RoyaltyInfoList([new RoyaltyInfo([treasury.address], ["10"])]);
+        offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], ["10"])];
 
         // Create a seller and an offer, testing for the event
         await expect(
@@ -2753,7 +2755,7 @@ describe("IBosonOrchestrationHandler", function () {
         await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
 
         // Add royalty info to the offer
-        offer.royaltyInfo = new RoyaltyInfoList([new RoyaltyInfo([other1.address, treasury.address], ["150", "10"])]);
+        offer.royaltyInfo = [new RoyaltyInfo([other1.address, ZeroAddress], ["150", "10"])];
 
         // Create an offer with condition, testing for the events
         await expect(
@@ -3123,7 +3125,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           it("Royalty recipient is not on seller's allow list", async function () {
             // Add royalty info to the offer
-            offer.royaltyInfo = new RoyaltyInfoList([new RoyaltyInfo([other1.address, rando.address], ["150", "10"])]);
+            offer.royaltyInfo = [new RoyaltyInfo([other1.address, rando.address], ["150", "10"])];
 
             // Attempt to create an offer with condition, expecting revert
             await expect(
@@ -3135,7 +3137,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           it("Royalty percentage is less that the value decided by the admin", async function () {
             // Add royalty info to the offer
-            offer.royaltyInfo = new RoyaltyInfoList([new RoyaltyInfo([other1.address, other2.address], ["90", "250"])]);
+            offer.royaltyInfo = [new RoyaltyInfo([other1.address, other2.address], ["90", "250"])];
 
             // Attempt to create an offer with condition, expecting revert
             await expect(
@@ -3147,9 +3149,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           it("Total royalty percentage is more than max royalty percentage", async function () {
             // Add royalty info to the offer
-            offer.royaltyInfo = new RoyaltyInfoList([
-              new RoyaltyInfo([other1.address, other2.address], ["5000", "4000"]),
-            ]);
+            offer.royaltyInfo = [new RoyaltyInfo([other1.address, other2.address], ["5000", "4000"])];
 
             // Attempt to create an offer with condition, expecting revert
             await expect(
@@ -3551,7 +3551,7 @@ describe("IBosonOrchestrationHandler", function () {
         await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
 
         // Add royalty info to the offer
-        offer.royaltyInfo = new RoyaltyInfoList([new RoyaltyInfo([other1.address, treasury.address], ["150", "10"])]);
+        offer.royaltyInfo = [new RoyaltyInfo([other1.address, ZeroAddress], ["150", "10"])];
 
         // Create an offer, add it to the group, testing for the events
         await expect(
@@ -4270,7 +4270,7 @@ describe("IBosonOrchestrationHandler", function () {
         await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
 
         // Add royalty info to the offer
-        offer.royaltyInfo = new RoyaltyInfoList([new RoyaltyInfo([other1.address, treasury.address], ["150", "10"])]);
+        offer.royaltyInfo = [new RoyaltyInfo([other1.address, ZeroAddress], ["150", "10"])];
 
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
@@ -5211,7 +5211,7 @@ describe("IBosonOrchestrationHandler", function () {
         await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
 
         // Add royalty info to the offer
-        offer.royaltyInfo = new RoyaltyInfoList([new RoyaltyInfo([other1.address, treasury.address], ["150", "10"])]);
+        offer.royaltyInfo = [new RoyaltyInfo([other1.address, ZeroAddress], ["150", "10"])];
 
         // Create an offer with condition, twin and bundle testing for the events
         await expect(
@@ -5862,6 +5862,7 @@ describe("IBosonOrchestrationHandler", function () {
         // ERC2981 Royalty fee is 0%
         voucherInitValues.royaltyPercentage = "0"; //0%
         expect(voucherInitValues.isValid()).is.true;
+        offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
         // Create a seller and an offer with condition
         await orchestrationHandler
@@ -5927,6 +5928,7 @@ describe("IBosonOrchestrationHandler", function () {
         // ERC2981 Royalty fee is 10%
         voucherInitValues.royaltyPercentage = "1000"; //10%
         expect(voucherInitValues.isValid()).is.true;
+        offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
         // Create a seller and an offer with condition
         await orchestrationHandler
@@ -6715,6 +6717,7 @@ describe("IBosonOrchestrationHandler", function () {
         // ERC2981 Royalty fee is 0%
         voucherInitValues.royaltyPercentage = "0"; //0%
         expect(voucherInitValues.isValid()).is.true;
+        offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
@@ -6783,6 +6786,7 @@ describe("IBosonOrchestrationHandler", function () {
         // ERC2981 Royalty fee is 10%
         voucherInitValues.royaltyPercentage = "1000"; //10%
         expect(voucherInitValues.isValid()).is.true;
+        offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
@@ -7715,6 +7719,7 @@ describe("IBosonOrchestrationHandler", function () {
         // ERC2981 Royalty fee is 0%
         voucherInitValues.royaltyPercentage = "0"; //0%
         expect(voucherInitValues.isValid()).is.true;
+        offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
@@ -7784,6 +7789,7 @@ describe("IBosonOrchestrationHandler", function () {
         // ERC2981 Royalty fee is 10%
         voucherInitValues.royaltyPercentage = "1000"; //10%
         expect(voucherInitValues.isValid()).is.true;
+        offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler

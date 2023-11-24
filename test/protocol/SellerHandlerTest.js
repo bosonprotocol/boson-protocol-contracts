@@ -185,7 +185,7 @@ describe("SellerHandler", function () {
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
 
         const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
         ]);
 
         await expect(tx)
@@ -221,7 +221,7 @@ describe("SellerHandler", function () {
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
 
         const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
         ]);
 
         await expect(tx)
@@ -682,24 +682,25 @@ describe("SellerHandler", function () {
           voucherInitValues.collectionSalt
         );
         seller.id = Number(seller.id) + 1;
+        const defaultRoyaltyRecipients = new RoyaltyRecipientList([
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+        ]);
 
         const tx = await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
         await expect(tx)
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(seller.id, seller.toStruct(), expectedCloneAddress, emptyAuthTokenStruct, await admin.getAddress());
+          .withArgs(seller.id, seller.toStruct(), expectedCloneAddress, emptyAuthTokenStruct, await admin.address);
+
+        await expect(tx)
+          .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+          .withArgs(seller.id, compareRoyaltyRecipientLists.bind(defaultRoyaltyRecipients.toStruct()), admin.address);
 
         // Voucher clone contract
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
 
-        await expect(tx)
-          .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-          .withArgs(voucherInitValues.royaltyPercentage);
-
-        await expect(tx)
-          .to.emit(bosonVoucher, "VoucherInitialized")
-          .withArgs(seller.id, voucherInitValues.royaltyPercentage, contractURI);
+        await expect(tx).to.emit(bosonVoucher, "VoucherInitialized").withArgs(seller.id, contractURI);
 
         bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
@@ -2970,7 +2971,6 @@ describe("SellerHandler", function () {
 
     context("👉 createNewCollection()", async function () {
       let externalId, expectedDefaultAddress, expectedCollectionAddress;
-      let royaltyPercentage;
 
       beforeEach(async function () {
         // Create a seller
@@ -2978,7 +2978,7 @@ describe("SellerHandler", function () {
 
         externalId = "Brand1";
         voucherInitValues.contractURI = contractURI = "https://brand1.com";
-        voucherInitValues.royaltyPercentage = royaltyPercentage = "100"; // 1%
+        voucherInitValues.royaltyPercentage = "100"; // 1%
         voucherInitValues.collectionSalt = encodeBytes32String(externalId);
         expectedDefaultAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
@@ -3005,10 +3005,7 @@ describe("SellerHandler", function () {
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCollectionAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-        await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged").withArgs(royaltyPercentage);
-        await expect(tx)
-          .to.emit(bosonVoucher, "VoucherInitialized")
-          .withArgs(seller.id, royaltyPercentage, contractURI);
+        await expect(tx).to.emit(bosonVoucher, "VoucherInitialized").withArgs(seller.id, contractURI);
 
         bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCollectionAddress);
 
@@ -3059,7 +3056,7 @@ describe("SellerHandler", function () {
             voucherInitValues.collectionSalt
           );
           voucherInitValues.contractURI = contractURI = `https://brand${i}.com`;
-          voucherInitValues.royaltyPercentage = royaltyPercentage = (i * 100).toString(); // 1%, 2%, 3%
+          voucherInitValues.royaltyPercentage = (i * 100).toString(); // 1%, 2%, 3%
 
           // Create a new collection, testing for the event
           const tx = await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
@@ -3072,10 +3069,7 @@ describe("SellerHandler", function () {
           bosonVoucher = await getContractAt("IBosonVoucher", expectedCollectionAddress);
 
           await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-          await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged").withArgs(royaltyPercentage);
-          await expect(tx)
-            .to.emit(bosonVoucher, "VoucherInitialized")
-            .withArgs(seller.id, royaltyPercentage, contractURI);
+          await expect(tx).to.emit(bosonVoucher, "VoucherInitialized").withArgs(seller.id, contractURI);
 
           bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCollectionAddress);
 
@@ -3137,10 +3131,7 @@ describe("SellerHandler", function () {
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCollectionAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-        await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged").withArgs(royaltyPercentage);
-        await expect(tx)
-          .to.emit(bosonVoucher, "VoucherInitialized")
-          .withArgs(seller.id, royaltyPercentage, contractURI);
+        await expect(tx).to.emit(bosonVoucher, "VoucherInitialized").withArgs(seller.id, contractURI);
 
         bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCollectionAddress);
 

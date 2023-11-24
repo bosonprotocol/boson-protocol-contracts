@@ -8,7 +8,7 @@ const Role = require("../../../scripts/domain/Role");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const Range = require("../../../scripts/domain/Range");
 const VoucherInitValues = require("../../../scripts/domain/VoucherInitValues");
-const { RoyaltyInfo, RoyaltyInfoList } = require("../../../scripts/domain/RoyaltyInfo");
+const { RoyaltyInfo } = require("../../../scripts/domain/RoyaltyInfo");
 const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../../scripts/domain/RoyaltyRecipient.js");
 const { Funds, FundsList } = require("../../../scripts/domain/Funds");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
@@ -1705,7 +1705,9 @@ describe("IBosonVoucher", function () {
         it("should return a recipient and royalty fee", async function () {
           // First, set royalty fee as 0
           royaltyPercentage = "0"; //0%
-          await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
+          await offerHandler
+            .connect(assistant)
+            .updateOfferRoyaltyRecipients(offerId, new RoyaltyInfo([ZeroAddress], [royaltyPercentage]));
 
           let receiver, royaltyAmount;
           [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
@@ -1719,7 +1721,9 @@ describe("IBosonVoucher", function () {
 
           // Now, set royalty fee as 10%
           royaltyPercentage = "1000"; //10%
-          await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
+          await offerHandler
+            .connect(assistant)
+            .updateOfferRoyaltyRecipients(offerId, new RoyaltyInfo([ZeroAddress], [royaltyPercentage]));
 
           [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
 
@@ -1733,7 +1737,9 @@ describe("IBosonVoucher", function () {
           // Any random address can check the royalty info
           // Now, set royalty fee as 8%
           royaltyPercentage = "800"; //8%
-          await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
+          await offerHandler
+            .connect(assistant)
+            .updateOfferRoyaltyRecipients(offerId, new RoyaltyInfo([ZeroAddress], [royaltyPercentage]));
 
           [receiver, royaltyAmount] = await bosonVoucher.connect(rando).royaltyInfo(exchangeId, offerPrice);
 
@@ -1748,7 +1754,9 @@ describe("IBosonVoucher", function () {
         it("if exchange doesn't exist it should return 0 values", async function () {
           // Set royalty fee as 10%
           royaltyPercentage = "1000"; //10%
-          await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
+          await offerHandler
+            .connect(assistant)
+            .updateOfferRoyaltyRecipients(offerId, new RoyaltyInfo([ZeroAddress], [royaltyPercentage]));
 
           // Set inexistent exchangeId
           exchangeId = "100000";
@@ -2299,9 +2307,7 @@ describe("IBosonVoucher", function () {
         .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
       const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
-      offer.royaltyInfo = new RoyaltyInfoList([
-        new RoyaltyInfo([seller.treasury], [voucherInitValues.royaltyPercentage]),
-      ]); // 10%
+      offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])]; // 10%
       voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
 
       await offerHandler
@@ -2380,12 +2386,12 @@ describe("IBosonVoucher", function () {
 
         // Create an offer with multiple recipients
         const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
-        offer.royaltyInfo = new RoyaltyInfoList([
+        offer.royaltyInfo = [
           new RoyaltyInfo(
-            [rando.address, seller.treasury, rando2.address],
+            [rando.address, ZeroAddress, rando2.address],
             ["200", voucherInitValues.royaltyPercentage, "250"]
           ),
-        ]);
+        ];
         offer.id = 2;
 
         await offerHandler
@@ -2415,7 +2421,7 @@ describe("IBosonVoucher", function () {
       it("for offer without royalty recipients, it returns 0 values", async function () {
         // Create an offer with multiple recipients
         const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
-        offer.royaltyInfo = new RoyaltyInfoList([new RoyaltyInfo([], [])]);
+        offer.royaltyInfo = [new RoyaltyInfo([], [])];
         offer.id = 2;
 
         await offerHandler
@@ -2442,9 +2448,7 @@ describe("IBosonVoucher", function () {
       it("should return a recipient and royalty fee for preminted offers", async function () {
         // Create an offer with multiple recipients
         const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
-        offer.royaltyInfo = new RoyaltyInfoList([
-          new RoyaltyInfo([seller.treasury], [voucherInitValues.royaltyPercentage]),
-        ]);
+        offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
         offer.id = 2;
         offer.quantityAvailable = 20;
 

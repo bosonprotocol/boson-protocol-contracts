@@ -11,7 +11,7 @@ const { assert } = require("chai");
 const Role = require("../../scripts/domain/Role");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
-const { RoyaltyInfo, RoyaltyInfoList } = require("../../scripts/domain/RoyaltyInfo");
+const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo");
 const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
 
 // Requirements to run this test:
@@ -133,7 +133,7 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
 
     const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
     offer.quantityAvailable = 10;
-    offer.royaltyInfo = new RoyaltyInfoList([new RoyaltyInfo([other1.address], [100])]);
+    offer.royaltyInfo = [new RoyaltyInfo([other1.address], [100])];
     royaltyInfo = offer.royaltyInfo;
     offerPrice = offer.price;
 

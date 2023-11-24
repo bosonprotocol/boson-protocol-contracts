@@ -6,7 +6,7 @@ const {
   enumIsValid,
 } = require("../util/validations.js");
 const PriceType = require("./PriceType.js");
-const { RoyaltyInfoList } = require("./RoyaltyInfo.js");
+const { RoyaltyInfo, RoyaltyInfoList } = require("./RoyaltyInfo.js");
 
 /**
  * Boson Protocol Domain Entity: Offer
@@ -97,7 +97,7 @@ class Offer {
       voided,
       collectionIndex,
       priceType,
-      RoyaltyInfoList.fromObject(royaltyInfo)
+      royaltyInfo.map((ri) => RoyaltyInfo.fromObject(ri))
     );
   }
 
@@ -154,7 +154,7 @@ class Offer {
       voided,
       collectionIndex: collectionIndex.toString(),
       priceType: Number(priceType),
-      royaltyInfo: RoyaltyInfoList.fromStruct(royaltyInfo),
+      royaltyInfo: royaltyInfo.map((ri) => RoyaltyInfo.fromStruct(ri)),
     });
   }
 
@@ -192,7 +192,7 @@ class Offer {
       this.voided,
       this.collectionIndex,
       this.priceType,
-      this.royaltyInfo.toStruct(),
+      new RoyaltyInfoList(this.royaltyInfo).toStruct(),
     ];
   }
 
@@ -322,8 +322,9 @@ class Offer {
   royaltyInfoIsValid() {
     let valid = false;
     let { royaltyInfo } = this;
+    let royaltyInfoList = new RoyaltyInfoList(royaltyInfo);
     try {
-      valid = typeof royaltyInfo == "object" && royaltyInfo.isValid();
+      valid = typeof royaltyInfoList == "object" && royaltyInfoList.isValid();
     } catch (e) {}
     return valid;
   }
