@@ -3,7 +3,7 @@ const { getSigners, parseUnits, ZeroAddress } = hre.ethers;
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
 const PriceType = require("../../scripts/domain/PriceType");
-const RoyaltyInfo = require("../../scripts/domain/RoyaltyInfo");
+const { RoyaltyInfo, RoyaltyInfoList } = require("../../scripts/domain/RoyaltyInfo");
 
 /**
  *  Test the Offer domain entity
@@ -42,10 +42,12 @@ describe("Offer", function () {
     voided = false;
     collectionIndex = "2";
     priceType = PriceType.Static;
-    royaltyInfo = new RoyaltyInfo(
-      accounts.slice(0, 3).map((a) => a.address),
-      ["16", "32", "64"]
-    );
+    royaltyInfo = new RoyaltyInfoList([
+      new RoyaltyInfo(
+        accounts.slice(0, 3).map((a) => a.address),
+        ["16", "32", "64"]
+      ),
+    ]);
   });
 
   context("📋 Constructor", async function () {

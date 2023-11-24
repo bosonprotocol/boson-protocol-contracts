@@ -7,7 +7,7 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const PriceDiscovery = require("../../scripts/domain/PriceDiscovery");
 const Side = require("../../scripts/domain/Side");
-const RoyaltyInfo = require("../../scripts/domain/RoyaltyInfo");
+const { RoyaltyInfo, RoyaltyInfoList } = require("../../scripts/domain/RoyaltyInfo");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
@@ -4572,7 +4572,7 @@ describe("IBosonFundsHandler", function () {
                 offer.price = "100";
                 offer.sellerDeposit = "10";
                 offer.buyerCancelPenalty = "30";
-                offer.royaltyInfo = new RoyaltyInfo([treasury.address], [fee.royalties]);
+                offer.royaltyInfo = new RoyaltyInfoList([new RoyaltyInfo([treasury.address], [fee.royalties])]);
 
                 // deposit to seller's pool
                 await fundsHandler.connect(assistant).withdrawFunds(seller.id, [], []); // withdraw all, so it's easier to test

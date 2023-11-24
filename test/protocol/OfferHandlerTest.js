@@ -11,7 +11,7 @@ const OfferFees = require("../../scripts/domain/OfferFees");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const Range = require("../../scripts/domain/Range");
 const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
-const RoyaltyInfo = require("../../scripts/domain/RoyaltyInfo");
+const { RoyaltyInfo, RoyaltyInfoList } = require("../../scripts/domain/RoyaltyInfo");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
@@ -635,7 +635,7 @@ describe("IBosonOfferHandler", function () {
         await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
 
         // Add royalty info to the offer
-        offer.royaltyInfo = new RoyaltyInfo([other.address, treasury.address], ["150", "10"]);
+        offer.royaltyInfo = new RoyaltyInfoList([new RoyaltyInfo([other.address, treasury.address], ["150", "10"])]);
 
         // Create an offer testing for the event
         await expect(
@@ -975,7 +975,7 @@ describe("IBosonOfferHandler", function () {
 
           it("Royalty percentage is less that the value decided by the admin", async function () {
             // Add royalty info to the offer
-            offer.royaltyInfo = new RoyaltyInfo([other.address, other2.address], ["90", "250"]);
+            offer.royaltyInfo = new RoyaltyInfoList([new RoyaltyInfo([other.address, other2.address], ["90", "250"])]);
 
             // Create an offer testing for the event
             await expect(
@@ -987,7 +987,9 @@ describe("IBosonOfferHandler", function () {
 
           it("Total royalty percentage is more than max royalty percentage", async function () {
             // Add royalty info to the offer
-            offer.royaltyInfo = new RoyaltyInfo([other.address, other2.address], ["5000", "4000"]);
+            offer.royaltyInfo = new RoyaltyInfoList([
+              new RoyaltyInfo([other.address, other2.address], ["5000", "4000"]),
+            ]);
 
             // Create an offer testing for the event
             await expect(
@@ -2074,7 +2076,7 @@ describe("IBosonOfferHandler", function () {
         new RoyaltyRecipient(other2.address, "200", "other2"),
       ]);
       await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
-      offers[3].royaltyInfo = new RoyaltyInfo([other.address, treasury.address], ["150", "10"]);
+      offers[3].royaltyInfo = new RoyaltyInfoList([new RoyaltyInfo([other.address, treasury.address], ["150", "10"])]);
       offerStructs[3] = offers[3].toStruct();
     });
 
@@ -2806,7 +2808,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Royalty recipient is not on seller's allow list", async function () {
           // Add royalty info to the offer
-          offers[3].royaltyInfo = new RoyaltyInfo([other.address, rando.address], ["150", "10"]);
+          offers[3].royaltyInfo = new RoyaltyInfoList([new RoyaltyInfo([other.address, rando.address], ["150", "10"])]);
 
           // Create an offer testing for the event
           await expect(
@@ -2818,7 +2820,9 @@ describe("IBosonOfferHandler", function () {
 
         it("Royalty percentage is less that the value decided by the admin", async function () {
           // Add royalty info to the offer
-          offers[3].royaltyInfo = new RoyaltyInfo([other.address, other2.address], ["90", "250"]);
+          offers[3].royaltyInfo = new RoyaltyInfoList([
+            new RoyaltyInfo([other.address, other2.address], ["90", "250"]),
+          ]);
 
           // Create an offer testing for the event
           await expect(
@@ -2830,7 +2834,9 @@ describe("IBosonOfferHandler", function () {
 
         it("Total royalty percentage is more than max royalty percentage", async function () {
           // Add royalty info to the offer
-          offers[3].royaltyInfo = new RoyaltyInfo([other.address, other2.address], ["5000", "4000"]);
+          offers[3].royaltyInfo = new RoyaltyInfoList([
+            new RoyaltyInfo([other.address, other2.address], ["5000", "4000"]),
+          ]);
 
           // Create an offer testing for the event
           await expect(

@@ -6,7 +6,7 @@ const {
   enumIsValid,
 } = require("../util/validations.js");
 const PriceType = require("./PriceType.js");
-const RoyaltyInfo = require("./RoyaltyInfo.js");
+const { RoyaltyInfoList } = require("./RoyaltyInfo.js");
 
 /**
  * Boson Protocol Domain Entity: Offer
@@ -28,7 +28,7 @@ class Offer {
             bool voided;
             uint256 collectionIndex;            
             PriceType priceType;
-            RoyaltyInfo royaltyInfo;
+            RoyaltyInfo[] royaltyInfo;
         }
     */
 
@@ -97,7 +97,7 @@ class Offer {
       voided,
       collectionIndex,
       priceType,
-      RoyaltyInfo.fromObject(royaltyInfo)
+      RoyaltyInfoList.fromObject(royaltyInfo)
     );
   }
 
@@ -154,7 +154,7 @@ class Offer {
       voided,
       collectionIndex: collectionIndex.toString(),
       priceType: Number(priceType),
-      royaltyInfo: RoyaltyInfo.fromStruct(royaltyInfo),
+      royaltyInfo: RoyaltyInfoList.fromStruct(royaltyInfo),
     });
   }
 

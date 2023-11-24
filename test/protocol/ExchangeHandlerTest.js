@@ -33,7 +33,7 @@ const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const GatingType = require("../../scripts/domain/GatingType");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
-const RoyaltyInfo = require("../../scripts/domain/RoyaltyInfo");
+const { RoyaltyInfo, RoyaltyInfoList } = require("../../scripts/domain/RoyaltyInfo");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
@@ -309,7 +309,9 @@ describe("IBosonExchangeHandler", function () {
 
       offer.quantityAvailable = "10";
       disputeResolverId = mo.disputeResolverId;
-      offer.royaltyInfo = new RoyaltyInfo([seller.treasury], [voucherInitValues.royaltyPercentage]);
+      offer.royaltyInfo = new RoyaltyInfoList([
+        new RoyaltyInfo([seller.treasury], [voucherInitValues.royaltyPercentage]),
+      ]);
 
       offerDurations.voucherValid = (oneMonth * 12n).toString();
 
@@ -505,7 +507,9 @@ describe("IBosonExchangeHandler", function () {
 
         // Create an offer with new seller
         const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
-        offer.royaltyInfo = new RoyaltyInfo([seller.treasury], [voucherInitValues.royaltyPercentage]);
+        offer.royaltyInfo = new RoyaltyInfoList([
+          new RoyaltyInfo([seller.treasury], [voucherInitValues.royaltyPercentage]),
+        ]);
 
         // Create the offer
         await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
