@@ -23,6 +23,7 @@ const { toHexString } = require("../../scripts/util/utils.js");
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
 const { RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
+const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo.js");
 
 function getEvent(receipt, factory, eventName) {
   let found = false;
@@ -137,7 +138,7 @@ function compareOfferStructs(returnedOffer) {
 
 // ToDo: make a generic predicate for comparing structs
 /** Predicate to compare RoyaltyRecipientList in emitted events
- * Bind Royalty Recipient List to this function and pass it to .withArgs() instead of the expected offer struct
+ * Bind Royalty Recipient List to this function and pass it to .withArgs() instead of the expected Royalty recipient list
  * If returned and expected Royalty Recipient Lists are equal, the test will pass, otherwise it raises an error
  * 
  * Example
@@ -151,6 +152,18 @@ function compareOfferStructs(returnedOffer) {
  */
 function compareRoyaltyRecipientLists(returnedRoyaltyRecipientList) {
   expect(RoyaltyRecipientList.fromStruct(returnedRoyaltyRecipientList).toStruct()).to.deep.equal(this);
+  return true;
+}
+
+/** Predicate to compare RoyaltyInfo in emitted events
+ * Bind Royalty Info to this function and pass it to .withArgs() instead of the expected Royalty Info struct
+ * If returned and expected Royalty Infos are equal, the test will pass, otherwise it raises an error
+ *
+ * @param {*} returnedRoyaltyInfo
+ * @returns
+ */
+function compareRoyaltyInfo(returnedRoyaltyInfo) {
+  expect(RoyaltyInfo.fromStruct(returnedRoyaltyInfo).toStruct()).to.deep.equal(this);
   return true;
 }
 
@@ -548,3 +561,4 @@ exports.setupTestEnvironment = setupTestEnvironment;
 exports.getSnapshot = getSnapshot;
 exports.revertToSnapshot = revertToSnapshot;
 exports.getSellerSalt = getSellerSalt;
+exports.compareRoyaltyInfo = compareRoyaltyInfo;
