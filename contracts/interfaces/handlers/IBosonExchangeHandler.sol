@@ -12,7 +12,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xaf2e70f8
+ * The ERC-165 identifier for this interface is: 0xe480bd0f
  */
 interface IBosonExchangeHandler is BosonErrors, IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents {
     /**
@@ -275,7 +275,7 @@ interface IBosonExchangeHandler is BosonErrors, IBosonExchangeEvents, IBosonFund
     function getNextExchangeId() external view returns (uint256 nextExchangeId);
 
     /**
-     * @notice Gets EIP2981 style royalty information for a chosen exchange.
+     * @notice Gets EIP2981 style royalty information for a chosen offer or exchange.
      *
      * EIP2981 supports only 1 recipient, there fore this method defaults to treasury address.
      * This method is not exactly compliant with EIP2981, since it does not accept `salePrice` and does not return `royaltyAmount,
@@ -285,31 +285,31 @@ interface IBosonExchangeHandler is BosonErrors, IBosonExchangeEvents, IBosonFund
      *
      * Reverts if exchange does not exist.
      *
-     * @param _queryId - if _isPreminted this is offer id, else is the exchange id
-     * @param _isPreminted - indicates if the query is for preminted voucher
+     * @param _queryId - offer id or exchange id
+     * @param _isExchangeId - indicates if the query represents the exchange id
      * @return receiver - the address of the royalty receiver (seller's treasury address)
      * @return royaltyPercentage - the royalty percentage in bps
      */
-    function getExchangeEIP2981Royalties(
+    function getEIP2981Royalties(
         uint256 _queryId,
-        bool _isPreminted
+        bool _isExchangeId
     ) external view returns (address receiver, uint256 royaltyPercentage);
 
     /**
-     * @notice Gets royalty information for a chosen exchange.
+     * @notice Gets royalty information for a chosen offer or exchange.
      *
      * Returns a list of royalty recipients and corresponding bps. Format is compatible with Manifold and Foundation royalties
      * and can be directly used by royalty registry.
      *
      * Reverts if exchange does not exist.
      *
-     * @param _queryId - if _isPreminted this is offer id, else is the exchange id
-     * @param _isPreminted - indicates if the query is for preminted voucher
+     * @param _queryId - offer id or exchange id
+     * @param _isExchangeId - indicates if the query represents the exchange id
      * @return royaltyInfo - list of royalty recipients and corresponding bps
      */
-    function getExchangeRoyalties(
+    function getRoyalties(
         uint256 _queryId,
-        bool _isPreminted
+        bool _isExchangeId
     ) external view returns (BosonTypes.RoyaltyInfo memory royaltyInfo);
 
     /**

@@ -128,7 +128,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                 // Calculate royalties
                 {
                     RoyaltyInfo storage royaltyInfo;
-                    (royaltyInfo, exchangeCost.royaltyInfoIndex, ) = fetchExchangeRoyalties(offerId, true);
+                    (royaltyInfo, exchangeCost.royaltyInfoIndex, ) = fetchRoyalties(offerId, false);
                     exchangeCost.royaltyAmount =
                         (getTotalRoyaltyPercentage(royaltyInfo.bps) * exchangeCost.price) /
                         10000;

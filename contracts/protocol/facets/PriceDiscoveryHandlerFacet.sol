@@ -126,7 +126,7 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
 
         {
             // Calculate royalties
-            (RoyaltyInfo storage royaltyInfo, uint256 royaltyInfoIndex, ) = fetchExchangeRoyalties(exchangeId, false); // even though this was technically a preminted voucher, we already have a valid exchange at this point
+            (RoyaltyInfo storage royaltyInfo, uint256 royaltyInfoIndex, ) = fetchRoyalties(offerId, false);
             uint256 royaltyAmount = (getTotalRoyaltyPercentage(royaltyInfo.bps) * actualPrice) / 10000;
 
             // Verify that fees and royalties are not higher than the price.

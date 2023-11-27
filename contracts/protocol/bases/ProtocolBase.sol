@@ -727,18 +727,18 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
      *
      * Reverts if exchange does not exist.
      *
-     * @param _queryId - if _isPreminted this is offer id, else is the exchange id
-     * @param _isPreminted - indicates if the query is for preminted voucher
+     * @param _queryId - offer id or exchange id
+     * @param _isExchangeId - indicates if the query represents the exchange id
      * @return royaltyInfo - list of royalty recipients and corresponding bps
      * @return royaltyInfoIndex - index of the royalty info
      * @return treasury - the seller's treasury address
      */
-    function fetchExchangeRoyalties(
+    function fetchRoyalties(
         uint256 _queryId,
-        bool _isPreminted
+        bool _isExchangeId
     ) internal view returns (RoyaltyInfo storage royaltyInfo, uint256 royaltyInfoIndex, address treasury) {
         RoyaltyInfo[] storage royaltyInfoAll;
-        if (!_isPreminted) {
+        if (_isExchangeId) {
             (bool exists, Exchange storage exchange) = fetchExchange(_queryId);
             if (!exists) revert NoSuchExchange();
             _queryId = exchange.offerId;

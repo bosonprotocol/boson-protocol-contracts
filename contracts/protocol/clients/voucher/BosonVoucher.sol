@@ -629,9 +629,9 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         }
 
         uint256 royaltyPercentage;
-        (receiver, royaltyPercentage) = getExchangeEIP2981Royalties(
+        (receiver, royaltyPercentage) = getEIP2981RoyaltiesFromProtocol(
             isPreminted ? offerId : (_tokenId & type(uint128).max),
-            isPreminted
+            !isPreminted
         );
 
         royaltyAmount = (_salePrice * royaltyPercentage) / 10000;
