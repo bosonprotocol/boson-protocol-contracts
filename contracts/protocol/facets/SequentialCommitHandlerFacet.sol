@@ -126,11 +126,12 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                 exchangeCost.protocolFeeAmount = getProtocolFee(exchangeToken, exchangeCost.price);
 
                 // Calculate royalties
-                uint256 royaltyAmount;
                 {
                     RoyaltyInfo storage royaltyInfo;
-                    (royaltyInfo, exchangeCost.royaltyInfoIndex, ) = fetchExchangeRoyalties(exchangeId, false);
-                    royaltyAmount = (getTotalRoyaltyPercentage(royaltyInfo.bps) * exchangeCost.price) / 10000;
+                    (royaltyInfo, exchangeCost.royaltyInfoIndex, ) = fetchExchangeRoyalties(offerId, true);
+                    exchangeCost.royaltyAmount =
+                        (getTotalRoyaltyPercentage(royaltyInfo.bps) * exchangeCost.price) /
+                        10000;
                 }
 
                 // Verify that fees and royalties are not higher than the price.

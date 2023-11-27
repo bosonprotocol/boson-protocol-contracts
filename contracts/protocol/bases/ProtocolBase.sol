@@ -764,8 +764,12 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
      */
     function getTotalRoyaltyPercentage(uint256[] storage _bps) internal view returns (uint256 totalBps) {
         uint256 bpsLength = _bps.length;
-        for (uint256 i = 0; i < bpsLength; i++) {
+        for (uint256 i = 0; i < bpsLength; ) {
             totalBps += _bps[i];
+
+            unchecked {
+                i++;
+            }
         }
     }
 }

@@ -1,18 +1,24 @@
 const { ethers } = require("hardhat");
 const { ZeroAddress, getContractAt, getSigners, parseUnits } = ethers;
-const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond");
-const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
-const { getFacetsWithArgs, calculateContractAddress, applyPercentage } = require("../util/utils");
-const { oneWeek, oneMonth, maxPriorityFeePerGas, ROYALTY_REGISTRY_ADDRESS } = require("../util/constants");
+const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients.js");
+const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond.js");
+const { deployAndCutFacets } = require("../../../scripts/util/deploy-protocol-handler-facets.js");
+const { getFacetsWithArgs, calculateContractAddress, applyPercentage } = require("../../util/utils.js");
+const { oneWeek, oneMonth, maxPriorityFeePerGas, ROYALTY_REGISTRY_ADDRESS } = require("../../util/constants.js");
 
-const { mockSeller, mockAuthToken, mockVoucherInitValues, mockOffer, mockDisputeResolver } = require("../util/mock");
+const {
+  mockSeller,
+  mockAuthToken,
+  mockVoucherInitValues,
+  mockOffer,
+  mockDisputeResolver,
+} = require("../../util/mock.js");
 const { assert } = require("chai");
-const Role = require("../../scripts/domain/Role");
-const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
-const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo");
-const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
+const Role = require("../../../scripts/domain/Role.js");
+const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens.js");
+const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee.js");
+const { RoyaltyInfo } = require("../../../scripts/domain/RoyaltyInfo.js");
+const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../../scripts/domain/RoyaltyRecipient.js");
 
 // Requirements to run this test:
 // - Royalty registry is a submodule. If you didn't clone repository recursively, run `git submodule update --init --recursive` to get it.
