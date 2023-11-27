@@ -8123,30 +8123,18 @@ describe("IBosonExchangeHandler", function () {
             expect(returnedRoyaltyRecipient).to.equal(voucherInitValues.royaltyPercentage, "Wrong royalty percentage");
           });
 
-          it("multiple recipients - the first recipient gets the sum", async function () {
-            // Update the offer, so it has multiple recipients in the protocol
-            const royaltyRecipientList = new RoyaltyRecipientList([
-              new RoyaltyRecipient(rando.address, "50", "other"),
-              new RoyaltyRecipient(newOwner.address, "50", "other2"),
-              new RoyaltyRecipient(treasuryDR.address, "50", "other3"),
-            ]);
-            await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
-
-            const recipients = [rando.address, newOwner.address, ZeroAddress, treasuryDR.address];
-            const bps = [100, 150, 500, 200];
-
-            await offerHandler
-              .connect(assistant)
-              .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo(recipients, bps));
+          it("if treasury changes, offer does not have to be updated", async function () {
+            // update the treasury
+            seller.treasury = newOwner.address;
+            await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
             const [returnedReceiver, returnedRoyaltyRecipient] = await exchangeHandler.getEIP2981Royalties(
               queryId,
               isExchangeId
             );
 
-            const totalBps = bps.reduce((a, b) => a + b, 0);
-            expect(returnedReceiver).to.equal(recipients[0], "Wrong recipient");
-            expect(returnedRoyaltyRecipient).to.equal(totalBps, "Wrong royalty percentage");
+            expect(returnedReceiver).to.equal(newOwner.address, "Wrong recipient");
+            expect(returnedRoyaltyRecipient).to.equal(voucherInitValues.royaltyPercentage, "Wrong royalty percentage");
           });
 
           it("no recipients", async function () {
@@ -8167,18 +8155,57 @@ describe("IBosonExchangeHandler", function () {
             expect(returnedRoyaltyRecipient).to.equal(0, "Wrong royalty percentage");
           });
 
-          it("if treasury changes, offer does not have to be updated", async function () {
-            // update the treasury
-            seller.treasury = newOwner.address;
-            await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+          context("multiple recipients", async function () {
+            let recipients, bps, totalBps;
+            beforeEach(async function () {
+              // Update the offer, so it has multiple recipients in the protocol
+              const royaltyRecipientList = new RoyaltyRecipientList([
+                new RoyaltyRecipient(rando.address, "50", "other"),
+                new RoyaltyRecipient(newOwner.address, "50", "other2"),
+                new RoyaltyRecipient(treasuryDR.address, "50", "other3"),
+              ]);
+              await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
 
-            const [returnedReceiver, returnedRoyaltyRecipient] = await exchangeHandler.getEIP2981Royalties(
-              queryId,
-              isExchangeId
-            );
+              recipients = [rando.address, newOwner.address, ZeroAddress, treasuryDR.address];
+              bps = [100, 150, 500, 200];
+              totalBps = bps.reduce((a, b) => a + b, 0);
+            });
 
-            expect(returnedReceiver).to.equal(newOwner.address, "Wrong recipient");
-            expect(returnedRoyaltyRecipient).to.equal(voucherInitValues.royaltyPercentage, "Wrong royalty percentage");
+            it("multiple recipients - the first recipient gets the sum", async function () {
+              await offerHandler
+                .connect(assistant)
+                .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo(recipients, bps));
+
+              const [returnedReceiver, returnedRoyaltyRecipient] = await exchangeHandler.getEIP2981Royalties(
+                queryId,
+                isExchangeId
+              );
+
+              expect(returnedReceiver).to.equal(recipients[0], "Wrong recipient");
+              expect(returnedRoyaltyRecipient).to.equal(totalBps, "Wrong royalty percentage");
+            });
+
+            it("if treasury changes, offer does not have to be updated", async function () {
+              // make treasury the first recipient
+              [recipients[0], recipients[2]] = [recipients[2], recipients[0]];
+              [bps[0], bps[2]] = [bps[2], bps[0]];
+
+              await offerHandler
+                .connect(assistant)
+                .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo(recipients, bps));
+
+              // update the treasury
+              seller.treasury = newOwner.address;
+              await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+
+              const [returnedReceiver, returnedRoyaltyRecipient] = await exchangeHandler.getEIP2981Royalties(
+                queryId,
+                isExchangeId
+              );
+
+              expect(returnedReceiver).to.equal(newOwner.address, "Wrong recipient");
+              expect(returnedRoyaltyRecipient).to.equal(totalBps, "Wrong royalty percentage");
+            });
           });
         });
       });
@@ -8231,26 +8258,14 @@ describe("IBosonExchangeHandler", function () {
             expect(expectedRoyaltyInfo).to.eql(RoyaltyInfo.fromStruct(returnedRoyaltyInfo));
           });
 
-          it("multiple recipients - the first recipient gets the sum", async function () {
-            // Update the offer, so it has multiple recipients in the protocol
-            const royaltyRecipientList = new RoyaltyRecipientList([
-              new RoyaltyRecipient(rando.address, "50", "other"),
-              new RoyaltyRecipient(newOwner.address, "50", "other2"),
-              new RoyaltyRecipient(treasuryDR.address, "50", "other3"),
-            ]);
-            await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
-
-            const recipients = [rando.address, newOwner.address, ZeroAddress, treasuryDR.address];
-            const bps = ["100", "150", "500", "200"];
-
-            await offerHandler
-              .connect(assistant)
-              .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo(recipients, bps));
+          it("if treasury changes, offer does not have to be updated", async function () {
+            // update the treasury
+            seller.treasury = newOwner.address;
+            await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
             const returnedRoyaltyInfo = await exchangeHandler.getRoyalties(queryId, isExchangeId);
 
-            recipients[2] = seller.treasury; // getRoyalties replaces ZeroAddress with treasury
-            const expectedRoyaltyInfo = new RoyaltyInfo(recipients, bps);
+            const expectedRoyaltyInfo = new RoyaltyInfo([newOwner.address], [voucherInitValues.royaltyPercentage]);
             expect(expectedRoyaltyInfo).to.eql(RoyaltyInfo.fromStruct(returnedRoyaltyInfo));
           });
 
@@ -8269,15 +8284,45 @@ describe("IBosonExchangeHandler", function () {
             expect(expectedRoyaltyInfo).to.eql(RoyaltyInfo.fromStruct(returnedRoyaltyInfo));
           });
 
-          it("if treasury changes, offer does not have to be updated", async function () {
-            // update the treasury
-            seller.treasury = newOwner.address;
-            await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+          context("multiple recipients", async function () {
+            let recipients, bps;
 
-            const returnedRoyaltyInfo = await exchangeHandler.getRoyalties(queryId, isExchangeId);
+            beforeEach(async function () {
+              // Update the offer, so it has multiple recipients in the protocol
+              const royaltyRecipientList = new RoyaltyRecipientList([
+                new RoyaltyRecipient(rando.address, "50", "other"),
+                new RoyaltyRecipient(newOwner.address, "50", "other2"),
+                new RoyaltyRecipient(treasuryDR.address, "50", "other3"),
+              ]);
+              await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
 
-            const expectedRoyaltyInfo = new RoyaltyInfo([newOwner.address], [voucherInitValues.royaltyPercentage]);
-            expect(expectedRoyaltyInfo).to.eql(RoyaltyInfo.fromStruct(returnedRoyaltyInfo));
+              recipients = [rando.address, newOwner.address, ZeroAddress, treasuryDR.address];
+              bps = ["100", "150", "500", "200"];
+
+              await offerHandler
+                .connect(assistant)
+                .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo(recipients, bps));
+            });
+
+            it("multiple recipients - the first recipient gets the sum", async function () {
+              const returnedRoyaltyInfo = await exchangeHandler.getRoyalties(queryId, isExchangeId);
+
+              recipients[2] = seller.treasury; // getRoyalties replaces ZeroAddress with treasury
+              const expectedRoyaltyInfo = new RoyaltyInfo(recipients, bps);
+              expect(expectedRoyaltyInfo).to.eql(RoyaltyInfo.fromStruct(returnedRoyaltyInfo));
+            });
+
+            it("if treasury changes, offer does not have to be updated - multiple recipients", async function () {
+              // update the treasury
+              seller.treasury = newOwner.address;
+              await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+
+              const returnedRoyaltyInfo = await exchangeHandler.getRoyalties(queryId, isExchangeId);
+
+              recipients[2] = newOwner.address; // getRoyalties replaces ZeroAddress with treasury
+              const expectedRoyaltyInfo = new RoyaltyInfo(recipients, bps);
+              expect(expectedRoyaltyInfo).to.eql(RoyaltyInfo.fromStruct(returnedRoyaltyInfo));
+            });
           });
         });
       });
