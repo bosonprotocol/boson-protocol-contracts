@@ -271,7 +271,7 @@ describe("SellerHandler", function () {
 
         // Default royalty recipient is set
         const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
         ]);
         const royaltyRecipientList = RoyaltyRecipientList.fromStruct(
           await accountHandler.connect(rando).getRoyaltyRecipients(seller.id)
@@ -345,7 +345,7 @@ describe("SellerHandler", function () {
 
         // Default royalty recipient is set
         const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
         ]);
         const royaltyRecipientList = RoyaltyRecipientList.fromStruct(
           await accountHandler.connect(rando).getRoyaltyRecipients(seller.id)
@@ -416,7 +416,7 @@ describe("SellerHandler", function () {
 
         // Default royalty recipient is set
         const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
         ]);
         const royaltyRecipientList = RoyaltyRecipientList.fromStruct(
           await accountHandler.connect(rando).getRoyaltyRecipients(seller.id)
@@ -2073,7 +2073,7 @@ describe("SellerHandler", function () {
 
         // Default royalty recipient is set
         let expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
         ]);
         let royaltyRecipientList = RoyaltyRecipientList.fromStruct(
           await accountHandler.connect(rando).getRoyaltyRecipients(seller.id)
@@ -2094,7 +2094,7 @@ describe("SellerHandler", function () {
 
         // Default royalty recipient is set
         expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(seller2.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
         ]);
         royaltyRecipientList = RoyaltyRecipientList.fromStruct(
           await accountHandler.connect(rando).getRoyaltyRecipients(seller.id)
@@ -3692,7 +3692,7 @@ describe("SellerHandler", function () {
         royaltyRecipientListStruct = royaltyRecipientList.toStruct();
 
         expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
           ...royaltyRecipientList.royaltyRecipients,
         ]);
       });
@@ -3805,12 +3805,12 @@ describe("SellerHandler", function () {
           royaltyRecipientIds = [1, 0, 3];
           royaltyRecipientListUpdates = new RoyaltyRecipientList([
             new RoyaltyRecipient(other4.address, "400", "other1"), // change address and percentage, keep name
-            new RoyaltyRecipient(seller.treasury, "100", "itisme"), // change external id of default recipient
+            new RoyaltyRecipient(ZeroAddress, "100", "itisme"), // change external id of default recipient
             new RoyaltyRecipient(other3.address, "300", "other3"), // change nothing
           ]);
 
           expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-            new RoyaltyRecipient(seller.treasury, "100", "itisme"),
+            new RoyaltyRecipient(ZeroAddress, "100", "itisme"),
             new RoyaltyRecipient(other4.address, "400", "other1"),
             new RoyaltyRecipient(other2.address, "200", "other2"),
             new RoyaltyRecipient(other3.address, "300", "other3"),
@@ -3988,7 +3988,7 @@ describe("SellerHandler", function () {
 
           // Removal process: [0,1,2,3,4,5,6]->[0,1,2,3,4,5]->[0,1,2,3,5]->[0,1,2,5]->[0,5,2]
           expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-            new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT), // default
+            new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT), // default
             royaltyRecipientList.royaltyRecipients[4],
             royaltyRecipientList.royaltyRecipients[1],
           ]);

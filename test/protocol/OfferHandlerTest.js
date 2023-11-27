@@ -963,7 +963,7 @@ describe("IBosonOfferHandler", function () {
 
           it("Royalty recipient is not on seller's allow list", async function () {
             // Add royalty info to the offer
-            offer.royaltyInfo = new RoyaltyInfo([other.address, rando.address], ["150", "10"]);
+            offer.royaltyInfo = [new RoyaltyInfo([other.address, rando.address], ["150", "10"])];
 
             // Create an offer testing for the event
             await expect(

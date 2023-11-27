@@ -633,6 +633,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             isPreminted ? offerId : (_tokenId & type(uint128).max),
             isPreminted
         );
+
         royaltyAmount = (_salePrice * royaltyPercentage) / 10000;
     }
 

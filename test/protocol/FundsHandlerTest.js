@@ -6186,7 +6186,7 @@ describe("IBosonFundsHandler", function () {
               offer.price = "100";
               offer.sellerDeposit = "10";
               offer.buyerCancelPenalty = "30";
-              offer.royaltyInfo = new RoyaltyInfo([ZeroAddress], [fee.royalties]);
+              offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [fee.royalties])];
 
               // deposit to seller's pool
               await fundsHandler.connect(assistant).withdrawFunds(seller.id, [], []); // withdraw all, so it's easier to test

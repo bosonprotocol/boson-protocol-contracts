@@ -548,6 +548,7 @@ contract SellerHandlerFacet is SellerBase {
             (Seller storage seller, ) = validateAdminStatus(lookups, _sellerId);
             treasury = seller.treasury;
         }
+
         if (_royaltyRecipientIds.length != _royaltyRecipients.length) revert ArrayLengthMismatch();
 
         RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
@@ -556,27 +557,29 @@ contract SellerHandlerFacet is SellerBase {
         for (uint256 i = 0; i < _royaltyRecipientIds.length; ) {
             uint256 royaltyRecipientId = _royaltyRecipientIds[i];
 
-            if (royaltyRecipientId >= royaltyRecipientsLength || royaltyRecipientId == 0)
-                revert InvalidRoyaltyRecipientId();
+            if (royaltyRecipientId >= royaltyRecipientsLength) revert InvalidRoyaltyRecipientId();
 
             if (_royaltyRecipients[i].wallet == treasury) revert RecipientNotUnique();
 
-            uint256 royaltyRecipientIndex = lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
-                _royaltyRecipients[i].wallet
-            ];
-            if (royaltyRecipientIndex == 0) {
-                // update index
-                lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][_royaltyRecipients[i].wallet] =
-                    royaltyRecipientId +
-                    1;
-                delete lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
-                    royaltyRecipients[royaltyRecipientId].wallet
-                ];
+            if (royaltyRecipientId == 0) {
+                if (_royaltyRecipients[i].wallet != address(0)) revert WrongDefaultRecipient();
             } else {
-                // If "updating" the existing recipient with itself, do nothing
-                if (royaltyRecipientIndex - 1 != royaltyRecipientId) revert RecipientNotUnique();
-            }
+                uint256 royaltyRecipientIndex = lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
+                    _royaltyRecipients[i].wallet
+                ];
 
+                if (royaltyRecipientIndex == 0) {
+                    // update index
+                    lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][_royaltyRecipients[i].wallet] =
+                        royaltyRecipientId +
+                        1;
+                    delete lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
+                        royaltyRecipients[royaltyRecipientId].wallet
+                    ];
+                } else {
+                    if (royaltyRecipientIndex - 1 != royaltyRecipientId) revert RecipientNotUnique();
+                }
+            }
             if (_royaltyRecipients[i].minRoyaltyPercentage > protocolLimits().maxRoyaltyPercentage)
                 revert InvalidRoyaltyPercentage();
 

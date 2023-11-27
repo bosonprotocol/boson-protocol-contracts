@@ -413,6 +413,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Create an offer with new seller
         const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+        offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
         // Create the offer
         await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
@@ -593,6 +594,7 @@ describe("IBosonExchangeHandler", function () {
         const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
         offerDurations.voucherValid = "0";
         offerDates.voucherRedeemableUntil = offerDates.validUntil; // all vouchers expire when offer expires
+        offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
         // Check if domain entities are valid
         expect(offer.isValid()).is.true;
@@ -649,6 +651,7 @@ describe("IBosonExchangeHandler", function () {
         // Create an offer with unlimited quantity
         let { offer, ...details } = await mockOffer();
         offer.quantityAvailable = MaxUint256.toString();
+        offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
         // Delete unnecessary field
         delete details.offerFees;
@@ -684,6 +687,7 @@ describe("IBosonExchangeHandler", function () {
         const mo = await mockOffer();
         const { offerDates, offerDurations } = mo;
         offer = mo.offer;
+        offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = "0";
         // set a dummy token address otherwise protocol token (zero address) and offer token will be the same and we will get the error AGENT_FEE_AMOUNT_TOO_HIGH
         offer.exchangeToken = await foreign20.getAddress();
@@ -1032,6 +1036,7 @@ describe("IBosonExchangeHandler", function () {
         // Create a new offer
         offerId = await offerHandler.getNextOfferId();
         const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+        offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
         // Create the offer
         offer.quantityAvailable = "10";
@@ -3492,6 +3497,7 @@ describe("IBosonExchangeHandler", function () {
 
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
           offer.quantityAvailable = "2";
+          offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
           // Create a new offer
           await offerHandler
@@ -3521,6 +3527,8 @@ describe("IBosonExchangeHandler", function () {
         it("Should transfer the twin even if supplyAvailable is equal to amount", async function () {
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
           offer.quantityAvailable = "1";
+          offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
+          offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
           // Create a new offer
           await offerHandler
@@ -3600,6 +3608,7 @@ describe("IBosonExchangeHandler", function () {
 
             // Create a new offer
             const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+            offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
             await offerHandler
               .connect(assistant)
@@ -4039,6 +4048,7 @@ describe("IBosonExchangeHandler", function () {
 
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
           offer.quantityAvailable = "1";
+          offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
           // Create a new offer
           await offerHandler
@@ -4181,6 +4191,7 @@ describe("IBosonExchangeHandler", function () {
             // Create a new offer
             const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
             offer.quantityAvailable = "10";
+            offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
             await offerHandler
               .connect(assistant)
@@ -4285,6 +4296,7 @@ describe("IBosonExchangeHandler", function () {
 
             const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
             offer.quantityAvailable = "2";
+            offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
             // Create a new offer
             await offerHandler
@@ -4753,6 +4765,7 @@ describe("IBosonExchangeHandler", function () {
 
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
           offer.quantityAvailable = "2";
+          offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
           // Create a new offer
           await offerHandler
@@ -4782,6 +4795,7 @@ describe("IBosonExchangeHandler", function () {
         it("Should transfer the twin even if supplyAvailable is equal to amount", async function () {
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
           offer.quantityAvailable = "1";
+          offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
           // Create a new offer
           await offerHandler
@@ -5245,6 +5259,7 @@ describe("IBosonExchangeHandler", function () {
 
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
           offer.quantityAvailable = "1";
+          offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
           // Create a new offer
           await offerHandler
@@ -5344,6 +5359,7 @@ describe("IBosonExchangeHandler", function () {
 
             const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
             offer.quantityAvailable = "2";
+            offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
             // Create a new offer
             await offerHandler
@@ -6667,6 +6683,7 @@ describe("IBosonExchangeHandler", function () {
         offer = mo.offer;
         offer.id = offerId = "2";
         offer.price = offer.buyerCancelPenalty = offer.sellerDeposit = "0";
+        offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
         // set a dummy token address otherwise protocol token (zero address) and offer token will be the same and we will get the error AGENT_FEE_AMOUNT_TOO_HIGH
         offer.exchangeToken = await foreign20.getAddress();
         disputeResolverId = agentId = "0";
@@ -6928,6 +6945,7 @@ describe("IBosonExchangeHandler", function () {
           offer = mo.offer;
           offer.quantityAvailable = "10";
           offer.id = offerId = "2";
+          offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
           disputeResolverId = mo.disputeResolverId;
 
           // Update voucherRedeemableFrom
@@ -7269,6 +7287,7 @@ describe("IBosonExchangeHandler", function () {
         const { offerDates, offerDurations } = mo;
         offer = mo.offer;
         offer.id = offerId = "2";
+        offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
         disputeResolverId = mo.disputeResolverId;
 
         // Update voucherRedeemableFrom

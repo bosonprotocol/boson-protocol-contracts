@@ -641,7 +641,7 @@ describe("IBosonOrchestrationHandler", function () {
           );
 
         const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
         ]);
 
         await expect(tx)
@@ -707,7 +707,7 @@ describe("IBosonOrchestrationHandler", function () {
           );
 
         const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
         ]);
 
         await expect(tx)
@@ -1367,7 +1367,7 @@ describe("IBosonOrchestrationHandler", function () {
             );
 
           const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-            new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+            new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
           ]);
 
           await expect(tx)
@@ -5716,7 +5716,7 @@ describe("IBosonOrchestrationHandler", function () {
           );
 
         const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
         ]);
 
         await expect(tx)
@@ -6208,7 +6208,7 @@ describe("IBosonOrchestrationHandler", function () {
             );
 
           const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-            new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+            new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
           ]);
 
           await expect(tx)
@@ -6550,7 +6550,7 @@ describe("IBosonOrchestrationHandler", function () {
           );
 
         const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
         ]);
 
         await expect(tx)
@@ -7114,7 +7114,7 @@ describe("IBosonOrchestrationHandler", function () {
             );
 
           const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-            new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+            new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
           ]);
 
           await expect(tx)
@@ -7527,7 +7527,7 @@ describe("IBosonOrchestrationHandler", function () {
           );
 
         const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
         ]);
 
         await expect(tx)
@@ -8021,7 +8021,7 @@ describe("IBosonOrchestrationHandler", function () {
             );
 
           const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-            new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+            new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
           ]);
 
           await expect(tx)
@@ -8161,7 +8161,7 @@ describe("IBosonOrchestrationHandler", function () {
             );
 
           const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-            new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+            new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
           ]);
 
           await expect(tx)

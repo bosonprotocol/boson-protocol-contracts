@@ -217,7 +217,7 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
       // create offer
       const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
       offer.quantityAvailable = "10";
-      offer.royaltyInfo = new RoyaltyInfo([new RoyaltyInfo([other1.address], [100])]);
+      offer.royaltyInfo = [new RoyaltyInfo([new RoyaltyInfo([other1.address], [100])])];
       royaltyInfo = offer.royaltyInfo;
       offerPrice = offer.price;
       const offerStruct = offer.toStruct();

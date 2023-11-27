@@ -170,6 +170,8 @@ interface BosonErrors {
     error CannotRemoveDefaultRecipient();
     // Supplying to many Royalty info structs
     error InvalidRoyaltyInfo();
+    // Trying to change the default recipient address (treasury)
+    error WrongDefaultRecipient();
 
     // Group related
     // Group does not exist
