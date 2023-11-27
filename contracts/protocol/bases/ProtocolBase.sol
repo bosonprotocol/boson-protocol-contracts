@@ -745,13 +745,14 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
         }
 
         // not using fetchOffer to reduce gas costs (limitation of royalty registry)
-        Offer storage offer;
-        offer = protocolEntities().offers[_queryId];
-        (, Seller storage seller, ) = fetchSeller(offer.sellerId);
-        treasury = seller.treasury;
-        royaltyInfoAll = protocolEntities().offers[_queryId].royaltyInfo;
+        ProtocolLib.ProtocolEntities storage pe = protocolEntities();
+        Offer storage offer = pe.offers[_queryId];
+        treasury = pe.sellers[offer.sellerId].treasury;
+        royaltyInfoAll = pe.offers[_queryId].royaltyInfo;
 
-        royaltyInfoIndex = royaltyInfoAll.length - 1;
+        uint256 royaltyInfoLength = royaltyInfoAll.length;
+        if (royaltyInfoLength == 0) revert NoSuchOffer();
+        royaltyInfoIndex = royaltyInfoLength - 1;
         // get the last royalty info
         return (royaltyInfoAll[royaltyInfoIndex], royaltyInfoIndex, treasury);
     }

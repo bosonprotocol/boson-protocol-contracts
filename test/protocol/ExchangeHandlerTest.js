@@ -34,6 +34,7 @@ const GatingType = require("../../scripts/domain/GatingType");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo");
+const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
@@ -267,7 +268,7 @@ describe("IBosonExchangeHandler", function () {
 
       // VoucherInitValues
       seller1Treasury = seller.treasury;
-      royaltyPercentage1 = "5"; // 0%
+      royaltyPercentage1 = "500"; // 5%
       voucherInitValues = mockVoucherInitValues();
       voucherInitValues.royaltyPercentage = royaltyPercentage1;
       expect(voucherInitValues.isValid()).is.true;
@@ -8090,6 +8091,117 @@ describe("IBosonExchangeHandler", function () {
           await expect(
             exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, 0)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
+        });
+      });
+    });
+
+    context("👉 getEIP2981Royalties()", async function () {
+      const isExchangeId = [true, false];
+
+      isExchangeId.forEach((isExchangeId) => {
+        context(`Query by ${isExchangeId ? "exchange" : "offer"} id`, async function () {
+          let queryId;
+          beforeEach(async function () {
+            if (isExchangeId) {
+              // commit to offer to get a valid exchange
+              // commit twice, so offerId and exchangeId in tests are different
+              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+              queryId = "2";
+            } else {
+              queryId = offerId;
+            }
+          });
+
+          it("treasury is the only recipient", async function () {
+            const [returnedReceiver, returnedRoyaltyRecipient] = await exchangeHandler.getEIP2981Royalties(
+              queryId,
+              isExchangeId
+            );
+
+            expect(returnedReceiver).to.equal(treasury.address, "Wrong recipient");
+            expect(returnedRoyaltyRecipient).to.equal(voucherInitValues.royaltyPercentage, "Wrong royalty percentage");
+          });
+
+          it("multiple recipients - the first recipient gets the sum", async function () {
+            // Update the offer, so it has multiple recipients in the protocol
+            const royaltyRecipientList = new RoyaltyRecipientList([
+              new RoyaltyRecipient(rando.address, "50", "other"),
+              new RoyaltyRecipient(newOwner.address, "50", "other2"),
+              new RoyaltyRecipient(treasuryDR.address, "50", "other3"),
+            ]);
+            await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+
+            const recipients = [rando.address, newOwner.address, ZeroAddress, treasuryDR.address];
+            const bps = [100, 150, 500, 200];
+
+            await offerHandler
+              .connect(assistant)
+              .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo(recipients, bps));
+
+            const [returnedReceiver, returnedRoyaltyRecipient] = await exchangeHandler.getEIP2981Royalties(
+              queryId,
+              isExchangeId
+            );
+
+            const totalBps = bps.reduce((a, b) => a + b, 0);
+            expect(returnedReceiver).to.equal(recipients[0], "Wrong recipient");
+            expect(returnedRoyaltyRecipient).to.equal(totalBps, "Wrong royalty percentage");
+          });
+
+          it("no recipients", async function () {
+            // Update the offer, so it doesn't have any recipients in the protocol
+            const recipients = [];
+            const bps = [];
+
+            await offerHandler
+              .connect(assistant)
+              .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo(recipients, bps));
+
+            const [returnedReceiver, returnedRoyaltyRecipient] = await exchangeHandler.getEIP2981Royalties(
+              queryId,
+              isExchangeId
+            );
+
+            expect(returnedReceiver).to.equal(ZeroAddress, "Wrong recipient");
+            expect(returnedRoyaltyRecipient).to.equal(0, "Wrong royalty percentage");
+          });
+
+          it("if treasury changes, offer does not have to be updated", async function () {
+            // update the treasury
+            seller.treasury = newOwner.address;
+            await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+
+            const [returnedReceiver, returnedRoyaltyRecipient] = await exchangeHandler.getEIP2981Royalties(
+              queryId,
+              isExchangeId
+            );
+
+            expect(returnedReceiver).to.equal(newOwner.address, "Wrong recipient");
+            expect(returnedRoyaltyRecipient).to.equal(voucherInitValues.royaltyPercentage, "Wrong royalty percentage");
+          });
+        });
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("offer does not exist", async function () {
+          // Update the offer, so it doesn't have any recipients in the protocol
+          offerId = "999";
+
+          await expect(exchangeHandler.getEIP2981Royalties(offerId, false)).to.be.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.NO_SUCH_OFFER
+          );
+        });
+
+        it("exchange does not exist", async function () {
+          // If no commit happens, exchangeId 1 does not exist
+          exchangeId = "1";
+
+          await expect(exchangeHandler.getEIP2981Royalties(exchangeId, true)).to.be.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.NO_SUCH_EXCHANGE
+          );
         });
       });
     });
