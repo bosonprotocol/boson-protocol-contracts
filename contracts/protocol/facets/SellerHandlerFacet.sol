@@ -155,29 +155,23 @@ contract SellerHandlerFacet is SellerBase {
                 if (_seller.treasury == address(0)) revert InvalidAddress();
 
                 // Check if new treasury is already a royalty recipient
-                uint256 royaltyRecipientId = lookups.royaltyRecipientIndexBySellerAndRecipient[_seller.id][
-                    _seller.treasury
-                ];
+                mapping(address => uint256) storage royaltyRecipientIndexBySellerAndRecipient = lookups
+                    .royaltyRecipientIndexBySellerAndRecipient[_seller.id];
+                uint256 royaltyRecipientId = royaltyRecipientIndexBySellerAndRecipient[_seller.treasury];
 
                 RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_seller.id];
                 if (royaltyRecipientId != 0) {
                     // If the new treasury is already a royalty recipient, remove it
-                    // TODO: check if can be refactored to use with removeRoyaltyRecipient
+                    royaltyRecipientId--; // royaltyRecipientId is 1-based, so we need to decrement it to get the index
                     uint256 lastRoyaltyRecipientsId = royaltyRecipients.length - 1;
                     if (royaltyRecipientId != lastRoyaltyRecipientsId) {
                         royaltyRecipients[royaltyRecipientId] = royaltyRecipients[lastRoyaltyRecipientsId];
-                        lookups.royaltyRecipientIndexBySellerAndRecipient[_seller.id][
-                            royaltyRecipients[royaltyRecipientId].wallet
-                        ] = royaltyRecipientId;
+                        royaltyRecipientIndexBySellerAndRecipient[royaltyRecipients[royaltyRecipientId].wallet] =
+                            royaltyRecipientId +
+                            1;
                     }
-                    delete royaltyRecipients[lastRoyaltyRecipientsId];
+                    royaltyRecipients.pop();
                 }
-
-                // Update treasury
-                seller.treasury = _seller.treasury;
-
-                // Update default royalty recipient
-                lookups.royaltyRecipientsBySeller[_seller.id][0].wallet = _seller.treasury;
 
                 // Update treasury
                 seller.treasury = _seller.treasury;

@@ -716,7 +716,7 @@ describe("SellerHandler", function () {
 
           // Attempt to create a seller expecting revert
           await expect(
-            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
+            accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
@@ -725,7 +725,7 @@ describe("SellerHandler", function () {
 
           // Attempt to Create a seller, expecting revert
           await expect(
-            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
+            accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues)
           ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.MUST_BE_ACTIVE);
         });
 
@@ -985,6 +985,15 @@ describe("SellerHandler", function () {
           await expect(
             accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.CLONE_CREATION_FAILED);
+        });
+
+        it("Royalty percentage is above the limit", async function () {
+          voucherInitValues.royaltyPercentage = "50000"; //50%
+
+          // Attempt to Create a seller, expecting revert
+          await expect(
+            accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues)
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
         });
       });
     });
@@ -2221,6 +2230,42 @@ describe("SellerHandler", function () {
         await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
           .to.emit(accountHandler, "SellerUpdatePending")
           .withArgs(seller.id, pendingSellerUpdateStruct, emptyAuthTokenStruct, admin.address);
+      });
+
+      it("update treasury, when it's already one of the royalty recipients", async function () {
+        // add some royalty recipients
+        const newRoyaltyRecipients = new RoyaltyRecipientList([
+          new RoyaltyRecipient(other1.address, "100", "other1"),
+          new RoyaltyRecipient(other2.address, "200", "other2"),
+          new RoyaltyRecipient(other3.address, "300", "other3"),
+        ]);
+        await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, newRoyaltyRecipients.toStruct());
+
+        // Default royalty recipient is set
+        let expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          ...newRoyaltyRecipients.royaltyRecipients,
+        ]);
+
+        let royaltyRecipientList = RoyaltyRecipientList.fromStruct(
+          await accountHandler.connect(rando).getRoyaltyRecipients(seller.id)
+        );
+        expect(royaltyRecipientList).to.deep.equal(expectedRoyaltyRecipientList, "Royalty recipient list mismatch");
+
+        // Update seller's treasury
+        seller.treasury = other1.address;
+        await accountHandler.connect(assistant).updateSeller(seller, emptyAuthToken);
+
+        // Default royalty recipient is set
+        expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          new RoyaltyRecipient(other3.address, "300", "other3"),
+          new RoyaltyRecipient(other2.address, "200", "other2"),
+        ]);
+        royaltyRecipientList = RoyaltyRecipientList.fromStruct(
+          await accountHandler.connect(rando).getRoyaltyRecipients(seller.id)
+        );
+        expect(royaltyRecipientList).to.deep.equal(expectedRoyaltyRecipientList, "Royalty recipient list mismatch");
       });
 
       context("💔 Revert Reasons", async function () {
