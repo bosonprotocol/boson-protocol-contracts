@@ -48,7 +48,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
      * - Royalty recipient is not on seller's allow list
-     * - Royalty percentage is less that the value decided by the admin
+     * - Royalty percentage is less than the value decided by the admin
      * - Total royalty percentage is more than max royalty percentage
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
@@ -97,7 +97,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
      *   - Royalty recipient is not on seller's allow list
-     *   - Royalty percentage is less that the value decided by the admin
+     *   - Royalty percentage is less than the value decided by the admin
      *   - Total royalty percentage is more than max royalty percentage
      *
      * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false

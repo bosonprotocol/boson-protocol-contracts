@@ -528,7 +528,7 @@ interface IBosonOrchestrationHandler is
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
      *   - Royalty recipient is not on seller's allow list
-     *   - Royalty percentage is less that the value decided by the admin
+     *   - Royalty percentage is less than the value decided by the admin
      *   - Total royalty percentage is more than max royalty percentage
      *   - Collection does not exist
      * - When creating twin if
@@ -596,7 +596,7 @@ interface IBosonOrchestrationHandler is
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
      *   - Royalty recipient is not on seller's allow list
-     *   - Royalty percentage is less that the value decided by the admin
+     *   - Royalty percentage is less than the value decided by the admin
      *   - Total royalty percentage is more than max royalty percentage
      *   - Collection does not exist
      * - Condition includes invalid combination of parameters
@@ -664,7 +664,7 @@ interface IBosonOrchestrationHandler is
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
      *   - Royalty recipient is not on seller's allow list
-     *   - Royalty percentage is less that the value decided by the admin
+     *   - Royalty percentage is less than the value decided by the admin
      *   - Total royalty percentage is more than max royalty percentage
      *   - Collection does not exist
      * - Condition includes invalid combination of parameters
@@ -753,7 +753,7 @@ interface IBosonOrchestrationHandler is
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
      *   - Royalty recipient is not on seller's allow list
-     *   - Royalty percentage is less that the value decided by the admin
+     *   - Royalty percentage is less than the value decided by the admin
      *   - Total royalty percentage is more than max royalty percentage
      *   - Collection does not exist
      * - Condition includes invalid combination of parameters
@@ -835,7 +835,7 @@ interface IBosonOrchestrationHandler is
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
      *   - Royalty recipient is not on seller's allow list
-     *   - Royalty percentage is less that the value decided by the admin
+     *   - Royalty percentage is less than the value decided by the admin
      *   - Total royalty percentage is more than max royalty percentage
      *   - Collection does not exist
      * - Condition includes invalid combination of parameters
@@ -921,7 +921,7 @@ interface IBosonOrchestrationHandler is
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
      *   - Royalty recipient is not on seller's allow list
-     *   - Royalty percentage is less that the value decided by the admin
+     *   - Royalty percentage is less than the value decided by the admin
      *   - Total royalty percentage is more than max royalty percentage
      *   - Collection does not exist
      * - When creating twin if
@@ -1011,7 +1011,7 @@ interface IBosonOrchestrationHandler is
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
      *   - Royalty recipient is not on seller's allow list
-     *   - Royalty percentage is less that the value decided by the admin
+     *   - Royalty percentage is less than the value decided by the admin
      *   - Total royalty percentage is more than max royalty percentage
      *   - Collection does not exist
      * - When creating twin if
@@ -1105,7 +1105,7 @@ interface IBosonOrchestrationHandler is
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
      *   - Royalty recipient is not on seller's allow list
-     *   - Royalty percentage is less that the value decided by the admin
+     *   - Royalty percentage is less than the value decided by the admin
      *   - Total royalty percentage is more than max royalty percentage
      *   - Collection does not exist
      * - Condition includes invalid combination of parameters
@@ -1200,7 +1200,7 @@ interface IBosonOrchestrationHandler is
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
      *   - Royalty recipient is not on seller's allow list
-     *   - Royalty percentage is less that the value decided by the admin
+     *   - Royalty percentage is less than the value decided by the admin
      *   - Total royalty percentage is more than max royalty percentage
      *   - Collection does not exist
      * - Condition includes invalid combination of parameters

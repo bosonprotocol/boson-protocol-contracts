@@ -974,7 +974,7 @@ describe("IBosonOfferHandler", function () {
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_RECIPIENT);
           });
 
-          it("Royalty percentage is less that the value decided by the admin", async function () {
+          it("Royalty percentage is less than the value decided by the admin", async function () {
             // Add royalty info to the offer
             offer.royaltyInfo = [new RoyaltyInfo([other.address, other2.address], ["90", "250"])];
 
@@ -2975,7 +2975,7 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_RECIPIENT);
         });
 
-        it("Royalty percentage is less that the value decided by the admin", async function () {
+        it("Royalty percentage is less than the value decided by the admin", async function () {
           // Add royalty info to the offer
           offers[3].royaltyInfo = [new RoyaltyInfo([other.address, other2.address], ["40", "250"])];
 
