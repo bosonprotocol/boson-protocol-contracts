@@ -222,6 +222,7 @@ setupEnvironment["maxOffersPerBatch"] = async function (offerCount = 10) {
   // Create a seller
   // Required constructor params
   const agentId = "0"; // agent id is optional while creating an offer
+  const offerFeeLimit = MaxUint256;
 
   const seller1 = mockSeller(
     await sellerWallet1.getAddress(),
@@ -274,10 +275,10 @@ setupEnvironment["maxOffersPerBatch"] = async function (offerCount = 10) {
     // Create the offers for voiding/extending
     await offerHandler
       .connect(sellerWallet2)
-      .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+      .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit);
     await offerHandler
       .connect(sellerWallet3)
-      .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+      .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit);
   }
 
   const offerIds = [...Array(offerCount + 1).keys()].slice(1);
@@ -312,6 +313,7 @@ setupEnvironment["maxOffersPerGroup"] = async function (offerCount = 10) {
   // Required constructor params
   const groupId = "1"; // argument sent to contract for createSeller will be ignored
   const agentId = "0"; // agent id is optional while creating an offer
+  const offerFeeLimit = MaxUint256;
 
   const seller1 = mockSeller(
     await sellerWallet1.getAddress(),
@@ -360,13 +362,13 @@ setupEnvironment["maxOffersPerGroup"] = async function (offerCount = 10) {
     // Create the offer
     await offerHandler
       .connect(sellerWallet1)
-      .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+      .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit);
     await offerHandler
       .connect(sellerWallet2)
-      .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+      .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit);
     await offerHandler
       .connect(sellerWallet3)
-      .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+      .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit);
   }
 
   const offerIds = [...Array(offerCount + 1).keys()].slice(1);
@@ -407,6 +409,7 @@ setupEnvironment["maxOffersPerBundle"] = async function (offerCount = 10) {
   // Create a seller
   // Required constructor params
   const agentId = "0"; // agent id is optional while creating an offer
+  const offerFeeLimit = MaxUint256;
 
   const seller1 = mockSeller(
     await sellerWallet1.getAddress(),
@@ -437,7 +440,7 @@ setupEnvironment["maxOffersPerBundle"] = async function (offerCount = 10) {
     // Create the offer
     await offerHandler
       .connect(sellerWallet1)
-      .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+      .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit);
   }
 
   // Create a valid twin.
@@ -473,6 +476,7 @@ setupEnvironment["maxTwinsPerBundle"] = async function (twinCount = 10) {
   // Create a seller
   // Required constructor params
   const agentId = "0"; // agent id is optional while creating an offer
+  const offerFeeLimit = MaxUint256;
 
   const seller1 = mockSeller(
     await sellerWallet1.getAddress(),
@@ -512,7 +516,9 @@ setupEnvironment["maxTwinsPerBundle"] = async function (twinCount = 10) {
   const { offer, offerDates, offerDurations } = await mockOffer();
 
   // Create the offer
-  await offerHandler.connect(sellerWallet1).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+  await offerHandler
+    .connect(sellerWallet1)
+    .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit);
 
   const offerIds = ["1"];
   const twinIds = [...Array(twinCount + 1).keys()].slice(1);
@@ -536,6 +542,7 @@ setupEnvironment["maxExchangesPerBatch"] = async function (exchangesCount = 10) 
   // Create a seller
   // Required constructor params
   const agentId = "0"; // agent id is optional while creating an offer
+  const offerFeeLimit = MaxUint256;
 
   const seller1 = mockSeller(
     await sellerWallet1.getAddress(),
@@ -563,7 +570,9 @@ setupEnvironment["maxExchangesPerBatch"] = async function (exchangesCount = 10) 
   const { offer, offerDates, offerDurations } = await mockOffer();
   offer.quantityAvailable = exchangesCount;
   // Create the offer
-  await offerHandler.connect(sellerWallet1).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+  await offerHandler
+    .connect(sellerWallet1)
+    .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit);
 
   // Deposit seller funds so the commit will succeed
   const sellerPool = BigInt(offer.price).mul(exchangesCount);
@@ -602,6 +611,7 @@ setupEnvironment["maxDisputesPerBatch"] = async function (exchangesCount = 10) {
   // Create a seller
   // Required constructor params
   const agentId = "0"; // agent id is optional while creating an offer
+  const offerFeeLimit = MaxUint256;
 
   const seller1 = mockSeller(
     await sellerWallet1.getAddress(),
@@ -629,7 +639,9 @@ setupEnvironment["maxDisputesPerBatch"] = async function (exchangesCount = 10) {
   const { offer, offerDates, offerDurations } = await mockOffer();
   offer.quantityAvailable = exchangesCount;
   // Create the offer
-  await offerHandler.connect(sellerWallet1).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+  await offerHandler
+    .connect(sellerWallet1)
+    .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit);
 
   // Deposit seller funds so the commit will succeed
   const sellerPool = BigInt(offer.price).mul(exchangesCount);
@@ -672,6 +684,7 @@ setupEnvironment["maxTokensPerWithdrawal"] = async function (tokenCount = 10) {
   // Create a seller
   // Required constructor params
   const agentId = "0"; // agent id is optional while creating an offer
+  const offerFeeLimit = MaxUint256;
 
   const seller1 = mockSeller(
     await sellerWallet1.getAddress(),
@@ -722,7 +735,7 @@ setupEnvironment["maxTokensPerWithdrawal"] = async function (tokenCount = 10) {
     // create the offer
     await offerHandler
       .connect(sellerWallet1)
-      .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+      .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit);
 
     // Commit to offer, creating a new exchange
     await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), i);
@@ -760,6 +773,7 @@ setupEnvironment["maxPremintedVouchers"] = async function (tokenCount = 10) {
   // Create a seller
   // Required constructor params
   const agentId = "0"; // agent id is optional while creating an offer
+  const offerFeeLimit = MaxUint256;
 
   const seller1 = mockSeller(
     await sellerWallet1.getAddress(),
@@ -786,7 +800,9 @@ setupEnvironment["maxPremintedVouchers"] = async function (tokenCount = 10) {
   // create the offer
   const { offer, offerDates, offerDurations } = await mockOffer();
   offer.quantityAvailable = MaxUint256;
-  await offerHandler.connect(sellerWallet1).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+  await offerHandler
+    .connect(sellerWallet1)
+    .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit);
 
   // reserve range
   let length = BigInt(2).pow(128).sub(1);

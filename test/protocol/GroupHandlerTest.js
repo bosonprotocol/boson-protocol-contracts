@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { ZeroAddress, getSigners, parseUnits, getContractFactory } = ethers;
+const { ZeroAddress, getSigners, parseUnits, getContractFactory, MaxUint256 } = ethers;
 const { assert, expect } = require("chai");
 
 const Group = require("../../scripts/domain/Group");
@@ -46,6 +46,7 @@ describe("IBosonGroupHandler", function () {
   let emptyAuthToken;
   let agentId;
   let snapshotId;
+  let offerFeeLimit;
 
   before(async function () {
     accountId.next(true);
@@ -103,6 +104,7 @@ describe("IBosonGroupHandler", function () {
       // Required constructor params
       groupId = "1"; // argument sent to contract for createSeller will be ignored
       agentId = "0"; // agent id is optional while creating an offer
+      offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
 
       // Create a valid seller, then set fields in tests directly
       seller = mockSeller(
@@ -169,7 +171,7 @@ describe("IBosonGroupHandler", function () {
         // Create the offer
         await offerHandler
           .connect(assistant)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
       }
 
       // Required constructor params for Group
@@ -319,7 +321,9 @@ describe("IBosonGroupHandler", function () {
           );
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
-          await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6
+          await offerHandler
+            .connect(rando)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit); // creates an offer with id 6
 
           // add offer belonging to another seller
           group.offerIds = ["2", "6"];
@@ -694,7 +698,9 @@ describe("IBosonGroupHandler", function () {
           );
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
-          await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6
+          await offerHandler
+            .connect(rando)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit); // creates an offer with id 6
 
           // add offer belonging to another seller
           offerIdsToAdd = ["1", "6"];
@@ -890,7 +896,7 @@ describe("IBosonGroupHandler", function () {
           // create an offer and add it to another group
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
           group.offerIds = ["6"];
           await groupHandler.connect(assistant).createGroup(group, condition);
 

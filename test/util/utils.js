@@ -111,7 +111,7 @@ function compareArgs(eventArgs, args) {
  * Example
  * 
  *  await expect(
-        offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
+        offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit)
       )
         .to.emit(offerHandler, "OfferCreated")
         .withArgs(

@@ -52,6 +52,7 @@ describe("IBosonBundleHandler", function () {
   let emptyAuthToken;
   let agentId;
   let snapshotId;
+  let offerFeeLimit;
 
   before(async function () {
     // get interface Ids
@@ -129,6 +130,7 @@ describe("IBosonBundleHandler", function () {
       // create a seller
       // Required constructor params
       agentId = "0"; // agent id is optional while creating an offer
+      offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
 
       // Create a valid seller, then set fields in tests directly
       seller = mockSeller(
@@ -187,7 +189,7 @@ describe("IBosonBundleHandler", function () {
       for (let i = 0; i < 5; i++) {
         await offerHandler
           .connect(assistant)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
       }
 
       // The first bundle id
@@ -307,11 +309,11 @@ describe("IBosonBundleHandler", function () {
 
         await offerHandler
           .connect(assistant)
-          .createOffer(newOffer, offerDates, offerDurations, disputeResolverId, agentId);
+          .createOffer(newOffer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
         await offerHandler
           .connect(assistant)
-          .createOffer(newOffer2, offerDates, offerDurations, disputeResolverId, agentId);
+          .createOffer(newOffer2, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
         // create a twin with almost unlimited supply
         twin = mockTwin(await bosonToken.getAddress());
@@ -402,7 +404,7 @@ describe("IBosonBundleHandler", function () {
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           const tx = await offerHandler
             .connect(rando)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit); // creates an offer with id 6
           const txReceipt = await tx.wait();
           const event = getEvent(txReceipt, offerHandler, "OfferCreated");
           assert.equal(event.offerId.toString(), expectedNewOfferId, "Offer Id is not 6");
@@ -567,7 +569,7 @@ describe("IBosonBundleHandler", function () {
 
           await offerHandler
             .connect(assistant)
-            .createOffer(newOffer, offerDates, offerDurations, disputeResolverId, agentId);
+            .createOffer(newOffer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
           bundle.offerIds = [expectedNewOfferId];
           await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWith(

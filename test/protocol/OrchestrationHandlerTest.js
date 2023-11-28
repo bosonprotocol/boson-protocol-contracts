@@ -114,6 +114,7 @@ describe("IBosonOrchestrationHandler", function () {
   let protocolDiamondAddress;
   let snapshotId;
   let beaconProxyAddress;
+  let offerFeeLimit;
 
   before(async function () {
     // Reset the accountId iterator
@@ -291,6 +292,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       // Set agent id as zero as it is optional for create Offer.
       agentId = "0";
+      offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
     });
 
     afterEach(async function () {
@@ -320,7 +322,7 @@ describe("IBosonOrchestrationHandler", function () {
         // create an offer with erc20 exchange token
         await offerHandler
           .connect(assistant)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
         // mint tokens to buyer and approve the protocol
         buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
@@ -346,7 +348,8 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolver.id,
             emptyAuthToken,
             voucherInitValues,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         // buyer escalation deposit used in multiple tests
@@ -607,7 +610,8 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolver.id,
             emptyAuthToken,
             voucherInitValues,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         expectedCloneAddress = calculateCloneAddress(
@@ -663,7 +667,8 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolver.id,
             authToken,
             voucherInitValues,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         expectedCloneAddress = calculateCloneAddress(
@@ -720,7 +725,8 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolver.id,
             authToken,
             voucherInitValues,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         // Get the seller as a struct
@@ -812,7 +818,8 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolver.id,
             authToken,
             voucherInitValues,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         // Get the collections information
@@ -877,7 +884,8 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolver.id,
             authToken,
             voucherInitValues,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         // Get the collections information
@@ -940,7 +948,8 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolver.id,
             emptyAuthToken,
             voucherInitValues,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         await expect(tx)
@@ -1000,7 +1009,8 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolver.id,
               emptyAuthToken,
               voucherInitValues,
-              agentId
+              agentId,
+              offerFeeLimit
             )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -1033,7 +1043,8 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolver.id,
               emptyAuthToken,
               voucherInitValues,
-              agentId
+              agentId,
+              offerFeeLimit
             )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -1074,7 +1085,8 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolver.id,
               emptyAuthToken,
               voucherInitValues,
-              agentId
+              agentId,
+              offerFeeLimit
             )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -1110,7 +1122,8 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolver.id,
               emptyAuthToken,
               voucherInitValues,
-              agentId
+              agentId,
+              offerFeeLimit
             )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -1143,7 +1156,8 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolver.id,
               emptyAuthToken,
               voucherInitValues,
-              agentId
+              agentId,
+              offerFeeLimit
             )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -1173,7 +1187,8 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolver.id,
               emptyAuthToken,
               voucherInitValues,
-              agentId
+              agentId,
+              offerFeeLimit
             )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -1216,7 +1231,8 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolver.id,
               emptyAuthToken,
               voucherInitValues,
-              agentId
+              agentId,
+              offerFeeLimit
             )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -1235,6 +1251,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       context("Preminted offer - createSellerAndPremintedOffer()", async function () {
         let firstTokenId, lastTokenId, reservedRangeLength, range;
+        let premintParameters;
 
         beforeEach(async function () {
           offer.quantityAvailable = reservedRangeLength = 100;
@@ -1249,6 +1266,7 @@ describe("IBosonOrchestrationHandler", function () {
             "0",
             await assistant.getAddress()
           );
+          premintParameters = [reservedRangeLength, await assistant.getAddress()];
         });
 
         it("should emit a SellerCreated, OfferCreated and RangeReserved events with auth token", async function () {
@@ -1264,11 +1282,11 @@ describe("IBosonOrchestrationHandler", function () {
               offerDates,
               offerDurations,
               disputeResolver.id,
-              reservedRangeLength,
-              await assistant.getAddress(),
+              premintParameters,
               authToken,
               voucherInitValues,
-              agentId
+              agentId,
+              offerFeeLimit
             );
 
           expectedCloneAddress = calculateCloneAddress(
@@ -1336,11 +1354,11 @@ describe("IBosonOrchestrationHandler", function () {
               offerDates,
               offerDurations,
               disputeResolver.id,
-              reservedRangeLength,
-              await assistant.getAddress(),
+              premintParameters,
               authToken,
               voucherInitValues,
-              agentId
+              agentId,
+              offerFeeLimit
             );
 
           // Get the seller as a struct
@@ -1439,7 +1457,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -1460,7 +1479,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -1481,7 +1501,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -1492,6 +1513,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a offer expecting revert
           const reservedRangeLength = offer.quantityAvailable;
+          const premintParameters = [reservedRangeLength, await assistant.getAddress()];
           await expect(
             orchestrationHandler
               .connect(assistant)
@@ -1501,11 +1523,11 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDates,
                 offerDurations,
                 disputeResolver.id,
-                reservedRangeLength,
-                await assistant.getAddress(),
+                premintParameters,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -1525,7 +1547,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
         });
@@ -1547,7 +1570,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
         });
@@ -1567,7 +1591,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.NOT_ADMIN);
         });
@@ -1588,7 +1613,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 authToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.NOT_ADMIN);
         });
@@ -1608,7 +1634,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.NOT_ASSISTANT);
         });
@@ -1630,7 +1657,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.CLERK_DEPRECATED);
         });
@@ -1648,7 +1676,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 authToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.ADMIN_OR_AUTH_TOKEN);
         });
@@ -1668,7 +1697,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.ADMIN_OR_AUTH_TOKEN);
         });
@@ -1692,7 +1722,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 authToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.AUTH_TOKEN_MUST_BE_UNIQUE);
         });
@@ -1714,7 +1745,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
@@ -1739,7 +1771,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
@@ -1760,7 +1793,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
         });
@@ -1781,7 +1815,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
         });
@@ -1803,7 +1838,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
@@ -1825,7 +1861,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
@@ -1847,7 +1884,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
@@ -1870,7 +1908,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
@@ -1891,7 +1930,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_PERIOD);
         });
@@ -1912,7 +1952,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
@@ -1933,7 +1974,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
@@ -1954,7 +1996,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.INVALID_QUANTITY_AVAILABLE);
         });
@@ -1975,7 +2018,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
@@ -2008,7 +2052,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
@@ -2030,7 +2075,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
@@ -2067,7 +2113,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
@@ -2098,7 +2145,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
         });
@@ -2119,14 +2167,16 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.DR_UNSUPPORTED_FEE);
         });
 
         it("Reserved range length is zero", async function () {
           // Set reserved range length to zero
-          let reservedRangeLength = "0";
+          const reservedRangeLength = "0";
+          const premintParameters = [reservedRangeLength, await assistant.getAddress()];
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
@@ -2138,18 +2188,19 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDates,
                 offerDurations,
                 disputeResolver.id,
-                reservedRangeLength,
-                await assistant.getAddress(),
+                premintParameters,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.INVALID_RANGE_LENGTH);
         });
 
         it("Reserved range length is greater than quantity available", async function () {
           // Set reserved range length to more than quantity available
-          let reservedRangeLength = Number(offer.quantityAvailable) + 1;
+          const reservedRangeLength = Number(offer.quantityAvailable) + 1;
+          const premintParameters = [reservedRangeLength, await assistant.getAddress()];
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
@@ -2161,18 +2212,19 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDates,
                 offerDurations,
                 disputeResolver.id,
-                reservedRangeLength,
-                await assistant.getAddress(),
+                premintParameters,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.INVALID_RANGE_LENGTH);
         });
 
         it("Reserved range length is greater than maximum allowed range length", async function () {
           // Set reserved range length to more than maximum allowed range length
-          let reservedRangeLength = 2n ** 64n - 1n;
+          const reservedRangeLength = 2n ** 64n - 1n;
+          const premintParameters = [reservedRangeLength, await assistant.getAddress()];
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
@@ -2184,11 +2236,11 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDates,
                 offerDurations,
                 disputeResolver.id,
-                reservedRangeLength,
-                await assistant.getAddress(),
+                premintParameters,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.INVALID_RANGE_LENGTH);
         });
@@ -2209,7 +2261,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.NO_SUCH_COLLECTION);
         });
@@ -2250,7 +2303,8 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolver.id,
               emptyAuthToken,
               voucherInitValues,
-              agentId
+              agentId,
+              offerFeeLimit
             );
 
           await expect(tx)
@@ -2298,7 +2352,8 @@ describe("IBosonOrchestrationHandler", function () {
                   disputeResolver.id,
                   authToken,
                   voucherInitValues,
-                  agentId
+                  agentId,
+                  offerFeeLimit
                 )
             ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
           });
@@ -2331,7 +2386,8 @@ describe("IBosonOrchestrationHandler", function () {
                   disputeResolver.id,
                   emptyAuthToken,
                   voucherInitValues,
-                  agent.id
+                  agent.id,
+                  offerFeeLimit
                 )
             ).to.revertedWith(RevertReasons.AGENT_FEE_AMOUNT_TOO_HIGH);
           });
@@ -2372,7 +2428,15 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, testing for the events
         const tx = await orchestrationHandler
           .connect(assistant)
-          .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId);
+          .createOfferWithCondition(
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolver.id,
+            condition,
+            agentId,
+            offerFeeLimit
+          );
 
         // OfferCreated event
         await expect(tx)
@@ -2408,7 +2472,15 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition
         await orchestrationHandler
           .connect(assistant)
-          .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId);
+          .createOfferWithCondition(
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolver.id,
+            condition,
+            agentId,
+            offerFeeLimit
+          );
 
         // Get the offer as a struct
         [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
@@ -2461,7 +2533,15 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, testing for the events
         const tx = await orchestrationHandler
           .connect(assistant)
-          .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId);
+          .createOfferWithCondition(
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolver.id,
+            condition,
+            agentId,
+            offerFeeLimit
+          );
 
         // OfferCreated event
         await expect(tx)
@@ -2499,7 +2579,15 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, testing for the events
         const tx = await orchestrationHandler
           .connect(assistant)
-          .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId);
+          .createOfferWithCondition(
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolver.id,
+            condition,
+            agentId,
+            offerFeeLimit
+          );
 
         // OfferCreated event
         await expect(tx)
@@ -2546,7 +2634,15 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(assistant)
-            .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
+            .createOfferWithCondition(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              condition,
+              agentId,
+              offerFeeLimit
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -2573,7 +2669,15 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(assistant)
-            .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
+            .createOfferWithCondition(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              condition,
+              agentId,
+              offerFeeLimit
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -2597,7 +2701,15 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(assistant)
-            .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
+            .createOfferWithCondition(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              condition,
+              agentId,
+              offerFeeLimit
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -2618,7 +2730,15 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(assistant)
-            .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
+            .createOfferWithCondition(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              condition,
+              agentId,
+              offerFeeLimit
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -2649,7 +2769,15 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(assistant)
-            .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
+            .createOfferWithCondition(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              condition,
+              agentId,
+              offerFeeLimit
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -2674,7 +2802,15 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(assistant)
-            .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
+            .createOfferWithCondition(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              condition,
+              agentId,
+              offerFeeLimit
+            )
         ).to.emit(orchestrationHandler, "OfferCreated");
       });
 
@@ -2700,7 +2836,15 @@ describe("IBosonOrchestrationHandler", function () {
           // Create an offer with condition, testing for the events
           const tx = await orchestrationHandler
             .connect(assistant)
-            .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId);
+            .createOfferWithCondition(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              condition,
+              agentId,
+              offerFeeLimit
+            );
 
           // OfferCreated event
           await expect(tx)
@@ -2739,6 +2883,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       context("Preminted offer - createPremintedOfferWithCondition()", async function () {
         let firstTokenId, lastTokenId, reservedRangeLength, range;
+        let premintParameters;
 
         beforeEach(async function () {
           offer.quantityAvailable = reservedRangeLength = 100;
@@ -2755,13 +2900,9 @@ describe("IBosonOrchestrationHandler", function () {
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
           const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
-          range = new Range(
-            tokenIdStart.toString(),
-            reservedRangeLength.toString(),
-            "0",
-            "0",
-            await bosonVoucher.getAddress()
-          );
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", expectedCloneAddress);
+
+          premintParameters = [reservedRangeLength, expectedCloneAddress];
         });
 
         it("should emit an OfferCreated, a GroupCreated and a RangeReserved events", async function () {
@@ -2774,10 +2915,10 @@ describe("IBosonOrchestrationHandler", function () {
               offerDates,
               offerDurations,
               disputeResolver.id,
-              reservedRangeLength,
-              await bosonVoucher.getAddress(),
+              premintParameters,
               condition,
-              agentId
+              agentId,
+              offerFeeLimit
             );
 
           // OfferCreated event
@@ -2838,10 +2979,10 @@ describe("IBosonOrchestrationHandler", function () {
               offerDates,
               offerDurations,
               disputeResolver.id,
-              reservedRangeLength,
-              await bosonVoucher.getAddress(),
+              premintParameters,
               condition,
-              agentId
+              agentId,
+              offerFeeLimit
             );
 
           // Get the offer as a struct
@@ -2916,7 +3057,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -2929,7 +3071,15 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(assistant)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
+              .createOfferWithCondition(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                condition,
+                agentId,
+                offerFeeLimit
+              )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
@@ -2939,6 +3089,12 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to orchestrate, expecting revert
           const reservedRangeLength = offer.quantityAvailable;
+          const bosonVoucherAddress = calculateCloneAddress(
+            await accountHandler.getAddress(),
+            beaconProxyAddress,
+            admin.address
+          );
+          const premintParameters = [reservedRangeLength, bosonVoucherAddress];
           await expect(
             orchestrationHandler
               .connect(assistant)
@@ -2947,10 +3103,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDates,
                 offerDurations,
                 disputeResolver.id,
-                reservedRangeLength,
-                await bosonVoucher.getAddress(),
+                premintParameters,
                 condition,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -2963,7 +3119,15 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(assistant)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
+              .createOfferWithCondition(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                condition,
+                agentId,
+                offerFeeLimit
+              )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
@@ -2972,7 +3136,15 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(rando)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
+              .createOfferWithCondition(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                condition,
+                agentId,
+                offerFeeLimit
+              )
           ).to.revertedWith(RevertReasons.NOT_ASSISTANT);
         });
 
@@ -2983,7 +3155,15 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(assistant)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
+              .createOfferWithCondition(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                condition,
+                agentId,
+                offerFeeLimit
+              )
           ).to.revertedWith(RevertReasons.INVALID_CONDITION_PARAMETERS);
         });
 
@@ -2995,7 +3175,15 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(assistant)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
+              .createOfferWithCondition(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                condition,
+                agentId,
+                offerFeeLimit
+              )
           ).to.revertedWith(RevertReasons.INVALID_CONDITION_PARAMETERS);
         });
 
@@ -3007,7 +3195,15 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(assistant)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId)
+              .createOfferWithCondition(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                condition,
+                agentId,
+                offerFeeLimit
+              )
           ).to.revertedWith(RevertReasons.INVALID_CONDITION_PARAMETERS);
         });
       });
@@ -3046,7 +3242,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Create the offer
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+            .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit);
 
           nextOfferId++;
         }
@@ -3088,7 +3284,15 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, add it to the group, testing for the events
         const tx = await orchestrationHandler
           .connect(assistant)
-          .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId);
+          .createOfferAddToGroup(
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolver.id,
+            nextGroupId,
+            agentId,
+            offerFeeLimit
+          );
 
         // OfferCreated event
         await expect(tx)
@@ -3123,7 +3327,15 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, add it to the group
         await orchestrationHandler
           .connect(assistant)
-          .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId);
+          .createOfferAddToGroup(
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolver.id,
+            nextGroupId,
+            agentId,
+            offerFeeLimit
+          );
 
         // Get the offer as a struct
         [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
@@ -3176,7 +3388,15 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, add it to the group, testing for the events
         const tx = await orchestrationHandler
           .connect(assistant)
-          .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId);
+          .createOfferAddToGroup(
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolver.id,
+            nextGroupId,
+            agentId,
+            offerFeeLimit
+          );
 
         // OfferCreated event
         await expect(tx)
@@ -3214,7 +3434,15 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, add it to the group, testing for the events
         const tx = await orchestrationHandler
           .connect(assistant)
-          .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId);
+          .createOfferAddToGroup(
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolver.id,
+            nextGroupId,
+            agentId,
+            offerFeeLimit
+          );
 
         // OfferCreated event
         await expect(tx)
@@ -3261,7 +3489,15 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(assistant)
-            .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
+            .createOfferAddToGroup(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              nextGroupId,
+              agentId,
+              offerFeeLimit
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -3288,7 +3524,15 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(assistant)
-            .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
+            .createOfferAddToGroup(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              nextGroupId,
+              agentId,
+              offerFeeLimit
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -3312,7 +3556,15 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(assistant)
-            .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
+            .createOfferAddToGroup(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              nextGroupId,
+              agentId,
+              offerFeeLimit
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -3333,7 +3585,15 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(assistant)
-            .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
+            .createOfferAddToGroup(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              nextGroupId,
+              agentId,
+              offerFeeLimit
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -3364,7 +3624,15 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(assistant)
-            .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
+            .createOfferAddToGroup(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              nextGroupId,
+              agentId,
+              offerFeeLimit
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -3389,7 +3657,15 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(assistant)
-            .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
+            .createOfferAddToGroup(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              nextGroupId,
+              agentId,
+              offerFeeLimit
+            )
         ).to.emit(orchestrationHandler, "OfferCreated");
       });
 
@@ -3415,7 +3691,15 @@ describe("IBosonOrchestrationHandler", function () {
           // Create an offer, add it to the group, testing for the events
           const tx = await orchestrationHandler
             .connect(assistant)
-            .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId);
+            .createOfferAddToGroup(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              nextGroupId,
+              agentId,
+              offerFeeLimit
+            );
 
           // OfferCreated event
           await expect(tx)
@@ -3449,6 +3733,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       context("Preminted offer - createPremintedOfferAddToGroup()", async function () {
         let firstTokenId, lastTokenId, reservedRangeLength, range;
+        let premintParameters;
 
         beforeEach(async function () {
           offer.quantityAvailable = reservedRangeLength = 100;
@@ -3471,6 +3756,8 @@ describe("IBosonOrchestrationHandler", function () {
             admin.address
           );
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+          premintParameters = [reservedRangeLength, await assistant.getAddress()];
         });
 
         it("should emit an OfferCreated, a GroupUpdated and a RangeReserved events", async function () {
@@ -3482,10 +3769,10 @@ describe("IBosonOrchestrationHandler", function () {
               offerDates,
               offerDurations,
               disputeResolver.id,
-              reservedRangeLength,
-              await assistant.getAddress(),
+              premintParameters,
               nextGroupId,
-              agentId
+              agentId,
+              offerFeeLimit
             );
 
           // OfferCreated event
@@ -3541,10 +3828,10 @@ describe("IBosonOrchestrationHandler", function () {
               offerDates,
               offerDurations,
               disputeResolver.id,
-              reservedRangeLength,
-              await assistant.getAddress(),
+              premintParameters,
               nextGroupId,
-              agentId
+              agentId,
+              offerFeeLimit
             );
 
           // Get the offer as a struct
@@ -3611,7 +3898,15 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(assistant)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
+              .createOfferAddToGroup(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                nextGroupId,
+                agentId,
+                offerFeeLimit
+              )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
@@ -3623,7 +3918,15 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(assistant)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
+              .createOfferAddToGroup(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                nextGroupId,
+                agentId,
+                offerFeeLimit
+              )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
@@ -3633,6 +3936,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a offer expecting revert
           const reservedRangeLength = offer.quantityAvailable;
+          const premintParameters = [reservedRangeLength, await assistant.getAddress()];
           await expect(
             orchestrationHandler
               .connect(assistant)
@@ -3641,10 +3945,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDates,
                 offerDurations,
                 disputeResolver.id,
-                reservedRangeLength,
-                await assistant.getAddress(),
+                premintParameters,
                 nextGroupId,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -3657,7 +3961,15 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(assistant)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
+              .createOfferAddToGroup(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                nextGroupId,
+                agentId,
+                offerFeeLimit
+              )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
@@ -3669,7 +3981,15 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(assistant)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, invalidGroupId, agentId)
+              .createOfferAddToGroup(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                invalidGroupId,
+                agentId,
+                offerFeeLimit
+              )
           ).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
 
           // Set invalid id
@@ -3679,7 +3999,15 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(assistant)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, invalidGroupId, agentId)
+              .createOfferAddToGroup(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                invalidGroupId,
+                agentId,
+                offerFeeLimit
+              )
           ).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
         });
 
@@ -3688,7 +4016,15 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(rando)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolver.id, nextGroupId, agentId)
+              .createOfferAddToGroup(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                nextGroupId,
+                agentId,
+                offerFeeLimit
+              )
           ).to.revertedWith(RevertReasons.NOT_ASSISTANT);
         });
       });
@@ -3731,7 +4067,15 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, a twin and a bundle, testing for the events
         const tx = await orchestrationHandler
           .connect(assistant)
-          .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId);
+          .createOfferAndTwinWithBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolver.id,
+            twin,
+            agentId,
+            offerFeeLimit
+          );
 
         // OfferCreated event
         await expect(tx)
@@ -3776,7 +4120,15 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, a twin and a bundle
         await orchestrationHandler
           .connect(assistant)
-          .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId);
+          .createOfferAndTwinWithBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolver.id,
+            twin,
+            agentId,
+            offerFeeLimit
+          );
 
         // Get the offer as a struct
         [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
@@ -3833,7 +4185,15 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, a twin and a bundle, testing for the events
         const tx = await orchestrationHandler
           .connect(assistant)
-          .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId);
+          .createOfferAndTwinWithBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolver.id,
+            twin,
+            agentId,
+            offerFeeLimit
+          );
 
         // OfferCreated event
         await expect(tx)
@@ -3886,7 +4246,15 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, a twin and a bundle, testing for the events
         const tx = await orchestrationHandler
           .connect(assistant)
-          .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId);
+          .createOfferAndTwinWithBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolver.id,
+            twin,
+            agentId,
+            offerFeeLimit
+          );
 
         // OfferCreated event
         await expect(tx)
@@ -3947,7 +4315,15 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(assistant)
-            .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
+            .createOfferAndTwinWithBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              twin,
+              agentId,
+              offerFeeLimit
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -3974,7 +4350,15 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(assistant)
-            .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
+            .createOfferAndTwinWithBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              twin,
+              agentId,
+              offerFeeLimit
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -4000,7 +4384,15 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(assistant)
-            .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
+            .createOfferAndTwinWithBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              twin,
+              agentId,
+              offerFeeLimit
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -4021,7 +4413,15 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(assistant)
-            .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
+            .createOfferAndTwinWithBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              twin,
+              agentId,
+              offerFeeLimit
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -4052,7 +4452,15 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(assistant)
-            .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
+            .createOfferAndTwinWithBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              twin,
+              agentId,
+              offerFeeLimit
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -4077,7 +4485,15 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(assistant)
-            .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
+            .createOfferAndTwinWithBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              twin,
+              agentId,
+              offerFeeLimit
+            )
         ).to.emit(orchestrationHandler, "OfferCreated");
       });
 
@@ -4103,7 +4519,15 @@ describe("IBosonOrchestrationHandler", function () {
           // Create an offer, a twin and a bundle, testing for the events
           const tx = await orchestrationHandler
             .connect(assistant)
-            .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId);
+            .createOfferAndTwinWithBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              twin,
+              agentId,
+              offerFeeLimit
+            );
 
           // OfferCreated event
           await expect(tx)
@@ -4147,6 +4571,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       context("Preminted offer - createPremintedOfferAndTwinWithBundle()", async function () {
         let firstTokenId, lastTokenId, reservedRangeLength, range;
+        let premintParameters;
 
         beforeEach(async function () {
           offer.quantityAvailable = reservedRangeLength = 1;
@@ -4163,13 +4588,9 @@ describe("IBosonOrchestrationHandler", function () {
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
           const tokenIdStart = deriveTokenId(offer.id, firstTokenId);
-          range = new Range(
-            tokenIdStart.toString(),
-            reservedRangeLength.toString(),
-            "0",
-            "0",
-            await bosonVoucher.getAddress()
-          );
+          range = new Range(tokenIdStart.toString(), reservedRangeLength.toString(), "0", "0", expectedCloneAddress);
+
+          premintParameters = [reservedRangeLength, expectedCloneAddress];
         });
 
         it("should emit an OfferCreated, a TwinCreated, a BundleCreated and a RangeReserved events", async function () {
@@ -4181,10 +4602,10 @@ describe("IBosonOrchestrationHandler", function () {
               offerDates,
               offerDurations,
               disputeResolver.id,
-              reservedRangeLength,
-              await bosonVoucher.getAddress(),
+              premintParameters,
               twin,
-              agentId
+              agentId,
+              offerFeeLimit
             );
 
           // OfferCreated event
@@ -4250,10 +4671,10 @@ describe("IBosonOrchestrationHandler", function () {
               offerDates,
               offerDurations,
               disputeResolver.id,
-              reservedRangeLength,
-              await bosonVoucher.getAddress(),
+              premintParameters,
               twin,
-              agentId
+              agentId,
+              offerFeeLimit
             );
 
           // Get the offer as a struct
@@ -4323,7 +4744,15 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(assistant)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
+              .createOfferAndTwinWithBundle(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                twin,
+                agentId,
+                offerFeeLimit
+              )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
@@ -4335,7 +4764,15 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(assistant)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
+              .createOfferAndTwinWithBundle(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                twin,
+                agentId,
+                offerFeeLimit
+              )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
@@ -4347,7 +4784,15 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(assistant)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
+              .createOfferAndTwinWithBundle(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                twin,
+                agentId,
+                offerFeeLimit
+              )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
@@ -4359,7 +4804,15 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(assistant)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
+              .createOfferAndTwinWithBundle(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                twin,
+                agentId,
+                offerFeeLimit
+              )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
@@ -4369,6 +4822,12 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a twin, expecting revert
           const reservedRangeLength = offer.quantityAvailable;
+          const bosonVoucherAddress = calculateCloneAddress(
+            await accountHandler.getAddress(),
+            beaconProxyAddress,
+            admin.address
+          );
+          const premintParameters = [reservedRangeLength, bosonVoucherAddress];
           await expect(
             orchestrationHandler
               .connect(assistant)
@@ -4377,10 +4836,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDates,
                 offerDurations,
                 disputeResolver.id,
-                reservedRangeLength,
-                await bosonVoucher.getAddress(),
+                premintParameters,
                 twin,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -4395,7 +4854,15 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(assistant)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
+              .createOfferAndTwinWithBundle(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                twin,
+                agentId,
+                offerFeeLimit
+              )
           ).to.revertedWith(RevertReasons.NO_TRANSFER_APPROVED);
         });
 
@@ -4406,7 +4873,15 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(assistant)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
+              .createOfferAndTwinWithBundle(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                twin,
+                agentId,
+                offerFeeLimit
+              )
           ).to.revertedWith(RevertReasons.NO_TRANSFER_APPROVED);
         });
 
@@ -4417,7 +4892,15 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(assistant)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
+              .createOfferAndTwinWithBundle(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                twin,
+                agentId,
+                offerFeeLimit
+              )
           ).to.revertedWith(RevertReasons.NO_TRANSFER_APPROVED);
         });
 
@@ -4428,7 +4911,15 @@ describe("IBosonOrchestrationHandler", function () {
             await expect(
               orchestrationHandler
                 .connect(assistant)
-                .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
+                .createOfferAndTwinWithBundle(
+                  offer,
+                  offerDates,
+                  offerDurations,
+                  disputeResolver.id,
+                  twin,
+                  agentId,
+                  offerFeeLimit
+                )
             ).to.be.revertedWith(RevertReasons.UNSUPPORTED_TOKEN);
           });
 
@@ -4438,7 +4929,15 @@ describe("IBosonOrchestrationHandler", function () {
             await expect(
               orchestrationHandler
                 .connect(assistant)
-                .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
+                .createOfferAndTwinWithBundle(
+                  offer,
+                  offerDates,
+                  offerDurations,
+                  disputeResolver.id,
+                  twin,
+                  agentId,
+                  offerFeeLimit
+                )
             ).to.be.revertedWith(RevertReasons.UNSUPPORTED_TOKEN);
           });
 
@@ -4448,7 +4947,15 @@ describe("IBosonOrchestrationHandler", function () {
             await expect(
               orchestrationHandler
                 .connect(assistant)
-                .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolver.id, twin, agentId)
+                .createOfferAndTwinWithBundle(
+                  offer,
+                  offerDates,
+                  offerDurations,
+                  disputeResolver.id,
+                  twin,
+                  agentId,
+                  offerFeeLimit
+                )
             ).to.be.revertedWith(RevertReasons.UNSUPPORTED_TOKEN);
           });
         });
@@ -4519,7 +5026,8 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolver.id,
             condition,
             twin,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         // OfferCreated event
@@ -4582,7 +5090,8 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolver.id,
             condition,
             twin,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         // Get the offer as a struct
@@ -4666,7 +5175,8 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolver.id,
             condition,
             twin,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         // OfferCreated event
@@ -4737,7 +5247,8 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolver.id,
             condition,
             twin,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         // OfferCreated event
@@ -4816,7 +5327,8 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolver.id,
               condition,
               twin,
-              agentId
+              agentId,
+              offerFeeLimit
             )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -4851,7 +5363,8 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolver.id,
               condition,
               twin,
-              agentId
+              agentId,
+              offerFeeLimit
             )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -4885,7 +5398,8 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolver.id,
               condition,
               twin,
-              agentId
+              agentId,
+              offerFeeLimit
             )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -4914,7 +5428,8 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolver.id,
               condition,
               twin,
-              agentId
+              agentId,
+              offerFeeLimit
             )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -4953,7 +5468,8 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolver.id,
               condition,
               twin,
-              agentId
+              agentId,
+              offerFeeLimit
             )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -4986,7 +5502,8 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolver.id,
               condition,
               twin,
-              agentId
+              agentId,
+              offerFeeLimit
             )
         ).to.emit(orchestrationHandler, "OfferCreated");
       });
@@ -5021,7 +5538,8 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolver.id,
               condition,
               twin,
-              agentId
+              agentId,
+              offerFeeLimit
             );
 
           // OfferCreated event
@@ -5076,6 +5594,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       context("Preminted offer - createPremintedOfferWithConditionAndTwinAndBundle()", async function () {
         let firstTokenId, lastTokenId, reservedRangeLength, range;
+        let premintParameters;
 
         beforeEach(async function () {
           offer.quantityAvailable = reservedRangeLength = 1;
@@ -5098,6 +5617,7 @@ describe("IBosonOrchestrationHandler", function () {
             admin.address
           );
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+          premintParameters = [reservedRangeLength, await assistant.getAddress()];
         });
 
         it("should emit an OfferCreated, a GroupCreated, a TwinCreated, a BundleCreated and a RangeReserved events", async function () {
@@ -5109,11 +5629,11 @@ describe("IBosonOrchestrationHandler", function () {
               offerDates,
               offerDurations,
               disputeResolver.id,
-              reservedRangeLength,
-              await assistant.getAddress(),
+              premintParameters,
               condition,
               twin,
-              agentId
+              agentId,
+              offerFeeLimit
             );
 
           // OfferCreated event
@@ -5189,11 +5709,11 @@ describe("IBosonOrchestrationHandler", function () {
               offerDates,
               offerDurations,
               disputeResolver.id,
-              reservedRangeLength,
-              await assistant.getAddress(),
+              premintParameters,
               condition,
               twin,
-              agentId
+              agentId,
+              offerFeeLimit
             );
 
           // Get the offer as a struct
@@ -5289,7 +5809,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 condition,
                 twin,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -5309,7 +5830,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 condition,
                 twin,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -5329,7 +5851,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 condition,
                 twin,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -5349,7 +5872,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 condition,
                 twin,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -5369,7 +5893,8 @@ describe("IBosonOrchestrationHandler", function () {
                 disputeResolver.id,
                 condition,
                 twin,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -5380,6 +5905,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a twin, expecting revert
           const reservedRangeLength = offer.quantityAvailable;
+          const premintParameters = [reservedRangeLength, await assistant.getAddress()];
           await expect(
             orchestrationHandler
               .connect(assistant)
@@ -5388,11 +5914,11 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDates,
                 offerDurations,
                 disputeResolver.id,
-                reservedRangeLength,
-                await assistant.getAddress(),
+                premintParameters,
                 condition,
                 twin,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -5437,7 +5963,8 @@ describe("IBosonOrchestrationHandler", function () {
             condition,
             emptyAuthToken,
             voucherInitValues,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         expectedCloneAddress = calculateCloneAddress(
@@ -5506,7 +6033,8 @@ describe("IBosonOrchestrationHandler", function () {
             condition,
             emptyAuthToken,
             voucherInitValues,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         // Get the seller as a struct
@@ -5616,7 +6144,8 @@ describe("IBosonOrchestrationHandler", function () {
             condition,
             emptyAuthToken,
             voucherInitValues,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         // Get the collections information
@@ -5681,7 +6210,8 @@ describe("IBosonOrchestrationHandler", function () {
             condition,
             emptyAuthToken,
             voucherInitValues,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         // Get the collections information
@@ -5746,7 +6276,8 @@ describe("IBosonOrchestrationHandler", function () {
             condition,
             emptyAuthToken,
             voucherInitValues,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         // SellerCreated and OfferCreated events
@@ -5825,7 +6356,8 @@ describe("IBosonOrchestrationHandler", function () {
               condition,
               emptyAuthToken,
               voucherInitValues,
-              agentId
+              agentId,
+              offerFeeLimit
             );
 
           // SellerCreated and OfferCreated events
@@ -5870,6 +6402,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       context("Preminted offer - createSellerAndPremintedOfferWithCondition()", async function () {
         let firstTokenId, lastTokenId, reservedRangeLength, range;
+        let premintParameters;
 
         beforeEach(async function () {
           offer.quantityAvailable = reservedRangeLength = 100;
@@ -5884,6 +6417,7 @@ describe("IBosonOrchestrationHandler", function () {
             "0",
             await assistant.getAddress()
           );
+          premintParameters = [reservedRangeLength, await assistant.getAddress()];
         });
 
         it("should emit a SellerCreated, an OfferCreated, a GroupCreated and a RangeReserved event", async function () {
@@ -5896,12 +6430,12 @@ describe("IBosonOrchestrationHandler", function () {
               offerDates,
               offerDurations,
               disputeResolver.id,
-              reservedRangeLength,
-              await assistant.getAddress(),
+              premintParameters,
               condition,
               emptyAuthToken,
               voucherInitValues,
-              agentId
+              agentId,
+              offerFeeLimit
             );
 
           expectedCloneAddress = calculateCloneAddress(
@@ -5986,12 +6520,12 @@ describe("IBosonOrchestrationHandler", function () {
               offerDates,
               offerDurations,
               disputeResolver.id,
-              reservedRangeLength,
-              await assistant.getAddress(),
+              premintParameters,
               condition,
               emptyAuthToken,
               voucherInitValues,
-              agentId
+              agentId,
+              offerFeeLimit
             );
 
           // Get the seller as a struct
@@ -6110,7 +6644,8 @@ describe("IBosonOrchestrationHandler", function () {
                 condition,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -6132,7 +6667,8 @@ describe("IBosonOrchestrationHandler", function () {
                 condition,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -6154,7 +6690,8 @@ describe("IBosonOrchestrationHandler", function () {
                 condition,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -6176,17 +6713,19 @@ describe("IBosonOrchestrationHandler", function () {
                 condition,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
-        it("The exchanges region of protocol is paused", async function () {
+        it("The exchanges region of protocol is paused [preminted offers]", async function () {
           // Pause the exchanges region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to create an group, expecting revert
           const reservedRangeLength = offer.quantityAvailable;
+          const premintParameters = [reservedRangeLength, await assistant.getAddress()];
           await expect(
             orchestrationHandler
               .connect(assistant)
@@ -6196,12 +6735,12 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDates,
                 offerDurations,
                 disputeResolver.id,
-                reservedRangeLength,
-                await assistant.getAddress(),
+                premintParameters,
                 condition,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -6252,7 +6791,8 @@ describe("IBosonOrchestrationHandler", function () {
             twin,
             emptyAuthToken,
             voucherInitValues,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         expectedCloneAddress = calculateCloneAddress(
@@ -6340,7 +6880,8 @@ describe("IBosonOrchestrationHandler", function () {
             twin,
             emptyAuthToken,
             voucherInitValues,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         // Get the seller as a struct
@@ -6456,7 +6997,8 @@ describe("IBosonOrchestrationHandler", function () {
             twin,
             emptyAuthToken,
             voucherInitValues,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         // Get the collections information
@@ -6524,7 +7066,8 @@ describe("IBosonOrchestrationHandler", function () {
             twin,
             emptyAuthToken,
             voucherInitValues,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         // Get the collections information
@@ -6593,7 +7136,8 @@ describe("IBosonOrchestrationHandler", function () {
             twin,
             emptyAuthToken,
             voucherInitValues,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         // SellerCreated and OfferCreated events
@@ -6690,7 +7234,8 @@ describe("IBosonOrchestrationHandler", function () {
               twin,
               emptyAuthToken,
               voucherInitValues,
-              agentId
+              agentId,
+              offerFeeLimit
             );
 
           // SellerCreated and OfferCreated events
@@ -6755,6 +7300,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       context("Preminted offer - createSellerAndPremintedOfferAndTwinWithBundle()", async function () {
         let firstTokenId, lastTokenId, reservedRangeLength, range;
+        let premintParameters;
 
         beforeEach(async function () {
           offer.quantityAvailable = reservedRangeLength = 1;
@@ -6769,6 +7315,7 @@ describe("IBosonOrchestrationHandler", function () {
             "0",
             await assistant.getAddress()
           );
+          premintParameters = [reservedRangeLength, await assistant.getAddress()];
         });
 
         it("should emit a SellerCreated, an OfferCreated, a TwinCreated, a BundleCreated and RangeReserved event", async function () {
@@ -6784,12 +7331,12 @@ describe("IBosonOrchestrationHandler", function () {
               offerDates,
               offerDurations,
               disputeResolver.id,
-              reservedRangeLength,
-              await assistant.getAddress(),
+              premintParameters,
               twin,
               emptyAuthToken,
               voucherInitValues,
-              agentId
+              agentId,
+              offerFeeLimit
             );
 
           expectedCloneAddress = calculateCloneAddress(
@@ -6897,12 +7444,12 @@ describe("IBosonOrchestrationHandler", function () {
               offerDates,
               offerDurations,
               disputeResolver.id,
-              reservedRangeLength,
-              await assistant.getAddress(),
+              premintParameters,
               twin,
               emptyAuthToken,
               voucherInitValues,
-              agentId
+              agentId,
+              offerFeeLimit
             );
 
           // Get the seller as a struct
@@ -7024,7 +7571,8 @@ describe("IBosonOrchestrationHandler", function () {
                 twin,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -7046,7 +7594,8 @@ describe("IBosonOrchestrationHandler", function () {
                 twin,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -7068,7 +7617,8 @@ describe("IBosonOrchestrationHandler", function () {
                 twin,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -7090,7 +7640,8 @@ describe("IBosonOrchestrationHandler", function () {
                 twin,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -7112,7 +7663,8 @@ describe("IBosonOrchestrationHandler", function () {
                 twin,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -7126,6 +7678,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a twin expecting revert
           const reservedRangeLength = offer.quantityAvailable;
+          const premintParameters = [reservedRangeLength, await assistant.getAddress()];
           await expect(
             orchestrationHandler
               .connect(assistant)
@@ -7135,12 +7688,12 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDates,
                 offerDurations,
                 disputeResolver.id,
-                reservedRangeLength,
-                await assistant.getAddress(),
+                premintParameters,
                 twin,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -7211,7 +7764,8 @@ describe("IBosonOrchestrationHandler", function () {
             twin,
             emptyAuthToken,
             voucherInitValues,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         expectedCloneAddress = calculateCloneAddress(
@@ -7304,7 +7858,8 @@ describe("IBosonOrchestrationHandler", function () {
             twin,
             emptyAuthToken,
             voucherInitValues,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         // Get the seller as a struct
@@ -7440,7 +7995,8 @@ describe("IBosonOrchestrationHandler", function () {
             twin,
             emptyAuthToken,
             voucherInitValues,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         // Get the collections information
@@ -7509,7 +8065,8 @@ describe("IBosonOrchestrationHandler", function () {
             twin,
             emptyAuthToken,
             voucherInitValues,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         // Get the collections information
@@ -7579,7 +8136,8 @@ describe("IBosonOrchestrationHandler", function () {
             twin,
             emptyAuthToken,
             voucherInitValues,
-            agentId
+            agentId,
+            offerFeeLimit
           );
 
         // SellerCreated and OfferCreated events
@@ -7694,7 +8252,8 @@ describe("IBosonOrchestrationHandler", function () {
               twin,
               emptyAuthToken,
               voucherInitValues,
-              agentId
+              agentId,
+              offerFeeLimit
             );
 
           // SellerCreated and OfferCreated events
@@ -7773,6 +8332,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       context("Preminted offer - createSellerAndPremintedOfferWithConditionAndTwinAndBundle()", async function () {
         let firstTokenId, lastTokenId, reservedRangeLength, range;
+        let premintParameters;
 
         beforeEach(async function () {
           offer.quantityAvailable = reservedRangeLength = 1;
@@ -7787,6 +8347,7 @@ describe("IBosonOrchestrationHandler", function () {
             "0",
             await assistant.getAddress()
           );
+          premintParameters = [reservedRangeLength, await assistant.getAddress()];
         });
 
         it("should emit a SellerCreated, an OfferCreated, a GroupCreated, a TwinCreated, a BundleCreated and a RangeReserved event", async function () {
@@ -7802,13 +8363,13 @@ describe("IBosonOrchestrationHandler", function () {
               offerDates,
               offerDurations,
               disputeResolver.id,
-              reservedRangeLength,
-              await assistant.getAddress(),
+              premintParameters,
               condition,
               twin,
               emptyAuthToken,
               voucherInitValues,
-              agentId
+              agentId,
+              offerFeeLimit
             );
 
           expectedCloneAddress = calculateCloneAddress(
@@ -7916,13 +8477,13 @@ describe("IBosonOrchestrationHandler", function () {
               offerDates,
               offerDurations,
               disputeResolver.id,
-              reservedRangeLength,
-              await assistant.getAddress(),
+              premintParameters,
               condition,
               twin,
               emptyAuthToken,
               voucherInitValues,
-              agentId
+              agentId,
+              offerFeeLimit
             );
 
           // Get the seller as a struct
@@ -8064,7 +8625,8 @@ describe("IBosonOrchestrationHandler", function () {
                 twin,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -8087,7 +8649,8 @@ describe("IBosonOrchestrationHandler", function () {
                 twin,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -8110,7 +8673,8 @@ describe("IBosonOrchestrationHandler", function () {
                 twin,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -8133,7 +8697,8 @@ describe("IBosonOrchestrationHandler", function () {
                 twin,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -8156,7 +8721,8 @@ describe("IBosonOrchestrationHandler", function () {
                 twin,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -8179,7 +8745,8 @@ describe("IBosonOrchestrationHandler", function () {
                 twin,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
@@ -8193,6 +8760,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a group, expecting revert
           const reservedRangeLength = offer.quantityAvailable;
+          const premintParameters = [reservedRangeLength, await assistant.getAddress()];
           await expect(
             orchestrationHandler
               .connect(assistant)
@@ -8202,13 +8770,13 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDates,
                 offerDurations,
                 disputeResolver.id,
-                reservedRangeLength,
-                await bosonVoucher.getAddress(),
+                premintParameters,
                 condition,
                 twin,
                 emptyAuthToken,
                 voucherInitValues,
-                agentId
+                agentId,
+                offerFeeLimit
               )
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });

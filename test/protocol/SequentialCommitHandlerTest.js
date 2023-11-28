@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { ZeroAddress, getContractFactory, getSigners, parseUnits, provider, getContractAt } = ethers;
+const { ZeroAddress, getContractFactory, getSigners, parseUnits, provider, getContractAt, MaxUint256 } = ethers;
 const { expect } = require("chai");
 
 const Exchange = require("../../scripts/domain/Exchange");
@@ -73,6 +73,7 @@ describe("IBosonSequentialCommitHandler", function () {
   let snapshotId;
   let priceDiscoveryContract;
   let tokenId;
+  let offerFeeLimit;
 
   before(async function () {
     accountId.next(true);
@@ -152,6 +153,7 @@ describe("IBosonSequentialCommitHandler", function () {
       // Initial ids for all the things
       exchangeId = offerId = "1";
       agentId = "0"; // agent id is optional while creating an offer
+      offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
 
       // Create a valid seller
       seller = mockSeller(assistant.address, admin.address, ZeroAddress, treasury.address);
@@ -209,7 +211,9 @@ describe("IBosonSequentialCommitHandler", function () {
       expect(offerDurations.isValid()).is.true;
 
       // Create the offer
-      await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+      await offerHandler
+        .connect(assistant)
+        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
       // Set used variables
       price = BigInt(offer.price);

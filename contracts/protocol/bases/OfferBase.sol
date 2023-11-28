@@ -237,9 +237,10 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
 
             uint256 totalOfferFeeLimit = (protocolLimits().maxTotalOfferFeePercentage * offerPrice) / 10000;
 
-            // Sum of agent fee amount and protocol fee amount should be <= offer fee limit
-            require((agentFeeAmount + protocolFee) <= totalOfferFeeLimit, AGENT_FEE_AMOUNT_TOO_HIGH);
-            require(agentFeeAmount + protocolFee <= _feeLimit, TOTAL_FEE_EXCEEDS_LIMIT);
+            // Sum of agent fee amount and protocol fee amount should be <= offer fee limit and less that fee limit set by seller
+            uint256 totalFeeAmount = agentFeeAmount + protocolFee;
+            require(totalFeeAmount <= totalOfferFeeLimit, AGENT_FEE_AMOUNT_TOO_HIGH);
+            require(totalFeeAmount <= _feeLimit, TOTAL_FEE_EXCEEDS_LIMIT);
 
             //Set offer fees props individually since calldata structs can't be copied to storage
             offerFees.protocolFee = protocolFee;

@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { getContractAt, ZeroAddress } = ethers;
+const { getContractAt, ZeroAddress, MaxUint256 } = ethers;
 const { expect } = require("chai");
 
 const Buyer = require("../../scripts/domain/Buyer");
@@ -328,6 +328,7 @@ describe("BuyerHandler", function () {
           id = await accountHandler.connect(rando).getNextAccountId();
           offerId = await offerHandler.connect(rando).getNextOfferId();
           let agentId = "0"; // agent id is optional while creating an offer
+          const offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
 
           // Create a valid seller
           seller = mockSeller(
@@ -391,7 +392,7 @@ describe("BuyerHandler", function () {
           // Create the offer
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+            .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit);
 
           offerId = offer.id;
           const sellerDeposit = offer.sellerDeposit;

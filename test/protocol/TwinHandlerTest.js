@@ -744,6 +744,7 @@ describe("IBosonTwinHandler", function () {
           offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = "0";
           let disputeResolverId = "0";
           let agentId = "0"; // agent id is optional while creating an offer
+          let offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
 
           // Check if domains are valid
           expect(offer.isValid()).is.true;
@@ -753,7 +754,7 @@ describe("IBosonTwinHandler", function () {
           // Create the offer
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
           // Bundle: Required constructor params
           bundleId = "1";
