@@ -569,7 +569,7 @@ library FundsLib {
     }
 
     /**
-     * @notice Distributes the royalties to external recipients and seller's trasury.
+     * @notice Distributes the royalties to external recipients and seller's treasury.
      *
      * @param _offer - storage pointer to the offer
      * @param _royaltyInfoIndex - index of the royalty info (reffers to offer.royaltyInfo array)
