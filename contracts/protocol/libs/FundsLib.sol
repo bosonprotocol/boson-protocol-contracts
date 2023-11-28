@@ -325,8 +325,16 @@ library FundsLib {
                 uint256 protocolFeeAmount = secondaryCommit.protocolFeeAmount;
                 uint256 royaltyAmount = secondaryCommit.royaltyAmount;
 
-                protocolFee += protocolFeeAmount;
-                sellerRoyalties += distributeRoyalties(_offer, secondaryCommit.royaltyInfoIndex, price);
+                if (effectivePriceMultiplier > 0) {
+                    protocolFee += protocolFeeAmount;
+                    sellerRoyalties += distributeRoyalties(
+                        _offer,
+                        secondaryCommit.royaltyInfoIndex,
+                        price,
+                        royaltyAmount,
+                        effectivePriceMultiplier
+                    );
+                }
 
                 // secondary price without protocol fee and royalties
                 uint256 reducedSecondaryPrice = price - protocolFeeAmount - royaltyAmount;
@@ -360,32 +368,7 @@ library FundsLib {
 
         // protocolFee and sellerRoyalties can be multiplied by effectivePriceMultiplier just at the end
         protocolFee = (protocolFee * effectivePriceMultiplier) / 10000;
-        sellerRoyalties = (sellerRoyalties * effectivePriceMultiplier) / 10000;
-    }
-
-    function distributeRoyalties(
-        BosonTypes.Offer storage _offer,
-        uint256 _royaltyInfoIndex,
-        uint256 _price
-    ) internal returns (uint256 sellerRoyalties) {
-        address exchangeToken = _offer.exchangeToken;
-        BosonTypes.RoyaltyInfo storage _royaltyInfo = _offer.royaltyInfo[_royaltyInfoIndex];
-        uint256 len = _royaltyInfo.recipients.length;
-        for (uint256 i = 0; i < len; ) {
-            address payable recipient = _royaltyInfo.recipients[i];
-            uint256 amount = (_royaltyInfo.bps[i] * _price) / 10000;
-            if (recipient == address(0)) {
-                // goes to seller's treasury
-                sellerRoyalties = amount;
-            } else {
-                // try to transfer the funds. Or better make it available to withdraw?
-                FundsLib.transferFundsFromProtocol(exchangeToken, recipient, amount);
-            }
-
-            unchecked {
-                i++;
-            }
-        }
+        sellerRoyalties = sellerRoyalties;
     }
 
     /**
@@ -583,5 +566,47 @@ library FundsLib {
                 delete entityTokens[_tokenAddress];
             }
         }
+    }
+
+    /**
+     * @notice Distributes the royalties to external recipients and seller's trasury.
+     *
+     * @param _offer - storage pointer to the offer
+     * @param _royaltyInfoIndex - index of the royalty info (reffers to offer.royaltyInfo array)
+     * @param _price - price in the sequential commit
+     * @param _escrowedRoyaltyAmount - amount of royalties that were escrowed
+     * @param _effectivePriceMultiplier - multiplier for the price, depending on the state of the exchange
+     */
+    function distributeRoyalties(
+        BosonTypes.Offer storage _offer,
+        uint256 _royaltyInfoIndex,
+        uint256 _price,
+        uint256 _escrowedRoyaltyAmount,
+        uint256 _effectivePriceMultiplier
+    ) internal returns (uint256 sellerRoyalties) {
+        address exchangeToken = _offer.exchangeToken;
+        BosonTypes.RoyaltyInfo storage _royaltyInfo = _offer.royaltyInfo[_royaltyInfoIndex];
+        uint256 len = _royaltyInfo.recipients.length;
+        uint256 totalAmount;
+        uint256 effectivePrice = (_price * _effectivePriceMultiplier) / 10000;
+        for (uint256 i = 0; i < len; ) {
+            address payable recipient = _royaltyInfo.recipients[i];
+            uint256 amount = (_royaltyInfo.bps[i] * effectivePrice) / 10000;
+            totalAmount += amount;
+            if (recipient == address(0)) {
+                // goes to seller's treasury
+                sellerRoyalties = amount;
+            } else {
+                // try to transfer the funds. Or better make it available to withdraw?
+                FundsLib.transferFundsFromProtocol(exchangeToken, recipient, amount);
+            }
+
+            unchecked {
+                i++;
+            }
+        }
+
+        // if there is a remainder due to rounding, it goes to the seller's treasury
+        sellerRoyalties += (_effectivePriceMultiplier * _escrowedRoyaltyAmount) / 10000 - totalAmount;
     }
 }
