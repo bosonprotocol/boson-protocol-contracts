@@ -1651,7 +1651,7 @@ describe("SellerHandler", function () {
 
         // Default royalty recipient is updated
         const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(seller.treasury, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
         ]);
         const royaltyRecipientList = RoyaltyRecipientList.fromStruct(
           await accountHandler.connect(rando).getRoyaltyRecipients(seller.id)
