@@ -279,7 +279,7 @@ interface IBosonExchangeHandler is BosonErrors, IBosonExchangeEvents, IBosonFund
      *
      * EIP2981 supports only 1 recipient, therefore this method defaults to treasury address.
      * This method is not exactly compliant with EIP2981, since it does not accept `salePrice` and does not return `royaltyAmount,
-     * but it rather returns `royaltyPercentage` which is the sum of all bps (exchange can have multiple reoyalty recipients).
+     * but it rather returns `royaltyPercentage` which is the sum of all bps (an exchange can have multiple royalty recipients).
      *
      * This function is meant to be primarly used by boson voucher client, which implements EIP2981.
      *

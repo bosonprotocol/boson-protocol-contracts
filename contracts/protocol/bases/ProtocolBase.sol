@@ -723,7 +723,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
     }
 
     /**
-     * @notice Internal helper to get royalty information and sellerfor a chosen exchange.
+     * @notice Internal helper to get royalty information and seller for a chosen exchange.
      *
      * Reverts if exchange does not exist.
      *

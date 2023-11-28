@@ -39,7 +39,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
      * - Royalty recipient is not on seller's allow list
-     * - Royalty percentage is less that the value decided by the admin
+     * - Royalty percentage is less than the value decided by the admin
      * - Total royalty percentage is more than max royalty percentage
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
@@ -239,7 +239,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                 // Sum of agent fee amount and protocol fee amount should be <= offer fee limit
                 if ((agentFeeAmount + protocolFee) > totalOfferFeeLimit) revert AgentFeeAmountTooHigh();
 
-                //Set offer fees props individually since calldata structs can't be copied to storage
+                // Set offer fees props individually since calldata structs can't be copied to storage
                 offerFees.protocolFee = protocolFee;
                 offerFees.agentFee = agentFeeAmount;
             }
