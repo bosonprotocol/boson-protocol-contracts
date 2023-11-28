@@ -45,6 +45,7 @@ exports.RevertReasons = {
   INVALID_QUANTITY_AVAILABLE: "InvalidQuantityAvailable",
   DR_UNSUPPORTED_FEE: "DRUnsupportedFee",
   AGENT_FEE_AMOUNT_TOO_HIGH: "AgentFeeAmountTooHigh",
+  TOTAL_FEE_EXCEEDS_LIMIT: "TotalFeeExceedsLimit",
   OFFER_NOT_AVAILABLE: "OfferNotAvailable",
   OFFER_HAS_EXPIRED: "OfferHasExpired",
   OFFER_SOLD_OUT: "OfferSoldOut",

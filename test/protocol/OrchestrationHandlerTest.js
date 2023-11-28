@@ -2361,7 +2361,7 @@ describe("IBosonOrchestrationHandler", function () {
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_AGENT);
           });
 
-          it("Sum of agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
+          it("Sum of agent fee amount and protocol fee amount should be <= than the protocol wide offer fee limit", async function () {
             // Create new agent
             let id = "3"; // argument sent to contract for createAgent will be ignored
 
@@ -2393,6 +2393,28 @@ describe("IBosonOrchestrationHandler", function () {
                   offerFeeLimit
                 )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.AGENT_FEE_AMOUNT_TOO_HIGH);
+          });
+
+          it("Sum of agent fee amount and protocol fee amount should be <= than the seller defined offer fee limit", async function () {
+            // Set fee limit below the sum of agent fee and protocol fee
+            offerFeeLimit = BigInt(agent.feePercentage) + BigInt(offerFees.protocolFee) - 1n;
+
+            // Attempt to Create an offer, expecting revert
+            await expect(
+              orchestrationHandler
+                .connect(assistant)
+                .createSellerAndOffer(
+                  seller,
+                  offer,
+                  offerDates,
+                  offerDurations,
+                  disputeResolver.id,
+                  emptyAuthToken,
+                  voucherInitValues,
+                  agent.id,
+                  offerFeeLimit
+                )
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOTAL_FEE_EXCEEDS_LIMIT);
           });
         });
       });
