@@ -38,7 +38,7 @@ contract ProtocolDiamond {
         IDiamondCut.FacetCut[] memory _facetCuts,
         bytes4[] memory _interfaceIds
     ) {
-        require(address(_accessController) != address(0), INVALID_ADDRESS);
+        require(address(_accessController) != address(0), "Invalid address");
 
         // Get the DiamondStorage struct
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();

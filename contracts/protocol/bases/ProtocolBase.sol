@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
@@ -14,13 +15,13 @@ import { ReentrancyGuardBase } from "./ReentrancyGuardBase.sol";
  *
  * @notice Provides domain and common modifiers to Protocol facets
  */
-abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
+abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors {
     /**
      * @notice Modifier to protect initializer function from being invoked twice.
      */
     modifier onlyUninitialized(bytes4 interfaceId) {
         ProtocolLib.ProtocolStatus storage ps = protocolStatus();
-        require(!ps.initializedInterfaces[interfaceId], ALREADY_INITIALIZED);
+        if (ps.initializedInterfaces[interfaceId]) revert AlreadyInitialized();
         ps.initializedInterfaces[interfaceId] = true;
         _;
     }
@@ -36,7 +37,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      */
     modifier onlyRole(bytes32 _role) {
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
-        require(ds.accessController.hasRole(_role, msgSender()), ACCESS_DENIED);
+        if (!ds.accessController.hasRole(_role, msgSender())) revert AccessDenied();
         _;
     }
 
@@ -497,10 +498,10 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
         (exists, offer) = fetchOffer(_offerId);
 
         // Offer must already exist
-        require(exists, NO_SUCH_OFFER);
+        if (!exists) revert NoSuchOffer();
 
         // Offer must not already be voided
-        require(!offer.voided, OFFER_HAS_BEEN_VOIDED);
+        if (offer.voided) revert OfferHasBeenVoided();
     }
 
     /**
@@ -522,7 +523,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
         (, Seller storage seller, ) = fetchSeller(offer.sellerId);
 
         // Caller must be seller's assistant address
-        require(seller.assistant == msgSender(), NOT_ASSISTANT);
+        if (seller.assistant != msgSender()) revert NotAssistant();
     }
 
     /**
@@ -585,7 +586,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
         (, uint256 buyerId) = getBuyerIdByWallet(msgSender());
 
         // Must be the buyer associated with the exchange (which is always voucher holder)
-        require(buyerId == _currentBuyer, NOT_VOUCHER_HOLDER);
+        if (buyerId != _currentBuyer) revert NotVoucherHolder();
     }
 
     /**
@@ -609,9 +610,10 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
         (exchangeExists, exchange) = fetchExchange(_exchangeId);
 
         // Make sure the exchange exists
-        require(exchangeExists, NO_SUCH_EXCHANGE);
+        if (!exchangeExists) revert NoSuchExchange();
+
         // Make sure the exchange is in expected state
-        require(exchange.state == _expectedState, INVALID_STATE);
+        if (exchange.state != _expectedState) revert InvalidState();
 
         // Get the voucher
         voucher = fetchVoucher(_exchangeId);

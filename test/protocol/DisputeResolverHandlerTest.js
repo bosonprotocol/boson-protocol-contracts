@@ -1,6 +1,6 @@
 const { ethers } = require("hardhat");
 const { expect, assert } = require("chai");
-const { ZeroAddress } = ethers;
+const { ZeroAddress, getContractAt } = ethers;
 
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const { DisputeResolverFee, DisputeResolverFeeList } = require("../../scripts/domain/DisputeResolverFee");
@@ -38,6 +38,7 @@ describe("DisputeResolverHandler", function () {
   let invalidAccountId, key, value, exists;
   let voucherInitValues;
   let snapshotId;
+  let bosonErrors;
 
   async function isValidDisputeResolverEvent(
     tx,
@@ -102,6 +103,8 @@ describe("DisputeResolverHandler", function () {
       signers: [pauser, admin, treasury, rando, other1, other2, other3, other4, other5],
       contractInstances: { accountHandler, configHandler, pauseHandler },
     } = await setupTestEnvironment(contracts));
+
+    bosonErrors = await getContractAt("BosonErrors", await configHandler.getAddress());
 
     // make all account the same
     assistant = admin;
@@ -466,7 +469,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to create a dispute resolver, expecting revert
           await expect(
             accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("Any address is the zero address", async function () {
@@ -475,7 +478,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to Create a DisputeResolver, expecting revert
           await expect(
             accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
 
           disputeResolver.assistant = await assistant.getAddress();
           disputeResolver.admin = ZeroAddress;
@@ -483,7 +486,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to Create a DisputeResolver, expecting revert
           await expect(
             accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
 
           disputeResolver.admin = await admin.getAddress();
           disputeResolver.treasury = ZeroAddress;
@@ -491,7 +494,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to Create a DisputeResolver, expecting revert
           await expect(
             accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
         });
 
         it("Supplied clerk is not a zero address", async function () {
@@ -500,7 +503,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to Create a DisputeResolver, expecting revert
           await expect(
             accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.CLERK_DEPRECATED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CLERK_DEPRECATED);
         });
 
         it("Address is not unique to this dispute resolver Id", async function () {
@@ -519,7 +522,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to create another dispute resolver with same addresses
           await expect(
             accountHandler.connect(admin).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
         });
 
         it("EscalationResponsePeriod is invalid", async function () {
@@ -528,14 +531,14 @@ describe("DisputeResolverHandler", function () {
           // Attempt to Create a DisputeResolver, expecting revert
           await expect(
             accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.INVALID_ESCALATION_PERIOD);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ESCALATION_PERIOD);
 
           disputeResolver.escalationResponsePeriod = 0;
 
           // Attempt to Create a DisputeResolver, expecting revert
           await expect(
             accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.INVALID_ESCALATION_PERIOD);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ESCALATION_PERIOD);
         });
 
         it("Duplicate dispute resolver fees", async function () {
@@ -550,7 +553,7 @@ describe("DisputeResolverHandler", function () {
           // Create a dispute resolver
           await expect(
             accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees2, sellerAllowList)
-          ).to.revertedWith(RevertReasons.DUPLICATE_DISPUTE_RESOLVER_FEES);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.DUPLICATE_DISPUTE_RESOLVER_FEES);
         });
 
         it("Duplicate dispute resolver fees", async function () {
@@ -560,7 +563,7 @@ describe("DisputeResolverHandler", function () {
           // Create a dispute resolver
           await expect(
             accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.NO_SUCH_SELLER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_SELLER);
         });
 
         it("Some seller id is duplicated", async function () {
@@ -570,7 +573,7 @@ describe("DisputeResolverHandler", function () {
           // Create a dispute resolver
           await expect(
             accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.SELLER_ALREADY_APPROVED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_ALREADY_APPROVED);
         });
 
         it("Caller is not the supplied admin", async function () {
@@ -579,7 +582,7 @@ describe("DisputeResolverHandler", function () {
           // Create a dispute resolver
           await expect(
             accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.NOT_ADMIN_AND_ASSISTANT);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ADMIN_AND_ASSISTANT);
         });
 
         it("Caller is not the supplied assistant", async function () {
@@ -588,7 +591,7 @@ describe("DisputeResolverHandler", function () {
           // Create a dispute resolver
           await expect(
             accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.NOT_ADMIN_AND_ASSISTANT);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ADMIN_AND_ASSISTANT);
         });
 
         it("Active is false", async function () {
@@ -597,7 +600,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to Create a DR, expecting revert
           await expect(
             accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.MUST_BE_ACTIVE);
         });
 
         it("Fee amount is not 0", async function () {
@@ -606,7 +609,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to Create a DR, expecting revert
           await expect(
             accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWith(RevertReasons.FEE_AMOUNT_NOT_YET_SUPPORTED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_AMOUNT_NOT_YET_SUPPORTED);
         });
       });
     });
@@ -1071,7 +1074,8 @@ describe("DisputeResolverHandler", function () {
           );
 
         // Attempt to update the dispute resolver with original admin address, expecting revert
-        await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+        await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWithCustomError(
+          bosonErrors,
           RevertReasons.NOT_ADMIN
         );
       });
@@ -1209,7 +1213,8 @@ describe("DisputeResolverHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.DisputeResolvers]);
 
           // Attempt to update a dispute resolver, expecting revert
-          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.REGION_PAUSED
           );
         });
@@ -1219,31 +1224,32 @@ describe("DisputeResolverHandler", function () {
           disputeResolver.id = "444";
 
           // Attempt to update the dispute resolver, expecting revert
-          await expect(accountHandler.connect(other1).updateDisputeResolver(disputeResolver)).to.revertedWith(
-            RevertReasons.NO_SUCH_DISPUTE_RESOLVER
-          );
+          await expect(
+            accountHandler.connect(other1).updateDisputeResolver(disputeResolver)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
 
           // Set invalid id
           disputeResolver.id = "0";
 
           // Attempt to update the dispute resolver, expecting revert
-          await expect(accountHandler.connect(other1).updateDisputeResolver(disputeResolver)).to.revertedWith(
-            RevertReasons.NO_SUCH_DISPUTE_RESOLVER
-          );
+          await expect(
+            accountHandler.connect(other1).updateDisputeResolver(disputeResolver)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
         });
 
         it("Caller is not dispute resolver admin address", async function () {
           // Attempt to update the disputer resolver, expecting revert
-          await expect(accountHandler.connect(other2).updateDisputeResolver(disputeResolver)).to.revertedWith(
-            RevertReasons.NOT_ADMIN
-          );
+          await expect(
+            accountHandler.connect(other2).updateDisputeResolver(disputeResolver)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ADMIN);
         });
 
         it("Any address is the zero address", async function () {
           disputeResolver.assistant = ZeroAddress;
 
           // Attempt to update the disputer resolver, expecting revert
-          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_ADDRESS
           );
 
@@ -1251,7 +1257,8 @@ describe("DisputeResolverHandler", function () {
           disputeResolver.admin = ZeroAddress;
 
           // Attempt to update the disputer resolver, expecting revert
-          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_ADDRESS
           );
 
@@ -1259,7 +1266,8 @@ describe("DisputeResolverHandler", function () {
           disputeResolver.treasury = ZeroAddress;
 
           // Attempt to update the disputer resolver, expecting revert
-          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_ADDRESS
           );
         });
@@ -1268,7 +1276,8 @@ describe("DisputeResolverHandler", function () {
           disputeResolver.clerk = await rando.getAddress();
 
           // Attempt to update the disputer resolver, expecting revert
-          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.CLERK_DEPRECATED
           );
         });
@@ -1290,7 +1299,8 @@ describe("DisputeResolverHandler", function () {
           disputeResolver.assistant = await other1.getAddress();
 
           // Attempt to update dispute resolver 1 with non-unique admin address, expecting revert
-          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
           );
 
@@ -1298,7 +1308,8 @@ describe("DisputeResolverHandler", function () {
           disputeResolver.admin = await other1.getAddress();
 
           // Attempt to update dispute resolver 1 with non-unique admin address, expecting revert
-          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
           );
         });
@@ -1320,18 +1331,18 @@ describe("DisputeResolverHandler", function () {
           disputeResolver2.admin = await assistant.getAddress();
 
           // Attempt to update dispute resolver 1 with non-unique admin address, expecting revert
-          await expect(accountHandler.connect(other1).updateDisputeResolver(disputeResolver2)).to.revertedWith(
-            RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
-          );
+          await expect(
+            accountHandler.connect(other1).updateDisputeResolver(disputeResolver2)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
 
           //Set dispute resolver 2's assistant address to dispute resolver 1's assistant address
           disputeResolver2.admin = await other2.getAddress();
           disputeResolver2.assistant = await assistant.getAddress();
 
           // Attempt to update dispute resolver 1 with non-unique assistant address, expecting revert
-          await expect(accountHandler.connect(other1).updateDisputeResolver(disputeResolver2)).to.revertedWith(
-            RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
-          );
+          await expect(
+            accountHandler.connect(other1).updateDisputeResolver(disputeResolver2)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
         });
 
         it("EscalationResponsePeriod is invalid", async function () {
@@ -1341,19 +1352,22 @@ describe("DisputeResolverHandler", function () {
           disputeResolver.escalationResponsePeriod = oneWeek + 1n;
 
           // Attempt to update a DisputeResolver, expecting revert
-          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_ESCALATION_PERIOD
           );
 
           disputeResolver.escalationResponsePeriod = 0;
 
           // Attempt to update a DisputeResolver, expecting revert
-          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_ESCALATION_PERIOD
           );
         });
         it("No updates applied or set to pending", async function () {
-          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_UPDATE_APPLIED
           );
         });
@@ -1455,7 +1469,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to add dispute resolver fees, expecting revert
           await expect(
             accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFeesToAdd)
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("Dispute resolver does not exist", async function () {
@@ -1465,7 +1479,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to add fees to the dispute resolver, expecting revert
           await expect(
             accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
-          ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
 
           // Set invalid id
           disputeResolver.id = "0";
@@ -1473,14 +1487,14 @@ describe("DisputeResolverHandler", function () {
           // Attempt to add fees to the dispute resolver, expecting revert
           await expect(
             accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
-          ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
         });
 
         it("Caller is not dispute resolver admin address", async function () {
           // Attempt to add fees to the dispute resolver, expecting revert
           await expect(
             accountHandler.connect(rando).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
-          ).to.revertedWith(RevertReasons.NOT_ADMIN);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ADMIN);
         });
 
         it("DisputeResolverFees empty", async function () {
@@ -1489,7 +1503,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to add fees to the dispute resolver, expecting revert
           await expect(
             accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
-          ).to.revertedWith(RevertReasons.INEXISTENT_DISPUTE_RESOLVER_FEES);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INEXISTENT_DISPUTE_RESOLVER_FEES);
         });
 
         it("Duplicate dispute resolver fees", async function () {
@@ -1501,7 +1515,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to add fees to the dispute resolver, expecting revert
           await expect(
             accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
-          ).to.revertedWith(RevertReasons.DUPLICATE_DISPUTE_RESOLVER_FEES);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.DUPLICATE_DISPUTE_RESOLVER_FEES);
         });
 
         it("Fee amount is not 0", async function () {
@@ -1510,7 +1524,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to Create a DR, expecting revert
           await expect(
             accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
-          ).to.revertedWith(RevertReasons.FEE_AMOUNT_NOT_YET_SUPPORTED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_AMOUNT_NOT_YET_SUPPORTED);
         });
       });
     });
@@ -1700,7 +1714,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to remove dispute resolver fees, expecting revert
           await expect(
             accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("Dispute resolver does not exist", async function () {
@@ -1710,7 +1724,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to remove fees from the dispute resolver, expecting revert
           await expect(
             accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
-          ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
 
           // Set invalid id
           disputeResolver.id = "0";
@@ -1718,14 +1732,14 @@ describe("DisputeResolverHandler", function () {
           // Attempt to remove fees from the dispute resolver, expecting revert
           await expect(
             accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
-          ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
         });
 
         it("Caller is not dispute resolver admin address", async function () {
           // Attempt to remove fees from the dispute resolver, expecting revert
           await expect(
             accountHandler.connect(rando).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
-          ).to.revertedWith(RevertReasons.NOT_ADMIN);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ADMIN);
         });
 
         it("DisputeResolverFees empty", async function () {
@@ -1734,7 +1748,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to remove fees from the dispute resolver, expecting revert
           await expect(
             accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
-          ).to.revertedWith(RevertReasons.INEXISTENT_DISPUTE_RESOLVER_FEES);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INEXISTENT_DISPUTE_RESOLVER_FEES);
         });
 
         it("DisputeResolverFee in array does not exist for Dispute Resolver", async function () {
@@ -1743,7 +1757,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to remove fees from the dispute resolver, expecting revert
           await expect(
             accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
-          ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_FEE_NOT_FOUND);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.DISPUTE_RESOLVER_FEE_NOT_FOUND);
         });
       });
     });
@@ -1831,7 +1845,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to add sellers to a dispute resolver allow list, expecting revert
           await expect(
             accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("Dispute resolver does not exist", async function () {
@@ -1841,7 +1855,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to add sellers to the allow list, expecting revert
           await expect(
             accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
-          ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
 
           // Set invalid id
           disputeResolver.id = "0";
@@ -1849,14 +1863,14 @@ describe("DisputeResolverHandler", function () {
           // Attempt to add sellers to the allow list, expecting revert
           await expect(
             accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
-          ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
         });
 
         it("Caller is not dispute resolver admin address", async function () {
           // Attempt to add sellers to the allow list, expecting revert
           await expect(
             accountHandler.connect(rando).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
-          ).to.revertedWith(RevertReasons.NOT_ADMIN);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ADMIN);
         });
 
         it("SellerAllowList empty", async function () {
@@ -1865,7 +1879,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to add sellers to the allow list, expecting revert
           await expect(
             accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
-          ).to.revertedWith(RevertReasons.INEXISTENT_ALLOWED_SELLERS_LIST);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INEXISTENT_ALLOWED_SELLERS_LIST);
         });
 
         it("Some seller does not exist", async function () {
@@ -1875,7 +1889,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to add sellers to the allow list, expecting revert
           await expect(
             accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
-          ).to.revertedWith(RevertReasons.NO_SUCH_SELLER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_SELLER);
         });
 
         it("Seller id is already approved", async function () {
@@ -1885,7 +1899,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to add sellers to the allow listr, expecting revert
           await expect(
             accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
-          ).to.revertedWith(RevertReasons.SELLER_ALREADY_APPROVED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_ALREADY_APPROVED);
 
           // Duplicate existing seller id
           allowedSellersToAdd = ["2", "1"];
@@ -1893,7 +1907,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to add sellers to the allow list, expecting revert
           await expect(
             accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
-          ).to.revertedWith(RevertReasons.SELLER_ALREADY_APPROVED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_ALREADY_APPROVED);
         });
       });
     });
@@ -2036,7 +2050,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to remove sellers from a dispute resolver allow list, expecting revert
           await expect(
             accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("Dispute resolver does not exist", async function () {
@@ -2046,7 +2060,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to remove sellers from the allowed list, expecting revert
           await expect(
             accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
-          ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
 
           // Set invalid id
           disputeResolver.id = "0";
@@ -2054,14 +2068,14 @@ describe("DisputeResolverHandler", function () {
           // Attempt to remove sellers from the allowed list, expecting revert
           await expect(
             accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
-          ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
         });
 
         it("Caller is not dispute resolver admin address", async function () {
           // Attempt to remove sellers from the allowed list, expecting revert
           await expect(
             accountHandler.connect(rando).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
-          ).to.revertedWith(RevertReasons.NOT_ADMIN);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ADMIN);
         });
 
         it("SellerAllowList empty", async function () {
@@ -2070,7 +2084,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to remove sellers from the allowed list, expecting revert
           await expect(
             accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
-          ).to.revertedWith(RevertReasons.INEXISTENT_ALLOWED_SELLERS_LIST);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INEXISTENT_ALLOWED_SELLERS_LIST);
         });
 
         it("Seller id is not approved", async function () {
@@ -2089,7 +2103,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to remove sellers from the allowed list, expecting revert
           await expect(
             accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
-          ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_NOT_APPROVED);
 
           // remove same id twice
           allowedSellersToRemove = ["2", "4", "2"];
@@ -2097,7 +2111,7 @@ describe("DisputeResolverHandler", function () {
           // Attempt to remove sellers from the allowed list, expecting revert
           await expect(
             accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
-          ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_NOT_APPROVED);
         });
       });
     });
@@ -2202,7 +2216,7 @@ describe("DisputeResolverHandler", function () {
           accountHandler
             .connect(other1)
             .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Assistant])
-        ).to.revertedWith(RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
+        ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
 
         disputeResolverPendingUpdate.assistant = ZeroAddress;
         disputeResolverPendingUpdate2Struct = disputeResolverPendingUpdate.toStruct();
@@ -2274,7 +2288,7 @@ describe("DisputeResolverHandler", function () {
 
           await expect(
             accountHandler.connect(other1).optInToDisputeResolverUpdate(disputeResolver.id, [])
-          ).to.revertedWith(RevertReasons.NO_PENDING_UPDATE_FOR_ACCOUNT);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_PENDING_UPDATE_FOR_ACCOUNT);
         });
 
         it("Caller is not the new admin", async function () {
@@ -2287,7 +2301,7 @@ describe("DisputeResolverHandler", function () {
             accountHandler
               .connect(other2)
               .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Admin])
-          ).to.revertedWith(RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
         });
 
         it("Caller is not the new assistant", async function () {
@@ -2300,7 +2314,7 @@ describe("DisputeResolverHandler", function () {
             accountHandler
               .connect(other2)
               .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Assistant])
-          ).to.revertedWith(RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNAUTHORIZED_CALLER_UPDATE);
         });
 
         it("The DisputeResolvers region of protocol is paused", async function () {
@@ -2313,7 +2327,7 @@ describe("DisputeResolverHandler", function () {
 
           await expect(
             accountHandler.connect(rando).optInToDisputeResolverUpdate(disputeResolver.id, [])
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("Admin is not unique to this disputeResolver", async function () {
@@ -2339,7 +2353,7 @@ describe("DisputeResolverHandler", function () {
             accountHandler
               .connect(other1)
               .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Admin])
-          ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
         });
 
         it("Assistant is not unique to this disputeResolver", async function () {
@@ -2365,7 +2379,7 @@ describe("DisputeResolverHandler", function () {
             accountHandler
               .connect(other1)
               .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Assistant])
-          ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
         });
 
         it("Dispute resolver tries to update the clerk", async function () {
@@ -2378,7 +2392,7 @@ describe("DisputeResolverHandler", function () {
             accountHandler
               .connect(other2)
               .optInToDisputeResolverUpdate(disputeResolver.id, [DisputeResolverUpdateFields.Clerk])
-          ).to.revertedWith(RevertReasons.CLERK_DEPRECATED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CLERK_DEPRECATED);
         });
       });
     });

@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { ZeroAddress, MaxUint256, id: ethersId } = ethers;
+const { ZeroAddress, MaxUint256, id: ethersId, getContractAt } = ethers;
 const { expect, assert } = require("chai");
 const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
@@ -50,6 +50,7 @@ describe("IBosonTwinHandler", function () {
   let voucherInitValues;
   let emptyAuthToken;
   let snapshotId;
+  let bosonErrors;
 
   before(async function () {
     // get interface Ids
@@ -69,6 +70,8 @@ describe("IBosonTwinHandler", function () {
       signers: [pauser, admin, treasury, rando],
       contractInstances: { erc165, accountHandler, twinHandler, bundleHandler, offerHandler, pauseHandler },
     } = await setupTestEnvironment(contracts));
+
+    bosonErrors = await getContractAt("BosonErrors", await accountHandler.getAddress());
 
     // make all account the same
     assistant = admin;
@@ -343,19 +346,26 @@ describe("IBosonTwinHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Twins]);
 
           // Attempt to Remove a twin, expecting revert
-          await expect(twinHandler.connect(assistant).createTwin(twin)).to.revertedWith(RevertReasons.REGION_PAUSED);
+          await expect(twinHandler.connect(assistant).createTwin(twin)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.REGION_PAUSED
+          );
         });
 
         it("Caller not assistant of any seller", async function () {
           // Attempt to Create a twin, expecting revert
-          await expect(twinHandler.connect(rando).createTwin(twin)).to.revertedWith(RevertReasons.NOT_ASSISTANT);
+          await expect(twinHandler.connect(rando).createTwin(twin)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.NOT_ASSISTANT
+          );
         });
 
         it("protocol is not approved to transfer the ERC20 token", async function () {
           //ERC20 token address
           twin.tokenAddress = await bosonToken.getAddress();
 
-          await expect(twinHandler.connect(assistant).createTwin(twin)).to.revertedWith(
+          await expect(twinHandler.connect(assistant).createTwin(twin)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_TRANSFER_APPROVED
           );
         });
@@ -364,7 +374,8 @@ describe("IBosonTwinHandler", function () {
           //ERC721 token address
           twin.tokenAddress = await foreign721.getAddress();
 
-          await expect(twinHandler.connect(assistant).createTwin(twin)).to.revertedWith(
+          await expect(twinHandler.connect(assistant).createTwin(twin)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_TRANSFER_APPROVED
           );
         });
@@ -373,7 +384,8 @@ describe("IBosonTwinHandler", function () {
           //ERC1155 token address
           twin.tokenAddress = await foreign1155.getAddress();
 
-          await expect(twinHandler.connect(assistant).createTwin(twin)).to.revertedWith(
+          await expect(twinHandler.connect(assistant).createTwin(twin)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_TRANSFER_APPROVED
           );
         });
@@ -389,7 +401,8 @@ describe("IBosonTwinHandler", function () {
           twin.tokenAddress = await foreign721.getAddress();
           twin.tokenType = TokenType.NonFungibleToken;
 
-          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
+          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_SUPPLY_AVAILABLE
           );
         });
@@ -403,7 +416,8 @@ describe("IBosonTwinHandler", function () {
           twin.tokenAddress = await bosonToken.getAddress();
           twin.tokenType = TokenType.FungibleToken;
 
-          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
+          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_AMOUNT
           );
         });
@@ -418,7 +432,8 @@ describe("IBosonTwinHandler", function () {
           twin.tokenAddress = await foreign1155.getAddress();
           twin.tokenType = TokenType.MultiToken;
 
-          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
+          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_AMOUNT
           );
         });
@@ -431,7 +446,8 @@ describe("IBosonTwinHandler", function () {
           twin.tokenAddress = await bosonToken.getAddress();
           twin.tokenType = TokenType.FungibleToken;
 
-          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
+          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_AMOUNT
           );
         });
@@ -445,7 +461,8 @@ describe("IBosonTwinHandler", function () {
           twin.tokenAddress = await foreign1155.getAddress();
           twin.tokenType = TokenType.MultiToken;
 
-          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
+          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_AMOUNT
           );
         });
@@ -460,7 +477,8 @@ describe("IBosonTwinHandler", function () {
           await foreign721.connect(assistant).mint(twin.tokenId, "1");
           await foreign721.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 
-          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
+          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_TWIN_PROPERTY
           );
         });
@@ -480,28 +498,32 @@ describe("IBosonTwinHandler", function () {
           await twinHandler.connect(assistant).createTwin(twin);
 
           // Create another twin with exact same range
-          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
+          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_TWIN_TOKEN_RANGE
           );
 
           // Create an twin with ids range: ["0" ... "5"]
           twin.tokenId = "0";
           twin.supplyAvailable = "6";
-          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
+          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_TWIN_TOKEN_RANGE
           );
 
           // Create an twin with ids range: ["14" ... "18"]
           twin.tokenId = "14";
           twin.supplyAvailable = "5";
-          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
+          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_TWIN_TOKEN_RANGE
           );
 
           // Create an twin with ids range: ["6" ... "9"]
           twin.tokenId = "6";
           twin.supplyAvailable = "4";
-          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
+          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_TWIN_TOKEN_RANGE
           );
         });
@@ -519,7 +541,8 @@ describe("IBosonTwinHandler", function () {
 
           // Create new twin with same token address
           twin.supplyAvailable = "2";
-          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
+          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_TWIN_TOKEN_RANGE
           );
         });
@@ -534,7 +557,8 @@ describe("IBosonTwinHandler", function () {
           await foreign721.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 
           // Create new twin with same token address
-          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
+          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_TWIN_TOKEN_RANGE
           );
         });
@@ -549,7 +573,8 @@ describe("IBosonTwinHandler", function () {
           await foreign721.connect(assistant).setApprovalForAll(await twinHandler.getAddress(), true);
 
           // Create new twin with same token address
-          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
+          await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_TWIN_TOKEN_RANGE
           );
         });
@@ -558,7 +583,8 @@ describe("IBosonTwinHandler", function () {
           it("Token address is a zero address", async function () {
             twin.tokenAddress = ZeroAddress;
 
-            await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
+            await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.UNSUPPORTED_TOKEN
             );
           });
@@ -566,7 +592,8 @@ describe("IBosonTwinHandler", function () {
           it("Token address is a contract address that does not support the isApprovedForAll", async function () {
             twin.tokenAddress = await twinHandler.getAddress();
 
-            await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
+            await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.UNSUPPORTED_TOKEN
             );
           });
@@ -574,7 +601,8 @@ describe("IBosonTwinHandler", function () {
           it("Token address is a contract that reverts from a fallback method", async function () {
             twin.tokenAddress = await fallbackError.getAddress();
 
-            await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
+            await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.UNSUPPORTED_TOKEN
             );
           });
@@ -584,7 +612,8 @@ describe("IBosonTwinHandler", function () {
             twin.tokenType = TokenType.NonFungibleToken;
             twin.tokenAddress = await bosonToken.getAddress();
 
-            await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
+            await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_TOKEN_ADDRESS
             );
           });
@@ -594,7 +623,8 @@ describe("IBosonTwinHandler", function () {
             twin.tokenType = TokenType.MultiToken;
             twin.tokenAddress = await bosonToken.getAddress();
 
-            await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWith(
+            await expect(twinHandler.connect(assistant).createTwin(twin)).to.be.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_TOKEN_ADDRESS
             );
           });
@@ -691,10 +721,12 @@ describe("IBosonTwinHandler", function () {
 
         // We don't have getters, so we implicitly test that correct change was done
         // Twin2 should still exists, therefore it should not be possible to create it again
-        await expect(twinHandler.connect(assistant).createTwin(twin1)).to.be.revertedWith(
+        await expect(twinHandler.connect(assistant).createTwin(twin1)).to.be.revertedWithCustomError(
+          bosonErrors,
           RevertReasons.INVALID_TWIN_TOKEN_RANGE
         );
-        await expect(twinHandler.connect(assistant).createTwin(twin3)).to.be.revertedWith(
+        await expect(twinHandler.connect(assistant).createTwin(twin3)).to.be.revertedWithCustomError(
+          bosonErrors,
           RevertReasons.INVALID_TWIN_TOKEN_RANGE
         );
         // Twin2 was removed, therefore it should be possible to be added again
@@ -719,21 +751,28 @@ describe("IBosonTwinHandler", function () {
             .pause([PausableRegion.Offers, PausableRegion.Twins, PausableRegion.Bundles]);
 
           // Attempt to Remove a twin, expecting revert
-          await expect(twinHandler.connect(assistant).removeTwin(twin.id)).to.revertedWith(RevertReasons.REGION_PAUSED);
+          await expect(twinHandler.connect(assistant).removeTwin(twin.id)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.REGION_PAUSED
+          );
         });
 
         it("Twin does not exist", async function () {
           let nonExistantTwinId = "999";
 
           // Attempt to Remove a twin, expecting revert
-          await expect(twinHandler.connect(assistant).removeTwin(nonExistantTwinId)).to.revertedWith(
+          await expect(twinHandler.connect(assistant).removeTwin(nonExistantTwinId)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_SUCH_TWIN
           );
         });
 
         it("Caller is not the seller", async function () {
           // Attempt to Remove a twin, expecting revert
-          await expect(twinHandler.connect(rando).removeTwin(twin.id)).to.revertedWith(RevertReasons.NOT_ASSISTANT);
+          await expect(twinHandler.connect(rando).removeTwin(twin.id)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.NOT_ASSISTANT
+          );
         });
 
         it("Bundle for twin exists", async function () {
@@ -766,7 +805,8 @@ describe("IBosonTwinHandler", function () {
           await bundleHandler.connect(assistant).createBundle(bundle);
 
           // Attempt to Remove a twin, expecting revert
-          await expect(twinHandler.connect(assistant).removeTwin(twin.id)).to.revertedWith(
+          await expect(twinHandler.connect(assistant).removeTwin(twin.id)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.BUNDLE_FOR_TWIN_EXISTS
           );
         });

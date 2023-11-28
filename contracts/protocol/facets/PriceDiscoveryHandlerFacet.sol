@@ -77,13 +77,7 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
         PriceDiscovery calldata _priceDiscovery
     ) external payable override exchangesNotPaused buyersNotPaused {
         // Make sure buyer address is not zero address
-        require(_buyer != address(0), INVALID_ADDRESS);
-
-        // Make sure caller provided price discovery data
-        require(
-            _priceDiscovery.priceDiscoveryContract != address(0) && _priceDiscovery.priceDiscoveryData.length > 0,
-            INVALID_PRICE_DISCOVERY
-        );
+        if (_buyer == address(0)) revert InvalidAddress();
 
         bool isTokenId;
         uint256 offerId = _tokenIdOrOfferId >> 128;
@@ -104,7 +98,7 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
         Offer storage offer = getValidOffer(offerId);
 
         // Make sure offer type is price discovery. Otherwise, use commitToOffer
-        require(offer.priceType == PriceType.Discovery, INVALID_PRICE_TYPE);
+        if (offer.priceType != PriceType.Discovery) revert InvalidPriceType();
         uint256 sellerId = offer.sellerId;
 
         uint256 actualPrice;
@@ -137,7 +131,7 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
             ).royaltyInfo(exchangeId, actualPrice);
 
             // Verify that fees and royalties are not higher than the price.
-            require((protocolFeeAmount + royaltyAmount) <= actualPrice, FEE_AMOUNT_TOO_HIGH);
+            if (protocolFeeAmount + royaltyAmount > actualPrice) revert FeeAmountTooHigh();
 
             // Store exchange costs so it can be released later. This is the first cost entry for this exchange.
             exchangeCosts.push(

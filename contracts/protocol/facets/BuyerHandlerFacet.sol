@@ -59,7 +59,7 @@ contract BuyerHandlerFacet is BuyerBase {
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // Check for zero address
-        require(_buyer.wallet != address(0), INVALID_ADDRESS);
+        if (_buyer.wallet == address(0)) revert InvalidAddress();
 
         bool exists;
         Buyer storage buyer;
@@ -68,23 +68,23 @@ contract BuyerHandlerFacet is BuyerBase {
         (exists, buyer) = fetchBuyer(_buyer.id);
 
         // Buyer must already exist
-        require(exists, NO_SUCH_BUYER);
+        if (!exists) revert NoSuchBuyer();
 
         // Get message sender
         address sender = msgSender();
 
         // Check that msg.sender is the wallet address for this buyer
-        require(buyer.wallet == sender, NOT_BUYER_WALLET);
+        if (buyer.wallet != sender) revert NotBuyerWallet();
 
         // Check that current wallet address does not own any vouchers, if changing wallet address
         if (buyer.wallet != _buyer.wallet) {
-            require(lookups.voucherCount[_buyer.id] == 0, WALLET_OWNS_VOUCHERS);
+            if (lookups.voucherCount[_buyer.id] != 0) revert WalletOwnsVouchers();
         }
 
         // Check that the wallet address is unique to one buyer id if new
         mapping(address => uint256) storage buyerIds = lookups.buyerIdByWallet;
-        uint256 check1 = buyerIds[_buyer.wallet];
-        require(check1 == 0 || check1 == _buyer.id, BUYER_ADDRESS_MUST_BE_UNIQUE);
+        uint256 buyerId = buyerIds[_buyer.wallet];
+        if (buyerId != 0 && buyerId != _buyer.id) revert BuyerAddressMustBeUnique();
 
         // Delete current mappings
         delete buyerIds[sender];

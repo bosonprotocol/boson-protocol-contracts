@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonTwinEvents } from "../events/IBosonTwinEvents.sol";
 
 /**
@@ -11,7 +12,7 @@ import { IBosonTwinEvents } from "../events/IBosonTwinEvents.sol";
  *
  * The ERC-165 identifier for this interface is: 0x60b30e70
  */
-interface IBosonTwinHandler is IBosonTwinEvents {
+interface IBosonTwinHandler is BosonErrors, IBosonTwinEvents {
     /**
      * @notice Creates a Twin.
      *

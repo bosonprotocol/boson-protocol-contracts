@@ -51,6 +51,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   let protocolDiamondAddress;
   let snapshotId;
   let offerFeeLimit;
+  let bosonErrors;
 
   before(async function () {
     accountId.next(true);
@@ -70,6 +71,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       protocolConfig: [, , { buyerEscalationDepositPercentage }],
       diamondAddress: protocolDiamondAddress,
     } = await setupTestEnvironment(contracts));
+
+    bosonErrors = await getContractAt("BosonErrors", protocolDiamondAddress);
 
     // make all account the same
     assistant = admin;
@@ -860,12 +863,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             // Attempt to withdraw the funds, expecting revert
             await expect(
               fundsHandler.connect(assistant).withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller)
-            ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
 
             // buyer withdrawal
             await expect(
               fundsHandler.connect(buyer).withdrawFunds(buyerId, tokenListBuyer, tokenAmountsBuyer)
-            ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
           });
         });
       });

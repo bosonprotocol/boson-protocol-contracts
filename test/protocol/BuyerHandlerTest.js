@@ -41,6 +41,7 @@ describe("BuyerHandler", function () {
   let bosonVoucher;
   let voucherInitValues;
   let snapshotId;
+  let bosonErrors;
 
   before(async function () {
     accountId.next(true);
@@ -58,6 +59,8 @@ describe("BuyerHandler", function () {
       signers: [pauser, admin, treasury, rando, other1, other2, other3, other4],
       contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, pauseHandler },
     } = await setupTestEnvironment(contracts));
+
+    bosonErrors = await getContractAt("BosonErrors", await accountHandler.getAddress());
 
     // make all account the same
     assistant = admin;
@@ -136,21 +139,30 @@ describe("BuyerHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Buyers]);
 
           // Attempt to create a buyer, expecting revert
-          await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(RevertReasons.REGION_PAUSED);
+          await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.REGION_PAUSED
+          );
         });
 
         it("active is false", async function () {
           buyer.active = false;
 
           // Attempt to Create a Buyer, expecting revert
-          await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
+          await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.MUST_BE_ACTIVE
+          );
         });
 
         it("addresses are the zero address", async function () {
           buyer.wallet = ZeroAddress;
 
           // Attempt to Create a Buyer, expecting revert
-          await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+          await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.INVALID_ADDRESS
+          );
         });
 
         it("wallet address is not unique to this buyerId", async function () {
@@ -158,7 +170,8 @@ describe("BuyerHandler", function () {
           await accountHandler.connect(rando).createBuyer(buyer);
 
           // Attempt to create another buyer with same wallet address
-          await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(
+          await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.BUYER_ADDRESS_MUST_BE_UNIQUE
           );
         });
@@ -319,7 +332,10 @@ describe("BuyerHandler", function () {
           .withArgs(buyer.id, buyerStruct, await other2.getAddress());
 
         // Attempt to update the buyer with original wallet address, expecting revert
-        await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.NOT_BUYER_WALLET);
+        await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWithCustomError(
+          bosonErrors,
+          RevertReasons.NOT_BUYER_WALLET
+        );
       });
 
       context("💔 Revert Reasons", async function () {
@@ -428,7 +444,10 @@ describe("BuyerHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Buyers]);
 
           // Attempt to update a buyer, expecting revert
-          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.REGION_PAUSED);
+          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.REGION_PAUSED
+          );
         });
 
         it("Buyer does not exist", async function () {
@@ -436,18 +455,25 @@ describe("BuyerHandler", function () {
           buyer.id = "444";
 
           // Attempt to update the buyer, expecting revert
-          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.NO_SUCH_BUYER);
+          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.NO_SUCH_BUYER
+          );
 
           // Set invalid id
           buyer.id = "0";
 
           // Attempt to update the buyer, expecting revert
-          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.NO_SUCH_BUYER);
+          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.NO_SUCH_BUYER
+          );
         });
 
         it("Caller is not buyer wallet address", async function () {
           // Attempt to update the buyer, expecting revert
-          await expect(accountHandler.connect(other2).updateBuyer(buyer)).to.revertedWith(
+          await expect(accountHandler.connect(other2).updateBuyer(buyer)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NOT_BUYER_WALLET
           );
         });
@@ -456,7 +482,8 @@ describe("BuyerHandler", function () {
           buyer.wallet = ZeroAddress;
 
           // Attempt to update the buyer, expecting revert
-          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(
+          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_ADDRESS
           );
         });
@@ -477,7 +504,8 @@ describe("BuyerHandler", function () {
           buyer2.wallet = await other1.getAddress(); //already being used by buyer 1
 
           // Attempt to update buyer 2 with non-unique wallet address, expecting revert
-          await expect(accountHandler.connect(other2).updateBuyer(buyer2)).to.revertedWith(
+          await expect(accountHandler.connect(other2).updateBuyer(buyer2)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.BUYER_ADDRESS_MUST_BE_UNIQUE
           );
         });
@@ -486,7 +514,8 @@ describe("BuyerHandler", function () {
           buyer.wallet = await other4.getAddress();
 
           // Attempt to update the buyer, expecting revert
-          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(
+          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.WALLET_OWNS_VOUCHERS
           );
         });

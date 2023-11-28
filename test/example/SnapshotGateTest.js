@@ -63,6 +63,7 @@ describe("SnapshotGate", function () {
   let offerDates, offerDurations;
   let snapshot, snapshotTokenSupplies, snapshotTokenCount, holders, holderByAddress;
   let offerFeeLimit;
+  let bosonErrors;
 
   beforeEach(async function () {
     // Reset the accountId iterator
@@ -177,6 +178,8 @@ describe("SnapshotGate", function () {
 
     // Cast Diamond to IBosonExchangeHandler
     exchangeHandler = await getContractAt("IBosonExchangeHandler", await protocolDiamond.getAddress());
+
+    bosonErrors = await getContractAt("BosonErrors", await protocolDiamond.getAddress());
 
     accountId.next(true);
 
@@ -718,7 +721,7 @@ describe("SnapshotGate", function () {
           // Commit to the offer
           await expect(
             snapshotGate.connect(holder).commitToGatedOffer(entry.owner, offerId, entry.tokenId, { value: price })
-          ).to.revertedWith(RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_ID_NOT_IN_CONDITION_RANGE);
         });
 
         it("offer is from another seller", async function () {
@@ -922,7 +925,7 @@ describe("SnapshotGate", function () {
           // Check that holder cannot commit directly to the offer on the protocol itself
           await expect(
             exchangeHandler.connect(holder).commitToConditionalOffer(await holder.getAddress(), offerId, entry.tokenId)
-          ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
         });
       });
     });

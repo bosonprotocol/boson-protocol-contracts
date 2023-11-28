@@ -22,7 +22,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      */
     modifier onlyUninitializedVersion(bytes32 _version) {
         ProtocolLib.ProtocolStatus storage ps = protocolStatus();
-        require(!ps.initializedVersions[_version], ALREADY_INITIALIZED);
+        if (ps.initializedVersions[_version]) revert AlreadyInitialized();
         ps.initializedVersions[_version] = true;
         _;
     }
@@ -68,9 +68,9 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         bytes4[] calldata _interfacesToRemove,
         bytes4[] calldata _interfacesToAdd
     ) external onlyUninitializedVersion(_version) {
-        require(address(this) != thisAddress, DIRECT_INITIALIZATION_NOT_ALLOWED);
-        require(_version != bytes32(0), VERSION_MUST_BE_SET);
-        require(_addresses.length == _calldata.length, ADDRESSES_AND_CALLDATA_LENGTH_MISMATCH);
+        if (address(this) == thisAddress) revert DirectInitializationNotAllowed();
+        if (_version == bytes32(0)) revert VersionMustBeSet();
+        if (_addresses.length != _calldata.length) revert AddressesAndCalldataLengthMismatch();
 
         // Delegate call to initialize methods of facets declared in _addresses
         for (uint256 i = 0; i < _addresses.length; ) {
@@ -85,7 +85,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
                     }
                 } else {
                     // Reverts with default message
-                    revert(PROTOCOL_INITIALIZATION_FAILED);
+                    revert ProtocolInitializationFailed();
                 }
             }
 
@@ -122,11 +122,11 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      */
     function initV2_2_0(bytes calldata _initializationData) internal {
         // v2.2.0 can only be initialized if the current version does not exist yet
-        require(protocolStatus().version == 0x0, WRONG_CURRENT_VERSION);
+        if (protocolStatus().version != bytes32(0)) revert WrongCurrentVersion();
 
         // Initialize limits.maxPremintedVouchers (configHandlerFacet initializer)
         uint256 _maxPremintedVouchers = abi.decode(_initializationData, (uint256));
-        require(_maxPremintedVouchers != 0, VALUE_ZERO_NOT_ALLOWED);
+        if (_maxPremintedVouchers == 0) revert ValueZeroNotAllowed();
         protocolLimits().maxPremintedVouchers = _maxPremintedVouchers;
         emit MaxPremintedVouchersChanged(_maxPremintedVouchers, msgSender());
     }
@@ -136,7 +136,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      */
     function initV2_2_1() internal view {
         // Current version must be 2.2.0
-        require(protocolStatus().version == bytes32("2.2.0"), WRONG_CURRENT_VERSION);
+        if (protocolStatus().version != bytes32("2.2.0")) revert WrongCurrentVersion();
     }
 
     /**
@@ -154,9 +154,9 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      */
     function initV2_3_0(bytes calldata _initializationData) internal {
         // Current version must be 2.2.1
-        require(protocolStatus().version == bytes32("2.2.1"), WRONG_CURRENT_VERSION);
+        if (protocolStatus().version != bytes32("2.2.1")) revert WrongCurrentVersion();
 
-        require(protocolCounters().nextTwinId == 1, TWINS_ALREADY_EXIST);
+        if (protocolCounters().nextTwinId != 1) revert TwinsAlreadyExist();
 
         // Decode initialization data
         uint256 _minResolutionPeriod = abi.decode(_initializationData, (uint256));
@@ -165,10 +165,10 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         ProtocolLib.ProtocolLimits storage limits = protocolLimits();
 
         // make sure _minResolutionPeriod is less than maxResolutionPeriod
-        require(limits.maxResolutionPeriod >= _minResolutionPeriod, INVALID_RESOLUTION_PERIOD);
+        if (limits.maxResolutionPeriod < _minResolutionPeriod) revert InvalidResolutionPeriod();
 
         // Initialize limits.maxPremintedVouchers (configHandlerFacet initializer)
-        require(_minResolutionPeriod != 0, VALUE_ZERO_NOT_ALLOWED);
+        if (_minResolutionPeriod == 0) revert ValueZeroNotAllowed();
         limits.minResolutionPeriod = _minResolutionPeriod;
         emit MinResolutionPeriodChanged(_minResolutionPeriod, msgSender());
 

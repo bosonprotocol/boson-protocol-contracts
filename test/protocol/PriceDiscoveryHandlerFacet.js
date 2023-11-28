@@ -77,6 +77,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
   let tokenId;
   let bosonVoucher;
   let offerFeeLimit;
+  let bosonErrors;
 
   before(async function () {
     accountId.next(true);
@@ -116,6 +117,8 @@ describe("IPriceDiscoveryHandlerFacet", function () {
       protocolConfig: [, , { percentage: protocolFeePercentage }],
       diamondAddress: protocolDiamondAddress,
     } = await setupTestEnvironment(contracts, { wethAddress: await weth.getAddress() }));
+
+    bosonErrors = await getContractAt("BosonErrors", await configHandler.getAddress());
 
     // make all account the same
     assistant = admin;
@@ -467,7 +470,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(buyer)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
-            ).to.revertedWith(RevertReasons.REGION_PAUSED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
           });
 
           it("The buyers region of protocol is paused", async function () {
@@ -479,7 +482,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(buyer)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
-            ).to.revertedWith(RevertReasons.REGION_PAUSED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
           });
 
           it("buyer address is the zero address", async function () {
@@ -488,7 +491,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(buyer)
                 .commitToPriceDiscoveryOffer(ZeroAddress, tokenId, priceDiscovery, { value: price })
-            ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
           });
 
           it("token id is invalid", async function () {
@@ -516,7 +519,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(buyer)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
-            ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
           });
 
           it("offer is not yet available for commits", async function () {
@@ -545,7 +548,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(buyer)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
-            ).to.revertedWith(RevertReasons.OFFER_NOT_AVAILABLE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_NOT_AVAILABLE);
           });
 
           it("offer has expired", async function () {
@@ -557,7 +560,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(buyer)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
-            ).to.revertedWith(RevertReasons.OFFER_HAS_EXPIRED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_EXPIRED);
           });
 
           it.skip("offer sold", async function () {
@@ -575,7 +578,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(buyer)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
-            ).to.revertedWith(RevertReasons.FEE_AMOUNT_TOO_HIGH);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_AMOUNT_TOO_HIGH);
           });
 
           it("insufficient values sent", async function () {
@@ -585,7 +588,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(buyer)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
-            ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
           });
 
           it("price discovery does not send the voucher anywhere", async function () {
@@ -613,7 +616,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(buyer)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
-            ).to.revertedWith(RevertReasons.TOKEN_ID_MISMATCH);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_ID_MISMATCH);
           });
 
           it("price discovery does not send the voucher to the protocol", async function () {
@@ -646,7 +649,43 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(buyer)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
-            ).to.revertedWith(RevertReasons.VOUCHER_NOT_RECEIVED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.VOUCHER_NOT_RECEIVED);
+          });
+
+          it("price discovery address is not set", async function () {
+            // An invalid price discovery address
+            priceDiscovery.priceDiscoveryContract = ZeroAddress;
+
+            // Attempt to commit, expecting revert
+            await expect(
+              priceDiscoveryHandler
+                .connect(buyer)
+                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_PRICE_DISCOVERY);
+          });
+
+          it("price discovery data is empty", async function () {
+            // An empty price discovery data
+            priceDiscovery.priceDiscoveryData = "0x";
+
+            // Attempt to commit, expecting revert
+            await expect(
+              priceDiscoveryHandler
+                .connect(buyer)
+                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_PRICE_DISCOVERY);
+          });
+
+          it("conduit address is not set", async function () {
+            // An invalid conduit address
+            priceDiscovery.conduit = ZeroAddress;
+
+            // Attempt to commit, expecting revert
+            await expect(
+              priceDiscoveryHandler
+                .connect(buyer)
+                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_CONDUIT_ADDRESS);
           });
         });
       });
@@ -811,7 +850,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(assistant)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
-            ).to.revertedWith(RevertReasons.REGION_PAUSED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
           });
 
           it("The buyers region of protocol is paused", async function () {
@@ -823,14 +862,14 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(assistant)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
-            ).to.revertedWith(RevertReasons.REGION_PAUSED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
           });
 
           it("buyer address is the zero address", async function () {
             // Attempt to commit, expecting revert
             await expect(
               priceDiscoveryHandler.connect(assistant).commitToPriceDiscoveryOffer(ZeroAddress, tokenId, priceDiscovery)
-            ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
           });
 
           it("offer id is invalid", async function () {
@@ -843,7 +882,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(assistant)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
-            ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_OFFER);
           });
 
           it("token id is invalid", async function () {
@@ -868,7 +907,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(assistant)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
-            ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
           });
 
           it("offer is not yet available for commits", async function () {
@@ -897,7 +936,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(assistant)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
-            ).to.revertedWith(RevertReasons.OFFER_NOT_AVAILABLE);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_NOT_AVAILABLE);
           });
 
           it("offer has expired", async function () {
@@ -909,7 +948,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(assistant)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
-            ).to.revertedWith(RevertReasons.OFFER_HAS_EXPIRED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_EXPIRED);
           });
 
           it.skip("offer sold", async function () {
@@ -927,7 +966,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(assistant)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
-            ).to.revertedWith(RevertReasons.FEE_AMOUNT_TOO_HIGH);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_AMOUNT_TOO_HIGH);
           });
 
           it("voucher transfer not approved", async function () {
@@ -951,14 +990,50 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(assistant)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
-            ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
           });
 
           it("Only seller can call, if side is bid", async function () {
             // Commit to offer, retrieving the event
             await expect(
               priceDiscoveryHandler.connect(rando).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
-            ).to.revertedWith(RevertReasons.NOT_VOUCHER_HOLDER);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_VOUCHER_HOLDER);
+          });
+
+          it("price discovery address is not set", async function () {
+            // An invalid price discovery address
+            priceDiscovery.priceDiscoveryContract = ZeroAddress;
+
+            // Attempt to commit, expecting revert
+            await expect(
+              priceDiscoveryHandler
+                .connect(assistant)
+                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_PRICE_DISCOVERY);
+          });
+
+          it("price discovery data is empty", async function () {
+            // An empty price discovery data
+            priceDiscovery.priceDiscoveryData = "0x";
+
+            // Attempt to commit, expecting revert
+            await expect(
+              priceDiscoveryHandler
+                .connect(assistant)
+                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_PRICE_DISCOVERY);
+          });
+
+          it("conduit address is not set", async function () {
+            // An invalid conduit address
+            priceDiscovery.conduit = ZeroAddress;
+
+            // Attempt to commit, expecting revert
+            await expect(
+              priceDiscoveryHandler
+                .connect(assistant)
+                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_CONDUIT_ADDRESS);
           });
         });
       });
@@ -999,7 +1074,8 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             expect(await bosonVoucher.ownerOf(tokenId)).to.equal(await mockAuction.getAddress());
 
             // safe transfer from will fail on onPremintedTransferredHook and transaction should fail
-            await expect(mockAuction.connect(rando).endAuction(auctionId)).to.be.revertedWith(
+            await expect(mockAuction.connect(rando).endAuction(auctionId)).to.be.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.VOUCHER_TRANSFER_NOT_ALLOWED
             );
 
@@ -1184,7 +1260,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             priceDiscoveryHandler
               .connect(buyer)
               .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
-          ).to.revertedWith(RevertReasons.TOKEN_ID_MISMATCH);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_ID_MISMATCH);
         });
 
         it("Correct token id, wrong caller", async function () {
@@ -1226,7 +1302,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             priceDiscoveryHandler
               .connect(buyer)
               .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
-          ).to.revertedWith(RevertReasons.UNEXPECTED_ERC721_RECEIVED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNEXPECTED_ERC721_RECEIVED);
         });
       });
     });
@@ -1253,7 +1329,8 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             price: "0",
           };
 
-          await expect(priceDiscoveryContract.fulfilBuyOrder(order)).to.be.revertedWith(
+          await expect(priceDiscoveryContract.fulfilBuyOrder(order)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.VOUCHER_TRANSFER_NOT_ALLOWED
           );
         });
@@ -1264,7 +1341,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
           const tokenId = deriveTokenId(offer.id, exchangeId);
           await expect(
             bosonVoucher.connect(assistant).transferFrom(assistant.address, rando.address, tokenId)
-          ).to.be.revertedWith(RevertReasons.VOUCHER_TRANSFER_NOT_ALLOWED);
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.VOUCHER_TRANSFER_NOT_ALLOWED);
         });
       });
     });

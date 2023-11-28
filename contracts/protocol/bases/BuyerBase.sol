@@ -26,16 +26,16 @@ contract BuyerBase is ProtocolBase, IBosonAccountEvents {
      */
     function createBuyerInternal(Buyer memory _buyer) internal {
         //Check for zero address
-        require(_buyer.wallet != address(0), INVALID_ADDRESS);
+        if (_buyer.wallet == address(0)) revert InvalidAddress();
 
         //Check active is not set to false
-        require(_buyer.active, MUST_BE_ACTIVE);
+        if (!_buyer.active) revert MustBeActive();
 
         // Get the next account id and increment the counter
         uint256 buyerId = protocolCounters().nextAccountId++;
 
         //check that the wallet address is unique to one buyer id
-        require(protocolLookups().buyerIdByWallet[_buyer.wallet] == 0, BUYER_ADDRESS_MUST_BE_UNIQUE);
+        if (protocolLookups().buyerIdByWallet[_buyer.wallet] != 0) revert BuyerAddressMustBeUnique();
 
         _buyer.id = buyerId;
         storeBuyer(_buyer);
@@ -80,7 +80,7 @@ contract BuyerBase is ProtocolBase, IBosonAccountEvents {
             (, Buyer storage buyer) = fetchBuyer(buyerId);
 
             // Make sure buyer account is active
-            require(buyer.active, MUST_BE_ACTIVE);
+            if (!buyer.active) revert MustBeActive();
         } else {
             // Create the buyer account
             Buyer memory newBuyer;
