@@ -6,6 +6,7 @@ const {
   enumIsValid,
 } = require("../util/validations.js");
 const PriceType = require("./PriceType.js");
+const { RoyaltyInfo, RoyaltyInfoList } = require("./RoyaltyInfo.js");
 
 /**
  * Boson Protocol Domain Entity: Offer
@@ -25,8 +26,9 @@ class Offer {
             string metadataUri;
             string metadataHash;
             bool voided;
-            uint256 collectionIndex;
+            uint256 collectionIndex;            
             PriceType priceType;
+            RoyaltyInfo[] royaltyInfo;
         }
     */
 
@@ -42,7 +44,8 @@ class Offer {
     metadataHash,
     voided,
     collectionIndex,
-    priceType
+    priceType,
+    royaltyInfo
   ) {
     this.id = id;
     this.sellerId = sellerId;
@@ -56,6 +59,7 @@ class Offer {
     this.voided = voided;
     this.collectionIndex = collectionIndex;
     this.priceType = priceType;
+    this.royaltyInfo = royaltyInfo;
   }
 
   /**
@@ -77,6 +81,7 @@ class Offer {
       voided,
       collectionIndex,
       priceType,
+      royaltyInfo,
     } = o;
 
     return new Offer(
@@ -91,7 +96,8 @@ class Offer {
       metadataHash,
       voided,
       collectionIndex,
-      priceType
+      priceType,
+      royaltyInfo.map((ri) => RoyaltyInfo.fromObject(ri))
     );
   }
 
@@ -112,7 +118,8 @@ class Offer {
       metadataHash,
       voided,
       collectionIndex,
-      priceType;
+      priceType,
+      royaltyInfo;
 
     // destructure struct
     [
@@ -128,6 +135,7 @@ class Offer {
       voided,
       collectionIndex,
       priceType,
+      royaltyInfo,
     ] = struct;
     if (!collectionIndex) {
       collectionIndex = 0;
@@ -146,6 +154,7 @@ class Offer {
       voided,
       collectionIndex: collectionIndex.toString(),
       priceType: Number(priceType),
+      royaltyInfo: royaltyInfo.map((ri) => RoyaltyInfo.fromStruct(ri)),
     });
   }
 
@@ -183,6 +192,7 @@ class Offer {
       this.voided,
       this.collectionIndex,
       this.priceType,
+      new RoyaltyInfoList(this.royaltyInfo).toStruct(),
     ];
   }
 
@@ -305,6 +315,21 @@ class Offer {
   }
 
   /**
+   * Is this Offer instance's royaltyInfo field valid?
+   * Must be a valid RoyaltyInfo instance
+   * @returns {boolean}
+   */
+  royaltyInfoIsValid() {
+    let valid = false;
+    let { royaltyInfo } = this;
+    let royaltyInfoList = new RoyaltyInfoList(royaltyInfo);
+    try {
+      valid = typeof royaltyInfoList == "object" && royaltyInfoList.isValid();
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
    * Is this Offer instance valid?
    * @returns {boolean}
    */
@@ -321,7 +346,8 @@ class Offer {
       this.metadataHashIsValid() &&
       this.voidedIsValid() &&
       this.collectionIndexIsValid() &&
-      this.priceTypeIsValid()
+      this.priceTypeIsValid() &&
+      this.royaltyInfoIsValid()
     );
   }
 }

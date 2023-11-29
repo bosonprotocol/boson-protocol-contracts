@@ -18,6 +18,9 @@ uint256 constant ALL_REGIONS_MASK = (1 << (uint256(type(BosonTypes.PausableRegio
 uint256 constant NOT_ENTERED = 1;
 uint256 constant ENTERED = 2;
 
+// Seller related
+string constant DEFAULT_ROYALTY_RECIPIENT = "Treasury";
+
 // Twin handler
 uint256 constant SINGLE_TWIN_RESERVED_GAS = 160000;
 uint256 constant MINIMAL_RESIDUAL_GAS = 230000;

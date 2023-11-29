@@ -38,6 +38,9 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - Royalty recipient is not on seller's allow list
+     * - Royalty percentage is less than the value decided by the admin
+     * - Total royalty percentage is more than max royalty percentage
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -98,6 +101,9 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - Royalty recipient is not on seller's allow list
+     * - Royalty percentage is less than the value decided by the admin
+     * - Total royalty percentage is more than max royalty percentage
      *
      * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -129,11 +135,11 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             if (_offerDurations.voucherValid == 0) revert AmbiguousVoucherExpiry();
         }
 
+        // Cache protocol limits for reference
+        ProtocolLib.ProtocolLimits storage limits = protocolLimits();
+
         // Operate in a block to avoid "stack too deep" error
         {
-            // Cache protocol limits for reference
-            ProtocolLib.ProtocolLimits storage limits = protocolLimits();
-
             // dispute period must be greater than or equal to the minimum dispute period
             if (_offerDurations.disputePeriod < limits.minDisputePeriod) revert InvalidDisputePeriod();
 
@@ -153,9 +159,11 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         if (_offer.quantityAvailable == 0) revert InvalidQuantityAvailable();
 
         DisputeResolutionTerms memory disputeResolutionTerms;
+        OfferFees storage offerFees = fetchOfferFees(_offer.id);
         {
             // Cache protocol lookups for reference
             ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+            ProtocolLib.ProtocolFees storage fees = protocolFees();
 
             // Specified resolver must be registered and active, except for absolute zero offers with unspecified dispute resolver.
             // If price and sellerDeposit are 0, seller is not obliged to choose dispute resolver, which is done by setting _disputeResolverId to 0.
@@ -180,66 +188,72 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                     }
 
                     // get the index of DisputeResolverFee and make sure DR supports the exchangeToken
-                    uint256 feeIndex = lookups.disputeResolverFeeTokenIndex[_disputeResolverId][_offer.exchangeToken];
-                    if (feeIndex == 0) revert DRUnsupportedFee();
+                    {
+                        uint256 feeIndex = lookups.disputeResolverFeeTokenIndex[_disputeResolverId][
+                            _offer.exchangeToken
+                        ];
+                        if (feeIndex == 0) revert DRUnsupportedFee();
 
-                    uint256 feeAmount = disputeResolverFees[feeIndex - 1].feeAmount;
+                        uint256 feeAmount = disputeResolverFees[feeIndex - 1].feeAmount;
 
-                    // store DR terms
-                    disputeResolutionTerms.disputeResolverId = _disputeResolverId;
-                    disputeResolutionTerms.escalationResponsePeriod = disputeResolver.escalationResponsePeriod;
-                    disputeResolutionTerms.feeAmount = feeAmount;
-                    disputeResolutionTerms.buyerEscalationDeposit =
-                        (feeAmount * protocolFees().buyerEscalationDepositPercentage) /
-                        10000;
-
+                        // store DR terms
+                        disputeResolutionTerms.disputeResolverId = _disputeResolverId;
+                        disputeResolutionTerms.escalationResponsePeriod = disputeResolver.escalationResponsePeriod;
+                        disputeResolutionTerms.feeAmount = feeAmount;
+                        disputeResolutionTerms.buyerEscalationDeposit =
+                            (feeAmount * fees.buyerEscalationDepositPercentage) /
+                            10000;
+                    }
                     protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
+                }
+
+                // Collection must exist. Collections with index 0 exist by default.
+                if (_offer.collectionIndex > 0) {
+                    if (lookups.additionalCollections[_offer.sellerId].length < _offer.collectionIndex)
+                        revert NoSuchCollection();
                 }
             }
 
-            // Collection must exist. Collections with index 0 exist by default.
-            if (_offer.collectionIndex > 0) {
-                if (lookups.additionalCollections[_offer.sellerId].length < _offer.collectionIndex)
-                    revert NoSuchCollection();
+            // Operate in a block to avoid "stack too deep" error
+            {
+                // Get the agent
+                (bool agentExists, Agent storage agent) = fetchAgent(_agentId);
+
+                // Make sure agent exists if _agentId is not zero.
+                if (_agentId != 0 && !agentExists) revert NoSuchAgent();
+
+                // Set variable to eliminate multiple SLOAD
+                uint256 offerPrice = _offer.price;
+
+                // condition for successful payout when exchange final state is canceled
+                if (_offer.buyerCancelPenalty > offerPrice) revert InvalidOfferPenalty();
+
+                // Calculate and set the protocol fee
+                uint256 protocolFee = getProtocolFee(_offer.exchangeToken, offerPrice);
+
+                // Calculate the agent fee amount
+                uint256 agentFeeAmount = (agent.feePercentage * offerPrice) / 10000;
+
+                uint256 totalOfferFeeLimit = (limits.maxTotalOfferFeePercentage * offerPrice) / 10000;
+
+                // Sum of agent fee amount and protocol fee amount should be <= offer fee limit
+                if ((agentFeeAmount + protocolFee) > totalOfferFeeLimit) revert AgentFeeAmountTooHigh();
+
+                // Set offer fees props individually since calldata structs can't be copied to storage
+                offerFees.protocolFee = protocolFee;
+                offerFees.agentFee = agentFeeAmount;
             }
-        }
-
-        // Get storage location for offer fees
-        OfferFees storage offerFees = fetchOfferFees(_offer.id);
-
-        // Get the agent
-        (bool agentExists, Agent storage agent) = fetchAgent(_agentId);
-
-        // Make sure agent exists if _agentId is not zero.
-        if (_agentId != 0 && !agentExists) revert NoSuchAgent();
-
-        // Operate in a block to avoid "stack too deep" error
-        {
-            // Set variable to eliminate multiple SLOAD
-            uint256 offerPrice = _offer.price;
-
-            // condition for successful payout when exchange final state is canceled
-            if (_offer.buyerCancelPenalty > offerPrice) revert InvalidOfferPenalty();
-
-            // Calculate and set the protocol fee
-            uint256 protocolFee = getProtocolFee(_offer.exchangeToken, offerPrice);
-
-            // Calculate the agent fee amount
-            uint256 agentFeeAmount = (agent.feePercentage * offerPrice) / 10000;
-
-            uint256 totalOfferFeeLimit = (protocolLimits().maxTotalOfferFeePercentage * offerPrice) / 10000;
-
-            // Sum of agent fee amount and protocol fee amount should be <= offer fee limit
-            if ((agentFeeAmount + protocolFee) > totalOfferFeeLimit) revert AgentFeeAmountTooHigh();
-
-            //Set offer fees props individually since calldata structs can't be copied to storage
-            offerFees.protocolFee = protocolFee;
-            offerFees.agentFee = agentFeeAmount;
 
             // Store the agent id for the offer
-            protocolLookups().agentIdByOffer[_offer.id] = _agentId;
-        }
+            lookups.agentIdByOffer[_offer.id] = _agentId;
 
+            // Make sure that supplied royalties ok
+            // Operate in a block to avoid "stack too deep" error
+            {
+                if (_offer.royaltyInfo.length != 1) revert InvalidRoyaltyInfo();
+                validateRoyaltyInfo(lookups, limits, _offer.sellerId, _offer.royaltyInfo[0]);
+            }
+        }
         // Get storage location for offer
         (, Offer storage offer) = fetchOffer(_offer.id);
 
@@ -255,6 +269,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         offer.metadataHash = _offer.metadataHash;
         offer.collectionIndex = _offer.collectionIndex;
         offer.priceType = _offer.priceType;
+        offer.royaltyInfo.push(_offer.royaltyInfo[0]);
 
         // Get storage location for offer dates
         OfferDates storage offerDates = fetchOfferDates(_offer.id);
@@ -347,5 +362,54 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
 
         // Notify external observers
         emit RangeReserved(_offerId, offer.sellerId, _startId, _startId + _length - 1, _to, sender);
+    }
+
+    /**
+     * @notice Validates that royalty info struct contains valid data
+     *
+     * Reverts if:
+     * - Royalty recipient is not on seller's allow list
+     * - Royalty percentage is less than the value decided by the admin
+     * - Total royalty percentage is more than max royalty percentage
+     *
+     * @param _lookups -  the storage pointer to protocol lookups
+     * @param _limits - the storage pointer to protocol limits
+     * @param _sellerId - the id of the seller
+     * @param _royaltyInfo - the royalty info struct
+     */
+    function validateRoyaltyInfo(
+        ProtocolLib.ProtocolLookups storage _lookups,
+        ProtocolLib.ProtocolLimits storage _limits,
+        uint256 _sellerId,
+        RoyaltyInfo memory _royaltyInfo
+    ) internal view {
+        if (_royaltyInfo.recipients.length != _royaltyInfo.bps.length) revert ArrayLengthMismatch();
+
+        RoyaltyRecipient[] storage royaltyRecipients = _lookups.royaltyRecipientsBySeller[_sellerId];
+
+        uint256 totalRoyalties;
+        for (uint256 i = 0; i < _royaltyInfo.recipients.length; ) {
+            uint256 royaltyRecipientId;
+
+            if (_royaltyInfo.recipients[i] == address(0)) {
+                royaltyRecipientId = 1;
+            } else {
+                royaltyRecipientId = _lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
+                    _royaltyInfo.recipients[i]
+                ];
+                if (royaltyRecipientId == 0) revert InvalidRoyaltyRecipient();
+            }
+
+            if (_royaltyInfo.bps[i] < royaltyRecipients[royaltyRecipientId - 1].minRoyaltyPercentage)
+                revert InvalidRoyaltyPercentage();
+
+            totalRoyalties += _royaltyInfo.bps[i];
+
+            unchecked {
+                i++;
+            }
+        }
+
+        if (totalRoyalties > _limits.maxRoyaltyPercentage) revert InvalidRoyaltyPercentage();
     }
 }

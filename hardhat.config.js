@@ -191,7 +191,7 @@ module.exports = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 200,
+            runs: 50, // temporary until we upgrade compiler version
             details: {
               yul: true,
             },
@@ -220,6 +220,15 @@ module.exports = {
       },
       {
         version: "0.8.17",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 190,
+            details: {
+              yul: true,
+            },
+          },
+        },
       },
       {
         version: "0.4.17",

@@ -49,6 +49,8 @@ exports.RevertReasons = {
   OFFER_HAS_EXPIRED: "OfferHasExpired",
   OFFER_SOLD_OUT: "OfferSoldOut",
   NO_SUCH_COLLECTION: "NoSuchCollection",
+  INVALID_ROYALTY_RECIPIENT: "InvalidRoyaltyRecipient",
+  INVALID_ROYALTY_PERCENTAGE: "InvalidRoyaltyPercentage",
 
   // Group related
   NO_SUCH_GROUP: "NoSuchGroup",
@@ -95,6 +97,11 @@ exports.RevertReasons = {
   NO_UPDATE_APPLIED: "NoUpdateApplied",
   CLONE_CREATION_FAILED: "CloneCreationFailed",
   SELLER_SALT_NOT_UNIQUE: "SellerSaltNotUnique",
+  RECIPIENT_NOT_UNIQUE: "RecipientNotUnique",
+  INVALID_ROYALTY_RECIPIENT_ID: "InvalidRoyaltyRecipientId",
+  WRONG_DEFAULT_RECIPIENT: "WrongDefaultRecipient",
+  ROYALTY_RECIPIENT_IDS_NOT_SORTED: "RoyaltyRecipientIdsNotSorted",
+  CANNOT_REMOVE_DEFAULT_RECIPIENT: "CannotRemoveDefaultRecipient",
 
   // Twin related
   NO_SUCH_TWIN: "NoSuchTwin",

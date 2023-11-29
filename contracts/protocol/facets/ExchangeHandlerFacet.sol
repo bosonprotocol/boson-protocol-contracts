@@ -861,6 +861,68 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler, 
     }
 
     /**
+     * @notice Gets EIP2981 style royalty information for a chosen offer or exchange.
+     *
+     * EIP2981 supports only 1 recipient, therefore this method defaults to treasury address.
+     * This method is not exactly compliant with EIP2981, since it does not accept `salePrice` and does not return `royaltyAmount,
+     * but it rather returns `royaltyPercentage` which is the sum of all bps (exchange can have multiple royalty recipients).
+     *
+     * This function is meant to be primarly used by boson voucher client, which implements EIP2981.
+     *
+     * Reverts if exchange does not exist.
+     *
+     * @param _queryId - offer id or exchange id
+     * @param _isExchangeId - indicates if the query represents the exchange id
+     * @return receiver - the address of the royalty receiver (seller's treasury address)
+     * @return royaltyPercentage - the royalty percentage in bps
+     */
+    function getEIP2981Royalties(
+        uint256 _queryId,
+        bool _isExchangeId
+    ) external view returns (address receiver, uint256 royaltyPercentage) {
+        // EIP2981 returns only 1 recipient. Summ all bps and return treasury address as recipient
+        (RoyaltyInfo storage royaltyInfo, , address treasury) = fetchRoyalties(_queryId, _isExchangeId);
+
+        uint256 recipientLength = royaltyInfo.recipients.length;
+        if (recipientLength == 0) return (address(0), uint256(0));
+
+        uint256 totalBps = getTotalRoyaltyPercentage(royaltyInfo.bps);
+
+        return (royaltyInfo.recipients[0] == address(0) ? treasury : royaltyInfo.recipients[0], totalBps);
+    }
+
+    /**
+     * @notice Gets royalty information for a chosen offer or exchange.
+     *
+     * Returns a list of royalty recipients and corresponding bps. Format is compatible with Manifold and Foundation royalties
+     * and can be directly used by royalty registry.
+     *
+     * Reverts if exchange does not exist.
+     *
+     * @param _queryId - offer id or exchange id
+     * @param _isExchangeId - indicates if the query represents the exchange id
+     * @return royaltyInfo - list of royalty recipients and corresponding bps
+     */
+    function getRoyalties(uint256 _queryId, bool _isExchangeId) external view returns (RoyaltyInfo memory royaltyInfo) {
+        address treasury;
+        (royaltyInfo, , treasury) = fetchRoyalties(_queryId, _isExchangeId);
+
+        for (uint256 i = 0; i < royaltyInfo.recipients.length; ) {
+            if (royaltyInfo.recipients[i] == address(0)) {
+                // get treasury address!
+                royaltyInfo.recipients[i] = payable(treasury);
+                break;
+            }
+
+            unchecked {
+                i++;
+            }
+        }
+
+        return royaltyInfo;
+    }
+
+    /**
      * @notice Transitions exchange to a "finalized" state
      *
      * Target state must be Completed, Revoked, or Canceled.

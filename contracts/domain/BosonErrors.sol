@@ -156,6 +156,22 @@ interface BosonErrors {
     error AgentFeeAmountTooHigh();
     // Collection does not exist
     error NoSuchCollection();
+    // Royalty recipient is not allow listed for the seller
+    error InvalidRoyaltyRecipient();
+    // Total royality fee exceeds the max allowed
+    error InvalidRoyaltyPercentage();
+    // Specified royalty recipient already added
+    error RecipientNotUnique();
+    // Trying to access an out of bounds royalty recipient
+    error InvalidRoyaltyRecipientId();
+    // Array of royalty recipients is not sorted by id
+    error RoyaltyRecipientIdsNotSorted();
+    // Trying to remove the default recipient (treasury)
+    error CannotRemoveDefaultRecipient();
+    // Supplying too many Royalty info structs
+    error InvalidRoyaltyInfo();
+    // Trying to change the default recipient address (treasury)
+    error WrongDefaultRecipient();
 
     // Group related
     // Group does not exist

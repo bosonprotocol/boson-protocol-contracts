@@ -10,6 +10,8 @@ const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTe
 const OfferFees = require("../../scripts/domain/OfferFees");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const Range = require("../../scripts/domain/Range");
+const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
+const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
@@ -21,6 +23,8 @@ const {
   getSnapshot,
   revertToSnapshot,
   deriveTokenId,
+  compareOfferStructs,
+  compareRoyaltyInfo,
 } = require("../util/utils.js");
 const { oneWeek, oneMonth, oneDay } = require("../util/constants");
 const {
@@ -40,7 +44,19 @@ const { encodeBytes32String } = require("ethers");
 describe("IBosonOfferHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, pauser, rando, assistant, admin, clerk, treasury, assistantDR, adminDR, clerkDR, treasuryDR, other;
+  let deployer,
+    pauser,
+    rando,
+    assistant,
+    admin,
+    clerk,
+    treasury,
+    assistantDR,
+    adminDR,
+    clerkDR,
+    treasuryDR,
+    other,
+    other2;
   let erc165,
     accountHandler,
     offerHandler,
@@ -114,7 +130,7 @@ describe("IBosonOfferHandler", function () {
     };
 
     ({
-      signers: [pauser, admin, treasury, rando, adminDR, treasuryDR, other],
+      signers: [pauser, admin, treasury, rando, adminDR, treasuryDR, other, other2],
       contractInstances: {
         erc165,
         accountHandler,
@@ -268,7 +284,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             nextOfferId,
             offer.sellerId,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -327,7 +343,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             nextOfferId,
             offer.sellerId,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -357,7 +373,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             nextOfferId,
             sellerId,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -385,7 +401,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             nextOfferId,
             offer.sellerId,
-            offer.toStruct(),
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -415,7 +431,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             nextOfferId,
             offer.sellerId,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTerms.toStruct(),
@@ -440,7 +456,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             nextOfferId,
             offer.sellerId,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -462,7 +478,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             nextOfferId,
             offer.sellerId,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -481,7 +497,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             offer.id,
             sellerId,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -510,7 +526,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             offer.id,
             sellerId,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -574,7 +590,7 @@ describe("IBosonOfferHandler", function () {
             .withArgs(
               nextOfferId,
               offer.sellerId,
-              offer.toStruct(),
+              compareOfferStructs.bind(offer.toStruct()),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -609,6 +625,35 @@ describe("IBosonOfferHandler", function () {
 
           await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
         });
+      });
+
+      it("Should allow creation of an offer with royalty recipients", async function () {
+        // Add royalty recipients
+        const royaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(other.address, "100", "other"),
+          new RoyaltyRecipient(other2.address, "200", "other2"),
+        ]);
+        await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+
+        // Add royalty info to the offer
+        offer.royaltyInfo = [new RoyaltyInfo([other.address, ZeroAddress], ["150", "10"])];
+
+        // Create an offer testing for the event
+        await expect(
+          offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
+        )
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(
+            offer.id,
+            sellerId,
+            compareOfferStructs.bind(offer.toStruct()),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            offerFeesStruct,
+            agentId,
+            assistant.address
+          );
       });
 
       context("💔 Revert Reasons", async function () {
@@ -906,6 +951,53 @@ describe("IBosonOfferHandler", function () {
             offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_COLLECTION);
         });
+
+        context("With royalty info", async function () {
+          beforeEach(async function () {
+            // Add royalty recipients
+            const royaltyRecipientList = new RoyaltyRecipientList([
+              new RoyaltyRecipient(other.address, "100", "other"),
+              new RoyaltyRecipient(other2.address, "200", "other2"),
+            ]);
+            await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+          });
+
+          it("Royalty recipient is not on seller's allow list", async function () {
+            // Add royalty info to the offer
+            offer.royaltyInfo = [new RoyaltyInfo([other.address, rando.address], ["150", "10"])];
+
+            // Create an offer testing for the event
+            await expect(
+              offerHandler
+                .connect(assistant)
+                .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_RECIPIENT);
+          });
+
+          it("Royalty percentage is less than the value decided by the admin", async function () {
+            // Add royalty info to the offer
+            offer.royaltyInfo = [new RoyaltyInfo([other.address, other2.address], ["90", "250"])];
+
+            // Create an offer testing for the event
+            await expect(
+              offerHandler
+                .connect(assistant)
+                .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
+          });
+
+          it("Total royalty percentage is more than max royalty percentage", async function () {
+            // Add royalty info to the offer
+            offer.royaltyInfo = [new RoyaltyInfo([other.address, other2.address], ["5000", "4000"])];
+
+            // Create an offer testing for the event
+            await expect(
+              offerHandler
+                .connect(assistant)
+                .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
+          });
+        });
       });
 
       context("When offer has non zero agent id", async function () {
@@ -933,7 +1025,7 @@ describe("IBosonOfferHandler", function () {
             .withArgs(
               nextOfferId,
               offer.sellerId,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -969,7 +1061,7 @@ describe("IBosonOfferHandler", function () {
             .withArgs(
               nextOfferId,
               offer.sellerId,
-              offer.toStruct(),
+              compareOfferStructs.bind(offer.toStruct()),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -1359,6 +1451,164 @@ describe("IBosonOfferHandler", function () {
               offerHandler.connect(assistant).extendOffer(offer.id, offerDates.validUntil)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_PERIOD_INVALID);
           });
+        });
+      });
+    });
+
+    context("👉 updateOfferRoyaltyRecipients()", async function () {
+      let newRoyaltyInfo, expectedRoyaltyInfo;
+      beforeEach(async function () {
+        // Create an offer
+        await offerHandler
+          .connect(assistant)
+          .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+
+        // Register royalty recipients
+        const royaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(other.address, "50", "other"),
+          new RoyaltyRecipient(other2.address, "50", "other2"),
+          new RoyaltyRecipient(rando.address, "50", "other3"),
+        ]);
+        await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+
+        const recipients = [other.address, other2.address, ZeroAddress, rando.address];
+        const bps = ["100", "150", "500", "200"];
+        newRoyaltyInfo = new RoyaltyInfo(recipients, bps);
+
+        const expectedRecipients = [...recipients];
+        expectedRecipients[2] = treasury.address;
+        expectedRoyaltyInfo = new RoyaltyInfo(recipients, bps).toStruct();
+      });
+
+      it("should emit an OfferRoyaltyInfoUpdated event", async function () {
+        // Update the royalty recipients, testing for the event
+        await expect(offerHandler.connect(assistant).updateOfferRoyaltyRecipients(offer.id, newRoyaltyInfo))
+          .to.emit(offerHandler, "OfferRoyaltyInfoUpdated")
+          .withArgs(
+            offer.id,
+            offer.sellerId,
+            compareRoyaltyInfo.bind(expectedRoyaltyInfo),
+            await assistant.getAddress()
+          );
+      });
+
+      it("should update state", async function () {
+        // Update an offer
+        await offerHandler.connect(assistant).updateOfferRoyaltyRecipients(offer.id, newRoyaltyInfo);
+
+        // Get the offer as a struct
+        [, offerStruct] = await offerHandler.connect(rando).getOffer(offer.id);
+
+        // Parse into entity
+        const returnedOffer = Offer.fromStruct(offerStruct);
+
+        // New values should be appended to the end of offer.royaltyInfo
+        offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage]), newRoyaltyInfo];
+        expect(returnedOffer).to.eql(offer);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("The offers region of protocol is paused", async function () {
+          // Pause the offers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
+
+          // Attempt to update the offer expecting revert
+          await expect(
+            offerHandler.connect(assistant).updateOfferRoyaltyRecipients(offer.id, newRoyaltyInfo)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+        });
+
+        it("Offer does not exist", async function () {
+          // Set invalid id
+          id = "444";
+
+          // Attempt to update the offer, expecting revert
+          await expect(
+            offerHandler.connect(assistant).updateOfferRoyaltyRecipients(id, newRoyaltyInfo)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_OFFER);
+
+          // Set invalid id
+          id = "0";
+
+          // Attempt to void the offer, expecting revert
+          await expect(
+            offerHandler.connect(assistant).updateOfferRoyaltyRecipients(id, newRoyaltyInfo)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_OFFER);
+        });
+
+        it("Caller is not seller", async function () {
+          // caller is not the assistant of any seller
+          // Attempt to update the offer, expecting revert
+          await expect(
+            offerHandler.connect(rando).updateOfferRoyaltyRecipients(offer.id, newRoyaltyInfo)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
+
+          // caller is an assistant of another seller
+          // Create a valid seller, then set fields in tests directly
+          seller = mockSeller(
+            await rando.getAddress(),
+            await rando.getAddress(),
+            ZeroAddress,
+            await rando.getAddress()
+          );
+
+          // AuthToken
+          emptyAuthToken = mockAuthToken();
+          expect(emptyAuthToken.isValid()).is.true;
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+          // Attempt to update the offer, expecting revert
+          await expect(
+            offerHandler.connect(rando).updateOfferRoyaltyRecipients(offer.id, newRoyaltyInfo)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
+        });
+
+        it("Number of recipients and bps is different", async function () {
+          // Set invalid id
+          const recipients = [other.address, other2.address, ZeroAddress, rando.address];
+          const bps = ["100", "150", "500"];
+          newRoyaltyInfo = new RoyaltyInfo(recipients, bps);
+
+          // Attempt to update the offer, expecting revert
+          await expect(
+            offerHandler.connect(assistant).updateOfferRoyaltyRecipients(id, newRoyaltyInfo)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ARRAY_LENGTH_MISMATCH);
+        });
+
+        it("Royalty recipient is not approved", async function () {
+          // Set invalid id
+          const recipients = [other.address, other2.address, assistant.address, rando.address]; // assistant is not approved
+          const bps = ["100", "150", "500", "100"];
+          newRoyaltyInfo = new RoyaltyInfo(recipients, bps);
+
+          // Attempt to update the offer, expecting revert
+          await expect(
+            offerHandler.connect(assistant).updateOfferRoyaltyRecipients(id, newRoyaltyInfo)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_RECIPIENT);
+        });
+
+        it("Royalties are below the minimum", async function () {
+          // Set invalid single bps
+          const recipients = [other.address, other2.address, ZeroAddress, rando.address];
+          const bps = ["100", "150", "500", "40"]; // 40 bps is below the minimum, set by the seller admin
+          newRoyaltyInfo = new RoyaltyInfo(recipients, bps);
+
+          // Attempt to update the offer, expecting revert
+          await expect(
+            offerHandler.connect(assistant).updateOfferRoyaltyRecipients(id, newRoyaltyInfo)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
+        });
+
+        it("Total royalties are above the protocol maximum", async function () {
+          // Set bps so they are over protocol minimum (10%)
+          const recipients = [other.address, other2.address, ZeroAddress, rando.address];
+          const bps = ["100", "150", "500", "400"];
+          newRoyaltyInfo = new RoyaltyInfo(recipients, bps);
+
+          // Attempt to update the offer, expecting revert
+          await expect(
+            offerHandler.connect(assistant).updateOfferRoyaltyRecipients(id, newRoyaltyInfo)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
         });
       });
     });
@@ -1976,6 +2226,15 @@ describe("IBosonOfferHandler", function () {
       disputeResolutionTermsList[4] = new DisputeResolutionTerms("0", "0", "0", "0");
       disputeResolutionTermsStructs[4] = disputeResolutionTermsList[4].toStruct();
       offerFeesStructs[4] = offerFeesList[4].toStruct();
+
+      // offer with royalty recipients
+      const royaltyRecipientList = new RoyaltyRecipientList([
+        new RoyaltyRecipient(other.address, "50", "other"),
+        new RoyaltyRecipient(other2.address, "50", "other2"),
+      ]);
+      await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+      offers[3].royaltyInfo = [new RoyaltyInfo([other.address, ZeroAddress], ["150", "10"])];
+      offerStructs[3] = offers[3].toStruct();
     });
 
     afterEach(async () => {
@@ -1995,7 +2254,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             "1",
             offer.sellerId,
-            offerStructs[0],
+            compareOfferStructs.bind(offerStructs[0]),
             offerDatesStructs[0],
             offerDurationsStructs[0],
             disputeResolutionTermsStructs[0],
@@ -2009,7 +2268,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             "2",
             offer.sellerId,
-            offerStructs[1],
+            compareOfferStructs.bind(offerStructs[1]),
             offerDatesStructs[1],
             offerDurationsStructs[1],
             disputeResolutionTermsStructs[1],
@@ -2023,7 +2282,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             "3",
             offer.sellerId,
-            offerStructs[2],
+            compareOfferStructs.bind(offerStructs[2]),
             offerDatesStructs[2],
             offerDurationsStructs[2],
             disputeResolutionTermsStructs[2],
@@ -2037,7 +2296,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             "4",
             offer.sellerId,
-            offerStructs[3],
+            compareOfferStructs.bind(offerStructs[3]),
             offerDatesStructs[3],
             offerDurationsStructs[3],
             disputeResolutionTermsStructs[3],
@@ -2051,7 +2310,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             "5",
             offer.sellerId,
-            offerStructs[4],
+            compareOfferStructs.bind(offerStructs[4]),
             offerDatesStructs[4],
             offerDurationsStructs[4],
             disputeResolutionTermsStructs[4],
@@ -2115,7 +2374,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             "1",
             offer.sellerId,
-            offerStructs[0],
+            compareOfferStructs.bind(offerStructs[0]),
             offerDatesStructs[0],
             offerDurationsStructs[0],
             disputeResolutionTermsStructs[0],
@@ -2129,7 +2388,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             "2",
             offer.sellerId,
-            offerStructs[1],
+            compareOfferStructs.bind(offerStructs[1]),
             offerDatesStructs[1],
             offerDurationsStructs[1],
             disputeResolutionTermsStructs[1],
@@ -2143,7 +2402,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             "3",
             offer.sellerId,
-            offerStructs[2],
+            compareOfferStructs.bind(offerStructs[2]),
             offerDatesStructs[2],
             offerDurationsStructs[2],
             disputeResolutionTermsStructs[2],
@@ -2157,7 +2416,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             "4",
             offer.sellerId,
-            offerStructs[3],
+            compareOfferStructs.bind(offerStructs[3]),
             offerDatesStructs[3],
             offerDurationsStructs[3],
             disputeResolutionTermsStructs[3],
@@ -2171,7 +2430,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             "5",
             offer.sellerId,
-            offerStructs[4],
+            compareOfferStructs.bind(offerStructs[4]),
             offerDatesStructs[4],
             offerDurationsStructs[4],
             disputeResolutionTermsStructs[4],
@@ -2209,7 +2468,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             "1",
             sellerId,
-            offerStructs[0],
+            compareOfferStructs.bind(offerStructs[0]),
             offerDatesStructs[0],
             offerDurationsStructs[0],
             disputeResolutionTermsStructs[0],
@@ -2223,7 +2482,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             "2",
             sellerId,
-            offerStructs[1],
+            compareOfferStructs.bind(offerStructs[1]),
             offerDatesStructs[1],
             offerDurationsStructs[1],
             disputeResolutionTermsStructs[1],
@@ -2237,7 +2496,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             "3",
             sellerId,
-            offerStructs[2],
+            compareOfferStructs.bind(offerStructs[2]),
             offerDatesStructs[2],
             offerDurationsStructs[2],
             disputeResolutionTermsStructs[2],
@@ -2251,7 +2510,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             "4",
             sellerId,
-            offerStructs[3],
+            compareOfferStructs.bind(offerStructs[3]),
             offerDatesStructs[3],
             offerDurationsStructs[3],
             disputeResolutionTermsStructs[3],
@@ -2265,7 +2524,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(
             "5",
             sellerId,
-            offerStructs[4],
+            compareOfferStructs.bind(offerStructs[4]),
             offerDatesStructs[4],
             offerDurationsStructs[4],
             disputeResolutionTermsStructs[4],
@@ -2703,6 +2962,42 @@ describe("IBosonOfferHandler", function () {
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_COLLECTION);
         });
+
+        it("Royalty recipient is not on seller's allow list", async function () {
+          // Add royalty info to the offer
+          offers[3].royaltyInfo = [new RoyaltyInfo([other.address, rando.address], ["150", "10"])];
+
+          // Create an offer testing for the event
+          await expect(
+            offerHandler
+              .connect(assistant)
+              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_RECIPIENT);
+        });
+
+        it("Royalty percentage is less than the value decided by the admin", async function () {
+          // Add royalty info to the offer
+          offers[3].royaltyInfo = [new RoyaltyInfo([other.address, other2.address], ["40", "250"])];
+
+          // Create an offer testing for the event
+          await expect(
+            offerHandler
+              .connect(assistant)
+              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
+        });
+
+        it("Total royalty percentage is more than max royalty percentage", async function () {
+          // Add royalty info to the offer
+          offers[3].royaltyInfo = [new RoyaltyInfo([other.address, other2.address], ["5000", "4000"])];
+
+          // Create an offer testing for the event
+          await expect(
+            offerHandler
+              .connect(assistant)
+              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
+        });
       });
 
       context("When offers have non zero agent ids", async function () {
@@ -2749,7 +3044,7 @@ describe("IBosonOfferHandler", function () {
             .withArgs(
               "1",
               offer.sellerId,
-              offerStructs[0],
+              compareOfferStructs.bind(offerStructs[0]),
               offerDatesStructs[0],
               offerDurationsStructs[0],
               disputeResolutionTermsStructs[0],
@@ -2763,7 +3058,7 @@ describe("IBosonOfferHandler", function () {
             .withArgs(
               "2",
               offer.sellerId,
-              offerStructs[1],
+              compareOfferStructs.bind(offerStructs[1]),
               offerDatesStructs[1],
               offerDurationsStructs[1],
               disputeResolutionTermsStructs[1],
@@ -2777,7 +3072,7 @@ describe("IBosonOfferHandler", function () {
             .withArgs(
               "3",
               offer.sellerId,
-              offerStructs[2],
+              compareOfferStructs.bind(offerStructs[2]),
               offerDatesStructs[2],
               offerDurationsStructs[2],
               disputeResolutionTermsStructs[2],
@@ -2791,7 +3086,7 @@ describe("IBosonOfferHandler", function () {
             .withArgs(
               "4",
               offer.sellerId,
-              offerStructs[3],
+              compareOfferStructs.bind(offerStructs[3]),
               offerDatesStructs[3],
               offerDurationsStructs[3],
               disputeResolutionTermsStructs[3],
@@ -2805,7 +3100,7 @@ describe("IBosonOfferHandler", function () {
             .withArgs(
               "5",
               offer.sellerId,
-              offerStructs[4],
+              compareOfferStructs.bind(offerStructs[4]),
               offerDatesStructs[4],
               offerDurationsStructs[4],
               disputeResolutionTermsStructs[4],
@@ -3066,7 +3361,7 @@ describe("IBosonOfferHandler", function () {
           // Pause the offers region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
-          // Attempt to void offer batch, expecting revert
+          // Attempt to extend offer batch, expecting revert
           await expect(
             offerHandler.connect(assistant).extendOfferBatch(offersToExtend, newValidUntilDate)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
@@ -3170,6 +3465,163 @@ describe("IBosonOfferHandler", function () {
           await expect(
             offerHandler.connect(assistant).extendOfferBatch(offersToExtend, newValidUntilDate)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_PERIOD_INVALID);
+        });
+      });
+    });
+
+    context("👉 updateOfferRoyaltyRecipientsBatch()", async function () {
+      let offersToUpdate, newRoyaltyInfo, expectedRoyaltyInfo;
+      beforeEach(async function () {
+        // Create an offer
+        await offerHandler
+          .connect(assistant)
+          .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds);
+
+        // Register royalty recipients
+        const royaltyRecipientList = new RoyaltyRecipientList([new RoyaltyRecipient(rando.address, "50", "other3")]);
+        await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+
+        offersToUpdate = ["1", "4", "5"];
+        const recipients = [other.address, other2.address, ZeroAddress, rando.address];
+        const bps = ["100", "200", "500", "200"];
+        newRoyaltyInfo = new RoyaltyInfo(recipients, bps);
+
+        const expectedRecipients = [...recipients];
+        expectedRecipients[2] = treasury.address;
+        expectedRoyaltyInfo = new RoyaltyInfo(recipients, bps).toStruct();
+
+        for (const offerToUpdate of offersToUpdate) {
+          let i = offerToUpdate - 1;
+          offers[i].royaltyInfo.push(newRoyaltyInfo);
+        }
+      });
+
+      it("should emit OfferRoyaltyInfoUpdated events", async function () {
+        // Update the royalty info, testing for the event
+        const tx = await offerHandler
+          .connect(assistant)
+          .updateOfferRoyaltyRecipientsBatch(offersToUpdate, newRoyaltyInfo);
+        await expect(tx)
+          .to.emit(offerHandler, "OfferRoyaltyInfoUpdated")
+          .withArgs(offersToUpdate[0], offer.sellerId, compareRoyaltyInfo.bind(expectedRoyaltyInfo), assistant.address);
+
+        await expect(tx)
+          .to.emit(offerHandler, "OfferRoyaltyInfoUpdated")
+          .withArgs(offersToUpdate[1], offer.sellerId, compareRoyaltyInfo.bind(expectedRoyaltyInfo), assistant.address);
+
+        await expect(tx)
+          .to.emit(offerHandler, "OfferRoyaltyInfoUpdated")
+          .withArgs(offersToUpdate[2], offer.sellerId, compareRoyaltyInfo.bind(expectedRoyaltyInfo), assistant.address);
+      });
+
+      it("should update state", async function () {
+        // Update offers
+        await offerHandler.connect(assistant).updateOfferRoyaltyRecipientsBatch(offersToUpdate, newRoyaltyInfo);
+
+        for (const id of offersToUpdate) {
+          // validUntilDate field should be updated
+          [, offerStruct] = await offerHandler.getOffer(id);
+          const returnedOffer = Offer.fromStruct(offerStruct);
+          expect(returnedOffer).to.eql(offers[id - 1]);
+        }
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("The offers region of protocol is paused", async function () {
+          // Pause the offers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
+
+          // Attempt to update offer batch, expecting revert
+          await expect(
+            offerHandler.connect(assistant).updateOfferRoyaltyRecipientsBatch(offersToUpdate, newRoyaltyInfo)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+        });
+
+        it("Offer does not exist", async function () {
+          // Set invalid id
+          offersToUpdate = ["1", "432", "2"];
+
+          // Attempt to update the offers, expecting revert
+          await expect(
+            offerHandler.connect(assistant).updateOfferRoyaltyRecipientsBatch(offersToUpdate, newRoyaltyInfo)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_OFFER);
+
+          // Set invalid id
+          offersToUpdate = ["1", "2", "0"];
+
+          // Attempt to update the offers, expecting revert
+          await expect(
+            offerHandler.connect(assistant).updateOfferRoyaltyRecipientsBatch(offersToUpdate, newRoyaltyInfo)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_OFFER);
+        });
+
+        it("Caller is not seller", async function () {
+          // caller is not the assistant of any seller
+          // Attempt to update the offers, expecting revert
+          await expect(
+            offerHandler.connect(rando).updateOfferRoyaltyRecipientsBatch(offersToUpdate, newRoyaltyInfo)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
+
+          // caller is an assistant of another seller
+          seller = mockSeller(rando.address, rando.address, ZeroAddress, rando.address);
+
+          // AuthToken
+          emptyAuthToken = mockAuthToken();
+          expect(emptyAuthToken.isValid()).is.true;
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+          // Attempt to extend the offers, expecting revert
+          await expect(
+            offerHandler.connect(rando).updateOfferRoyaltyRecipientsBatch(offersToUpdate, newRoyaltyInfo)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
+        });
+
+        it("Number of recipients and bps is different", async function () {
+          // Set invalid id
+          const recipients = [other.address, other2.address, ZeroAddress, rando.address];
+          const bps = ["100", "150", "500"];
+          newRoyaltyInfo = new RoyaltyInfo(recipients, bps);
+
+          // Attempt to update the offer, expecting revert
+          await expect(
+            offerHandler.connect(assistant).updateOfferRoyaltyRecipientsBatch(offersToUpdate, newRoyaltyInfo)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ARRAY_LENGTH_MISMATCH);
+        });
+
+        it("Royalty recipient is not approved", async function () {
+          // Set invalid id
+          const recipients = [other.address, other2.address, assistant.address, rando.address]; // assistant is not approved
+          const bps = ["100", "150", "500", "100"];
+          newRoyaltyInfo = new RoyaltyInfo(recipients, bps);
+
+          // Attempt to update the offer, expecting revert
+          await expect(
+            offerHandler.connect(assistant).updateOfferRoyaltyRecipientsBatch(offersToUpdate, newRoyaltyInfo)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_RECIPIENT);
+        });
+
+        it("Royalties are below the minimum", async function () {
+          // Set invalid single bps
+          const recipients = [other.address, other2.address, ZeroAddress, rando.address];
+          const bps = ["100", "150", "500", "40"]; // 40 bps is below the minimum, set by the seller admin
+          newRoyaltyInfo = new RoyaltyInfo(recipients, bps);
+
+          // Attempt to update the offer, expecting revert
+          await expect(
+            offerHandler.connect(assistant).updateOfferRoyaltyRecipientsBatch(offersToUpdate, newRoyaltyInfo)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
+        });
+
+        it("Total royalties are above the protocol maximum", async function () {
+          // Set bps so they are over protocol minimum (10%)
+          const recipients = [other.address, other2.address, ZeroAddress, rando.address];
+          const bps = ["100", "150", "500", "400"];
+          newRoyaltyInfo = new RoyaltyInfo(recipients, bps);
+
+          // Attempt to update the offer, expecting revert
+          await expect(
+            offerHandler.connect(assistant).updateOfferRoyaltyRecipientsBatch(offersToUpdate, newRoyaltyInfo)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
         });
       });
     });

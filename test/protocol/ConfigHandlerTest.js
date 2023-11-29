@@ -29,7 +29,7 @@ describe("IBosonConfigHandler", function () {
     maxAllowedSellers,
     buyerEscalationDepositPercentage,
     maxTotalOfferFeePercentage,
-    maxRoyaltyPecentage,
+    maxRoyaltyPercentage,
     minResolutionPeriod,
     maxResolutionPeriod,
     minDisputePeriod,
@@ -68,7 +68,7 @@ describe("IBosonConfigHandler", function () {
     maxAllowedSellers = 100;
     buyerEscalationDepositPercentage = 100;
     maxTotalOfferFeePercentage = 4000; // 40%
-    maxRoyaltyPecentage = 1000; // 10%
+    maxRoyaltyPercentage = 1000; // 10%
     minResolutionPeriod = oneWeek;
     maxResolutionPeriod = oneMonth;
     minDisputePeriod = oneWeek;
@@ -117,7 +117,7 @@ describe("IBosonConfigHandler", function () {
             maxDisputesPerBatch,
             maxAllowedSellers,
             maxTotalOfferFeePercentage,
-            maxRoyaltyPecentage,
+            maxRoyaltyPercentage,
 
             minResolutionPeriod,
             maxResolutionPeriod,
@@ -177,7 +177,7 @@ describe("IBosonConfigHandler", function () {
 
         await expect(cutTransaction)
           .to.emit(configHandler, "MaxRoyaltyPercentageChanged")
-          .withArgs(maxRoyaltyPecentage, await deployer.getAddress());
+          .withArgs(maxRoyaltyPercentage, await deployer.getAddress());
 
         await expect(cutTransaction)
           .to.emit(configHandler, "MaxResolutionPeriodChanged")
@@ -214,7 +214,7 @@ describe("IBosonConfigHandler", function () {
           maxDisputesPerBatch,
           maxAllowedSellers,
           maxTotalOfferFeePercentage,
-          maxRoyaltyPecentage,
+          maxRoyaltyPercentage,
           minResolutionPeriod,
           maxResolutionPeriod,
           minDisputePeriod,
@@ -611,48 +611,48 @@ describe("IBosonConfigHandler", function () {
         });
       });
 
-      context("👉 setMaxRoyaltyPecentage()", async function () {
-        let maxRoyaltyPecentage;
+      context("👉 setMaxRoyaltyPercentage()", async function () {
+        let maxRoyaltyPercentage;
         beforeEach(async function () {
           // set new value for Max Royalty Percentage
-          maxRoyaltyPecentage = 250;
+          maxRoyaltyPercentage = 250;
         });
 
         it("should emit a MaxRoyaltyPercentageChanged event", async function () {
           // set new value for Max Royalty Percentage, testing for the event
-          await expect(configHandler.connect(deployer).setMaxRoyaltyPecentage(maxRoyaltyPecentage))
+          await expect(configHandler.connect(deployer).setMaxRoyaltyPercentage(maxRoyaltyPercentage))
             .to.emit(configHandler, "MaxRoyaltyPercentageChanged")
-            .withArgs(maxRoyaltyPecentage, await deployer.getAddress());
+            .withArgs(maxRoyaltyPercentage, await deployer.getAddress());
         });
 
         it("should update state", async function () {
           // set new value for Max Royalty Percentage
-          await configHandler.connect(deployer).setMaxRoyaltyPecentage(maxRoyaltyPecentage);
+          await configHandler.connect(deployer).setMaxRoyaltyPercentage(maxRoyaltyPercentage);
 
           // Verify that new value is stored
-          expect(await configHandler.connect(rando).getMaxRoyaltyPecentage()).to.equal(maxRoyaltyPecentage);
+          expect(await configHandler.connect(rando).getMaxRoyaltyPercentage()).to.equal(maxRoyaltyPercentage);
         });
 
         context("💔 Revert Reasons", async function () {
           it("caller is not the admin", async function () {
             // Attempt to set new value for Max Royalty Percentage, expecting revert
             await expect(
-              configHandler.connect(rando).setMaxRoyaltyPecentage(maxRoyaltyPecentage)
+              configHandler.connect(rando).setMaxRoyaltyPercentage(maxRoyaltyPercentage)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
           });
 
-          it("maxRoyaltyPecentage must be less than 10000", async function () {
+          it("maxRoyaltyPercentage must be less than 10000", async function () {
             // Attempt to set new value for Max Royalty Percentage, expecting revert
-            maxRoyaltyPecentage = 10001;
+            maxRoyaltyPercentage = 10001;
             await expect(
-              configHandler.connect(deployer).setMaxRoyaltyPecentage(maxRoyaltyPecentage)
+              configHandler.connect(deployer).setMaxRoyaltyPercentage(maxRoyaltyPercentage)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_PERCENTAGE_INVALID);
           });
 
-          it("maxRoyaltyPecentage is zero", async function () {
-            maxRoyaltyPecentage = 0;
+          it("maxRoyaltyPercentage is zero", async function () {
+            maxRoyaltyPercentage = 0;
             await expect(
-              configHandler.connect(deployer).setMaxRoyaltyPecentage(maxRoyaltyPecentage)
+              configHandler.connect(deployer).setMaxRoyaltyPercentage(maxRoyaltyPercentage)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.VALUE_ZERO_NOT_ALLOWED);
           });
         });
@@ -950,8 +950,8 @@ describe("IBosonConfigHandler", function () {
           maxTotalOfferFeePercentage,
           "Invalid max total offer fee percentage"
         );
-        expect(await configHandler.connect(rando).getMaxRoyaltyPecentage()).to.equal(
-          maxRoyaltyPecentage,
+        expect(await configHandler.connect(rando).getMaxRoyaltyPercentage()).to.equal(
+          maxRoyaltyPercentage,
           "Invalid max royalty percentage"
         );
         //setAuthTokenContract is not called in the initialize function

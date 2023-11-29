@@ -36,6 +36,7 @@ const {
   getCurrentBlockAndSetTimeForward,
 } = require("../util/utils.js");
 const { oneWeek, oneMonth } = require("../util/constants");
+const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo.js");
 
 /**
  *  Test the Boson Price Discovery Handler interface
@@ -567,7 +568,9 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             // Set protocol fees to 95%
             await configHandler.setProtocolFeePercentage(9500);
             // Set royalty fees to 6%
-            await bosonVoucherClone.connect(assistant).setRoyaltyPercentage(600);
+            await offerHandler
+              .connect(assistant)
+              .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo([ZeroAddress], [600]));
 
             // Attempt to commit, expecting revert
             await expect(
@@ -955,7 +958,9 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             // Set protocol fees to 95%
             await configHandler.setProtocolFeePercentage(9500);
             // Set royalty fees to 6%
-            await bosonVoucherClone.connect(assistant).setRoyaltyPercentage(600);
+            await offerHandler
+              .connect(assistant)
+              .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo([ZeroAddress], [600]));
 
             // Attempt to commit, expecting revert
             await expect(

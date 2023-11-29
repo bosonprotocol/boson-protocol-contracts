@@ -23,6 +23,7 @@ const Agent = require("../../scripts/domain/Agent");
 const Receipt = require("../../scripts/domain/Receipt");
 const Voucher = require("../../scripts/domain/Voucher");
 const Dispute = require("../../scripts/domain/Dispute");
+const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo");
 const { applyPercentage, incrementer } = require("../../test/util/utils.js");
 const { oneWeek, oneMonth } = require("./constants.js");
 const PriceType = require("../../scripts/domain/PriceType");
@@ -76,6 +77,7 @@ async function mockOffer({ refreshModule } = {}) {
   const voided = false;
   const collectionIndex = "0";
   const priceType = PriceType.Static;
+  const royaltyInfo = [new RoyaltyInfo([ZeroAddress], ["0"])];
 
   // Create a valid offer, then set fields in tests directly
   let offer = new Offer(
@@ -90,7 +92,8 @@ async function mockOffer({ refreshModule } = {}) {
     metadataHash,
     voided,
     collectionIndex,
-    priceType
+    priceType,
+    royaltyInfo
   );
 
   const offerDates = await mockOfferDates();
