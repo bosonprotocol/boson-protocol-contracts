@@ -7,6 +7,8 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const PriceDiscovery = require("../../scripts/domain/PriceDiscovery");
 const Side = require("../../scripts/domain/Side");
+const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo");
+const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
@@ -53,6 +55,7 @@ describe("IBosonFundsHandler", function () {
     clerkDR,
     treasuryDR,
     other,
+    other2,
     protocolTreasury;
   let erc165,
     accessController,
@@ -78,9 +81,11 @@ describe("IBosonFundsHandler", function () {
   let sellersAvailableFunds,
     buyerAvailableFunds,
     protocolAvailableFunds,
+    externalRoyaltyRecipientsBalance,
     expectedSellerAvailableFunds,
     expectedBuyerAvailableFunds,
-    expectedProtocolAvailableFunds;
+    expectedProtocolAvailableFunds,
+    expectedExternalRoyaltyRecipientsBalance;
   let tokenListSeller, tokenListBuyer, tokenAmountsSeller, tokenAmountsBuyer, tokenList, tokenAmounts;
   let tx, txReceipt, txCost, event;
   let disputeResolverFees, disputeResolver, disputeResolverId;
@@ -137,6 +142,7 @@ describe("IBosonFundsHandler", function () {
         adminDR,
         treasuryDR,
         other,
+        other2,
         buyer1,
         buyer2,
         buyer3,
@@ -464,7 +470,7 @@ describe("IBosonFundsHandler", function () {
         offerToken.id = "2";
         offerToken.exchangeToken = await mockToken.getAddress();
 
-        // Check if domais are valid
+        // Check if domains are valid
         expect(offerNative.isValid()).is.true;
         expect(offerToken.isValid()).is.true;
         expect(offerDates.isValid()).is.true;
@@ -4557,7 +4563,8 @@ describe("IBosonFundsHandler", function () {
             context(`protocol fee: ${fee.protocol / 100}%; royalties: ${fee.royalties / 100}%`, async function () {
               let voucherOwner, previousPrice;
               let payoutInformation;
-              let totalRoyalties, totalProtocolFee;
+              let totalRoyalties, totalProtocolFee, totalRoyaltiesSplit;
+              let royaltySplit;
 
               beforeEach(async function () {
                 payoutInformation = [];
@@ -4569,15 +4576,36 @@ describe("IBosonFundsHandler", function () {
                 );
                 bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
+                // Add external royalty recipients
+                const royaltyRecipientList = new RoyaltyRecipientList([
+                  new RoyaltyRecipient(other.address, "0", "other"),
+                  new RoyaltyRecipient(other2.address, "0", "other2"),
+                ]);
+                await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+                royaltySplit = {
+                  seller: 5000, // 50%
+                  other: 3000, // 30%
+                  other2: 2000, // 20%
+                };
+
                 // set fees
                 await configHandler.setProtocolFeePercentage(fee.protocol);
-                await bosonVoucherClone.connect(assistant).setRoyaltyPercentage(fee.royalties);
 
                 offer = offerToken.clone();
                 offer.id = "3";
                 offer.price = "100";
                 offer.sellerDeposit = "10";
                 offer.buyerCancelPenalty = "30";
+                offer.royaltyInfo = [
+                  new RoyaltyInfo(
+                    [ZeroAddress, other.address, other2.address],
+                    [
+                      applyPercentage(fee.royalties, royaltySplit.seller),
+                      applyPercentage(fee.royalties, royaltySplit.other),
+                      applyPercentage(fee.royalties, royaltySplit.other2),
+                    ]
+                  ),
+                ];
 
                 // deposit to seller's pool
                 await fundsHandler.connect(assistant).withdrawFunds(seller.id, [], []); // withdraw all, so it's easier to test
@@ -4607,6 +4635,11 @@ describe("IBosonFundsHandler", function () {
                 previousPrice = BigInt(offer.price);
                 totalRoyalties = 0n;
                 totalProtocolFee = 0n;
+                totalRoyaltiesSplit = {
+                  other: 0n,
+                  other2: 0n,
+                };
+
                 for (const trade of buyerChains[direction]) {
                   // Prepare calldata for PriceDiscovery contract
                   const tokenId = deriveTokenId(offer.id, exchangeId);
@@ -4663,11 +4696,19 @@ describe("IBosonFundsHandler", function () {
                   totalRoyalties = totalRoyalties + BigInt(royalties);
                   totalProtocolFee = totalProtocolFee + BigInt(protocolFee);
 
+                  // Update royalties split
+                  for (const [key, value] of Object.entries(totalRoyaltiesSplit)) {
+                    totalRoyaltiesSplit[key] =
+                      value + BigInt(applyPercentage(order.price, applyPercentage(fee.royalties, royaltySplit[key])));
+                  }
+
                   voucherOwner = trade.buyer; // last buyer is voucherOwner in next iteration
                   previousPrice = order.price;
 
                   mockTokenAddress = await mockToken.getAddress();
                 }
+
+                totalRoyaltiesSplit.seller = totalRoyalties - totalRoyaltiesSplit.other - totalRoyaltiesSplit.other2;
               });
 
               context("Final state COMPLETED", async function () {
@@ -4695,7 +4736,7 @@ describe("IBosonFundsHandler", function () {
                   sellerPayoff = (
                     BigInt(offer.sellerDeposit) +
                     BigInt(offer.price) +
-                    BigInt(totalRoyalties) -
+                    BigInt(totalRoyaltiesSplit.seller) -
                     BigInt(initialFee)
                   ).toString();
 
@@ -4752,6 +4793,9 @@ describe("IBosonFundsHandler", function () {
                   resellersAvailableFunds = (
                     await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                   ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+                  externalRoyaltyRecipientsBalance = await Promise.all(
+                    [other, other2].map((r) => mockToken.balanceOf(r.address))
+                  );
 
                   // Chain state should match the expected available funds
                   expectedSellerAvailableFunds = new FundsList([]);
@@ -4759,11 +4803,13 @@ describe("IBosonFundsHandler", function () {
                   expectedProtocolAvailableFunds = new FundsList([]);
                   expectedAgentAvailableFunds = new FundsList([]);
                   expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
+                  expectedExternalRoyaltyRecipientsBalance = [0n, 0n];
                   expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                   expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                   expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                   expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                   expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                  expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
 
                   // Complete the exchange so the funds are released
                   await exchangeHandler.connect(voucherOwner).completeExchange(exchangeId);
@@ -4774,6 +4820,7 @@ describe("IBosonFundsHandler", function () {
                   // resellers: difference between the secondary price and immediate payout
                   // protocol: protocolFee
                   // agent: 0
+                  // external royalty recipients: royalties
                   expectedSellerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", sellerPayoff));
                   if (protocolPayoff != "0") {
                     expectedProtocolAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", protocolPayoff));
@@ -4781,6 +4828,7 @@ describe("IBosonFundsHandler", function () {
                   expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
                     return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
                   });
+                  expectedExternalRoyaltyRecipientsBalance = [totalRoyaltiesSplit.other, totalRoyaltiesSplit.other2];
 
                   sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
                   buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
@@ -4789,12 +4837,16 @@ describe("IBosonFundsHandler", function () {
                   resellersAvailableFunds = (
                     await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                   ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+                  externalRoyaltyRecipientsBalance = await Promise.all(
+                    [other, other2].map((r) => mockToken.balanceOf(r.address))
+                  );
 
                   expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                   expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                   expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                   expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                   expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                  expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
                 });
               });
 
@@ -4860,6 +4912,9 @@ describe("IBosonFundsHandler", function () {
                   resellersAvailableFunds = (
                     await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                   ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+                  externalRoyaltyRecipientsBalance = await Promise.all(
+                    [other, other2].map((r) => mockToken.balanceOf(r.address))
+                  );
 
                   // Chain state should match the expected available funds
                   expectedSellerAvailableFunds = new FundsList([]);
@@ -4867,11 +4922,13 @@ describe("IBosonFundsHandler", function () {
                   expectedProtocolAvailableFunds = new FundsList([]);
                   expectedAgentAvailableFunds = new FundsList([]);
                   expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
+                  expectedExternalRoyaltyRecipientsBalance = [0n, 0n];
                   expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                   expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                   expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                   expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                   expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                  expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
 
                   // Revoke the voucher so the funds are released
                   await exchangeHandler.connect(assistant).revokeVoucher(exchangeId);
@@ -4882,6 +4939,7 @@ describe("IBosonFundsHandler", function () {
                   // resellers: difference between original price and immediate payoff
                   // protocol: 0
                   // agent: 0
+                  // external royalty recipients: 0
                   expectedBuyerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", buyerPayoff));
                   expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
                     return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
@@ -4894,12 +4952,16 @@ describe("IBosonFundsHandler", function () {
                   resellersAvailableFunds = (
                     await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                   ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+                  externalRoyaltyRecipientsBalance = await Promise.all(
+                    [other, other2].map((r) => mockToken.balanceOf(r.address))
+                  );
 
                   expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                   expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                   expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                   expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                   expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                  expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
                 });
               });
 
@@ -4970,6 +5032,9 @@ describe("IBosonFundsHandler", function () {
                   resellersAvailableFunds = (
                     await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                   ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+                  externalRoyaltyRecipientsBalance = await Promise.all(
+                    [other, other2].map((r) => mockToken.balanceOf(r.address))
+                  );
 
                   // Chain state should match the expected available funds
                   expectedSellerAvailableFunds = new FundsList([]);
@@ -4977,11 +5042,13 @@ describe("IBosonFundsHandler", function () {
                   expectedProtocolAvailableFunds = new FundsList([]);
                   expectedAgentAvailableFunds = new FundsList([]);
                   expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
+                  expectedExternalRoyaltyRecipientsBalance = [0n, 0n];
                   expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                   expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                   expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                   expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                   expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                  expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
 
                   // Cancel the voucher, so the funds are released
                   await exchangeHandler.connect(voucherOwner).cancelVoucher(exchangeId);
@@ -4992,6 +5059,7 @@ describe("IBosonFundsHandler", function () {
                   // resellers: difference between original price and immediate payoff
                   // protocol: 0
                   // agent: 0
+                  // external royalty recipients: 0
                   expectedSellerAvailableFunds.funds[0] = new Funds(mockTokenAddress, "Foreign20", sellerPayoff);
                   expectedBuyerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", buyerPayoff));
                   expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
@@ -5005,12 +5073,16 @@ describe("IBosonFundsHandler", function () {
                   resellersAvailableFunds = (
                     await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                   ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+                  externalRoyaltyRecipientsBalance = await Promise.all(
+                    [other, other2].map((r) => mockToken.balanceOf(r.address))
+                  );
 
                   expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                   expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                   expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                   expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                   expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                  expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
                 });
               });
 
@@ -5052,7 +5124,7 @@ describe("IBosonFundsHandler", function () {
                     sellerPayoff = (
                       BigInt(offer.sellerDeposit) +
                       BigInt(offer.price) +
-                      BigInt(totalRoyalties) -
+                      BigInt(totalRoyaltiesSplit.seller) -
                       BigInt(initialFee)
                     ).toString();
 
@@ -5109,6 +5181,9 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+                    externalRoyaltyRecipientsBalance = await Promise.all(
+                      [other, other2].map((r) => mockToken.balanceOf(r.address))
+                    );
 
                     // Chain state should match the expected available funds
                     expectedSellerAvailableFunds = new FundsList([]);
@@ -5116,11 +5191,13 @@ describe("IBosonFundsHandler", function () {
                     expectedProtocolAvailableFunds = new FundsList([]);
                     expectedAgentAvailableFunds = new FundsList([]);
                     expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
+                    expectedExternalRoyaltyRecipientsBalance = [0n, 0n];
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
 
                     // Retract from the dispute, so the funds are released
                     await disputeHandler.connect(voucherOwner).retractDispute(exchangeId);
@@ -5131,6 +5208,7 @@ describe("IBosonFundsHandler", function () {
                     // resellers: difference between the secondary price and immediate payout
                     // protocol: protocolFee
                     // agent: 0
+                    // external royalty recipients: royalties
                     expectedSellerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", sellerPayoff));
                     if (protocolPayoff != "0") {
                       expectedProtocolAvailableFunds.funds.push(
@@ -5140,6 +5218,7 @@ describe("IBosonFundsHandler", function () {
                     expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
                       return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
                     });
+                    expectedExternalRoyaltyRecipientsBalance = [totalRoyaltiesSplit.other, totalRoyaltiesSplit.other2];
 
                     sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
                     buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
@@ -5148,12 +5227,16 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+                    externalRoyaltyRecipientsBalance = await Promise.all(
+                      [other, other2].map((r) => mockToken.balanceOf(r.address))
+                    );
 
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
                   });
                 });
 
@@ -5177,7 +5260,7 @@ describe("IBosonFundsHandler", function () {
                     sellerPayoff = (
                       BigInt(offer.sellerDeposit) +
                       BigInt(offer.price) +
-                      BigInt(totalRoyalties) -
+                      BigInt(totalRoyaltiesSplit.seller) -
                       BigInt(initialFee)
                     ).toString();
 
@@ -5236,6 +5319,9 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+                    externalRoyaltyRecipientsBalance = await Promise.all(
+                      [other, other2].map((r) => mockToken.balanceOf(r.address))
+                    );
 
                     // Chain state should match the expected available funds
                     expectedSellerAvailableFunds = new FundsList([]);
@@ -5243,11 +5329,13 @@ describe("IBosonFundsHandler", function () {
                     expectedProtocolAvailableFunds = new FundsList([]);
                     expectedAgentAvailableFunds = new FundsList([]);
                     expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
+                    expectedExternalRoyaltyRecipientsBalance = [0n, 0n];
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
 
                     // Expire the dispute, so the funds are released
                     await disputeHandler.connect(rando).expireDispute(exchangeId);
@@ -5258,6 +5346,7 @@ describe("IBosonFundsHandler", function () {
                     // resellers: difference between the secondary price and immediate payout
                     // protocol: protocolFee
                     // agent: 0
+                    // external royalty recipients: royalties
                     expectedSellerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", sellerPayoff));
                     if (protocolPayoff != "0") {
                       expectedProtocolAvailableFunds.funds.push(
@@ -5267,6 +5356,7 @@ describe("IBosonFundsHandler", function () {
                     expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
                       return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
                     });
+                    expectedExternalRoyaltyRecipientsBalance = [totalRoyaltiesSplit.other, totalRoyaltiesSplit.other2];
 
                     sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
                     buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
@@ -5275,12 +5365,16 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+                    externalRoyaltyRecipientsBalance = await Promise.all(
+                      [other, other2].map((r) => mockToken.balanceOf(r.address))
+                    );
 
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
                   });
                 });
 
@@ -5307,13 +5401,31 @@ describe("IBosonFundsHandler", function () {
                       return { id: pi.buyerId, payoff };
                     });
 
+                    // recalculate the royalties due to rounding errors
+                    totalRoyaltiesSplit = { other: 0n, other2: 0n };
+                    totalRoyalties = 0n;
+                    for (const trade of buyerChains[direction]) {
+                      const effectivePrice = applyPercentage(trade.price, sellerPercentBasisPoints);
+
+                      totalRoyalties =
+                        totalRoyalties +
+                        BigInt(applyPercentage(applyPercentage(trade.price, fee.royalties), sellerPercentBasisPoints));
+                      for (const [key, value] of Object.entries(totalRoyaltiesSplit)) {
+                        totalRoyaltiesSplit[key] =
+                          value +
+                          BigInt(applyPercentage(effectivePrice, applyPercentage(fee.royalties, royaltySplit[key])));
+                      }
+                    }
+                    totalRoyaltiesSplit.seller =
+                      totalRoyalties - totalRoyaltiesSplit.other - totalRoyaltiesSplit.other2;
+
                     // seller: sellerDeposit + price + royalties
                     const initialFee = applyPercentage(offer.price, "0");
                     sellerPayoff = (
                       BigInt(offer.sellerDeposit) +
                       BigInt(offer.price) -
                       BigInt(buyerPayoff) +
-                      BigInt(applyPercentage(totalRoyalties, sellerPercentBasisPoints))
+                      BigInt(totalRoyaltiesSplit.seller)
                     ).toString();
 
                     // protocol: protocolFee (only secondary market)
@@ -5400,6 +5512,9 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+                    externalRoyaltyRecipientsBalance = await Promise.all(
+                      [other, other2].map((r) => mockToken.balanceOf(r.address))
+                    );
 
                     // Chain state should match the expected available funds
                     expectedSellerAvailableFunds = new FundsList([]);
@@ -5407,11 +5522,13 @@ describe("IBosonFundsHandler", function () {
                     expectedProtocolAvailableFunds = new FundsList([]);
                     expectedAgentAvailableFunds = new FundsList([]);
                     expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
+                    expectedExternalRoyaltyRecipientsBalance = [0n, 0n];
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
 
                     // Resolve the dispute, so the funds are released
                     await disputeHandler
@@ -5424,6 +5541,7 @@ describe("IBosonFundsHandler", function () {
                     // resellers: (difference between the secondary price and immediate payout)*(1-buyerPercentage)
                     // protocol: protocolFee (secondary market only)
                     // agent: 0
+                    // external royalty recipients: royalties*(1-buyerPercentage)
                     expectedSellerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", sellerPayoff));
                     expectedBuyerAvailableFunds = new FundsList([
                       new Funds(mockTokenAddress, "Foreign20", buyerPayoff),
@@ -5436,6 +5554,7 @@ describe("IBosonFundsHandler", function () {
                     expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
                       return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
                     });
+                    expectedExternalRoyaltyRecipientsBalance = [totalRoyaltiesSplit.other, totalRoyaltiesSplit.other2];
 
                     sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
                     buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
@@ -5444,12 +5563,16 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+                    externalRoyaltyRecipientsBalance = await Promise.all(
+                      [other, other2].map((r) => mockToken.balanceOf(r.address))
+                    );
 
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
                   });
                 });
 
@@ -5473,7 +5596,7 @@ describe("IBosonFundsHandler", function () {
                     sellerPayoff = (
                       BigInt(offer.sellerDeposit) +
                       BigInt(offer.price) +
-                      BigInt(totalRoyalties) -
+                      BigInt(totalRoyaltiesSplit.seller) -
                       BigInt(initialFee)
                     ).toString();
 
@@ -5533,6 +5656,9 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+                    externalRoyaltyRecipientsBalance = await Promise.all(
+                      [other, other2].map((r) => mockToken.balanceOf(r.address))
+                    );
 
                     // Chain state should match the expected available funds
                     expectedSellerAvailableFunds = new FundsList([]);
@@ -5540,11 +5666,13 @@ describe("IBosonFundsHandler", function () {
                     expectedProtocolAvailableFunds = new FundsList([]);
                     expectedAgentAvailableFunds = new FundsList([]);
                     expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
+                    expectedExternalRoyaltyRecipientsBalance = [0n, 0n];
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
 
                     // Retract from the dispute, so the funds are released
                     await disputeHandler.connect(voucherOwner).retractDispute(exchangeId);
@@ -5555,6 +5683,7 @@ describe("IBosonFundsHandler", function () {
                     // resellers: difference between the secondary price and immediate payout
                     // protocol: protocolFee
                     // agent: 0
+                    // external royalty recipients: royalties
                     expectedSellerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", sellerPayoff));
                     if (protocolPayoff != "0") {
                       expectedProtocolAvailableFunds.funds.push(
@@ -5564,6 +5693,7 @@ describe("IBosonFundsHandler", function () {
                     expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
                       return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
                     });
+                    expectedExternalRoyaltyRecipientsBalance = [totalRoyaltiesSplit.other, totalRoyaltiesSplit.other2];
 
                     sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
                     buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
@@ -5572,12 +5702,16 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+                    externalRoyaltyRecipientsBalance = await Promise.all(
+                      [other, other2].map((r) => mockToken.balanceOf(r.address))
+                    );
 
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
                   });
                 });
 
@@ -5604,13 +5738,31 @@ describe("IBosonFundsHandler", function () {
                       return { id: pi.buyerId, payoff };
                     });
 
+                    // recalculate the royalties due to rounding errors
+                    totalRoyaltiesSplit = { other: 0n, other2: 0n };
+                    totalRoyalties = 0n;
+                    for (const trade of buyerChains[direction]) {
+                      const effectivePrice = applyPercentage(trade.price, sellerPercentBasisPoints);
+
+                      totalRoyalties =
+                        totalRoyalties +
+                        BigInt(applyPercentage(applyPercentage(trade.price, fee.royalties), sellerPercentBasisPoints));
+                      for (const [key, value] of Object.entries(totalRoyaltiesSplit)) {
+                        totalRoyaltiesSplit[key] =
+                          value +
+                          BigInt(applyPercentage(effectivePrice, applyPercentage(fee.royalties, royaltySplit[key])));
+                      }
+                    }
+                    totalRoyaltiesSplit.seller =
+                      totalRoyalties - totalRoyaltiesSplit.other - totalRoyaltiesSplit.other2;
+
                     // seller: (sellerDeposit + price + royalties)*(1-buyerPercentage)
                     const initialFee = applyPercentage(offer.price, "0");
                     sellerPayoff = (
                       BigInt(offer.sellerDeposit) +
                       BigInt(offer.price) -
                       BigInt(buyerPayoff) +
-                      BigInt(applyPercentage(totalRoyalties, sellerPercentBasisPoints))
+                      BigInt(totalRoyaltiesSplit.seller)
                     ).toString();
 
                     // protocol: protocolFee *(1-buyerPercentage)
@@ -5700,6 +5852,9 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+                    externalRoyaltyRecipientsBalance = await Promise.all(
+                      [other, other2].map((r) => mockToken.balanceOf(r.address))
+                    );
 
                     // Chain state should match the expected available funds
                     expectedSellerAvailableFunds = new FundsList([]);
@@ -5707,11 +5862,13 @@ describe("IBosonFundsHandler", function () {
                     expectedProtocolAvailableFunds = new FundsList([]);
                     expectedAgentAvailableFunds = new FundsList([]);
                     expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
+                    expectedExternalRoyaltyRecipientsBalance = [0n, 0n];
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
 
                     // Resolve the dispute, so the funds are released
                     await disputeHandler
@@ -5722,8 +5879,9 @@ describe("IBosonFundsHandler", function () {
                     // buyer: (price + sellerDeposit)*buyerPercentage
                     // seller: (price + sellerDeposit + royalties)*(1-buyerPercentage)
                     // resellers: (difference between the secondary price and immediate payout)*(1-buyerPercentage)
-                    // protocol: protocolFee *(1-buyerPercentage)
+                    // protocol: protocolFee*(1-buyerPercentage)
                     // agent: 0
+                    // external royalty recipients: royalties*(1-buyerPercentage)
                     expectedSellerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", sellerPayoff));
                     expectedBuyerAvailableFunds = new FundsList([
                       new Funds(mockTokenAddress, "Foreign20", buyerPayoff),
@@ -5736,6 +5894,7 @@ describe("IBosonFundsHandler", function () {
                     expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
                       return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
                     });
+                    expectedExternalRoyaltyRecipientsBalance = [totalRoyaltiesSplit.other, totalRoyaltiesSplit.other2];
 
                     sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
                     buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
@@ -5744,12 +5903,16 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+                    externalRoyaltyRecipientsBalance = await Promise.all(
+                      [other, other2].map((r) => mockToken.balanceOf(r.address))
+                    );
 
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
                   });
                 });
 
@@ -5776,13 +5939,31 @@ describe("IBosonFundsHandler", function () {
                       return { id: pi.buyerId, payoff };
                     });
 
+                    // recalculate the royalties due to rounding errors
+                    totalRoyaltiesSplit = { other: 0n, other2: 0n };
+                    totalRoyalties = 0n;
+                    for (const trade of buyerChains[direction]) {
+                      const effectivePrice = applyPercentage(trade.price, sellerPercentBasisPoints);
+
+                      totalRoyalties =
+                        totalRoyalties +
+                        BigInt(applyPercentage(applyPercentage(trade.price, fee.royalties), sellerPercentBasisPoints));
+                      for (const [key, value] of Object.entries(totalRoyaltiesSplit)) {
+                        totalRoyaltiesSplit[key] =
+                          value +
+                          BigInt(applyPercentage(effectivePrice, applyPercentage(fee.royalties, royaltySplit[key])));
+                      }
+                    }
+                    totalRoyaltiesSplit.seller =
+                      totalRoyalties - totalRoyaltiesSplit.other - totalRoyaltiesSplit.other2;
+
                     // seller: (sellerDeposit + price + royalties)*(1-buyerPercentage)
                     const initialFee = applyPercentage(offer.price, "0");
                     sellerPayoff = (
                       BigInt(offer.sellerDeposit) +
                       BigInt(offer.price) -
                       BigInt(buyerPayoff) +
-                      BigInt(applyPercentage(totalRoyalties, sellerPercentBasisPoints))
+                      BigInt(totalRoyaltiesSplit.seller)
                     ).toString();
 
                     // protocol: protocolFee*(1-buyerPercentage)
@@ -5848,6 +6029,9 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+                    externalRoyaltyRecipientsBalance = await Promise.all(
+                      [other, other2].map((r) => mockToken.balanceOf(r.address))
+                    );
 
                     // Chain state should match the expected available funds
                     expectedSellerAvailableFunds = new FundsList([]);
@@ -5855,11 +6039,13 @@ describe("IBosonFundsHandler", function () {
                     expectedProtocolAvailableFunds = new FundsList([]);
                     expectedAgentAvailableFunds = new FundsList([]);
                     expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
+                    expectedExternalRoyaltyRecipientsBalance = [0n, 0n];
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
 
                     // Decide the dispute, so the funds are released
                     await disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints);
@@ -5868,8 +6054,9 @@ describe("IBosonFundsHandler", function () {
                     // buyer: (price + sellerDeposit)*buyerPercentage
                     // seller: (price + sellerDeposit + royalties)*(1-buyerPercentage)
                     // resellers: (difference between the secondary price and immediate payout)*(1-buyerPercentage)
-                    // protocol: protocolFee *(1-buyerPercentage)
+                    // protocol: protocolFee*(1-buyerPercentage)
                     // agent: 0
+                    // external royalty recipients: royalties*(1-buyerPercentage)
                     expectedSellerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", sellerPayoff));
                     expectedBuyerAvailableFunds = new FundsList([
                       new Funds(mockTokenAddress, "Foreign20", buyerPayoff),
@@ -5882,6 +6069,7 @@ describe("IBosonFundsHandler", function () {
                     expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
                       return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
                     });
+                    expectedExternalRoyaltyRecipientsBalance = [totalRoyaltiesSplit.other, totalRoyaltiesSplit.other2];
 
                     sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
                     buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
@@ -5890,12 +6078,16 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+                    externalRoyaltyRecipientsBalance = await Promise.all(
+                      [other, other2].map((r) => mockToken.balanceOf(r.address))
+                    );
 
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
                   });
                 });
 
@@ -5982,6 +6174,9 @@ describe("IBosonFundsHandler", function () {
                       resellersAvailableFunds = (
                         await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                       ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+                      externalRoyaltyRecipientsBalance = await Promise.all(
+                        [other, other2].map((r) => mockToken.balanceOf(r.address))
+                      );
 
                       // Chain state should match the expected available funds
                       expectedSellerAvailableFunds = new FundsList([]);
@@ -5989,11 +6184,13 @@ describe("IBosonFundsHandler", function () {
                       expectedProtocolAvailableFunds = new FundsList([]);
                       expectedAgentAvailableFunds = new FundsList([]);
                       expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
+                      expectedExternalRoyaltyRecipientsBalance = [0n, 0n];
                       expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                       expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                       expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                       expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                       expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                      expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
 
                       // Expire the escalated dispute, so the funds are released
                       await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);
@@ -6004,6 +6201,7 @@ describe("IBosonFundsHandler", function () {
                       // resellers: difference between the secondary price and immediate payout
                       // protocol: 0
                       // agent: 0
+                      // external royalty recipients: 0
                       expectedBuyerAvailableFunds.funds[0] = new Funds(mockTokenAddress, "Foreign20", buyerPayoff);
                       expectedSellerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", sellerPayoff));
                       expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
@@ -6021,12 +6219,16 @@ describe("IBosonFundsHandler", function () {
                       resellersAvailableFunds = (
                         await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                       ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+                      externalRoyaltyRecipientsBalance = await Promise.all(
+                        [other, other2].map((r) => mockToken.balanceOf(r.address))
+                      );
 
                       expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                       expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                       expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                       expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                       expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                      expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
                     });
                   }
                 );
@@ -6105,6 +6307,9 @@ describe("IBosonFundsHandler", function () {
                       resellersAvailableFunds = (
                         await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                       ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+                      externalRoyaltyRecipientsBalance = await Promise.all(
+                        [other, other2].map((r) => mockToken.balanceOf(r.address))
+                      );
 
                       // Chain state should match the expected available funds
                       expectedSellerAvailableFunds = new FundsList([]);
@@ -6112,11 +6317,13 @@ describe("IBosonFundsHandler", function () {
                       expectedProtocolAvailableFunds = new FundsList([]);
                       expectedAgentAvailableFunds = new FundsList([]);
                       expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
+                      expectedExternalRoyaltyRecipientsBalance = [0n, 0n];
                       expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                       expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                       expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                       expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                       expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                      expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
 
                       // Refuse the escalated dispute, so the funds are released
                       await disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId);
@@ -6127,6 +6334,7 @@ describe("IBosonFundsHandler", function () {
                       // resellers: difference between the secondary price and immediate payout
                       // protocol: 0
                       // agent: 0
+                      // external royalty recipients: 0
                       expectedBuyerAvailableFunds.funds[0] = new Funds(mockTokenAddress, "Foreign20", buyerPayoff);
                       expectedSellerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", sellerPayoff));
                       expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
@@ -6150,6 +6358,7 @@ describe("IBosonFundsHandler", function () {
                       expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                       expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                       expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
+                      expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
                     });
                   }
                 );
@@ -6184,7 +6393,6 @@ describe("IBosonFundsHandler", function () {
               );
               const bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
               await configHandler.setProtocolFeePercentage(fee.protocol);
-              await bosonVoucherClone.connect(assistant).setRoyaltyPercentage(fee.royalties);
 
               // create a new offer
               offer = offerToken.clone();
@@ -6192,6 +6400,7 @@ describe("IBosonFundsHandler", function () {
               offer.price = "100";
               offer.sellerDeposit = "10";
               offer.buyerCancelPenalty = "30";
+              offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [fee.royalties])];
 
               // deposit to seller's pool
               await fundsHandler.connect(assistant).withdrawFunds(seller.id, [], []); // withdraw all, so it's easier to test
@@ -6226,7 +6435,9 @@ describe("IBosonFundsHandler", function () {
 
                 // set new fee
                 await configHandler.setProtocolFeePercentage(fee.protocol);
-                await bosonVoucherClone.connect(assistant).setRoyaltyPercentage(fee.royalties);
+                await offerHandler
+                  .connect(assistant)
+                  .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo([ZeroAddress], [fee.royalties]));
 
                 // Prepare calldata for PriceDiscovery contract
                 const tokenId = deriveTokenId(offer.id, exchangeId);

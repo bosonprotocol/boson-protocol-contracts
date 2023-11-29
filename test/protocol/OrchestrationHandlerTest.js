@@ -18,11 +18,15 @@ const TokenType = require("../../scripts/domain/TokenType");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Range = require("../../scripts/domain/Range");
+const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
+const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const {
   getEvent,
   applyPercentage,
+  compareOfferStructs,
+  compareRoyaltyRecipientLists,
   calculateCloneAddress,
   calculateBosonProxyAddress,
   setupTestEnvironment,
@@ -30,7 +34,7 @@ const {
   revertToSnapshot,
 } = require("../util/utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
+const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL, DEFAULT_ROYALTY_RECIPIENT } = require("../util/constants");
 const {
   mockTwin,
   mockOffer,
@@ -631,7 +635,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             offer.sellerId,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -640,13 +644,22 @@ describe("IBosonOrchestrationHandler", function () {
             await assistant.getAddress()
           );
 
+        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+        ]);
+
+        await expect(tx)
+          .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+          .withArgs(
+            seller.id,
+            compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+            assistant.address
+          );
+
         // Voucher clone contract
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-        await expect(tx)
-          .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-          .withArgs(voucherInitValues.royaltyPercentage);
 
         bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
@@ -689,7 +702,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             offer.sellerId,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -698,13 +711,22 @@ describe("IBosonOrchestrationHandler", function () {
             await assistant.getAddress()
           );
 
+        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+        ]);
+
+        await expect(tx)
+          .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+          .withArgs(
+            seller.id,
+            compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+            assistant.address
+          );
+
         // Voucher clone contract
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-        await expect(tx)
-          .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-          .withArgs(voucherInitValues.royaltyPercentage);
 
         bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
@@ -809,6 +831,7 @@ describe("IBosonOrchestrationHandler", function () {
         // ERC2981 Royalty fee is 0%
         voucherInitValues.royaltyPercentage = "0"; //0%
         expect(voucherInitValues.isValid()).is.true;
+        offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
         // Create a seller and an offer
         await orchestrationHandler
@@ -875,6 +898,7 @@ describe("IBosonOrchestrationHandler", function () {
         // ERC2981 Royalty fee is 10%
         voucherInitValues.royaltyPercentage = "1000"; //10%
         expect(voucherInitValues.isValid()).is.true;
+        offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
         // Create a seller and an offer
         await orchestrationHandler
@@ -970,7 +994,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             offer.sellerId,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -1020,7 +1044,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -1054,7 +1078,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -1096,7 +1120,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -1133,7 +1157,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -1167,7 +1191,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -1198,7 +1222,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             offer.id,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -1242,13 +1266,47 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             offer.id,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
             offerFeesStruct,
             agentId,
             await rando.getAddress()
+          );
+      });
+
+      it("Should allow creation of an offer with royalty recipients", async function () {
+        // Add royalty info to the offer
+        offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], ["10"])];
+
+        // Create a seller and an offer, testing for the event
+        await expect(
+          orchestrationHandler
+            .connect(assistant)
+            .createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(
+            nextOfferId,
+            seller.id,
+            compareOfferStructs.bind(offer.toStruct()),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            offerFeesStruct,
+            agentId,
+            assistant.address
           );
       });
 
@@ -1307,7 +1365,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               offer.sellerId,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -1327,14 +1385,22 @@ describe("IBosonOrchestrationHandler", function () {
               await assistant.getAddress()
             );
 
+          const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+            new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          ]);
+
+          await expect(tx)
+            .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+            .withArgs(
+              seller.id,
+              compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+              assistant.address
+            );
+
           // Voucher clone contract
           bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
           await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-          await expect(tx)
-            .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-            .withArgs(voucherInitValues.royaltyPercentage);
-
           await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
 
           bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
@@ -2325,7 +2391,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               offer.sellerId,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -2469,7 +2535,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -2574,7 +2640,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -2620,7 +2686,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -2673,7 +2739,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -2708,7 +2774,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -2740,7 +2806,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -2769,7 +2835,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             offer.id,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -2808,7 +2874,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             offer.id,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -2837,6 +2903,45 @@ describe("IBosonOrchestrationHandler", function () {
               offerFeeLimit
             )
         ).to.emit(orchestrationHandler, "OfferCreated");
+      });
+
+      it("Should allow creation of an offer with royalty recipients", async function () {
+        // Add royalty recipients
+        const royaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(other1.address, "100", "other1"),
+          new RoyaltyRecipient(other2.address, "200", "other2"),
+        ]);
+        await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+
+        // Add royalty info to the offer
+        offer.royaltyInfo = [new RoyaltyInfo([other1.address, ZeroAddress], ["150", "10"])];
+
+        // Create an offer with condition, testing for the events
+        await expect(
+          orchestrationHandler
+            .connect(assistant)
+            .createOfferWithCondition(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              condition,
+              agentId,
+              offerFeeLimit
+            )
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(
+            nextOfferId,
+            seller.id,
+            compareOfferStructs.bind(offer.toStruct()),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            offerFeesStruct,
+            agentId,
+            assistant.address
+          );
       });
 
       context("When offers have non zero agent ids", async function () {
@@ -2877,7 +2982,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -2952,7 +3057,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -3231,6 +3336,80 @@ describe("IBosonOrchestrationHandler", function () {
               )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_CONDITION_PARAMETERS);
         });
+
+        context("Offers with royalty info", async function () {
+          // Other offer creation related revert reasons are tested in the previous context
+          // This is an exception, since these tests make more sense if seller has multiple royalty recipients
+
+          beforeEach(async function () {
+            // Add royalty recipients
+            const royaltyRecipientList = new RoyaltyRecipientList([
+              new RoyaltyRecipient(other1.address, "100", "other"),
+              new RoyaltyRecipient(other2.address, "200", "other2"),
+            ]);
+            await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+          });
+
+          it("Royalty recipient is not on seller's allow list", async function () {
+            // Add royalty info to the offer
+            offer.royaltyInfo = [new RoyaltyInfo([other1.address, rando.address], ["150", "10"])];
+
+            // Attempt to create an offer with condition, expecting revert
+            await expect(
+              orchestrationHandler
+                .connect(assistant)
+                .createOfferWithCondition(
+                  offer,
+                  offerDates,
+                  offerDurations,
+                  disputeResolver.id,
+                  condition,
+                  agentId,
+                  offerFeeLimit
+                )
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_RECIPIENT);
+          });
+
+          it("Royalty percentage is less than the value decided by the admin", async function () {
+            // Add royalty info to the offer
+            offer.royaltyInfo = [new RoyaltyInfo([other1.address, other2.address], ["90", "250"])];
+
+            // Attempt to create an offer with condition, expecting revert
+            await expect(
+              orchestrationHandler
+                .connect(assistant)
+                .createOfferWithCondition(
+                  offer,
+                  offerDates,
+                  offerDurations,
+                  disputeResolver.id,
+                  condition,
+                  agentId,
+                  offerFeeLimit
+                )
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
+          });
+
+          it("Total royalty percentage is more than max royalty percentage", async function () {
+            // Add royalty info to the offer
+            offer.royaltyInfo = [new RoyaltyInfo([other1.address, other2.address], ["5000", "4000"])];
+
+            // Attempt to create an offer with condition, expecting revert
+            await expect(
+              orchestrationHandler
+                .connect(assistant)
+                .createOfferWithCondition(
+                  offer,
+                  offerDates,
+                  offerDurations,
+                  disputeResolver.id,
+                  condition,
+                  agentId,
+                  offerFeeLimit
+                )
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
+          });
+        });
       });
     });
 
@@ -3325,7 +3504,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3429,7 +3608,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3475,7 +3654,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3528,7 +3707,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3563,7 +3742,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3595,7 +3774,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3624,7 +3803,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             offer.id,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3663,7 +3842,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             offer.id,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -3692,6 +3871,45 @@ describe("IBosonOrchestrationHandler", function () {
               offerFeeLimit
             )
         ).to.emit(orchestrationHandler, "OfferCreated");
+      });
+
+      it("Should allow creation of an offer with royalty recipients", async function () {
+        // Add royalty recipients
+        const royaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(other1.address, "100", "other1"),
+          new RoyaltyRecipient(other2.address, "200", "other2"),
+        ]);
+        await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+
+        // Add royalty info to the offer
+        offer.royaltyInfo = [new RoyaltyInfo([other1.address, ZeroAddress], ["150", "10"])];
+
+        // Create an offer, add it to the group, testing for the events
+        await expect(
+          orchestrationHandler
+            .connect(assistant)
+            .createOfferAddToGroup(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              nextGroupId,
+              agentId,
+              offerFeeLimit
+            )
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(
+            nextOfferId,
+            seller.id,
+            compareOfferStructs.bind(offer.toStruct()),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            offerFeesStruct,
+            agentId,
+            assistant.address
+          );
       });
 
       context("When offers have non zero agent ids", async function () {
@@ -3732,7 +3950,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -3806,7 +4024,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -4108,7 +4326,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -4226,7 +4444,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -4287,7 +4505,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -4354,7 +4572,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -4389,7 +4607,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -4423,7 +4641,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -4452,7 +4670,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             offer.id,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -4491,7 +4709,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             offer.id,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -4520,6 +4738,45 @@ describe("IBosonOrchestrationHandler", function () {
               offerFeeLimit
             )
         ).to.emit(orchestrationHandler, "OfferCreated");
+      });
+
+      it("Should allow creation of an offer with royalty recipients", async function () {
+        // Add royalty recipients
+        const royaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(other1.address, "100", "other1"),
+          new RoyaltyRecipient(other2.address, "200", "other2"),
+        ]);
+        await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+
+        // Add royalty info to the offer
+        offer.royaltyInfo = [new RoyaltyInfo([other1.address, ZeroAddress], ["150", "10"])];
+
+        // Create an offer, a twin and a bundle, testing for the events
+        await expect(
+          orchestrationHandler
+            .connect(assistant)
+            .createOfferAndTwinWithBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              twin,
+              agentId,
+              offerFeeLimit
+            )
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(
+            nextOfferId,
+            seller.id,
+            compareOfferStructs.bind(offer.toStruct()),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            offerFeesStruct,
+            agentId,
+            assistant.address
+          );
       });
 
       context("When offers have non zero agent ids", async function () {
@@ -4560,7 +4817,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -4639,7 +4896,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -5061,7 +5318,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -5210,7 +5467,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -5282,7 +5539,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -5360,7 +5617,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -5396,7 +5653,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -5431,7 +5688,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -5461,7 +5718,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             offer.id,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -5501,7 +5758,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             offer.id,
             seller.id,
-            offer.toStruct(),
+            compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -5531,6 +5788,46 @@ describe("IBosonOrchestrationHandler", function () {
               offerFeeLimit
             )
         ).to.emit(orchestrationHandler, "OfferCreated");
+      });
+
+      it("Should allow creation of an offer with royalty recipients", async function () {
+        // Add royalty recipients
+        const royaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(other1.address, "100", "other1"),
+          new RoyaltyRecipient(other2.address, "200", "other2"),
+        ]);
+        await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+
+        // Add royalty info to the offer
+        offer.royaltyInfo = [new RoyaltyInfo([other1.address, ZeroAddress], ["150", "10"])];
+
+        // Create an offer with condition, twin and bundle testing for the events
+        await expect(
+          orchestrationHandler
+            .connect(assistant)
+            .createOfferWithConditionAndTwinAndBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolver.id,
+              condition,
+              twin,
+              agentId,
+              offerFeeLimit
+            )
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(
+            nextOfferId,
+            seller.id,
+            compareOfferStructs.bind(offer.toStruct()),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            offerFeesStruct,
+            agentId,
+            assistant.address
+          );
       });
 
       context("When offers have non zero agent ids", async function () {
@@ -5573,7 +5870,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -5667,7 +5964,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -6008,7 +6305,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -6017,7 +6314,19 @@ describe("IBosonOrchestrationHandler", function () {
             await assistant.getAddress()
           );
 
-        // Events with structs that contain arrays must be tested differently
+        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+        ]);
+
+        await expect(tx)
+          .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+          .withArgs(
+            seller.id,
+            compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+            assistant.address
+          );
+
+        // Events with structs that contain arrays must be tested differently //ToDo: use predicates instead
         const txReceipt = await tx.wait();
 
         // GroupCreated event
@@ -6034,9 +6343,6 @@ describe("IBosonOrchestrationHandler", function () {
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-        await expect(tx)
-          .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-          .withArgs(voucherInitValues.royaltyPercentage);
 
         bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
@@ -6156,6 +6462,7 @@ describe("IBosonOrchestrationHandler", function () {
         // ERC2981 Royalty fee is 0%
         voucherInitValues.royaltyPercentage = "0"; //0%
         expect(voucherInitValues.isValid()).is.true;
+        offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
         // Create a seller and an offer with condition
         await orchestrationHandler
@@ -6222,6 +6529,7 @@ describe("IBosonOrchestrationHandler", function () {
         // ERC2981 Royalty fee is 10%
         voucherInitValues.royaltyPercentage = "1000"; //10%
         expect(voucherInitValues.isValid()).is.true;
+        offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
         // Create a seller and an offer with condition
         await orchestrationHandler
@@ -6321,7 +6629,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             sellerId,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -6401,7 +6709,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -6485,7 +6793,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -6505,7 +6813,19 @@ describe("IBosonOrchestrationHandler", function () {
               await assistant.getAddress()
             );
 
-          // Events with structs that contain arrays must be tested differently
+          const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+            new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          ]);
+
+          await expect(tx)
+            .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+            .withArgs(
+              seller.id,
+              compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+              assistant.address
+            );
+
+          // Events with structs that contain arrays must be tested differently //ToDo use predicates
           const txReceipt = await tx.wait();
 
           // GroupCreated event
@@ -6522,10 +6842,6 @@ describe("IBosonOrchestrationHandler", function () {
           bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
           await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-          await expect(tx)
-            .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-            .withArgs(voucherInitValues.royaltyPercentage);
-
           await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
 
           bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
@@ -6836,7 +7152,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -6845,7 +7161,19 @@ describe("IBosonOrchestrationHandler", function () {
             await assistant.getAddress()
           );
 
-        // Events with structs that contain arrays must be tested differently
+        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+        ]);
+
+        await expect(tx)
+          .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+          .withArgs(
+            seller.id,
+            compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+            assistant.address
+          );
+
+        // Events with structs that contain arrays must be tested differently // ToDo: use predicates
         const txReceipt = await tx.wait();
 
         // TwinCreated event
@@ -6878,10 +7206,6 @@ describe("IBosonOrchestrationHandler", function () {
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-        await expect(tx)
-          .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-          .withArgs(voucherInitValues.royaltyPercentage);
-
         bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         await expect(tx)
@@ -7006,6 +7330,7 @@ describe("IBosonOrchestrationHandler", function () {
         // ERC2981 Royalty fee is 0%
         voucherInitValues.royaltyPercentage = "0"; //0%
         expect(voucherInitValues.isValid()).is.true;
+        offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
@@ -7075,6 +7400,7 @@ describe("IBosonOrchestrationHandler", function () {
         // ERC2981 Royalty fee is 10%
         voucherInitValues.royaltyPercentage = "1000"; //10%
         expect(voucherInitValues.isValid()).is.true;
+        offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
@@ -7181,7 +7507,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             sellerId,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -7279,7 +7605,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -7386,7 +7712,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -7406,7 +7732,19 @@ describe("IBosonOrchestrationHandler", function () {
               await assistant.getAddress()
             );
 
-          // Events with structs that contain arrays must be tested differently
+          const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+            new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          ]);
+
+          await expect(tx)
+            .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+            .withArgs(
+              seller.id,
+              compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+              assistant.address
+            );
+
+          // Events with structs that contain arrays must be tested differently // ToDo use predicates
           const txReceipt = await tx.wait();
 
           // TwinCreated event
@@ -7443,10 +7781,6 @@ describe("IBosonOrchestrationHandler", function () {
           bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
           await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-          await expect(tx)
-            .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-            .withArgs(voucherInitValues.royaltyPercentage);
-
           await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
 
           bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
@@ -7809,7 +8143,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             seller.id,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -7818,7 +8152,19 @@ describe("IBosonOrchestrationHandler", function () {
             await assistant.getAddress()
           );
 
-        // Events with structs that contain arrays must be tested differently
+        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+        ]);
+
+        await expect(tx)
+          .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+          .withArgs(
+            seller.id,
+            compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+            assistant.address
+          );
+
+        // Events with structs that contain arrays must be tested differently // ToDo: use predicates
         const txReceipt = await tx.wait();
 
         // GroupCreated event
@@ -7855,9 +8201,6 @@ describe("IBosonOrchestrationHandler", function () {
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-        await expect(tx)
-          .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-          .withArgs(voucherInitValues.royaltyPercentage);
 
         bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
@@ -8003,6 +8346,7 @@ describe("IBosonOrchestrationHandler", function () {
         // ERC2981 Royalty fee is 0%
         voucherInitValues.royaltyPercentage = "0"; //0%
         expect(voucherInitValues.isValid()).is.true;
+        offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
@@ -8073,6 +8417,7 @@ describe("IBosonOrchestrationHandler", function () {
         // ERC2981 Royalty fee is 10%
         voucherInitValues.royaltyPercentage = "1000"; //10%
         expect(voucherInitValues.isValid()).is.true;
+        offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
@@ -8181,7 +8526,7 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(
             nextOfferId,
             sellerId,
-            offerStruct,
+            compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
@@ -8297,7 +8642,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -8306,7 +8651,19 @@ describe("IBosonOrchestrationHandler", function () {
               await assistant.getAddress()
             );
 
-          // Events with structs that contain arrays must be tested differently
+          const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+            new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          ]);
+
+          await expect(tx)
+            .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+            .withArgs(
+              seller.id,
+              compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+              assistant.address
+            );
+
+          // Events with structs that contain arrays must be tested differently // ToDo use predicates
           const txReceipt = await tx.wait();
 
           // GroupCreated event
@@ -8343,9 +8700,6 @@ describe("IBosonOrchestrationHandler", function () {
           bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
           await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-          await expect(tx)
-            .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-            .withArgs(voucherInitValues.royaltyPercentage);
 
           bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
@@ -8419,7 +8773,7 @@ describe("IBosonOrchestrationHandler", function () {
             .withArgs(
               nextOfferId,
               seller.id,
-              offerStruct,
+              compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
               disputeResolutionTermsStruct,
@@ -8439,7 +8793,19 @@ describe("IBosonOrchestrationHandler", function () {
               await assistant.getAddress()
             );
 
-          // Events with structs that contain arrays must be tested differently
+          const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+            new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          ]);
+
+          await expect(tx)
+            .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+            .withArgs(
+              seller.id,
+              compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+              assistant.address
+            );
+
+          // Events with structs that contain arrays must be tested differently /todo: use predicates
           const txReceipt = await tx.wait();
 
           // GroupCreated event
@@ -8476,10 +8842,6 @@ describe("IBosonOrchestrationHandler", function () {
           bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
           await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-          await expect(tx)
-            .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-            .withArgs(voucherInitValues.royaltyPercentage);
-
           await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
 
           bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);

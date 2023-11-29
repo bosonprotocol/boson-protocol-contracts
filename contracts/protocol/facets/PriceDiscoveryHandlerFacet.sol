@@ -126,9 +126,8 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
 
         {
             // Calculate royalties
-            (, uint256 royaltyAmount) = IBosonVoucher(
-                getCloneAddress(protocolLookups(), sellerId, offer.collectionIndex)
-            ).royaltyInfo(exchangeId, actualPrice);
+            (RoyaltyInfo storage royaltyInfo, uint256 royaltyInfoIndex, ) = fetchRoyalties(offerId, false);
+            uint256 royaltyAmount = (getTotalRoyaltyPercentage(royaltyInfo.bps) * actualPrice) / 10000;
 
             // Verify that fees and royalties are not higher than the price.
             if (protocolFeeAmount + royaltyAmount > actualPrice) revert FeeAmountTooHigh();
@@ -139,7 +138,8 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
                     resellerId: sellerId,
                     price: actualPrice,
                     protocolFeeAmount: protocolFeeAmount,
-                    royaltyAmount: royaltyAmount
+                    royaltyAmount: royaltyAmount,
+                    royaltyInfoIndex: royaltyInfoIndex
                 })
             );
         }

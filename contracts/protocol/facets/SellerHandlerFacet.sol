@@ -84,10 +84,6 @@ contract SellerHandlerFacet is SellerBase {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-        bool exists;
-        Seller storage seller;
-        AuthToken storage authToken;
-
         // Admin address or AuthToken data must be present. A seller can have one or the other
         if (
             (_seller.admin == address(0) && _authToken.tokenType == AuthTokenType.None) ||
@@ -100,95 +96,121 @@ contract SellerHandlerFacet is SellerBase {
         if (_authToken.tokenType == AuthTokenType.Custom) revert InvalidAuthTokenType();
 
         // Check Seller exists in sellers mapping
-        (exists, seller, authToken) = fetchSeller(_seller.id);
+        Seller storage seller;
+        AuthToken storage authToken;
+        {
+            bool exists;
+            (exists, seller, authToken) = fetchSeller(_seller.id);
 
-        // Seller must already exist
-        if (!exists) revert NoSuchSeller();
-
+            // Seller must already exist
+            if (!exists) revert NoSuchSeller();
+        }
         // Get message sender
-        address sender = msgSender();
+        // address sender = msgSender(); // temporary disabled due to stack too deep error. Revisit when compiler version is upgraded
 
         // Check that caller is authorized to call this function
-        authorizeAdmin(lookups, authToken, seller.admin, sender);
+        authorizeAdmin(lookups, authToken, seller.admin, msgSender());
 
         // Clean old seller pending update data if exists
         delete lookups.pendingAddressUpdatesBySeller[_seller.id];
         delete lookups.pendingAuthTokenUpdatesBySeller[_seller.id];
 
-        bool needsApproval;
         (, Seller storage sellerPendingUpdate, AuthToken storage authTokenPendingUpdate) = fetchSellerPendingUpdate(
             _seller.id
         );
 
-        // Admin address or AuthToken data must be present in parameters. A seller can have one or the other. Check passed in parameters
-        if (_authToken.tokenType != AuthTokenType.None) {
-            // If AuthToken data is different from the one in storage, then set it as pending update
-            if (authToken.tokenType != _authToken.tokenType || authToken.tokenId != _authToken.tokenId) {
-                // Check that auth token is unique to this seller
-                if (lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] != 0)
-                    revert AuthTokenMustBeUnique();
+        {
+            bool needsApproval;
+            // Admin address or AuthToken data must be present in parameters. A seller can have one or the other. Check passed in parameters
+            if (_authToken.tokenType != AuthTokenType.None) {
+                // If AuthToken data is different from the one in storage, then set it as pending update
+                if (authToken.tokenType != _authToken.tokenType || authToken.tokenId != _authToken.tokenId) {
+                    // Check that auth token is unique to this seller
+                    if (lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] != 0)
+                        revert AuthTokenMustBeUnique();
 
-                // Auth token owner must approve the update to prevent front-running
-                authTokenPendingUpdate.tokenType = _authToken.tokenType;
-                authTokenPendingUpdate.tokenId = _authToken.tokenId;
+                    // Auth token owner must approve the update to prevent front-running
+                    authTokenPendingUpdate.tokenType = _authToken.tokenType;
+                    authTokenPendingUpdate.tokenId = _authToken.tokenId;
+                    needsApproval = true;
+                }
+            } else if (_seller.admin != seller.admin) {
+                preUpdateSellerCheck(_seller.id, _seller.admin, lookups);
+                // If admin address exists, admin address owner must approve the update to prevent front-running
+                sellerPendingUpdate.admin = _seller.admin;
                 needsApproval = true;
             }
-        } else if (_seller.admin != seller.admin) {
-            preUpdateSellerCheck(_seller.id, _seller.admin, lookups);
-            // If admin address exists, admin address owner must approve the update to prevent front-running
-            sellerPendingUpdate.admin = _seller.admin;
-            needsApproval = true;
+
+            if (_seller.assistant != seller.assistant) {
+                preUpdateSellerCheck(_seller.id, _seller.assistant, lookups);
+                if (_seller.assistant == address(0)) revert InvalidAddress();
+                // Assistant address owner must approve the update to prevent front-running
+                sellerPendingUpdate.assistant = _seller.assistant;
+                needsApproval = true;
+            }
+
+            bool updateApplied;
+
+            if (_seller.treasury != seller.treasury) {
+                if (_seller.treasury == address(0)) revert InvalidAddress();
+
+                // Check if new treasury is already a royalty recipient
+                mapping(address => uint256) storage royaltyRecipientIndexBySellerAndRecipient = lookups
+                    .royaltyRecipientIndexBySellerAndRecipient[_seller.id];
+                uint256 royaltyRecipientId = royaltyRecipientIndexBySellerAndRecipient[_seller.treasury];
+
+                RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_seller.id];
+                if (royaltyRecipientId != 0) {
+                    // If the new treasury is already a royalty recipient, remove it
+                    royaltyRecipientId--; // royaltyRecipientId is 1-based, so we need to decrement it to get the index
+                    uint256 lastRoyaltyRecipientsId = royaltyRecipients.length - 1;
+                    if (royaltyRecipientId != lastRoyaltyRecipientsId) {
+                        royaltyRecipients[royaltyRecipientId] = royaltyRecipients[lastRoyaltyRecipientsId];
+                        royaltyRecipientIndexBySellerAndRecipient[royaltyRecipients[royaltyRecipientId].wallet] =
+                            royaltyRecipientId +
+                            1;
+                    }
+                    royaltyRecipients.pop();
+                }
+
+                // Update treasury
+                seller.treasury = _seller.treasury;
+
+                updateApplied = true;
+
+                emit RoyaltyRecipientsChanged(_seller.id, royaltyRecipients, msgSender());
+            }
+
+            if (keccak256(bytes(_seller.metadataUri)) != keccak256(bytes(seller.metadataUri))) {
+                // Update metadata URI
+                seller.metadataUri = _seller.metadataUri;
+
+                updateApplied = true;
+            }
+
+            if (updateApplied) {
+                // Notify watchers of state change
+                emit SellerUpdateApplied(
+                    _seller.id,
+                    seller,
+                    sellerPendingUpdate,
+                    authToken,
+                    authTokenPendingUpdate,
+                    msgSender()
+                );
+            }
+
+            if (needsApproval) {
+                // Notify watchers of state change
+                emit SellerUpdatePending(_seller.id, sellerPendingUpdate, authTokenPendingUpdate, msgSender());
+            }
+
+            if (!updateApplied && !needsApproval) revert NoUpdateApplied();
         }
-
-        if (_seller.assistant != seller.assistant) {
-            preUpdateSellerCheck(_seller.id, _seller.assistant, lookups);
-            if (_seller.assistant == address(0)) revert InvalidAddress();
-
-            // Assistant address owner must approve the update to prevent front-running
-            sellerPendingUpdate.assistant = _seller.assistant;
-            needsApproval = true;
-        }
-
-        bool updateApplied;
-
-        if (_seller.treasury != seller.treasury) {
-            if (_seller.treasury == address(0)) revert InvalidAddress();
-
-            // Update treasury
-            seller.treasury = _seller.treasury;
-
-            updateApplied = true;
-        }
-
-        if (keccak256(bytes(_seller.metadataUri)) != keccak256(bytes(seller.metadataUri))) {
-            // Update metadata URI
-            seller.metadataUri = _seller.metadataUri;
-
-            updateApplied = true;
-        }
-
-        if (updateApplied) {
-            // Notify watchers of state change
-            emit SellerUpdateApplied(
-                _seller.id,
-                seller,
-                sellerPendingUpdate,
-                authToken,
-                authTokenPendingUpdate,
-                sender
-            );
-        }
-
-        if (needsApproval) {
-            // Notify watchers of state change
-            emit SellerUpdatePending(_seller.id, sellerPendingUpdate, authTokenPendingUpdate, sender);
-        }
-
-        if (!updateApplied && !needsApproval) revert NoUpdateApplied();
     }
 
     /**
-     * @notice Opt-in to a pending seller update
+     * @notice Opt-in to a pending seller update.
      *
      * Emits a SellerUpdateApplied event if successful.
      *
@@ -343,7 +365,7 @@ contract SellerHandlerFacet is SellerBase {
         }
     }
 
-    /**
+    /*
      * @notice Creates a new seller collection.
      *
      * Emits a CollectionCreated event if successful.
@@ -433,6 +455,200 @@ contract SellerHandlerFacet is SellerBase {
         lookups.isUsedSellerSalt[lookups.sellerSalt[_sellerId]] = false;
         lookups.sellerSalt[_sellerId] = sellerSalt;
         lookups.isUsedSellerSalt[sellerSalt] = true;
+    }
+
+    /**
+     * @notice Adds royalty recipients to a seller.
+     *
+     * Emits a RoyalRecipientsUpdated event if successful.
+     *
+     *  Reverts if:
+     *  - The sellers region of protocol is paused
+     *  - Seller does not exist
+     *  - Caller is not the seller admin
+     *  - Caller does not own auth token
+     *  - Some recipient is not unique
+     *  - some royalty percentage is above the limit
+     *
+     * @param _sellerId - seller id
+     * @param _royaltyRecipients - list of royalty recipients to add
+     */
+    function addRoyaltyRecipients(
+        uint256 _sellerId,
+        RoyaltyRecipient[] calldata _royaltyRecipients
+    ) external sellersNotPaused nonReentrant {
+        // Cache protocol lookups and sender for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+        // Make sure admin is the caller and get the sender's address
+        (Seller storage seller, address sender) = validateAdminStatus(lookups, _sellerId);
+        address treasury = seller.treasury;
+
+        RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
+        for (uint256 i = 0; i < _royaltyRecipients.length; ) {
+            // No uniqueness check for externalIds since they are not used in the protocol
+            if (
+                _royaltyRecipients[i].wallet == treasury ||
+                lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][_royaltyRecipients[i].wallet] != 0
+            ) revert RecipientNotUnique();
+
+            if (_royaltyRecipients[i].minRoyaltyPercentage > protocolLimits().maxRoyaltyPercentage)
+                revert InvalidRoyaltyPercentage();
+
+            royaltyRecipients.push(_royaltyRecipients[i]);
+            lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
+                _royaltyRecipients[i].wallet
+            ] = royaltyRecipients.length; // can be optimized to use counter instead of array length
+
+            unchecked {
+                i++;
+            }
+        }
+
+        emit RoyaltyRecipientsChanged(_sellerId, royaltyRecipients, sender);
+    }
+
+    /**
+     * @notice Updates seller's royalty recipients.
+     *
+     * Emits a RoyalRecipientsUpdated event if successful.
+     *
+     *  Reverts if:
+     *  - The sellers region of protocol is paused
+     *  - Seller does not exist
+     *  - Caller is not the seller admin
+     *  - Caller does not own auth token
+     *  - Length of ids to change does not match length of new values
+     *  - Id to update does not exist
+     *  - Seller tries to update the address of default recipient
+     *  - Some recipient is not unique
+     *  - Some royalty percentage is above the limit
+     *
+     * @param _sellerId - seller id
+     * @param _royaltyRecipientIds - list of royalty recipient ids to update
+     * @param _royaltyRecipients - list of new royalty recipients corresponding to ids
+     */
+    function updateRoyaltyRecipients(
+        uint256 _sellerId,
+        uint256[] calldata _royaltyRecipientIds,
+        RoyaltyRecipient[] calldata _royaltyRecipients
+    ) external sellersNotPaused nonReentrant {
+        // Cache protocol lookups and sender for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+        // Make sure admin is the caller and get the seller
+        address treasury;
+        {
+            (Seller storage seller, ) = validateAdminStatus(lookups, _sellerId);
+            treasury = seller.treasury;
+        }
+
+        if (_royaltyRecipientIds.length != _royaltyRecipients.length) revert ArrayLengthMismatch();
+
+        RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
+        // uint256 royaltyRecipientIdsLength = _royaltyRecipientIds.length; // TODO can be optimized?
+        uint256 royaltyRecipientsLength = royaltyRecipients.length;
+        for (uint256 i = 0; i < _royaltyRecipientIds.length; ) {
+            uint256 royaltyRecipientId = _royaltyRecipientIds[i];
+
+            if (royaltyRecipientId >= royaltyRecipientsLength) revert InvalidRoyaltyRecipientId();
+
+            if (_royaltyRecipients[i].wallet == treasury) revert RecipientNotUnique();
+
+            if (royaltyRecipientId == 0) {
+                if (_royaltyRecipients[i].wallet != address(0)) revert WrongDefaultRecipient();
+            } else {
+                uint256 royaltyRecipientIndex = lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
+                    _royaltyRecipients[i].wallet
+                ];
+
+                if (royaltyRecipientIndex == 0) {
+                    // update index
+                    lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][_royaltyRecipients[i].wallet] =
+                        royaltyRecipientId +
+                        1;
+                    delete lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
+                        royaltyRecipients[royaltyRecipientId].wallet
+                    ];
+                } else {
+                    if (royaltyRecipientIndex - 1 != royaltyRecipientId) revert RecipientNotUnique();
+                }
+            }
+            if (_royaltyRecipients[i].minRoyaltyPercentage > protocolLimits().maxRoyaltyPercentage)
+                revert InvalidRoyaltyPercentage();
+
+            royaltyRecipients[royaltyRecipientId] = _royaltyRecipients[i];
+
+            unchecked {
+                i++;
+            }
+        }
+
+        emit RoyaltyRecipientsChanged(_sellerId, royaltyRecipients, msgSender());
+    }
+
+    /**
+     * @notice Removes seller's royalty recipients.
+     *
+     * Emits a RoyalRecipientsUpdated event if successful.
+     *
+     *  Reverts if:
+     *  - The sellers region of protocol is paused
+     *  - Seller does not exist
+     *  - Caller is not the seller admin
+     *  - Caller does not own auth token
+     *  - List of ids to remove is not sorted in ascending order
+     *  - Id to remove does not exist
+     *  - Seller tries to remove the default recipient
+     *
+     * @param _sellerId - seller id
+     * @param _royaltyRecipientIds - list of royalty recipient ids to remove
+     */
+    function removeRoyaltyRecipients(
+        uint256 _sellerId,
+        uint256[] calldata _royaltyRecipientIds
+    ) external sellersNotPaused nonReentrant {
+        // Cache protocol lookups and sender for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+        // Make sure admin is the caller and get the sender's address
+        (, address sender) = validateAdminStatus(lookups, _sellerId);
+
+        RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
+
+        // We loop from the end of the array to ensure correct ids are removed
+        // _royaltyRecipients must be sorted in ascending order
+        uint256 previousId = royaltyRecipients.length; // this is 1 more than the max id. This is used to ensure that royaltyRecipients is sorted in ascending order
+        uint256 lastRoyaltyRecipientsId = previousId - 1; // will never underflow, since at least default recipient always exists
+
+        for (uint256 i = _royaltyRecipientIds.length; i > 0; ) {
+            uint256 royaltyRecipientId = _royaltyRecipientIds[i - 1];
+
+            if (royaltyRecipientId >= previousId) revert RoyaltyRecipientIdsNotSorted(); // this also ensures that royaltyRecipientId will never be out of bounds
+            if (royaltyRecipientId == 0) revert CannotRemoveDefaultRecipient();
+
+            delete lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
+                royaltyRecipients[royaltyRecipientId].wallet
+            ];
+
+            if (royaltyRecipientId != lastRoyaltyRecipientsId) {
+                royaltyRecipients[royaltyRecipientId] = royaltyRecipients[lastRoyaltyRecipientsId];
+                lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
+                    royaltyRecipients[royaltyRecipientId].wallet
+                ] = royaltyRecipientId;
+            }
+            royaltyRecipients.pop();
+            lastRoyaltyRecipientsId--; // will never underflow. Even if all non-default royalty recipients are removed, default recipient will remain
+
+            // Update previous id
+            previousId = royaltyRecipientId;
+
+            unchecked {
+                i--;
+            }
+        }
+
+        emit RoyaltyRecipientsChanged(_sellerId, royaltyRecipients, sender);
     }
 
     /**
@@ -573,6 +789,18 @@ contract SellerHandlerFacet is SellerBase {
     }
 
     /**
+     * @notice Gets seller's royalty recipients.
+     *
+     * @param _sellerId - seller id
+     * @return royaltyRecipients - list of royalty recipients
+     */
+    function getRoyaltyRecipients(
+        uint256 _sellerId
+    ) external view returns (RoyaltyRecipient[] memory royaltyRecipients) {
+        return protocolLookups().royaltyRecipientsBySeller[_sellerId];
+    }
+
+    /**
      * @notice Pre update Seller checks
      *
      * Reverts if:
@@ -614,6 +842,14 @@ contract SellerHandlerFacet is SellerBase {
 
     /**
      * @notice Performs a validation that the message sender is either the admin address or the owner of auth token
+     * Reverts if:
+     *   - Seller uses address for authorization and supplied address is not the seller's admin address
+     *   - Seller uses NFT Auth for authorization and supplied address is not the owner of auth NFT
+     *
+     * @param _lookups - the lookups struct
+     * @param _authToken - the auth token to check
+     * @param _admin - the admin address to check
+     * @param _sender - the sender's address to check
      */
     function authorizeAdmin(
         ProtocolLib.ProtocolLookups storage _lookups,
@@ -628,5 +864,37 @@ contract SellerHandlerFacet is SellerBase {
             address tokenIdOwner = IERC721(authTokenContract).ownerOf(_authToken.tokenId);
             if (tokenIdOwner != _sender) revert NotAdmin();
         }
+    }
+
+    /**
+     * @notice Gets seller and callers info and validates that the caller is authorized to call a function.
+     *
+     * Reverts if:
+     *   - Seller does not exist
+     *   - Seller uses address for authorization and caller is not the seller's admin address
+     *   - Seller uses NFT Auth for authorization and caller is not the owner of auth NFT
+     *
+     * @param _lookups - the lookups struct
+     * @param _sellerId - the id of the seller to check
+     * @return seller - the seller storage pointer. See {BosonTypes.Seller}
+     * @return sender - the caller's address
+     */
+    function validateAdminStatus(
+        ProtocolLib.ProtocolLookups storage _lookups,
+        uint256 _sellerId
+    ) internal view returns (Seller storage seller, address sender) {
+        // Get message sender
+        sender = msgSender();
+
+        // Check Seller exists in sellers mapping
+        bool exists;
+        AuthToken storage authToken;
+        (exists, seller, authToken) = fetchSeller(_sellerId);
+
+        // Seller must already exist
+        if (!exists) revert NoSuchSeller();
+
+        // Check that caller is authorized to call this function
+        authorizeAdmin(_lookups, authToken, seller.admin, sender);
     }
 }

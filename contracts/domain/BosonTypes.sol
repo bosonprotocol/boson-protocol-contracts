@@ -158,6 +158,7 @@ contract BosonTypes {
         bool voided;
         uint256 collectionIndex;
         PriceType priceType;
+        RoyaltyInfo[] royaltyInfo;
     }
 
     struct OfferDates {
@@ -203,6 +204,7 @@ contract BosonTypes {
         uint256 price;
         uint256 protocolFeeAmount;
         uint256 royaltyAmount;
+        uint256 royaltyInfoIndex;
     }
 
     struct Voucher {
@@ -326,6 +328,17 @@ contract BosonTypes {
         Ask,
         Bid,
         Wrapper // Side is not relevant from the protocol perspective
+    }
+
+    struct RoyaltyRecipient {
+        address wallet;
+        uint256 minRoyaltyPercentage;
+        string externalId;
+    }
+
+    struct RoyaltyInfo {
+        address payable[] recipients;
+        uint256[] bps;
     }
 
     struct PremintParameters {

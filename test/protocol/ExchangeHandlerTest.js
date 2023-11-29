@@ -33,6 +33,8 @@ const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const GatingType = require("../../scripts/domain/GatingType");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
+const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo");
+const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
@@ -268,8 +270,9 @@ describe("IBosonExchangeHandler", function () {
 
       // VoucherInitValues
       seller1Treasury = seller.treasury;
-      royaltyPercentage1 = "0"; // 0%
+      royaltyPercentage1 = "500"; // 5%
       voucherInitValues = mockVoucherInitValues();
+      voucherInitValues.royaltyPercentage = royaltyPercentage1;
       expect(voucherInitValues.isValid()).is.true;
 
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -309,6 +312,7 @@ describe("IBosonExchangeHandler", function () {
 
       offer.quantityAvailable = "10";
       disputeResolverId = mo.disputeResolverId;
+      offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
       offerDurations.voucherValid = (oneMonth * 12n).toString();
 
@@ -414,6 +418,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Create an offer with new seller
         const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+        offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
         // Create the offer
         await offerHandler
@@ -508,6 +513,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Create an offer with new seller
         const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+        offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
         // Create the offer
         await offerHandler
@@ -597,6 +603,7 @@ describe("IBosonExchangeHandler", function () {
         const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
         offerDurations.voucherValid = "0";
         offerDates.voucherRedeemableUntil = offerDates.validUntil; // all vouchers expire when offer expires
+        offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
         // Check if domain entities are valid
         expect(offer.isValid()).is.true;
@@ -653,6 +660,7 @@ describe("IBosonExchangeHandler", function () {
         // Create an offer with unlimited quantity
         let { offer, ...details } = await mockOffer();
         offer.quantityAvailable = MaxUint256.toString();
+        offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
         // Delete unnecessary field
         delete details.offerFees;
@@ -688,6 +696,7 @@ describe("IBosonExchangeHandler", function () {
         const mo = await mockOffer();
         const { offerDates, offerDurations } = mo;
         offer = mo.offer;
+        offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = "0";
         // set a dummy token address otherwise protocol token (zero address) and offer token will be the same and we will get the error AGENT_FEE_AMOUNT_TOO_HIGH
         offer.exchangeToken = await foreign20.getAddress();
@@ -989,14 +998,14 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("ERC2981: issued voucher should have royalty fees", async function () {
-        // set non zero royalty percentage
-        const royaltyPercentage = "10";
-        await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
-
-        // Before voucher is transferred, it should have zero royalty fee
+        // Before voucher is transferred, it should already have royalty fee
         let [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offer.price);
-        assert.equal(receiver, ZeroAddress, "Recipient address is incorrect");
-        assert.equal(royaltyAmount.toString(), "0", "Royalty amount is incorrect");
+        assert.equal(receiver, treasury.address, "Recipient address is incorrect");
+        assert.equal(
+          royaltyAmount.toString(),
+          applyPercentage(offer.price, royaltyPercentage1),
+          "Royalty amount is incorrect"
+        );
 
         // Commit to preminted offer, creating a new exchange
         await bosonVoucher
@@ -1008,7 +1017,7 @@ describe("IBosonExchangeHandler", function () {
         assert.equal(receiver, await treasury.getAddress(), "Recipient address is incorrect");
         assert.equal(
           royaltyAmount.toString(),
-          applyPercentage(offer.price, royaltyPercentage),
+          applyPercentage(offer.price, royaltyPercentage1),
           "Royalty amount is incorrect"
         );
       });
@@ -1036,6 +1045,7 @@ describe("IBosonExchangeHandler", function () {
         // Create a new offer
         offerId = await offerHandler.getNextOfferId();
         const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+        offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
         // Create the offer
         offer.quantityAvailable = "10";
@@ -3496,6 +3506,7 @@ describe("IBosonExchangeHandler", function () {
 
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
           offer.quantityAvailable = "2";
+          offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
           // Create a new offer
           await offerHandler
@@ -3525,6 +3536,8 @@ describe("IBosonExchangeHandler", function () {
         it("Should transfer the twin even if supplyAvailable is equal to amount", async function () {
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
           offer.quantityAvailable = "1";
+          offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
+          offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
           // Create a new offer
           await offerHandler
@@ -3604,6 +3617,7 @@ describe("IBosonExchangeHandler", function () {
 
             // Create a new offer
             const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+            offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
             await offerHandler
               .connect(assistant)
@@ -4045,6 +4059,7 @@ describe("IBosonExchangeHandler", function () {
 
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
           offer.quantityAvailable = "1";
+          offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
           // Create a new offer
           await offerHandler
@@ -4187,6 +4202,7 @@ describe("IBosonExchangeHandler", function () {
             // Create a new offer
             const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
             offer.quantityAvailable = "10";
+            offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
             await offerHandler
               .connect(assistant)
@@ -4291,6 +4307,7 @@ describe("IBosonExchangeHandler", function () {
 
             const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
             offer.quantityAvailable = "2";
+            offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
             // Create a new offer
             await offerHandler
@@ -4761,6 +4778,7 @@ describe("IBosonExchangeHandler", function () {
 
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
           offer.quantityAvailable = "2";
+          offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
           // Create a new offer
           await offerHandler
@@ -4790,6 +4808,7 @@ describe("IBosonExchangeHandler", function () {
         it("Should transfer the twin even if supplyAvailable is equal to amount", async function () {
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
           offer.quantityAvailable = "1";
+          offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
           // Create a new offer
           await offerHandler
@@ -5255,6 +5274,7 @@ describe("IBosonExchangeHandler", function () {
 
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
           offer.quantityAvailable = "1";
+          offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
           // Create a new offer
           await offerHandler
@@ -5354,6 +5374,7 @@ describe("IBosonExchangeHandler", function () {
 
             const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
             offer.quantityAvailable = "2";
+            offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
             // Create a new offer
             await offerHandler
@@ -6679,6 +6700,7 @@ describe("IBosonExchangeHandler", function () {
         offer = mo.offer;
         offer.id = offerId = "2";
         offer.price = offer.buyerCancelPenalty = offer.sellerDeposit = "0";
+        offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
         // set a dummy token address otherwise protocol token (zero address) and offer token will be the same and we will get the error AGENT_FEE_AMOUNT_TOO_HIGH
         offer.exchangeToken = await foreign20.getAddress();
         disputeResolverId = agentId = "0";
@@ -6940,6 +6962,7 @@ describe("IBosonExchangeHandler", function () {
           offer = mo.offer;
           offer.quantityAvailable = "10";
           offer.id = offerId = "2";
+          offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
           disputeResolverId = mo.disputeResolverId;
 
           // Update voucherRedeemableFrom
@@ -7281,6 +7304,7 @@ describe("IBosonExchangeHandler", function () {
         const { offerDates, offerDurations } = mo;
         offer = mo.offer;
         offer.id = offerId = "2";
+        offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
         disputeResolverId = mo.disputeResolverId;
 
         // Update voucherRedeemableFrom
@@ -8083,6 +8107,261 @@ describe("IBosonExchangeHandler", function () {
           await expect(
             exchangeHandler.connect(buyer).isEligibleToCommit(buyer.address, offerId, 0)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
+        });
+      });
+    });
+
+    context("👉 getEIP2981Royalties()", async function () {
+      const isExchangeId = [true, false];
+
+      isExchangeId.forEach((isExchangeId) => {
+        context(`Query by ${isExchangeId ? "exchange" : "offer"} id`, async function () {
+          let queryId;
+          beforeEach(async function () {
+            if (isExchangeId) {
+              // commit to offer to get a valid exchange
+              // commit twice, so offerId and exchangeId in tests are different
+              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+              queryId = "2";
+            } else {
+              queryId = offerId;
+            }
+          });
+
+          it("treasury is the only recipient", async function () {
+            const [returnedReceiver, returnedRoyaltyRecipient] = await exchangeHandler.getEIP2981Royalties(
+              queryId,
+              isExchangeId
+            );
+
+            expect(returnedReceiver).to.equal(treasury.address, "Wrong recipient");
+            expect(returnedRoyaltyRecipient).to.equal(voucherInitValues.royaltyPercentage, "Wrong royalty percentage");
+          });
+
+          it("if treasury changes, offer does not have to be updated", async function () {
+            // update the treasury
+            seller.treasury = newOwner.address;
+            await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+
+            const [returnedReceiver, returnedRoyaltyRecipient] = await exchangeHandler.getEIP2981Royalties(
+              queryId,
+              isExchangeId
+            );
+
+            expect(returnedReceiver).to.equal(newOwner.address, "Wrong recipient");
+            expect(returnedRoyaltyRecipient).to.equal(voucherInitValues.royaltyPercentage, "Wrong royalty percentage");
+          });
+
+          it("no recipients", async function () {
+            // Update the offer, so it doesn't have any recipients in the protocol
+            const recipients = [];
+            const bps = [];
+
+            await offerHandler
+              .connect(assistant)
+              .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo(recipients, bps));
+
+            const [returnedReceiver, returnedRoyaltyRecipient] = await exchangeHandler.getEIP2981Royalties(
+              queryId,
+              isExchangeId
+            );
+
+            expect(returnedReceiver).to.equal(ZeroAddress, "Wrong recipient");
+            expect(returnedRoyaltyRecipient).to.equal(0, "Wrong royalty percentage");
+          });
+
+          context("multiple recipients", async function () {
+            let recipients, bps, totalBps;
+            beforeEach(async function () {
+              // Update the offer, so it has multiple recipients in the protocol
+              const royaltyRecipientList = new RoyaltyRecipientList([
+                new RoyaltyRecipient(rando.address, "50", "other"),
+                new RoyaltyRecipient(newOwner.address, "50", "other2"),
+                new RoyaltyRecipient(treasuryDR.address, "50", "other3"),
+              ]);
+              await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+
+              recipients = [rando.address, newOwner.address, ZeroAddress, treasuryDR.address];
+              bps = [100, 150, 500, 200];
+              totalBps = bps.reduce((a, b) => a + b, 0);
+            });
+
+            it("multiple recipients - the first recipient gets the sum", async function () {
+              await offerHandler
+                .connect(assistant)
+                .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo(recipients, bps));
+
+              const [returnedReceiver, returnedRoyaltyRecipient] = await exchangeHandler.getEIP2981Royalties(
+                queryId,
+                isExchangeId
+              );
+
+              expect(returnedReceiver).to.equal(recipients[0], "Wrong recipient");
+              expect(returnedRoyaltyRecipient).to.equal(totalBps, "Wrong royalty percentage");
+            });
+
+            it("if treasury changes, offer does not have to be updated", async function () {
+              // make treasury the first recipient
+              [recipients[0], recipients[2]] = [recipients[2], recipients[0]];
+              [bps[0], bps[2]] = [bps[2], bps[0]];
+
+              await offerHandler
+                .connect(assistant)
+                .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo(recipients, bps));
+
+              // update the treasury
+              seller.treasury = newOwner.address;
+              await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+
+              const [returnedReceiver, returnedRoyaltyRecipient] = await exchangeHandler.getEIP2981Royalties(
+                queryId,
+                isExchangeId
+              );
+
+              expect(returnedReceiver).to.equal(newOwner.address, "Wrong recipient");
+              expect(returnedRoyaltyRecipient).to.equal(totalBps, "Wrong royalty percentage");
+            });
+          });
+        });
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("offer does not exist", async function () {
+          // Update the offer, so it doesn't have any recipients in the protocol
+          offerId = "999";
+
+          await expect(exchangeHandler.getEIP2981Royalties(offerId, false)).to.be.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.NO_SUCH_OFFER
+          );
+        });
+
+        it("exchange does not exist", async function () {
+          // If no commit happens, exchangeId 1 does not exist
+          exchangeId = "1";
+
+          await expect(exchangeHandler.getEIP2981Royalties(exchangeId, true)).to.be.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.NO_SUCH_EXCHANGE
+          );
+        });
+      });
+    });
+
+    context("👉 getRoyalties()", async function () {
+      const isExchangeId = [true, false];
+
+      isExchangeId.forEach((isExchangeId) => {
+        context(`Query by ${isExchangeId ? "exchange" : "offer"} id`, async function () {
+          let queryId;
+          beforeEach(async function () {
+            if (isExchangeId) {
+              // commit to offer to get a valid exchange
+              // commit twice, so offerId and exchangeId in tests are different
+              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+              queryId = "2";
+            } else {
+              queryId = offerId;
+            }
+          });
+
+          it("treasury is the only recipient", async function () {
+            const returnedRoyaltyInfo = await exchangeHandler.getRoyalties(queryId, isExchangeId);
+
+            const expectedRoyaltyInfo = new RoyaltyInfo([treasury.address], [voucherInitValues.royaltyPercentage]);
+            expect(expectedRoyaltyInfo).to.eql(RoyaltyInfo.fromStruct(returnedRoyaltyInfo));
+          });
+
+          it("if treasury changes, offer does not have to be updated", async function () {
+            // update the treasury
+            seller.treasury = newOwner.address;
+            await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+
+            const returnedRoyaltyInfo = await exchangeHandler.getRoyalties(queryId, isExchangeId);
+
+            const expectedRoyaltyInfo = new RoyaltyInfo([newOwner.address], [voucherInitValues.royaltyPercentage]);
+            expect(expectedRoyaltyInfo).to.eql(RoyaltyInfo.fromStruct(returnedRoyaltyInfo));
+          });
+
+          it("no recipients", async function () {
+            // Update the offer, so it doesn't have any recipients in the protocol
+            const recipients = [];
+            const bps = [];
+
+            await offerHandler
+              .connect(assistant)
+              .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo(recipients, bps));
+
+            const returnedRoyaltyInfo = await exchangeHandler.getRoyalties(queryId, isExchangeId);
+
+            const expectedRoyaltyInfo = new RoyaltyInfo([], []);
+            expect(expectedRoyaltyInfo).to.eql(RoyaltyInfo.fromStruct(returnedRoyaltyInfo));
+          });
+
+          context("multiple recipients", async function () {
+            let recipients, bps;
+
+            beforeEach(async function () {
+              // Update the offer, so it has multiple recipients in the protocol
+              const royaltyRecipientList = new RoyaltyRecipientList([
+                new RoyaltyRecipient(rando.address, "50", "other"),
+                new RoyaltyRecipient(newOwner.address, "50", "other2"),
+                new RoyaltyRecipient(treasuryDR.address, "50", "other3"),
+              ]);
+              await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+
+              recipients = [rando.address, newOwner.address, ZeroAddress, treasuryDR.address];
+              bps = ["100", "150", "500", "200"];
+
+              await offerHandler
+                .connect(assistant)
+                .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo(recipients, bps));
+            });
+
+            it("multiple recipients - the first recipient gets the sum", async function () {
+              const returnedRoyaltyInfo = await exchangeHandler.getRoyalties(queryId, isExchangeId);
+
+              recipients[2] = seller.treasury; // getRoyalties replaces ZeroAddress with treasury
+              const expectedRoyaltyInfo = new RoyaltyInfo(recipients, bps);
+              expect(expectedRoyaltyInfo).to.eql(RoyaltyInfo.fromStruct(returnedRoyaltyInfo));
+            });
+
+            it("if treasury changes, offer does not have to be updated - multiple recipients", async function () {
+              // update the treasury
+              seller.treasury = newOwner.address;
+              await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+
+              const returnedRoyaltyInfo = await exchangeHandler.getRoyalties(queryId, isExchangeId);
+
+              recipients[2] = newOwner.address; // getRoyalties replaces ZeroAddress with treasury
+              const expectedRoyaltyInfo = new RoyaltyInfo(recipients, bps);
+              expect(expectedRoyaltyInfo).to.eql(RoyaltyInfo.fromStruct(returnedRoyaltyInfo));
+            });
+          });
+        });
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("offer does not exist", async function () {
+          // Update the offer, so it doesn't have any recipients in the protocol
+          offerId = "999";
+
+          await expect(exchangeHandler.getRoyalties(offerId, false)).to.be.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.NO_SUCH_OFFER
+          );
+        });
+
+        it("exchange does not exist", async function () {
+          // If no commit happens, exchangeId 1 does not exist
+          exchangeId = "1";
+
+          await expect(exchangeHandler.getRoyalties(exchangeId, true)).to.be.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.NO_SUCH_EXCHANGE
+          );
         });
       });
     });

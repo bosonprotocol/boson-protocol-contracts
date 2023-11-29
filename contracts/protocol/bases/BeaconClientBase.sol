@@ -49,6 +49,22 @@ abstract contract BeaconClientBase is BosonTypes, BosonErrors {
     }
 
     /**
+     * @notice Gets the royalty information for a chosen offer or exchange from the protocol.
+     *
+     * @param _queryId - offer id or exchange id
+     * @param _isExchangeId - indicates if the query represents the exchange id
+     * @return receiver - the address of the royalty receiver (seller's treasury address)
+     * @return royaltyPercentage - the royalty percentage in bps
+     */
+    function getEIP2981RoyaltiesFromProtocol(
+        uint256 _queryId,
+        bool _isExchangeId
+    ) internal view returns (address receiver, uint256 royaltyPercentage) {
+        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
+        return IBosonExchangeHandler(protocolDiamond).getEIP2981Royalties(_queryId, _isExchangeId);
+    }
+
+    /**
      * @notice Gets the info about the offer associated with a voucher's exchange
      *
      * @param _offerId - the offer id
@@ -87,19 +103,6 @@ abstract contract BeaconClientBase is BosonTypes, BosonErrors {
     ) internal returns (bool) {
         address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
         return IBosonExchangeHandler(protocolDiamond).onPremintedVoucherTransferred(_tokenId, _to, _from, _rangeOwner);
-    }
-
-    /**
-     * @notice Gets the info about the seller associated with the sellerId.
-     *
-     * @param _sellerId - the id of the seller
-     * @return exists - the seller was found
-     * @return seller - the seller associated with the _sellerId
-     */
-    function getBosonSeller(uint256 _sellerId) internal view returns (bool exists, Seller memory seller) {
-        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-
-        (exists, seller, ) = IBosonAccountHandler(protocolDiamond).getSeller(_sellerId);
     }
 
     /**

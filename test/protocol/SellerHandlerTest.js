@@ -6,6 +6,7 @@ const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const SellerUpdateFields = require("../../scripts/domain/SellerUpdateFields");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
+const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const {
   calculateCloneAddress,
@@ -16,8 +17,10 @@ const {
   getMappingStoragePosition,
   paddingType,
   getSellerSalt,
+  getEvent,
+  compareRoyaltyRecipientLists,
 } = require("../util/utils.js");
-const { VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
+const { VOUCHER_NAME, VOUCHER_SYMBOL, DEFAULT_ROYALTY_RECIPIENT } = require("../util/constants");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { mockSeller, mockAuthToken, mockVoucherInitValues, accountId } = require("../util/mock");
 const { Collection, CollectionList } = require("../../scripts/domain/Collection");
@@ -181,13 +184,19 @@ describe("SellerHandler", function () {
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
 
-        await expect(tx)
-          .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-          .withArgs(voucherInitValues.royaltyPercentage);
+        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+        ]);
 
         await expect(tx)
-          .to.emit(bosonVoucher, "VoucherInitialized")
-          .withArgs(seller.id, voucherInitValues.royaltyPercentage, contractURI);
+          .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+          .withArgs(
+            seller.id,
+            compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+            admin.address
+          );
+
+        await expect(tx).to.emit(bosonVoucher, "VoucherInitialized").withArgs(seller.id, contractURI);
 
         bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
@@ -211,13 +220,19 @@ describe("SellerHandler", function () {
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
 
-        await expect(tx)
-          .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-          .withArgs(voucherInitValues.royaltyPercentage);
+        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+        ]);
 
         await expect(tx)
-          .to.emit(bosonVoucher, "VoucherInitialized")
-          .withArgs(seller.id, voucherInitValues.royaltyPercentage, contractURI);
+          .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+          .withArgs(
+            seller.id,
+            compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+            admin.address
+          );
+
+        await expect(tx).to.emit(bosonVoucher, "VoucherInitialized").withArgs(seller.id, contractURI);
 
         bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
@@ -253,6 +268,15 @@ describe("SellerHandler", function () {
           .getSellersCollections(seller.id);
         expect(defaultVoucherAddress).to.equal(expectedCloneAddress, "Wrong default voucher address");
         expect(additionalCollections.length).to.equal(0, "Wrong number of additional collections");
+
+        // Default royalty recipient is set
+        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+        ]);
+        const royaltyRecipientList = RoyaltyRecipientList.fromStruct(
+          await accountHandler.connect(rando).getRoyaltyRecipients(seller.id)
+        );
+        expect(royaltyRecipientList).to.deep.equal(expectedRoyaltyRecipientList, "Default royalty recipient mismatch");
 
         // Voucher clone contract
         bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
@@ -319,6 +343,15 @@ describe("SellerHandler", function () {
         // Create a seller
         await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
+        // Default royalty recipient is set
+        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+        ]);
+        const royaltyRecipientList = RoyaltyRecipientList.fromStruct(
+          await accountHandler.connect(rando).getRoyaltyRecipients(seller.id)
+        );
+        expect(royaltyRecipientList).to.deep.equal(expectedRoyaltyRecipientList, "Default royalty recipient mismatch");
+
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
         expect(await bosonVoucher.name()).to.equal(
@@ -380,6 +413,15 @@ describe("SellerHandler", function () {
           .getSellersCollections(seller.id);
         expect(defaultVoucherAddress).to.equal(expectedCloneAddress, "Wrong default voucher address");
         expect(additionalCollections.length).to.equal(0, "Wrong number of additional collections");
+
+        // Default royalty recipient is set
+        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+        ]);
+        const royaltyRecipientList = RoyaltyRecipientList.fromStruct(
+          await accountHandler.connect(rando).getRoyaltyRecipients(seller.id)
+        );
+        expect(royaltyRecipientList).to.deep.equal(expectedRoyaltyRecipientList, "Default royalty recipient mismatch");
 
         // Voucher clone contract
         bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
@@ -640,24 +682,25 @@ describe("SellerHandler", function () {
           voucherInitValues.collectionSalt
         );
         seller.id = Number(seller.id) + 1;
+        const defaultRoyaltyRecipients = new RoyaltyRecipientList([
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+        ]);
 
         const tx = await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
         await expect(tx)
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(seller.id, seller.toStruct(), expectedCloneAddress, emptyAuthTokenStruct, await admin.getAddress());
+          .withArgs(seller.id, seller.toStruct(), expectedCloneAddress, emptyAuthTokenStruct, await admin.address);
+
+        await expect(tx)
+          .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+          .withArgs(seller.id, compareRoyaltyRecipientLists.bind(defaultRoyaltyRecipients.toStruct()), admin.address);
 
         // Voucher clone contract
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCloneAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
 
-        await expect(tx)
-          .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-          .withArgs(voucherInitValues.royaltyPercentage);
-
-        await expect(tx)
-          .to.emit(bosonVoucher, "VoucherInitialized")
-          .withArgs(seller.id, voucherInitValues.royaltyPercentage, contractURI);
+        await expect(tx).to.emit(bosonVoucher, "VoucherInitialized").withArgs(seller.id, contractURI);
 
         bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
@@ -673,7 +716,7 @@ describe("SellerHandler", function () {
 
           // Attempt to create a seller expecting revert
           await expect(
-            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
+            accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
@@ -682,7 +725,7 @@ describe("SellerHandler", function () {
 
           // Attempt to Create a seller, expecting revert
           await expect(
-            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
+            accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues)
           ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.MUST_BE_ACTIVE);
         });
 
@@ -942,6 +985,15 @@ describe("SellerHandler", function () {
           await expect(
             accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.CLONE_CREATION_FAILED);
+        });
+
+        it("Royalty percentage is above the limit", async function () {
+          voucherInitValues.royaltyPercentage = "50000"; //50%
+
+          // Attempt to Create a seller, expecting revert
+          await expect(
+            accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues)
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
         });
       });
     });
@@ -1597,6 +1649,15 @@ describe("SellerHandler", function () {
           expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
         }
 
+        // Default royalty recipient is updated
+        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+        ]);
+        const royaltyRecipientList = RoyaltyRecipientList.fromStruct(
+          await accountHandler.connect(rando).getRoyaltyRecipients(seller.id)
+        );
+        expect(royaltyRecipientList).to.deep.equal(expectedRoyaltyRecipientList, "Default royalty recipient mismatch");
+
         //Check that old addresses are no longer mapped. We don't map the treasury address.
         [exists] = await accountHandler.connect(rando).getSellerByAddress(await assistant.getAddress());
         expect(exists).to.be.false;
@@ -2019,6 +2080,15 @@ describe("SellerHandler", function () {
         seller2.assistant = other1.address;
         seller2.admin = other1.address;
 
+        // Default royalty recipient is set
+        let expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+        ]);
+        let royaltyRecipientList = RoyaltyRecipientList.fromStruct(
+          await accountHandler.connect(rando).getRoyaltyRecipients(seller.id)
+        );
+        expect(royaltyRecipientList).to.deep.equal(expectedRoyaltyRecipientList, "Default royalty recipient mismatch");
+
         // Create seller 2
         await accountHandler.connect(other1).createSeller(seller2, emptyAuthToken, voucherInitValues);
 
@@ -2030,6 +2100,15 @@ describe("SellerHandler", function () {
         [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller2.id);
         let returnedSeller2 = Seller.fromStruct(sellerStruct);
         expect(returnedSeller2.treasury).to.equal(await treasury.getAddress());
+
+        // Default royalty recipient is set
+        expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+        ]);
+        royaltyRecipientList = RoyaltyRecipientList.fromStruct(
+          await accountHandler.connect(rando).getRoyaltyRecipients(seller.id)
+        );
+        expect(royaltyRecipientList).to.deep.equal(expectedRoyaltyRecipientList, "Default royalty recipient mismatch");
       });
 
       it("should be possible to use the same address for assistant, admin and treasury", async function () {
@@ -2151,6 +2230,42 @@ describe("SellerHandler", function () {
         await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
           .to.emit(accountHandler, "SellerUpdatePending")
           .withArgs(seller.id, pendingSellerUpdateStruct, emptyAuthTokenStruct, admin.address);
+      });
+
+      it("update treasury, when it's already one of the royalty recipients", async function () {
+        // add some royalty recipients
+        const newRoyaltyRecipients = new RoyaltyRecipientList([
+          new RoyaltyRecipient(other1.address, "100", "other1"),
+          new RoyaltyRecipient(other2.address, "200", "other2"),
+          new RoyaltyRecipient(other3.address, "300", "other3"),
+        ]);
+        await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, newRoyaltyRecipients.toStruct());
+
+        // Default royalty recipient is set
+        let expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          ...newRoyaltyRecipients.royaltyRecipients,
+        ]);
+
+        let royaltyRecipientList = RoyaltyRecipientList.fromStruct(
+          await accountHandler.connect(rando).getRoyaltyRecipients(seller.id)
+        );
+        expect(royaltyRecipientList).to.deep.equal(expectedRoyaltyRecipientList, "Royalty recipient list mismatch");
+
+        // Update seller's treasury
+        seller.treasury = other1.address;
+        await accountHandler.connect(assistant).updateSeller(seller, emptyAuthToken);
+
+        // Default royalty recipient is set
+        expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          new RoyaltyRecipient(other3.address, "300", "other3"),
+          new RoyaltyRecipient(other2.address, "200", "other2"),
+        ]);
+        royaltyRecipientList = RoyaltyRecipientList.fromStruct(
+          await accountHandler.connect(rando).getRoyaltyRecipients(seller.id)
+        );
+        expect(royaltyRecipientList).to.deep.equal(expectedRoyaltyRecipientList, "Royalty recipient list mismatch");
       });
 
       context("💔 Revert Reasons", async function () {
@@ -2901,7 +3016,6 @@ describe("SellerHandler", function () {
 
     context("👉 createNewCollection()", async function () {
       let externalId, expectedDefaultAddress, expectedCollectionAddress;
-      let royaltyPercentage;
 
       beforeEach(async function () {
         // Create a seller
@@ -2909,7 +3023,7 @@ describe("SellerHandler", function () {
 
         externalId = "Brand1";
         voucherInitValues.contractURI = contractURI = "https://brand1.com";
-        voucherInitValues.royaltyPercentage = royaltyPercentage = "100"; // 1%
+        voucherInitValues.royaltyPercentage = "100"; // 1%
         voucherInitValues.collectionSalt = encodeBytes32String(externalId);
         expectedDefaultAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
@@ -2936,10 +3050,7 @@ describe("SellerHandler", function () {
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCollectionAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-        await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged").withArgs(royaltyPercentage);
-        await expect(tx)
-          .to.emit(bosonVoucher, "VoucherInitialized")
-          .withArgs(seller.id, royaltyPercentage, contractURI);
+        await expect(tx).to.emit(bosonVoucher, "VoucherInitialized").withArgs(seller.id, contractURI);
 
         bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCollectionAddress);
 
@@ -2990,7 +3101,7 @@ describe("SellerHandler", function () {
             voucherInitValues.collectionSalt
           );
           voucherInitValues.contractURI = contractURI = `https://brand${i}.com`;
-          voucherInitValues.royaltyPercentage = royaltyPercentage = (i * 100).toString(); // 1%, 2%, 3%
+          voucherInitValues.royaltyPercentage = (i * 100).toString(); // 1%, 2%, 3%
 
           // Create a new collection, testing for the event
           const tx = await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
@@ -3003,10 +3114,7 @@ describe("SellerHandler", function () {
           bosonVoucher = await getContractAt("IBosonVoucher", expectedCollectionAddress);
 
           await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-          await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged").withArgs(royaltyPercentage);
-          await expect(tx)
-            .to.emit(bosonVoucher, "VoucherInitialized")
-            .withArgs(seller.id, royaltyPercentage, contractURI);
+          await expect(tx).to.emit(bosonVoucher, "VoucherInitialized").withArgs(seller.id, contractURI);
 
           bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCollectionAddress);
 
@@ -3068,10 +3176,7 @@ describe("SellerHandler", function () {
         bosonVoucher = await getContractAt("IBosonVoucher", expectedCollectionAddress);
 
         await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
-        await expect(tx).to.emit(bosonVoucher, "RoyaltyPercentageChanged").withArgs(royaltyPercentage);
-        await expect(tx)
-          .to.emit(bosonVoucher, "VoucherInitialized")
-          .withArgs(seller.id, royaltyPercentage, contractURI);
+        await expect(tx).to.emit(bosonVoucher, "VoucherInitialized").withArgs(seller.id, contractURI);
 
         bosonVoucher = await getContractAt("OwnableUpgradeable", expectedCollectionAddress);
 
@@ -3613,6 +3718,419 @@ describe("SellerHandler", function () {
 
         expect(collectionAddress).to.equal(ZeroAddress, "Wrong collection address");
         expect(isAvailable).to.be.false;
+      });
+    });
+
+    context("Royalty Recipients", async function () {
+      let royaltyRecipientList, royaltyRecipientListStruct;
+      let expectedRoyaltyRecipientList;
+
+      beforeEach(async function () {
+        await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+        royaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(other1.address, "100", "other1"),
+          new RoyaltyRecipient(other2.address, "200", "other2"),
+          new RoyaltyRecipient(other3.address, "300", "other3"),
+        ]);
+
+        royaltyRecipientListStruct = royaltyRecipientList.toStruct();
+
+        expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+          ...royaltyRecipientList.royaltyRecipients,
+        ]);
+      });
+
+      context("👉 addRoyaltyRecipients()", async function () {
+        it("should emit RoyaltyRecipientsChanged event", async function () {
+          // Add royalty recipients
+          const tx = await accountHandler
+            .connect(admin)
+            .addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+
+          const event = getEvent(await tx.wait(), accountHandler, "RoyaltyRecipientsChanged");
+
+          const returnedRecipientList = RoyaltyRecipientList.fromStruct(event.royaltyRecipients);
+
+          expect(event.sellerId).to.equal(seller.id);
+          expect(event.executedBy).to.equal(admin.address);
+          expect(returnedRecipientList).to.deep.equal(expectedRoyaltyRecipientList);
+        });
+
+        it("should update state", async function () {
+          // Add royalty recipients
+          await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientListStruct);
+
+          const returnedRoyaltyRecipientList = RoyaltyRecipientList.fromStruct(
+            await accountHandler.connect(rando).getRoyaltyRecipients(seller.id)
+          );
+          expect(returnedRoyaltyRecipientList).to.deep.equal(
+            expectedRoyaltyRecipientList,
+            "Default royalty recipient mismatch"
+          );
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("The sellers region of protocol is paused", async function () {
+            // Pause the sellers region of the protocol
+            await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
+
+            // Attempt to add royalty recipients expecting revert
+            await expect(
+              accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientListStruct)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          });
+
+          it("seller does not exist", async function () {
+            seller.id = 666;
+
+            // Attempt to add royalty recipients expecting revert
+            await expect(
+              accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientListStruct)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_SELLER);
+          });
+
+          it("caller is not the seller admin", async function () {
+            // Attempt to add royalty recipients expecting revert
+            await expect(
+              accountHandler.connect(rando).addRoyaltyRecipients(seller.id, royaltyRecipientListStruct)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ADMIN);
+          });
+
+          it("caller does not own auth token", async function () {
+            // update seller to use auth token
+            seller.admin = ZeroAddress;
+            await accountHandler.connect(admin).updateSeller(seller, authToken);
+            await accountHandler.connect(authTokenOwner).optInToSellerUpdate(seller.id, [SellerUpdateFields.AuthToken]);
+
+            // Attempt to add royalty recipients expecting revert
+            await expect(
+              accountHandler.connect(rando).addRoyaltyRecipients(seller.id, royaltyRecipientListStruct)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ADMIN);
+          });
+
+          it("some recipient is not unique - same tx", async function () {
+            // Make duplicate entry
+            royaltyRecipientList.royaltyRecipients[2].wallet = other1.address;
+            // Attempt to add royalty recipients expecting revert
+            await expect(
+              accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct())
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.RECIPIENT_NOT_UNIQUE);
+          });
+
+          it("some recipient is not unique - two txs", async function () {
+            // Successfully add recipients
+            await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientListStruct);
+
+            // Attempt to add royalty recipients expecting revert
+            await expect(
+              accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientListStruct)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.RECIPIENT_NOT_UNIQUE);
+          });
+
+          it("some royalty percentage is above the limit", async function () {
+            royaltyRecipientList.royaltyRecipients[0].minRoyaltyPercentage = "8000";
+
+            // Attempt to add royalty recipients expecting revert
+            await expect(
+              accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct())
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
+          });
+        });
+      });
+
+      context("👉 updateRoyaltyRecipients()", async function () {
+        let royaltyRecipientIds, royaltyRecipientListUpdates;
+        beforeEach(async function () {
+          // add first set of royalty recipients
+          await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+
+          // update data
+          royaltyRecipientIds = [1, 0, 3];
+          royaltyRecipientListUpdates = new RoyaltyRecipientList([
+            new RoyaltyRecipient(other4.address, "400", "other1"), // change address and percentage, keep name
+            new RoyaltyRecipient(ZeroAddress, "100", "itisme"), // change external id of default recipient
+            new RoyaltyRecipient(other3.address, "300", "other3"), // change nothing
+          ]);
+
+          expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+            new RoyaltyRecipient(ZeroAddress, "100", "itisme"),
+            new RoyaltyRecipient(other4.address, "400", "other1"),
+            new RoyaltyRecipient(other2.address, "200", "other2"),
+            new RoyaltyRecipient(other3.address, "300", "other3"),
+          ]);
+        });
+
+        it("should emit RoyaltyRecipientsChanged event", async function () {
+          // Update royalty recipients
+          const tx = await accountHandler
+            .connect(admin)
+            .updateRoyaltyRecipients(seller.id, royaltyRecipientIds, royaltyRecipientListUpdates.toStruct());
+
+          const event = getEvent(await tx.wait(), accountHandler, "RoyaltyRecipientsChanged");
+
+          const returnedRecipientList = RoyaltyRecipientList.fromStruct(event.royaltyRecipients);
+
+          expect(event.sellerId).to.equal(seller.id);
+          expect(event.executedBy).to.equal(admin.address);
+          expect(returnedRecipientList).to.deep.equal(expectedRoyaltyRecipientList);
+        });
+
+        it("should update state", async function () {
+          // Update royalty recipients
+          await accountHandler
+            .connect(admin)
+            .updateRoyaltyRecipients(seller.id, royaltyRecipientIds, royaltyRecipientListUpdates.toStruct());
+
+          const returnedRoyaltyRecipientList = RoyaltyRecipientList.fromStruct(
+            await accountHandler.connect(rando).getRoyaltyRecipients(seller.id)
+          );
+          expect(returnedRoyaltyRecipientList).to.deep.equal(
+            expectedRoyaltyRecipientList,
+            "Default royalty recipient mismatch"
+          );
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("The sellers region of protocol is paused", async function () {
+            // Pause the sellers region of the protocol
+            await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
+
+            // Attempt to update royalty recipients expecting revert
+            await expect(
+              accountHandler
+                .connect(admin)
+                .updateRoyaltyRecipients(seller.id, royaltyRecipientIds, royaltyRecipientListUpdates.toStruct())
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          });
+
+          it("seller does not exist", async function () {
+            seller.id = 666;
+
+            // Attempt to update royalty recipients expecting revert
+            await expect(
+              accountHandler
+                .connect(admin)
+                .updateRoyaltyRecipients(seller.id, royaltyRecipientIds, royaltyRecipientListUpdates.toStruct())
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_SELLER);
+          });
+
+          it("caller is not the seller admin", async function () {
+            // Attempt to update royalty recipients expecting revert
+            await expect(
+              accountHandler
+                .connect(rando)
+                .updateRoyaltyRecipients(seller.id, royaltyRecipientIds, royaltyRecipientListUpdates.toStruct())
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ADMIN);
+          });
+
+          it("caller does not own auth token", async function () {
+            // update seller to use auth token
+            seller.admin = ZeroAddress;
+            await accountHandler.connect(admin).updateSeller(seller, authToken);
+            await accountHandler.connect(authTokenOwner).optInToSellerUpdate(seller.id, [SellerUpdateFields.AuthToken]);
+
+            // Attempt to update royalty recipients expecting revert
+            await expect(
+              accountHandler
+                .connect(rando)
+                .updateRoyaltyRecipients(seller.id, royaltyRecipientIds, royaltyRecipientListUpdates.toStruct())
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ADMIN);
+          });
+
+          it("length of ids to change does not match length of new values", async function () {
+            royaltyRecipientIds.push(2);
+
+            // Attempt to update royalty recipients expecting revert
+            await expect(
+              accountHandler
+                .connect(admin)
+                .updateRoyaltyRecipients(seller.id, royaltyRecipientIds, royaltyRecipientListUpdates.toStruct())
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ARRAY_LENGTH_MISMATCH);
+          });
+
+          it("id to update does not exist", async function () {
+            royaltyRecipientIds[0] = 1234;
+
+            // Attempt to update royalty recipients expecting revert
+            await expect(
+              accountHandler
+                .connect(admin)
+                .updateRoyaltyRecipients(seller.id, royaltyRecipientIds, royaltyRecipientListUpdates.toStruct())
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_RECIPIENT_ID);
+          });
+
+          it("seller tries to update the address of default recipient", async function () {
+            royaltyRecipientIds = [0];
+            royaltyRecipientListUpdates = new RoyaltyRecipientList([
+              new RoyaltyRecipient(other5.address, "100", "treasury"), // try to change default recipient address
+            ]);
+
+            // Attempt to update royalty recipients expecting revert
+            await expect(
+              accountHandler
+                .connect(admin)
+                .updateRoyaltyRecipients(seller.id, royaltyRecipientIds, royaltyRecipientListUpdates.toStruct())
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.WRONG_DEFAULT_RECIPIENT);
+          });
+
+          it("some recipient is not unique - same tx", async function () {
+            // Make duplicate entry
+            royaltyRecipientIds = [1, 2];
+            royaltyRecipientListUpdates = new RoyaltyRecipientList([
+              new RoyaltyRecipient(other5.address, "400", "other1"),
+              new RoyaltyRecipient(other5.address, "300", "other3"),
+            ]);
+
+            // Attempt to update royalty recipients expecting revert
+            await expect(
+              accountHandler
+                .connect(admin)
+                .updateRoyaltyRecipients(seller.id, royaltyRecipientIds, royaltyRecipientListUpdates.toStruct())
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.RECIPIENT_NOT_UNIQUE);
+          });
+
+          it("some recipient is not unique - two txs", async function () {
+            royaltyRecipientListUpdates.royaltyRecipients[0].wallet = other3.address; // address was already added to different recipientid
+
+            // Attempt to update royalty recipients expecting revert
+            await expect(
+              accountHandler
+                .connect(admin)
+                .updateRoyaltyRecipients(seller.id, royaltyRecipientIds, royaltyRecipientListUpdates.toStruct())
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.RECIPIENT_NOT_UNIQUE);
+          });
+
+          it("some royalty percentage is above the limit", async function () {
+            royaltyRecipientListUpdates.royaltyRecipients[2].minRoyaltyPercentage = "8000";
+
+            // Attempt to update royalty recipients expecting revert
+            await expect(
+              accountHandler
+                .connect(admin)
+                .updateRoyaltyRecipients(seller.id, royaltyRecipientIds, royaltyRecipientListUpdates.toStruct())
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
+          });
+        });
+      });
+
+      context("👉 removeRoyaltyRecipients()", async function () {
+        let royaltyRecipientIds;
+
+        beforeEach(async function () {
+          royaltyRecipientList = new RoyaltyRecipientList([
+            ...royaltyRecipientList.royaltyRecipients,
+            new RoyaltyRecipient(other4.address, "400", "other4"),
+            new RoyaltyRecipient(other5.address, "500", "other5"),
+            new RoyaltyRecipient(other6.address, "600", "other6"),
+          ]);
+          // add first set of royalty recipients
+          await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+
+          // ids to remove
+          royaltyRecipientIds = [1, 3, 4, 6];
+
+          // Removal process: [0,1,2,3,4,5,6]->[0,1,2,3,4,5]->[0,1,2,3,5]->[0,1,2,5]->[0,5,2]
+          expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+            new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT), // default
+            royaltyRecipientList.royaltyRecipients[4],
+            royaltyRecipientList.royaltyRecipients[1],
+          ]);
+        });
+
+        it("should emit RoyalRecipientsChanged event", async function () {
+          // Remove royalty recipients
+          const tx = await accountHandler.connect(admin).removeRoyaltyRecipients(seller.id, royaltyRecipientIds);
+
+          const event = getEvent(await tx.wait(), accountHandler, "RoyaltyRecipientsChanged");
+
+          const returnedRecipientList = RoyaltyRecipientList.fromStruct(event.royaltyRecipients);
+
+          expect(event.sellerId).to.equal(seller.id);
+          expect(event.executedBy).to.equal(admin.address);
+          expect(returnedRecipientList).to.deep.equal(expectedRoyaltyRecipientList);
+        });
+
+        it("should update state", async function () {
+          // Remove royalty recipients
+          await accountHandler.connect(admin).removeRoyaltyRecipients(seller.id, royaltyRecipientIds);
+
+          const returnedRoyaltyRecipientList = RoyaltyRecipientList.fromStruct(
+            await accountHandler.connect(rando).getRoyaltyRecipients(seller.id)
+          );
+          expect(returnedRoyaltyRecipientList).to.deep.equal(
+            expectedRoyaltyRecipientList,
+            "Default royalty recipient mismatch"
+          );
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("The sellers region of protocol is paused", async function () {
+            // Pause the sellers region of the protocol
+            await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
+
+            // Attempt to remove royalty recipients expecting revert
+            await expect(
+              accountHandler.connect(admin).removeRoyaltyRecipients(seller.id, royaltyRecipientIds)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          });
+
+          it("seller does not exist", async function () {
+            seller.id = 666;
+
+            // Attempt to remove royalty recipients expecting revert
+            await expect(
+              accountHandler.connect(admin).removeRoyaltyRecipients(seller.id, royaltyRecipientIds)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_SELLER);
+          });
+
+          it("caller is not the seller admin", async function () {
+            // Attempt to remove royalty recipients expecting revert
+            await expect(
+              accountHandler.connect(rando).removeRoyaltyRecipients(seller.id, royaltyRecipientIds)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ADMIN);
+          });
+
+          it("caller does not own auth token", async function () {
+            // update seller to use auth token
+            seller.admin = ZeroAddress;
+            await accountHandler.connect(admin).updateSeller(seller, authToken);
+            await accountHandler.connect(authTokenOwner).optInToSellerUpdate(seller.id, [SellerUpdateFields.AuthToken]);
+
+            // Attempt to remove royalty recipients expecting revert
+            await expect(
+              accountHandler.connect(rando).removeRoyaltyRecipients(seller.id, royaltyRecipientIds)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ADMIN);
+          });
+
+          it("list of ids to remove is not sorted in ascending order", async function () {
+            royaltyRecipientIds = [1, 2, 5, 4];
+
+            // Attempt to remove royalty recipients expecting revert
+            await expect(
+              accountHandler.connect(admin).removeRoyaltyRecipients(seller.id, royaltyRecipientIds)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ROYALTY_RECIPIENT_IDS_NOT_SORTED);
+          });
+
+          it("id to remove does not exist", async function () {
+            royaltyRecipientIds = [1, 2, 1234];
+
+            // Attempt to remove royalty recipients expecting revert
+            await expect(
+              accountHandler.connect(admin).removeRoyaltyRecipients(seller.id, royaltyRecipientIds)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ROYALTY_RECIPIENT_IDS_NOT_SORTED);
+          });
+
+          it("seller tries to remove the default recipient", async function () {
+            royaltyRecipientIds = [0, 4, 6];
+
+            // Attempt to remove royalty recipients expecting revert
+            await expect(
+              accountHandler.connect(admin).removeRoyaltyRecipients(seller.id, royaltyRecipientIds)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_REMOVE_DEFAULT_RECIPIENT);
+          });
+        });
       });
     });
   });

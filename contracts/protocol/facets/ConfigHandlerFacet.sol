@@ -42,7 +42,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxEscalationResponsePeriod(_limits.maxEscalationResponsePeriod);
         setBuyerEscalationDepositPercentage(_fees.buyerEscalationDepositPercentage);
         setMaxTotalOfferFeePercentage(_limits.maxTotalOfferFeePercentage);
-        setMaxRoyaltyPecentage(_limits.maxRoyaltyPecentage);
+        setMaxRoyaltyPercentage(_limits.maxRoyaltyPercentage);
         setMaxResolutionPeriod(_limits.maxResolutionPeriod);
         setMinResolutionPeriod(_limits.minResolutionPeriod);
         setMinDisputePeriod(_limits.minDisputePeriod);
@@ -307,27 +307,27 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Reverts if:
      * - The _maxRoyaltyPercentage is zero.
-     * - The _maxRoyaltyPecentage is greater than 10000.
+     * - The _maxRoyaltyPercentage is greater than 10000.
      *
      * @dev Caller must have ADMIN role.
      *
-     * @param _maxRoyaltyPecentage - the maximum royalty percentage
+     * @param _maxRoyaltyPercentage - the maximum royalty percentage
      *
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
      */
-    function setMaxRoyaltyPecentage(uint16 _maxRoyaltyPecentage) public override onlyRole(ADMIN) nonReentrant {
+    function setMaxRoyaltyPercentage(uint16 _maxRoyaltyPercentage) public override onlyRole(ADMIN) nonReentrant {
         // Make sure percentage is greater than 0
-        checkNonZeroValue(_maxRoyaltyPecentage);
+        checkNonZeroValue(_maxRoyaltyPercentage);
 
         // Make sure percentage is less than 10000
-        checkMaxPercententage(_maxRoyaltyPecentage);
+        checkMaxPercententage(_maxRoyaltyPercentage);
 
         // Store fee percentage
-        protocolLimits().maxRoyaltyPecentage = _maxRoyaltyPecentage;
+        protocolLimits().maxRoyaltyPercentage = _maxRoyaltyPercentage;
 
         // Notify watchers of state change
-        emit MaxRoyaltyPercentageChanged(_maxRoyaltyPecentage, msgSender());
+        emit MaxRoyaltyPercentageChanged(_maxRoyaltyPercentage, msgSender());
     }
 
     /**
@@ -335,8 +335,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @return the maximum royalty percentage
      */
-    function getMaxRoyaltyPecentage() external view override returns (uint16) {
-        return protocolLimits().maxRoyaltyPecentage;
+    function getMaxRoyaltyPercentage() external view override returns (uint16) {
+        return protocolLimits().maxRoyaltyPercentage;
     }
 
     /**

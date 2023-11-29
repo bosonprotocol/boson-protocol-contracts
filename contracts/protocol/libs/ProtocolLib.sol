@@ -59,7 +59,7 @@ library ProtocolLib {
         // limit the sum of (protocol fee percentage + agent fee percentage) of an offer fee
         uint16 maxTotalOfferFeePercentage;
         // limit the max royalty percentage that can be set by the seller
-        uint16 maxRoyaltyPecentage;
+        uint16 maxRoyaltyPercentage;
         // limit the max number of vouchers that can be preminted in a single transaction
         uint256 maxPremintedVouchers;
         // lower limit for resolution period
@@ -199,6 +199,10 @@ library ProtocolLib {
         mapping(uint256 => bytes32) sellerSalt;
         // seller salt => is used
         mapping(bytes32 => bool) isUsedSellerSalt;
+        // seller id => royalty recipients
+        mapping(uint256 => BosonTypes.RoyaltyRecipient[]) royaltyRecipientsBySeller;
+        // seller id => royalty recipient => index of royalty recipient in royaltyRecipientsBySeller
+        mapping(uint256 => mapping(address => uint256)) royaltyRecipientIndexBySellerAndRecipient;
     }
 
     // Incrementing id counters

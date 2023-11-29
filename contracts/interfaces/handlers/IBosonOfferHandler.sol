@@ -10,7 +10,7 @@ import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xe4c144b0
+ * The ERC-165 identifier for this interface is: 0xfe4be526
  */
 interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
     /**
@@ -41,6 +41,9 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      *   - If Agent does not exist
      * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
      * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
+     * - Royalty recipient is not on seller's allow list
+     * - Royalty percentage is less than the value decided by the admin
+     * - Total royalty percentage is more than max royalty percentage
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -84,6 +87,9 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
      *   - Collection does not exist
+     *   - Royalty recipient is not on seller's allow list
+     *   - Royalty percentage is less than the value decided by the admin
+     *   - Total royalty percentage is more than max royalty percentage
      * - When agent ids are non zero:
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -194,6 +200,42 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      *  @param _validUntilDate - new valid until date
      */
     function extendOfferBatch(uint256[] calldata _offerIds, uint256 _validUntilDate) external;
+
+    /**
+     * @notice Sets new valid royalty info.
+     *
+     * Emits an OfferRoyaltyInfoUpdated event if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - Offer does not exist
+     * - Caller is not the assistant of the offer
+     * - New royalty info is invalid
+     *
+     *  @param _offerId - the id of the offer to be updated
+     *  @param _royaltyInfo - new royalty info
+     */
+    function updateOfferRoyaltyRecipients(uint256 _offerId, BosonTypes.RoyaltyInfo calldata _royaltyInfo) external;
+
+    /**
+     * @notice Sets new valid until date for a batch of offers.
+     *
+     * Emits an OfferExtended event for every offer if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - For any of the offers:
+     *   - Offer does not exist
+     *   - Caller is not the assistant of the offer
+     *   - New royalty info is invalid
+     *
+     *  @param _offerIds - list of ids of the offers to extend
+     *  @param _royaltyInfo - new royalty info
+     */
+    function updateOfferRoyaltyRecipientsBatch(
+        uint256[] calldata _offerIds,
+        BosonTypes.RoyaltyInfo calldata _royaltyInfo
+    ) external;
 
     /**
      * @notice Gets the details about a given offer.

@@ -92,6 +92,15 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         _seller.id = sellerId;
         storeSeller(_seller, _authToken, lookups);
 
+        // Set treasury as the default royalty recipient
+        if (_voucherInitValues.royaltyPercentage > protocolLimits().maxRoyaltyPercentage)
+            revert InvalidRoyaltyPercentage();
+        RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[sellerId];
+        RoyaltyRecipient storage defaultRoyaltyRecipient = royaltyRecipients.push();
+        // We don't store the defaultRoyaltyRecipient.wallet, since it's always the trasury
+        defaultRoyaltyRecipient.minRoyaltyPercentage = _voucherInitValues.royaltyPercentage;
+        defaultRoyaltyRecipient.externalId = DEFAULT_ROYALTY_RECIPIENT;
+
         // Calculate seller salt and check that it is unique
         bytes32 sellerSalt = keccak256(abi.encodePacked(sender, _voucherInitValues.collectionSalt));
         if (lookups.isUsedSellerSalt[sellerSalt]) revert SellerSaltNotUnique();
@@ -104,6 +113,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
 
         // Notify watchers of state change
         emit SellerCreated(sellerId, _seller, voucherCloneAddress, _authToken, sender);
+        emit RoyaltyRecipientsChanged(sellerId, royaltyRecipients, sender);
     }
 
     /**

@@ -6,6 +6,7 @@ const { subtask } = require("hardhat/config");
 const path = require("node:path");
 const { glob } = require("glob");
 const { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } = require("hardhat/builtin-tasks/task-names");
+require("hardhat-preprocessor");
 
 subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS, async (_, { config }, runSuper) => {
   const files = await runSuper();
@@ -33,14 +34,6 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS, async (_, { config }, runSuper) 
   return [...files, ...submodules, ...submodulesWithLib].map(path.normalize);
 });
 
-function getRemappings() {
-  return fs
-    .readFileSync("remappings.txt", "utf8")
-    .split("\n")
-    .filter(Boolean) // remove empty lines
-    .map((line) => line.trim().split("="));
-}
-
 module.exports = {
   ...defaultConfig,
   networks: {
@@ -65,6 +58,9 @@ module.exports = {
                 break;
               }
             }
+          } else if (line.match(/^\s*pragma /i)) {
+            // needed for compatibility with submodules
+            line = line.replace(/solidity\s+0\.8\.9/i, "solidity ^0.8.9");
           }
         }
 
@@ -73,3 +69,11 @@ module.exports = {
     }),
   },
 };
+
+function getRemappings() {
+  return fs
+    .readFileSync("remappings.txt", "utf8")
+    .split("\n")
+    .filter(Boolean) // remove empty lines
+    .map((line) => line.trim().split("="));
+}

@@ -8,6 +8,7 @@ const PriceDiscovery = require("../../scripts/domain/PriceDiscovery");
 const Side = require("../../scripts/domain/Side");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
+const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
@@ -611,7 +612,9 @@ describe("IBosonSequentialCommitHandler", function () {
               // Set protocol fees to 95%
               await configHandler.setProtocolFeePercentage(9500);
               // Set royalty fees to 6%
-              await bosonVoucherClone.connect(assistant).setRoyaltyPercentage(600);
+              await offerHandler
+                .connect(assistant)
+                .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo([ZeroAddress], [600]));
 
               // Attempt to sequentially commit, expecting revert
               await expect(
@@ -798,7 +801,9 @@ describe("IBosonSequentialCommitHandler", function () {
               fees.forEach((fee) => {
                 it(`protocol fee: ${fee.protocol / 100}%; royalties: ${fee.royalties / 100}%`, async function () {
                   await configHandler.setProtocolFeePercentage(fee.protocol);
-                  await bosonVoucherClone.connect(assistant).setRoyaltyPercentage(fee.royalties);
+                  await offerHandler
+                    .connect(assistant)
+                    .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo([ZeroAddress], [fee.royalties]));
 
                   const balancesBefore = await getBalances();
 
@@ -833,7 +838,9 @@ describe("IBosonSequentialCommitHandler", function () {
                   fee.royalties / 100
                 }% - overpaid`, async function () {
                   await configHandler.setProtocolFeePercentage(fee.protocol);
-                  await bosonVoucherClone.connect(assistant).setRoyaltyPercentage(fee.royalties);
+                  await offerHandler
+                    .connect(assistant)
+                    .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo([ZeroAddress], [fee.royalties]));
 
                   const balancesBefore = await getBalances();
 
@@ -1190,7 +1197,9 @@ describe("IBosonSequentialCommitHandler", function () {
               // Set protocol fees to 95%
               await configHandler.setProtocolFeePercentage(9500);
               // Set royalty fees to 6%
-              await bosonVoucherClone.connect(assistant).setRoyaltyPercentage(600);
+              await offerHandler
+                .connect(assistant)
+                .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo([ZeroAddress], ["600"]));
 
               // Attempt to sequentially commit, expecting revert
               await expect(
@@ -1323,7 +1332,9 @@ describe("IBosonSequentialCommitHandler", function () {
               fees.forEach((fee) => {
                 it(`protocol fee: ${fee.protocol / 100}%; royalties: ${fee.royalties / 100}%`, async function () {
                   await configHandler.setProtocolFeePercentage(fee.protocol);
-                  await bosonVoucherClone.connect(assistant).setRoyaltyPercentage(fee.royalties);
+                  await offerHandler
+                    .connect(assistant)
+                    .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo([ZeroAddress], [fee.royalties]));
 
                   const balancesBefore = await getBalances();
 
@@ -1356,7 +1367,9 @@ describe("IBosonSequentialCommitHandler", function () {
                   fee.royalties / 100
                 }% - underpriced`, async function () {
                   await configHandler.setProtocolFeePercentage(fee.protocol);
-                  await bosonVoucherClone.connect(assistant).setRoyaltyPercentage(fee.royalties);
+                  await offerHandler
+                    .connect(assistant)
+                    .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo([ZeroAddress], [fee.royalties]));
 
                   const balancesBefore = await getBalances();
 
@@ -1391,7 +1404,9 @@ describe("IBosonSequentialCommitHandler", function () {
                   fee.royalties / 100
                 }% - non zero msg.value`, async function () {
                   await configHandler.setProtocolFeePercentage(fee.protocol);
-                  await bosonVoucherClone.connect(assistant).setRoyaltyPercentage(fee.royalties);
+                  await offerHandler
+                    .connect(assistant)
+                    .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo([ZeroAddress], [fee.royalties]));
 
                   const balancesBefore = await getBalances();
 

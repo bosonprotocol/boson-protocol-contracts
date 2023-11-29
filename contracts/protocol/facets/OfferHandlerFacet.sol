@@ -48,6 +48,9 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *   - If Agent does not exist
      * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
      * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
+     * - Royalty recipient is not on seller's allow list
+     * - Royalty percentage is less than the value decided by the admin
+     * - Total royalty percentage is more than max royalty percentage
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -97,6 +100,9 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *   - If Agent does not exist
      * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
      * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
+     * - Royalty recipient is not on seller's allow list
+     * - Royalty percentage is less than the value decided by the admin
+     * - Total royalty percentage is more than max royalty percentage
      *
      * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
      * @param _offerDates - the array of fully populated offer dates structs
@@ -271,6 +277,64 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     function extendOfferBatch(uint256[] calldata _offerIds, uint256 _validUntilDate) external override offersNotPaused {
         for (uint256 i = 0; i < _offerIds.length; ) {
             extendOffer(_offerIds[i], _validUntilDate);
+
+            unchecked {
+                i++;
+            }
+        }
+    }
+
+    /**
+     * @notice Sets new valid royalty info.
+     *
+     * Emits an OfferRoyaltyInfoUpdated event if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - Offer does not exist
+     * - Caller is not the assistant of the offer
+     * - New royalty info is invalid
+     *
+     *  @param _offerId - the id of the offer to be updated
+     *  @param _royaltyInfo - new royalty info
+     */
+    function updateOfferRoyaltyRecipients(
+        uint256 _offerId,
+        RoyaltyInfo calldata _royaltyInfo
+    ) public override offersNotPaused nonReentrant {
+        // Make sure the caller is the assistant, offer exists and is not voided
+        Offer storage offer = getValidOfferWithSellerCheck(_offerId);
+
+        validateRoyaltyInfo(protocolLookups(), protocolLimits(), offer.sellerId, _royaltyInfo);
+
+        // Add new entry to the royaltyInfo array
+        offer.royaltyInfo.push(_royaltyInfo);
+
+        // Notify watchers of state change
+        emit OfferRoyaltyInfoUpdated(_offerId, offer.sellerId, _royaltyInfo, msgSender());
+    }
+
+    /**
+     * @notice Sets new valid until date for a batch of offers.
+     *
+     * Emits an OfferExtended event for every offer if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - For any of the offers:
+     *   - Offer does not exist
+     *   - Caller is not the assistant of the offer
+     *   - New royalty info is invalid
+     *
+     *  @param _offerIds - list of ids of the offers to extend
+     *  @param _royaltyInfo - new royalty info
+     */
+    function updateOfferRoyaltyRecipientsBatch(
+        uint256[] calldata _offerIds,
+        BosonTypes.RoyaltyInfo calldata _royaltyInfo
+    ) external override offersNotPaused {
+        for (uint256 i = 0; i < _offerIds.length; ) {
+            updateOfferRoyaltyRecipients(_offerIds[i], _royaltyInfo);
 
             unchecked {
                 i++;

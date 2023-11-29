@@ -14,6 +14,7 @@ const {
   toUtf8Bytes,
   solidityPackedKeccak256,
   ZeroAddress,
+  ZeroHash,
 } = ethers;
 const { getFacets } = require("../../scripts/config/facet-deploy.js");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("./constants");
@@ -21,7 +22,8 @@ const Role = require("../../scripts/domain/Role");
 const { toHexString } = require("../../scripts/util/utils.js");
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
-const { ZeroHash } = require("ethers");
+const { RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
+const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo.js");
 
 function getEvent(receipt, factory, eventName) {
   let found = false;
@@ -131,6 +133,37 @@ function compareArgs(eventArgs, args) {
  */
 function compareOfferStructs(returnedOffer) {
   expect(Offer.fromStruct(returnedOffer).toStruct()).to.deep.equal(this);
+  return true;
+}
+
+// ToDo: make a generic predicate for comparing structs
+/** Predicate to compare RoyaltyRecipientList in emitted events
+ * Bind Royalty Recipient List to this function and pass it to .withArgs() instead of the expected Royalty recipient list
+ * If returned and expected Royalty Recipient Lists are equal, the test will pass, otherwise it raises an error
+ * 
+ * Example
+ * 
+ * await expect(tx)
+    .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+    .withArgs(seller.id, compareRoyaltyRecipientList.bind(expectedRoyaltyRecipientList.toStruct()), admin.address);
+ * 
+ * @param {*} returnedRoyaltyRecipientList 
+ * @returns 
+ */
+function compareRoyaltyRecipientLists(returnedRoyaltyRecipientList) {
+  expect(RoyaltyRecipientList.fromStruct(returnedRoyaltyRecipientList).toStruct()).to.deep.equal(this);
+  return true;
+}
+
+/** Predicate to compare RoyaltyInfo in emitted events
+ * Bind Royalty Info to this function and pass it to .withArgs() instead of the expected Royalty Info struct
+ * If returned and expected Royalty Infos are equal, the test will pass, otherwise it raises an error
+ *
+ * @param {*} returnedRoyaltyInfo
+ * @returns
+ */
+function compareRoyaltyInfo(returnedRoyaltyInfo) {
+  expect(RoyaltyInfo.fromStruct(returnedRoyaltyInfo).toStruct()).to.deep.equal(this);
   return true;
 }
 
@@ -446,7 +479,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
       maxDisputesPerBatch: 100,
       maxAllowedSellers: 100,
       maxTotalOfferFeePercentage: 4000, //40%
-      maxRoyaltyPecentage: 1000, //10%
+      maxRoyaltyPercentage: 1000, //10%
       minResolutionPeriod: oneWeek,
       maxResolutionPeriod: oneMonth,
       minDisputePeriod: oneWeek,
@@ -519,6 +552,7 @@ exports.getMappingStoragePosition = getMappingStoragePosition;
 exports.paddingType = paddingType;
 exports.getFacetsWithArgs = getFacetsWithArgs;
 exports.compareOfferStructs = compareOfferStructs;
+exports.compareRoyaltyRecipientLists = compareRoyaltyRecipientLists;
 exports.objectToArray = objectToArray;
 exports.deriveTokenId = deriveTokenId;
 exports.incrementer = incrementer;
@@ -527,3 +561,4 @@ exports.setupTestEnvironment = setupTestEnvironment;
 exports.getSnapshot = getSnapshot;
 exports.revertToSnapshot = revertToSnapshot;
 exports.getSellerSalt = getSellerSalt;
+exports.compareRoyaltyInfo = compareRoyaltyInfo;

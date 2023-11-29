@@ -721,4 +721,56 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
                 ? _lookups.cloneAddress[_sellerId]
                 : _lookups.additionalCollections[_sellerId][_collectionIndex - 1].collectionAddress;
     }
+
+    /**
+     * @notice Internal helper to get royalty information and seller for a chosen exchange.
+     *
+     * Reverts if exchange does not exist.
+     *
+     * @param _queryId - offer id or exchange id
+     * @param _isExchangeId - indicates if the query represents the exchange id
+     * @return royaltyInfo - list of royalty recipients and corresponding bps
+     * @return royaltyInfoIndex - index of the royalty info
+     * @return treasury - the seller's treasury address
+     */
+    function fetchRoyalties(
+        uint256 _queryId,
+        bool _isExchangeId
+    ) internal view returns (RoyaltyInfo storage royaltyInfo, uint256 royaltyInfoIndex, address treasury) {
+        RoyaltyInfo[] storage royaltyInfoAll;
+        if (_isExchangeId) {
+            (bool exists, Exchange storage exchange) = fetchExchange(_queryId);
+            if (!exists) revert NoSuchExchange();
+            _queryId = exchange.offerId;
+        }
+
+        // not using fetchOffer to reduce gas costs (limitation of royalty registry)
+        ProtocolLib.ProtocolEntities storage pe = protocolEntities();
+        Offer storage offer = pe.offers[_queryId];
+        treasury = pe.sellers[offer.sellerId].treasury;
+        royaltyInfoAll = pe.offers[_queryId].royaltyInfo;
+
+        uint256 royaltyInfoLength = royaltyInfoAll.length;
+        if (royaltyInfoLength == 0) revert NoSuchOffer();
+        royaltyInfoIndex = royaltyInfoLength - 1;
+        // get the last royalty info
+        return (royaltyInfoAll[royaltyInfoIndex], royaltyInfoIndex, treasury);
+    }
+
+    /**
+     * @notice Helper function that calculates the total royalty percentage for a given exchange
+     *
+     * @param _bps - storage slot for array of royalty percentages
+     * @return totalBps - the total royalty percentage
+     */
+    function getTotalRoyaltyPercentage(uint256[] storage _bps) internal view returns (uint256 totalBps) {
+        uint256 bpsLength = _bps.length;
+        for (uint256 i = 0; i < bpsLength; ) {
+            totalBps += _bps[i];
+
+            unchecked {
+                i++;
+            }
+        }
+    }
 }
