@@ -30,6 +30,11 @@ interface IBosonAccountEvents {
         BosonTypes.AuthToken pendingAuthToken,
         address indexed executedBy
     );
+    event RoyaltyRecipientsChanged(
+        uint256 indexed sellerId,
+        BosonTypes.RoyaltyRecipient[] royaltyRecipients,
+        address indexed executedBy
+    );
     event BuyerCreated(uint256 indexed buyerId, BosonTypes.Buyer buyer, address indexed executedBy);
     event BuyerUpdated(uint256 indexed buyerId, BosonTypes.Buyer buyer, address indexed executedBy);
     event AgentUpdated(uint256 indexed agentId, BosonTypes.Agent agent, address indexed executedBy);

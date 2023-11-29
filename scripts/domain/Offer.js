@@ -1,4 +1,12 @@
-const { bigNumberIsValid, addressIsValid, booleanIsValid, stringIsValid } = require("../util/validations.js");
+const {
+  bigNumberIsValid,
+  addressIsValid,
+  booleanIsValid,
+  stringIsValid,
+  enumIsValid,
+} = require("../util/validations.js");
+const PriceType = require("./PriceType.js");
+const { RoyaltyInfo, RoyaltyInfoList } = require("./RoyaltyInfo.js");
 
 /**
  * Boson Protocol Domain Entity: Offer
@@ -18,7 +26,9 @@ class Offer {
             string metadataUri;
             string metadataHash;
             bool voided;
-            uint256 collectionIndex;
+            uint256 collectionIndex;            
+            PriceType priceType;
+            RoyaltyInfo[] royaltyInfo;
         }
     */
 
@@ -33,7 +43,9 @@ class Offer {
     metadataUri,
     metadataHash,
     voided,
-    collectionIndex
+    collectionIndex,
+    priceType,
+    royaltyInfo
   ) {
     this.id = id;
     this.sellerId = sellerId;
@@ -46,6 +58,8 @@ class Offer {
     this.metadataHash = metadataHash;
     this.voided = voided;
     this.collectionIndex = collectionIndex;
+    this.priceType = priceType;
+    this.royaltyInfo = royaltyInfo;
   }
 
   /**
@@ -66,6 +80,8 @@ class Offer {
       metadataHash,
       voided,
       collectionIndex,
+      priceType,
+      royaltyInfo,
     } = o;
 
     return new Offer(
@@ -79,7 +95,9 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
-      collectionIndex
+      collectionIndex,
+      priceType,
+      royaltyInfo.map((ri) => RoyaltyInfo.fromObject(ri))
     );
   }
 
@@ -99,7 +117,9 @@ class Offer {
       metadataUri,
       metadataHash,
       voided,
-      collectionIndex;
+      collectionIndex,
+      priceType,
+      royaltyInfo;
 
     // destructure struct
     [
@@ -114,6 +134,8 @@ class Offer {
       metadataHash,
       voided,
       collectionIndex,
+      priceType,
+      royaltyInfo,
     ] = struct;
     if (!collectionIndex) {
       collectionIndex = 0;
@@ -131,6 +153,8 @@ class Offer {
       metadataHash,
       voided,
       collectionIndex: collectionIndex.toString(),
+      priceType: Number(priceType),
+      royaltyInfo: royaltyInfo.map((ri) => RoyaltyInfo.fromStruct(ri)),
     });
   }
 
@@ -167,6 +191,8 @@ class Offer {
       this.metadataHash,
       this.voided,
       this.collectionIndex,
+      this.priceType,
+      new RoyaltyInfoList(this.royaltyInfo).toStruct(),
     ];
   }
 
@@ -281,6 +307,29 @@ class Offer {
   }
 
   /**
+   * Is this Offer instance's priceType field valid?
+   * @returns {boolean}
+   */
+  priceTypeIsValid() {
+    return enumIsValid(this.priceType, PriceType.Types);
+  }
+
+  /**
+   * Is this Offer instance's royaltyInfo field valid?
+   * Must be a valid RoyaltyInfo instance
+   * @returns {boolean}
+   */
+  royaltyInfoIsValid() {
+    let valid = false;
+    let { royaltyInfo } = this;
+    let royaltyInfoList = new RoyaltyInfoList(royaltyInfo);
+    try {
+      valid = typeof royaltyInfoList == "object" && royaltyInfoList.isValid();
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
    * Is this Offer instance valid?
    * @returns {boolean}
    */
@@ -296,7 +345,9 @@ class Offer {
       this.metadataUriIsValid() &&
       this.metadataHashIsValid() &&
       this.voidedIsValid() &&
-      this.collectionIndexIsValid()
+      this.collectionIndexIsValid() &&
+      this.priceTypeIsValid() &&
+      this.royaltyInfoIsValid()
     );
   }
 }

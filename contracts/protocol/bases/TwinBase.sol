@@ -42,13 +42,13 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
 
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByAssistant(sender);
-        require(exists, NOT_ASSISTANT);
+        if (!exists) revert NotAssistant();
 
         // Protocol must be approved to transfer seller’s tokens
-        require(isProtocolApproved(_twin.tokenAddress, sender, address(this)), NO_TRANSFER_APPROVED);
+        if (!isProtocolApproved(_twin.tokenAddress, sender, address(this))) revert NoTransferApproved();
 
         // Twin supply must exist and can't be zero
-        require(_twin.supplyAvailable > 0, INVALID_SUPPLY_AVAILABLE);
+        if (_twin.supplyAvailable == 0) revert InvalidSupplyAvailable();
 
         // Get the next twinId and increment the counter
         uint256 twinId = protocolCounters().nextTwinId++;
@@ -56,19 +56,19 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
 
         if (_twin.tokenType == TokenType.NonFungibleToken) {
             // Check if the token supports IERC721 interface
-            require(contractSupportsInterface(_twin.tokenAddress, type(IERC721).interfaceId), INVALID_TOKEN_ADDRESS);
+            if (!contractSupportsInterface(_twin.tokenAddress, type(IERC721).interfaceId)) revert InvalidTokenAddress();
 
             // If token is NonFungible amount should be zero
-            require(_twin.amount == 0, INVALID_TWIN_PROPERTY);
+            if (_twin.amount != 0) revert InvalidTwinProperty();
 
             // Calculate new twin range [tokenId...lastTokenId]
             uint256 lastTokenId;
             uint256 tokenId = _twin.tokenId;
             if (_twin.supplyAvailable == type(uint256).max) {
-                require(tokenId <= (1 << 255), INVALID_TWIN_TOKEN_RANGE); // if supply is "unlimited", starting index can be at most 2*255
+                if (tokenId > (1 << 255)) revert InvalidTwinTokenRange(); // if supply is "unlimited", starting index can be at most 2*255
                 lastTokenId = type(uint256).max;
             } else {
-                require(type(uint256).max - _twin.supplyAvailable >= tokenId, INVALID_TWIN_TOKEN_RANGE);
+                if (type(uint256).max - _twin.supplyAvailable < tokenId) revert InvalidTwinTokenRange();
                 lastTokenId = tokenId + _twin.supplyAvailable - 1;
             }
 
@@ -81,7 +81,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
                 // A valid range has:
                 // - the first id of range greater than the last token id (tokenId + initialSupply - 1) of the looped twin or
                 // - the last id of range lower than the looped twin tokenId (beginning of range)
-                require(tokenId > twinRanges[i].end || lastTokenId < twinRanges[i].start, INVALID_TWIN_TOKEN_RANGE);
+                if (lastTokenId >= twinRanges[i].start && tokenId <= twinRanges[i].end) revert InvalidTwinTokenRange();
 
                 unchecked {
                     i++;
@@ -98,15 +98,16 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         } else if (_twin.tokenType == TokenType.MultiToken) {
             // If token is Fungible or MultiToken amount should not be zero
             // Also, the amount of tokens should not be more than the available token supply.
-            require(_twin.amount > 0 && _twin.amount <= _twin.supplyAvailable, INVALID_AMOUNT);
+            if (_twin.amount == 0 || _twin.amount > _twin.supplyAvailable) revert InvalidAmount();
 
             // Not every ERC20 has supportsInterface method so we can't check interface support if token type is NonFungible
             // Check if the token supports IERC1155 interface
-            require(contractSupportsInterface(_twin.tokenAddress, type(IERC1155).interfaceId), INVALID_TOKEN_ADDRESS);
+            if (!contractSupportsInterface(_twin.tokenAddress, type(IERC1155).interfaceId))
+                revert InvalidTokenAddress();
         } else {
             // If token is Fungible or MultiToken amount should not be zero
             // Also, the amount of tokens should not be more than the available token supply.
-            require(_twin.amount > 0 && _twin.amount <= _twin.supplyAvailable, INVALID_AMOUNT);
+            if (_twin.amount == 0 || _twin.amount > _twin.supplyAvailable) revert InvalidAmount();
         }
 
         // Get storage location for twin
@@ -153,7 +154,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         address _assistant,
         address _protocol
     ) internal view returns (bool _approved) {
-        require(_tokenAddress != address(0), UNSUPPORTED_TOKEN);
+        if (_tokenAddress == address(0)) revert UnsupportedToken();
 
         try ITwinToken(_tokenAddress).allowance(_assistant, _protocol) returns (uint256 _allowance) {
             if (_allowance > 0) {
@@ -163,7 +164,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             try ITwinToken(_tokenAddress).isApprovedForAll(_assistant, _protocol) returns (bool _isApproved) {
                 _approved = _isApproved;
             } catch {
-                revert(UNSUPPORTED_TOKEN);
+                revert UnsupportedToken();
             }
         }
     }

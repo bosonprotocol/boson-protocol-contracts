@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
@@ -60,9 +61,17 @@ library FundsLib {
      *
      * @param _offerId - id of the offer with the details
      * @param _buyerId - id of the buyer
+     * @param _price - the price, either price discovered externally or set on offer creation
      * @param _isPreminted - flag indicating if the offer is preminted
+     * @param _priceType - price type, either static or discovery
      */
-    function encumberFunds(uint256 _offerId, uint256 _buyerId, bool _isPreminted) internal {
+    function encumberFunds(
+        uint256 _offerId,
+        uint256 _buyerId,
+        uint256 _price,
+        bool _isPreminted,
+        BosonTypes.PriceType _priceType
+    ) internal {
         // Load protocol entities storage
         ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
 
@@ -73,17 +82,18 @@ library FundsLib {
         // this will be called only from commitToOffer so we expect that exchange actually exist
         BosonTypes.Offer storage offer = pe.offers[_offerId];
         address exchangeToken = offer.exchangeToken;
-        uint256 price = offer.price;
 
         // if offer is non-preminted, validate incoming payment
         if (!_isPreminted) {
-            validateIncomingPayment(exchangeToken, price);
-            emit FundsEncumbered(_buyerId, exchangeToken, price, sender);
+            validateIncomingPayment(exchangeToken, _price);
+            emit FundsEncumbered(_buyerId, exchangeToken, _price, sender);
         }
+
+        bool isPriceDiscovery = _priceType == BosonTypes.PriceType.Discovery;
 
         // decrease available funds
         uint256 sellerId = offer.sellerId;
-        uint256 sellerFundsEncumbered = offer.sellerDeposit + (_isPreminted ? price : 0); // for preminted offer, encumber also price from seller's available funds
+        uint256 sellerFundsEncumbered = offer.sellerDeposit + (_isPreminted && !isPriceDiscovery ? _price : 0); // for preminted offer and price type is static, encumber also price from seller's available funds
         decreaseAvailableFunds(sellerId, exchangeToken, sellerFundsEncumbered);
 
         // notify external observers
@@ -109,10 +119,10 @@ library FundsLib {
     function validateIncomingPayment(address _exchangeToken, uint256 _value) internal {
         if (_exchangeToken == address(0)) {
             // if transfer is in the native currency, msg.value must match offer price
-            require(msg.value == _value, INSUFFICIENT_VALUE_RECEIVED);
+            if (msg.value != _value) revert BosonErrors.InsufficientValueReceived();
         } else {
             // when price is in an erc20 token, transferring the native currency is not allowed
-            require(msg.value == 0, NATIVE_NOT_ALLOWED);
+            if (msg.value != 0) revert BosonErrors.NativeNotAllowed();
 
             // if transfer is in ERC20 token, try to transfer the amount from buyer to the protocol
             transferFundsToProtocol(_exchangeToken, _value);
@@ -145,12 +155,11 @@ library FundsLib {
         uint256 agentFee;
 
         BosonTypes.OfferFees storage offerFee = pe.offerFees[exchange.offerId];
-
+        uint256 price = offer.price;
         {
             // scope to avoid stack too deep errors
             BosonTypes.ExchangeState exchangeState = exchange.state;
             uint256 sellerDeposit = offer.sellerDeposit;
-            uint256 price = offer.price;
 
             if (exchangeState == BosonTypes.ExchangeState.Completed) {
                 // COMPLETED
@@ -198,19 +207,32 @@ library FundsLib {
             }
         }
 
-        // Store payoffs to availablefunds and notify the external observers
         address exchangeToken = offer.exchangeToken;
-        uint256 sellerId = offer.sellerId;
-        uint256 buyerId = exchange.buyerId;
+
+        // Original seller and last buyer are done
+        // Release funds to intermediate sellers (if they exist)
+        // and add the protocol fee to the total
+        {
+            (uint256 sequentialProtocolFee, uint256 sequentialRoyalties) = releaseFundsToIntermediateSellers(
+                _exchangeId,
+                exchange.state,
+                price,
+                exchangeToken,
+                offer
+            );
+            sellerPayoff += sequentialRoyalties;
+            protocolFee += sequentialProtocolFee;
+        }
+
+        // Store payoffs to availablefunds and notify the external observers
         address sender = EIP712Lib.msgSender();
         if (sellerPayoff > 0) {
-            increaseAvailableFunds(sellerId, exchangeToken, sellerPayoff);
-            emit FundsReleased(_exchangeId, sellerId, exchangeToken, sellerPayoff, sender);
+            increaseAvailableFundsAndEmitEvent(_exchangeId, offer.sellerId, exchangeToken, sellerPayoff, sender);
         }
         if (buyerPayoff > 0) {
-            increaseAvailableFunds(buyerId, exchangeToken, buyerPayoff);
-            emit FundsReleased(_exchangeId, buyerId, exchangeToken, buyerPayoff, sender);
+            increaseAvailableFundsAndEmitEvent(_exchangeId, exchange.buyerId, exchangeToken, buyerPayoff, sender);
         }
+
         if (protocolFee > 0) {
             increaseAvailableFunds(0, exchangeToken, protocolFee);
             emit ProtocolFeeCollected(_exchangeId, exchangeToken, protocolFee, sender);
@@ -218,9 +240,157 @@ library FundsLib {
         if (agentFee > 0) {
             // Get the agent for offer
             uint256 agentId = ProtocolLib.protocolLookups().agentIdByOffer[exchange.offerId];
-            increaseAvailableFunds(agentId, exchangeToken, agentFee);
-            emit FundsReleased(_exchangeId, agentId, exchangeToken, agentFee, sender);
+            increaseAvailableFundsAndEmitEvent(_exchangeId, agentId, exchangeToken, agentFee, sender);
         }
+    }
+
+    /**
+     * @notice Takes the exchange id and releases the funds to original seller if offer.priceType is Discovery
+     * and to all intermediate resellers in case of sequential commit, depending on the state of the exchange.
+     * It is called only from releaseFunds. Protocol fee and royalties are calculated and returned to releaseFunds, where they are added to the total.
+     *
+     * Emits FundsReleased events for non zero payoffs.
+     *
+     * @param _exchangeId - exchange id
+     * @param _exchangeState - state of the exchange
+     * @param _initialPrice - initial price of the offer
+     * @param _exchangeToken - address of the token used for the exchange
+     * @param _offer - offer struct
+     * @return protocolFee - protocol fee from secondary sales
+     * @return sellerRoyalties - royalties from secondary sales collected for the seller
+     */
+    function releaseFundsToIntermediateSellers(
+        uint256 _exchangeId,
+        BosonTypes.ExchangeState _exchangeState,
+        uint256 _initialPrice,
+        address _exchangeToken,
+        BosonTypes.Offer storage _offer
+    ) internal returns (uint256 protocolFee, uint256 sellerRoyalties) {
+        BosonTypes.ExchangeCosts[] storage exchangeCosts;
+
+        // calculate effective price multiplier
+        uint256 effectivePriceMultiplier;
+        {
+            ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
+
+            exchangeCosts = pe.exchangeCosts[_exchangeId];
+
+            // if price type was static and no sequential commit happened, just return
+            if (exchangeCosts.length == 0) {
+                return (0, 0);
+            }
+
+            {
+                if (_exchangeState == BosonTypes.ExchangeState.Completed) {
+                    // COMPLETED, buyer pays full price
+                    effectivePriceMultiplier = 10000;
+                } else if (
+                    _exchangeState == BosonTypes.ExchangeState.Revoked ||
+                    _exchangeState == BosonTypes.ExchangeState.Canceled
+                ) {
+                    // REVOKED or CANCELED, buyer pays nothing (buyerCancelationPenalty is not considered payment)
+                    effectivePriceMultiplier = 0;
+                } else if (_exchangeState == BosonTypes.ExchangeState.Disputed) {
+                    // DISPUTED
+                    // get the information about the dispute, which must exist
+                    BosonTypes.Dispute storage dispute = pe.disputes[_exchangeId];
+                    BosonTypes.DisputeState disputeState = dispute.state;
+
+                    if (disputeState == BosonTypes.DisputeState.Retracted) {
+                        // RETRACTED - same as "COMPLETED"
+                        effectivePriceMultiplier = 10000;
+                    } else if (disputeState == BosonTypes.DisputeState.Refused) {
+                        // REFUSED, buyer pays nothing
+                        effectivePriceMultiplier = 0;
+                    } else {
+                        // RESOLVED or DECIDED
+                        effectivePriceMultiplier = 10000 - dispute.buyerPercent;
+                    }
+                }
+            }
+        }
+
+        uint256 resellerBuyPrice = _initialPrice; // the price that reseller paid for the voucher
+        address msgSender = EIP712Lib.msgSender();
+        uint256 len = exchangeCosts.length;
+        for (uint256 i = 0; i < len; ) {
+            BosonTypes.ExchangeCosts storage secondaryCommit = exchangeCosts[i];
+
+            // amount to be released
+            uint256 currentResellerAmount;
+
+            // inside the scope to avoid stack too deep error
+            {
+                uint256 price = secondaryCommit.price;
+                uint256 protocolFeeAmount = secondaryCommit.protocolFeeAmount;
+                uint256 royaltyAmount = secondaryCommit.royaltyAmount;
+
+                if (effectivePriceMultiplier > 0) {
+                    protocolFee += protocolFeeAmount;
+                    sellerRoyalties += distributeRoyalties(
+                        _offer,
+                        secondaryCommit.royaltyInfoIndex,
+                        price,
+                        royaltyAmount,
+                        effectivePriceMultiplier
+                    );
+                }
+
+                // secondary price without protocol fee and royalties
+                uint256 reducedSecondaryPrice = price - protocolFeeAmount - royaltyAmount;
+
+                // current reseller gets the difference between final payout and the immediate payout they received at the time of secondary sale
+                currentResellerAmount =
+                    (
+                        reducedSecondaryPrice > resellerBuyPrice
+                            ? effectivePriceMultiplier * (reducedSecondaryPrice - resellerBuyPrice)
+                            : (10000 - effectivePriceMultiplier) * (resellerBuyPrice - reducedSecondaryPrice)
+                    ) /
+                    10000;
+
+                resellerBuyPrice = price;
+            }
+
+            if (currentResellerAmount > 0) {
+                increaseAvailableFundsAndEmitEvent(
+                    _exchangeId,
+                    secondaryCommit.resellerId,
+                    _exchangeToken,
+                    currentResellerAmount,
+                    msgSender
+                );
+            }
+
+            unchecked {
+                i++;
+            }
+        }
+
+        // protocolFee and sellerRoyalties can be multiplied by effectivePriceMultiplier just at the end
+        protocolFee = (protocolFee * effectivePriceMultiplier) / 10000;
+        sellerRoyalties = sellerRoyalties;
+    }
+
+    /**
+     * @notice Forwards values to increaseAvailableFunds and emits notifies external listeners.
+     *
+     * Emits FundsReleased events
+     *
+     * @param _exchangeId - exchange id
+     * @param _entityId - id of the entity to which the funds are released
+     * @param _tokenAddress - address of the token used for the exchange
+     * @param _amount - amount of tokens to be released
+     * @param _sender - address of the sender that executed the transaction
+     */
+    function increaseAvailableFundsAndEmitEvent(
+        uint256 _exchangeId,
+        uint256 _entityId,
+        address _tokenAddress,
+        uint256 _amount,
+        address _sender
+    ) internal {
+        increaseAvailableFunds(_entityId, _tokenAddress, _amount);
+        emit FundsReleased(_exchangeId, _entityId, _tokenAddress, _amount, _sender);
     }
 
     /**
@@ -234,22 +404,35 @@ library FundsLib {
      * - Received ERC20 token amount differs from the expected value
      *
      * @param _tokenAddress - address of the token to be transferred
+     * @param _from - address to transfer funds from
      * @param _amount - amount to be transferred
      */
-    function transferFundsToProtocol(address _tokenAddress, uint256 _amount) internal {
+    function transferFundsToProtocol(address _tokenAddress, address _from, uint256 _amount) internal {
         if (_amount > 0) {
             // protocol balance before the transfer
             uint256 protocolTokenBalanceBefore = IERC20(_tokenAddress).balanceOf(address(this));
 
             // transfer ERC20 tokens from the caller
-            IERC20(_tokenAddress).safeTransferFrom(EIP712Lib.msgSender(), address(this), _amount);
+            IERC20(_tokenAddress).safeTransferFrom(_from, address(this), _amount);
 
             // protocol balance after the transfer
             uint256 protocolTokenBalanceAfter = IERC20(_tokenAddress).balanceOf(address(this));
 
             // make sure that expected amount of tokens was transferred
-            require(protocolTokenBalanceAfter - protocolTokenBalanceBefore == _amount, INSUFFICIENT_VALUE_RECEIVED);
+            if (protocolTokenBalanceAfter - protocolTokenBalanceBefore != _amount)
+                revert BosonErrors.InsufficientValueReceived();
         }
+    }
+
+    /**
+     * @notice Same as transferFundsToProtocol(address _tokenAddress, address _from, uint256 _amount),
+     * but _from is message sender
+     *
+     * @param _tokenAddress - address of the token to be transferred
+     * @param _amount - amount to be transferred
+     */
+    function transferFundsToProtocol(address _tokenAddress, uint256 _amount) internal {
+        transferFundsToProtocol(_tokenAddress, EIP712Lib.msgSender(), _amount);
     }
 
     /**
@@ -263,6 +446,7 @@ library FundsLib {
      * - Contract at token address does not support ERC20 function transfer
      * - Available funds is less than amount to be decreased
      *
+     * @param _entityId - id of entity for which funds should be decreased, or 0 for protocol
      * @param _tokenAddress - address of the token to be transferred
      * @param _to - address of the recipient
      * @param _amount - amount to be transferred
@@ -277,17 +461,36 @@ library FundsLib {
         decreaseAvailableFunds(_entityId, _tokenAddress, _amount);
 
         // try to transfer the funds
+        transferFundsFromProtocol(_tokenAddress, _to, _amount);
+
+        // notify the external observers
+        emit FundsWithdrawn(_entityId, _to, _tokenAddress, _amount, EIP712Lib.msgSender());
+    }
+
+    /**
+     * @notice Tries to transfer native currency or tokens from the protocol to the recipient.
+     *
+     * Emits ERC20 Transfer event in call stack if ERC20 token is withdrawn and transfer is successful.
+     *
+     * Reverts if:
+     * - Transfer of native currency is not successful (i.e. recipient is a contract which reverted)
+     * - Contract at token address does not support ERC20 function transfer
+     * - Available funds is less than amount to be decreased
+     *
+     * @param _tokenAddress - address of the token to be transferred
+     * @param _to - address of the recipient
+     * @param _amount - amount to be transferred
+     */
+    function transferFundsFromProtocol(address _tokenAddress, address payable _to, uint256 _amount) internal {
+        // try to transfer the funds
         if (_tokenAddress == address(0)) {
             // transfer native currency
             (bool success, ) = _to.call{ value: _amount }("");
-            require(success, TOKEN_TRANSFER_FAILED);
+            if (!success) revert BosonErrors.TokenTransferFailed();
         } else {
             // transfer ERC20 tokens
             IERC20(_tokenAddress).safeTransfer(_to, _amount);
         }
-
-        // notify the external observers
-        emit FundsWithdrawn(_entityId, _to, _tokenAddress, _amount, EIP712Lib.msgSender());
     }
 
     /**
@@ -332,7 +535,7 @@ library FundsLib {
             uint256 entityFunds = availableFunds[_tokenAddress];
 
             // make sure that seller has enough funds in the pool and reduce the available funds
-            require(entityFunds >= _amount, INSUFFICIENT_AVAILABLE_FUNDS);
+            if (entityFunds < _amount) revert BosonErrors.InsufficientAvailableFunds();
 
             // Use unchecked to optimize execution cost. The math is safe because of the require above.
             unchecked {
@@ -363,5 +566,47 @@ library FundsLib {
                 delete entityTokens[_tokenAddress];
             }
         }
+    }
+
+    /**
+     * @notice Distributes the royalties to external recipients and seller's treasury.
+     *
+     * @param _offer - storage pointer to the offer
+     * @param _royaltyInfoIndex - index of the royalty info (reffers to offer.royaltyInfo array)
+     * @param _price - price in the sequential commit
+     * @param _escrowedRoyaltyAmount - amount of royalties that were escrowed
+     * @param _effectivePriceMultiplier - multiplier for the price, depending on the state of the exchange
+     */
+    function distributeRoyalties(
+        BosonTypes.Offer storage _offer,
+        uint256 _royaltyInfoIndex,
+        uint256 _price,
+        uint256 _escrowedRoyaltyAmount,
+        uint256 _effectivePriceMultiplier
+    ) internal returns (uint256 sellerRoyalties) {
+        address exchangeToken = _offer.exchangeToken;
+        BosonTypes.RoyaltyInfo storage _royaltyInfo = _offer.royaltyInfo[_royaltyInfoIndex];
+        uint256 len = _royaltyInfo.recipients.length;
+        uint256 totalAmount;
+        uint256 effectivePrice = (_price * _effectivePriceMultiplier) / 10000;
+        for (uint256 i = 0; i < len; ) {
+            address payable recipient = _royaltyInfo.recipients[i];
+            uint256 amount = (_royaltyInfo.bps[i] * effectivePrice) / 10000;
+            totalAmount += amount;
+            if (recipient == address(0)) {
+                // goes to seller's treasury
+                sellerRoyalties = amount;
+            } else {
+                // try to transfer the funds. Or better make it available to withdraw?
+                FundsLib.transferFundsFromProtocol(exchangeToken, recipient, amount);
+            }
+
+            unchecked {
+                i++;
+            }
+        }
+
+        // if there is a remainder due to rounding, it goes to the seller's treasury
+        sellerRoyalties += (_effectivePriceMultiplier * _escrowedRoyaltyAmount) / 10000 - totalAmount;
     }
 }

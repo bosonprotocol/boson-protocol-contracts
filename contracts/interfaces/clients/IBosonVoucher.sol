@@ -10,12 +10,11 @@ import { IERC721ReceiverUpgradeable } from "@openzeppelin/contracts-upgradeable/
  *
  * @notice This is the interface for the Boson Protocol ERC-721 Voucher contract.
  *
- * The ERC-165 identifier for this interface is: 0x5235dd2b
+ * The ERC-165 identifier for this interface is: 0x6a474d2c
  */
 interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable, IERC721ReceiverUpgradeable {
     event ContractURIChanged(string contractURI);
-    event RoyaltyPercentageChanged(uint256 royaltyPercentage);
-    event VoucherInitialized(uint256 indexed sellerId, uint256 indexed royaltyPercentage, string indexed contractURI);
+    event VoucherInitialized(uint256 indexed sellerId, string indexed contractURI);
     event RangeReserved(uint256 indexed offerId, Range range);
     event VouchersPreMinted(uint256 indexed offerId, uint256 startId, uint256 endId);
 
@@ -92,27 +91,6 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable, IERC7
         uint256 _tokenId,
         uint256 _salePrice
     ) external view returns (address receiver, uint256 royaltyAmount);
-
-    /**
-     * @notice Sets the royalty percentage.
-     * Can only be called by the owner or during the initialization
-     *
-     * Emits RoyaltyPercentageChanged if successful.
-     *
-     * Reverts if:
-     * - Caller is not the owner.
-     * - `_newRoyaltyPercentage` is greater than max royalty percentage defined in the protocol
-     *
-     * @param _newRoyaltyPercentage fee in percentage. e.g. 500 = 5%
-     */
-    function setRoyaltyPercentage(uint256 _newRoyaltyPercentage) external;
-
-    /**
-     * @notice Gets the royalty percentage.
-     *
-     * @return royalty percentage
-     */
-    function getRoyaltyPercentage() external view returns (uint256);
 
     /**
      * @notice Reserves a range of vouchers to be associated with an offer

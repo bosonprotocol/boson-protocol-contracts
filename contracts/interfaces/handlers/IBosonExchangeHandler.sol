@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonExchangeEvents } from "../events/IBosonExchangeEvents.sol";
 import { IBosonTwinEvents } from "../events/IBosonTwinEvents.sol";
 import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
@@ -11,11 +12,11 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xf34a48fa
+ * The ERC-165 identifier for this interface is: 0xe480bd0f
  */
-interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents {
+interface IBosonExchangeHandler is BosonErrors, IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents {
     /**
-     * @notice Commits to an offer (first step of an exchange).
+     * @notice Commits to a static offer (first step of an exchange).
      *
      * Emits a BuyerCommitted event if successful.
      * Issues a voucher to the buyer address.
@@ -73,30 +74,6 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @param _tokenId - the id of the token to use for the conditional commit
      */
     function commitToConditionalOffer(address payable _buyer, uint256 _offerId, uint256 _tokenId) external payable;
-
-    /**
-     * @notice Commits to a preminted offer (first step of an exchange).
-     *
-     * Emits a BuyerCommitted event if successful.
-     *
-     * Reverts if:
-     * - The exchanges region of protocol is paused
-     * - The buyers region of protocol is paused
-     * - Caller is not the voucher contract, owned by the seller
-     * - Exchange exists already
-     * - Offer has been voided
-     * - Offer has expired
-     * - Offer is not yet available for commits
-     * - Buyer account is inactive
-     * - Buyer is token-gated (conditional commit requirements not met or already used)
-     * - Buyer is token-gated and condition has a range.
-     * - Seller has less funds available than sellerDeposit and price
-     *
-     * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
-     * @param _offerId - the id of the offer to commit to
-     * @param _exchangeId - the id of the exchange
-     */
-    function commitToPreMintedOffer(address payable _buyer, uint256 _offerId, uint256 _exchangeId) external;
 
     /**
      * @notice Completes an exchange.
@@ -217,6 +194,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * Emits a VoucherTransferred event if successful.
      *
      * Reverts if
+     * - The exchanges region of protocol is paused
      * - The buyers region of protocol is paused
      * - Caller is not a clone address associated with the seller
      * - Exchange does not exist
@@ -224,10 +202,34 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * - Voucher has expired
      * - New buyer's existing account is deactivated
      *
-     * @param _exchangeId - the id of the exchange
+     * @param _tokenId - the voucher id
      * @param _newBuyer - the address of the new buyer
      */
-    function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer) external;
+    function onVoucherTransferred(uint256 _tokenId, address payable _newBuyer) external;
+
+    /**
+     * @notice Handle pre-minted voucher transfer
+     *
+     * Reverts if:
+     * - The exchanges region of protocol is paused
+     * - The buyers region of protocol is paused
+     * - Caller is not a clone address associated with the seller
+     * - Incoming voucher clone address is not the caller
+     * - Offer price is discovery, transaction is not starting from protocol nor seller is _from address
+     * - Any reason that ExchangeHandler commitToOfferInternal reverts. See ExchangeHandler.commitToOfferInternal
+     *
+     * @param _tokenId - the voucher id
+     * @param _to - the receiver address
+     * @param _from - the address of current owner
+     * @param _rangeOwner - the address of the preminted range owner
+     * @return committed - true if the voucher was committed
+     */
+    function onPremintedVoucherTransferred(
+        uint256 _tokenId,
+        address payable _to,
+        address _from,
+        address _rangeOwner
+    ) external returns (bool committed);
 
     /**
      * @notice Checks if the given exchange in a finalized state.
@@ -271,6 +273,44 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @return nextExchangeId - the next exchange id
      */
     function getNextExchangeId() external view returns (uint256 nextExchangeId);
+
+    /**
+     * @notice Gets EIP2981 style royalty information for a chosen offer or exchange.
+     *
+     * EIP2981 supports only 1 recipient, therefore this method defaults to treasury address.
+     * This method is not exactly compliant with EIP2981, since it does not accept `salePrice` and does not return `royaltyAmount,
+     * but it rather returns `royaltyPercentage` which is the sum of all bps (an exchange can have multiple royalty recipients).
+     *
+     * This function is meant to be primarly used by boson voucher client, which implements EIP2981.
+     *
+     * Reverts if exchange does not exist.
+     *
+     * @param _queryId - offer id or exchange id
+     * @param _isExchangeId - indicates if the query represents the exchange id
+     * @return receiver - the address of the royalty receiver (seller's treasury address)
+     * @return royaltyPercentage - the royalty percentage in bps
+     */
+    function getEIP2981Royalties(
+        uint256 _queryId,
+        bool _isExchangeId
+    ) external view returns (address receiver, uint256 royaltyPercentage);
+
+    /**
+     * @notice Gets royalty information for a chosen offer or exchange.
+     *
+     * Returns a list of royalty recipients and corresponding bps. Format is compatible with Manifold and Foundation royalties
+     * and can be directly used by royalty registry.
+     *
+     * Reverts if exchange does not exist.
+     *
+     * @param _queryId - offer id or exchange id
+     * @param _isExchangeId - indicates if the query represents the exchange id
+     * @return royaltyInfo - list of royalty recipients and corresponding bps
+     */
+    function getRoyalties(
+        uint256 _queryId,
+        bool _isExchangeId
+    ) external view returns (BosonTypes.RoyaltyInfo memory royaltyInfo);
 
     /**
      * @notice Gets exchange receipt.

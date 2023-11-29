@@ -1,6 +1,6 @@
-const hre = require("hardhat");
+const { ethers } = require("hardhat");
 const { expect } = require("chai");
-const { id } = hre.ethers;
+const { id, getContractAt } = ethers;
 const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
@@ -21,6 +21,8 @@ describe("IBosonPauseHandler", function () {
   let pauser, rando;
   let erc165, pauseHandler, support, regions;
   let snapshotId;
+  let bosonErrors;
+
   // uint256 constant ALL_REGIONS_MASK = (1 << (uint256(type(BosonTypes.PausableRegion).max) + 1)) - 1;
   const ALL_REGIONS_MASK = (1 << PausableRegion.Regions.length) - 1;
 
@@ -38,6 +40,8 @@ describe("IBosonPauseHandler", function () {
       signers: [pauser, rando],
       contractInstances: { erc165, pauseHandler },
     } = await setupTestEnvironment(contracts));
+
+    bosonErrors = await getContractAt("BosonErrors", await pauseHandler.getAddress());
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -147,7 +151,10 @@ describe("IBosonPauseHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("Caller does not have PAUSER role", async function () {
           // Attempt to pause without PAUSER role, expecting revert
-          await expect(pauseHandler.connect(rando).pause([])).to.revertedWith(RevertReasons.ACCESS_DENIED);
+          await expect(pauseHandler.connect(rando).pause([])).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.ACCESS_DENIED
+          );
         });
       });
     });
@@ -203,12 +210,18 @@ describe("IBosonPauseHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to unpause without PAUSER role, expecting revert
-          await expect(pauseHandler.connect(rando).unpause([])).to.revertedWith(RevertReasons.ACCESS_DENIED);
+          await expect(pauseHandler.connect(rando).unpause([])).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.ACCESS_DENIED
+          );
         });
 
         it("Protocol is not currently paused", async function () {
           // Attempt to unpause while not paused, expecting revert
-          await expect(pauseHandler.connect(pauser).unpause([])).to.revertedWith(RevertReasons.NOT_PAUSED);
+          await expect(pauseHandler.connect(pauser).unpause([])).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.NOT_PAUSED
+          );
         });
       });
     });

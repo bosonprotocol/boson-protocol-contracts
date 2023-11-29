@@ -14,6 +14,7 @@ const {
   toUtf8Bytes,
   solidityPackedKeccak256,
   ZeroAddress,
+  ZeroHash,
 } = ethers;
 const { getFacets } = require("../../scripts/config/facet-deploy.js");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("./constants");
@@ -21,7 +22,8 @@ const Role = require("../../scripts/domain/Role");
 const { toHexString } = require("../../scripts/util/utils.js");
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
-const { ZeroHash } = require("ethers");
+const { RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
+const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo.js");
 
 function getEvent(receipt, factory, eventName) {
   let found = false;
@@ -134,6 +136,37 @@ function compareOfferStructs(returnedOffer) {
   return true;
 }
 
+// ToDo: make a generic predicate for comparing structs
+/** Predicate to compare RoyaltyRecipientList in emitted events
+ * Bind Royalty Recipient List to this function and pass it to .withArgs() instead of the expected Royalty recipient list
+ * If returned and expected Royalty Recipient Lists are equal, the test will pass, otherwise it raises an error
+ * 
+ * Example
+ * 
+ * await expect(tx)
+    .to.emit(accountHandler, "RoyaltyRecipientsChanged")
+    .withArgs(seller.id, compareRoyaltyRecipientList.bind(expectedRoyaltyRecipientList.toStruct()), admin.address);
+ * 
+ * @param {*} returnedRoyaltyRecipientList 
+ * @returns 
+ */
+function compareRoyaltyRecipientLists(returnedRoyaltyRecipientList) {
+  expect(RoyaltyRecipientList.fromStruct(returnedRoyaltyRecipientList).toStruct()).to.deep.equal(this);
+  return true;
+}
+
+/** Predicate to compare RoyaltyInfo in emitted events
+ * Bind Royalty Info to this function and pass it to .withArgs() instead of the expected Royalty Info struct
+ * If returned and expected Royalty Infos are equal, the test will pass, otherwise it raises an error
+ *
+ * @param {*} returnedRoyaltyInfo
+ * @returns
+ */
+function compareRoyaltyInfo(returnedRoyaltyInfo) {
+  expect(RoyaltyInfo.fromStruct(returnedRoyaltyInfo).toStruct()).to.deep.equal(this);
+  return true;
+}
+
 async function setNextBlockTimestamp(timestamp, mine = false) {
   if (typeof timestamp == "string" && timestamp.startsWith("0x0") && timestamp.length > 3)
     timestamp = "0x" + timestamp.substring(3);
@@ -141,6 +174,13 @@ async function setNextBlockTimestamp(timestamp, mine = false) {
 
   // when testing static call, a block must be mined to get the correct timestamp
   if (mine) await provider.send("evm_mine", []);
+}
+
+async function getCurrentBlockAndSetTimeForward(seconds) {
+  const blockNumber = await provider.getBlockNumber();
+  const block = await provider.getBlock(blockNumber);
+  const newTime = block.timestamp + Number(seconds);
+  await setNextBlockTimestamp(newTime);
 }
 
 function getSignatureParameters(signature) {
@@ -331,7 +371,7 @@ async function getFacetsWithArgs(facetNames, config) {
   const facets = await getFacets(config);
   const keys = Object.keys(facets).filter((key) => facetNames.includes(key));
   return keys.reduce((obj, key) => {
-    obj[key] = facets[key];
+    obj[key] = { init: facets[key].init, constructorArgs: facets[key].constructorArgs };
     return obj;
   }, {});
 }
@@ -358,7 +398,7 @@ function objectToArray(input) {
   return result;
 }
 
-async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAddress } = {}) {
+async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAddress, wethAddress } = {}) {
   // Load modules only here to avoid the caching issues in upgrade tests
   const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
   const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
@@ -383,6 +423,8 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
     "ProtocolInitializationHandlerFacet",
     "ConfigHandlerFacet",
     "MetaTransactionsHandlerFacet",
+    "SequentialCommitHandlerFacet",
+    "PriceDiscoveryHandlerFacet",
   ];
 
   const signers = await getSigners();
@@ -437,7 +479,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
       maxDisputesPerBatch: 100,
       maxAllowedSellers: 100,
       maxTotalOfferFeePercentage: 4000, //40%
-      maxRoyaltyPecentage: 1000, //10%
+      maxRoyaltyPercentage: 1000, //10%
       minResolutionPeriod: oneWeek,
       maxResolutionPeriod: oneMonth,
       minDisputePeriod: oneWeek,
@@ -452,6 +494,8 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
   ];
 
   const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
+  facetsToDeploy["SequentialCommitHandlerFacet"].constructorArgs[0] = wethAddress || ZeroAddress; // update only weth address
+  facetsToDeploy["PriceDiscoveryHandlerFacet"].constructorArgs[0] = wethAddress || ZeroAddress; // update only weth address
 
   // Cut the protocol handler facets into the Diamond
   await deployAndCutFacets(await protocolDiamond.getAddress(), facetsToDeploy, maxPriorityFeePerGas);
@@ -484,6 +528,17 @@ function deriveTokenId(offerId, exchangeId) {
   return (BigInt(offerId) << 128n) + BigInt(exchangeId);
 }
 
+function* incrementer() {
+  let i = 0;
+  while (true) {
+    const reset = yield (i++).toString();
+    if (reset) {
+      // reset to 0 instead of 1 to not count the reset call
+      i = 0;
+    }
+  }
+}
+
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
 exports.getEvent = getEvent;
 exports.eventEmittedWithArgs = eventEmittedWithArgs;
@@ -497,9 +552,13 @@ exports.getMappingStoragePosition = getMappingStoragePosition;
 exports.paddingType = paddingType;
 exports.getFacetsWithArgs = getFacetsWithArgs;
 exports.compareOfferStructs = compareOfferStructs;
+exports.compareRoyaltyRecipientLists = compareRoyaltyRecipientLists;
 exports.objectToArray = objectToArray;
+exports.deriveTokenId = deriveTokenId;
+exports.incrementer = incrementer;
+exports.getCurrentBlockAndSetTimeForward = getCurrentBlockAndSetTimeForward;
 exports.setupTestEnvironment = setupTestEnvironment;
 exports.getSnapshot = getSnapshot;
 exports.revertToSnapshot = revertToSnapshot;
-exports.deriveTokenId = deriveTokenId;
 exports.getSellerSalt = getSellerSalt;
+exports.compareRoyaltyInfo = compareRoyaltyInfo;

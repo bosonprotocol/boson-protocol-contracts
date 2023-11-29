@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
@@ -16,7 +17,7 @@ import { ClientLib } from "../libs/ClientLib.sol";
  * to use `BeaconClientBase` instead
  *
  */
-abstract contract ClientBase is BosonTypes {
+abstract contract ClientBase is BosonTypes, BosonErrors {
     /**
      * @dev Modifier that checks that the caller has a specific role.
      *
@@ -28,7 +29,7 @@ abstract contract ClientBase is BosonTypes {
      * @param _role - the role to check
      */
     modifier onlyRole(bytes32 _role) {
-        require(ClientLib.hasRole(_role), ACCESS_DENIED);
+        if (!ClientLib.hasRole(_role)) revert AccessDenied();
         _;
     }
 

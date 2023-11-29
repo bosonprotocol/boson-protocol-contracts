@@ -1,3 +1,9 @@
+[submodule "submodules/royalty-registry-solidity"]
+	path = submodules/royalty-registry-solidity
+	url = git@github.com:manifoldxyz/royalty-registry-solidity.git
 [submodule "submodules/seaport"]
 	path = submodules/seaport
 	url = git@github.com:ProjectOpenSea/seaport.git
+[submodule "submodules/lssvm"]
+	path = submodules/lssvm
+	url = https://github.com/sudoswap/lssvm

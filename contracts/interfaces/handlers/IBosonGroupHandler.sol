@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonGroupEvents } from "../events/IBosonGroupEvents.sol";
 
 /**
@@ -11,7 +12,7 @@ import { IBosonGroupEvents } from "../events/IBosonGroupEvents.sol";
  *
  * The ERC-165 identifier for this interface is: 0x08ccdf47
  */
-interface IBosonGroupHandler is IBosonGroupEvents {
+interface IBosonGroupHandler is BosonErrors, IBosonGroupEvents {
     /**
      * @notice Creates a group.
      *

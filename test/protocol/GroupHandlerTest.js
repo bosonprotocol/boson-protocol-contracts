@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { ZeroAddress, getSigners, parseUnits, getContractFactory } = ethers;
+const { ZeroAddress, getSigners, parseUnits, getContractFactory, getContractAt } = ethers;
 const { assert, expect } = require("chai");
 
 const Group = require("../../scripts/domain/Group");
@@ -46,6 +46,7 @@ describe("IBosonGroupHandler", function () {
   let emptyAuthToken;
   let agentId;
   let snapshotId;
+  let bosonErrors;
 
   before(async function () {
     accountId.next(true);
@@ -66,6 +67,8 @@ describe("IBosonGroupHandler", function () {
       signers: [pauser, rando, admin, treasury, adminDR, treasuryDR],
       contractInstances: { erc165, accountHandler, offerHandler, groupHandler, pauseHandler },
     } = await setupTestEnvironment(contracts));
+
+    bosonErrors = await getContractAt("BosonErrors", await accountHandler.getAddress());
 
     // make all account the same
     assistant = admin;
@@ -297,14 +300,16 @@ describe("IBosonGroupHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
 
           // Attempt to create a group expecting revert
-          await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+          await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.REGION_PAUSED
           );
         });
 
         it("Caller not assistant of any seller", async function () {
           // Attempt to Create a group, expecting revert
-          await expect(groupHandler.connect(rando).createGroup(group, condition)).to.revertedWith(
+          await expect(groupHandler.connect(rando).createGroup(group, condition)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NOT_ASSISTANT
           );
         });
@@ -325,7 +330,8 @@ describe("IBosonGroupHandler", function () {
           group.offerIds = ["2", "6"];
 
           // Attempt to create a group, expecting revert
-          await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+          await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NOT_ASSISTANT
           );
         });
@@ -335,7 +341,8 @@ describe("IBosonGroupHandler", function () {
           group.offerIds = ["1", "999"];
 
           // Attempt to create a group, expecting revert
-          await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+          await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_SUCH_OFFER
           );
 
@@ -343,7 +350,8 @@ describe("IBosonGroupHandler", function () {
           group.offerIds = ["0", "4"];
 
           // Attempt to create a group, expecting revert
-          await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+          await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_SUCH_OFFER
           );
         });
@@ -356,7 +364,8 @@ describe("IBosonGroupHandler", function () {
           group.offerIds = ["1", "2", "4"];
 
           // Attempt to create a group, expecting revert
-          await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+          await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.OFFER_MUST_BE_UNIQUE
           );
         });
@@ -366,7 +375,8 @@ describe("IBosonGroupHandler", function () {
           group.offerIds = ["1", "1", "4"];
 
           // Attempt to create a group, expecting revert
-          await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+          await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.OFFER_MUST_BE_UNIQUE
           );
         });
@@ -380,7 +390,8 @@ describe("IBosonGroupHandler", function () {
             condition.tokenAddress = await rando.getAddress();
 
             // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
@@ -389,7 +400,8 @@ describe("IBosonGroupHandler", function () {
             condition.minTokenId = "20";
 
             // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
@@ -398,7 +410,8 @@ describe("IBosonGroupHandler", function () {
             condition.threshold = "100";
 
             // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
@@ -407,7 +420,8 @@ describe("IBosonGroupHandler", function () {
             condition.maxCommits = "5";
 
             // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
@@ -416,7 +430,8 @@ describe("IBosonGroupHandler", function () {
             condition.maxTokenId = "5";
 
             // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
@@ -425,7 +440,8 @@ describe("IBosonGroupHandler", function () {
             condition.tokenType = TokenType.NonFungibleToken;
 
             // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
@@ -434,7 +450,8 @@ describe("IBosonGroupHandler", function () {
             condition.gating = GatingType.PerTokenId;
 
             // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
@@ -457,7 +474,8 @@ describe("IBosonGroupHandler", function () {
             condition.tokenAddress = ZeroAddress;
 
             // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
@@ -466,7 +484,8 @@ describe("IBosonGroupHandler", function () {
             condition.maxCommits = "0";
 
             // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
@@ -475,7 +494,8 @@ describe("IBosonGroupHandler", function () {
             condition.threshold = "0";
 
             // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
@@ -486,7 +506,8 @@ describe("IBosonGroupHandler", function () {
             condition.maxTokenId = "90";
 
             // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
@@ -497,7 +518,8 @@ describe("IBosonGroupHandler", function () {
             condition.maxTokenId = "110";
 
             // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
@@ -508,7 +530,8 @@ describe("IBosonGroupHandler", function () {
             condition.maxTokenId = "110";
 
             // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
@@ -518,7 +541,8 @@ describe("IBosonGroupHandler", function () {
             condition.gating = GatingType.PerTokenId;
 
             // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
@@ -528,7 +552,8 @@ describe("IBosonGroupHandler", function () {
             condition.gating = GatingType.PerTokenId;
 
             // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
@@ -549,7 +574,8 @@ describe("IBosonGroupHandler", function () {
             condition.tokenAddress = ZeroAddress;
 
             // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
@@ -558,7 +584,8 @@ describe("IBosonGroupHandler", function () {
             condition.threshold = "10";
 
             // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
@@ -567,7 +594,8 @@ describe("IBosonGroupHandler", function () {
             condition.maxCommits = "0";
 
             // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
@@ -576,7 +604,8 @@ describe("IBosonGroupHandler", function () {
             condition.tokenType = TokenType.MultiToken;
 
             // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
@@ -585,7 +614,8 @@ describe("IBosonGroupHandler", function () {
             condition.tokenType = TokenType.FungibleToken;
 
             // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
@@ -595,7 +625,8 @@ describe("IBosonGroupHandler", function () {
             condition.maxTokenId = "10";
 
             // Attempt to create the group, expecting revert
-            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWith(
+            await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
+              bosonErrors,
               RevertReasons.INVALID_CONDITION_PARAMETERS
             );
           });
@@ -654,9 +685,9 @@ describe("IBosonGroupHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
 
           // Attempt to add offers to a group, expecting revert
-          await expect(groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(
+            groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("Group does not exist", async function () {
@@ -664,24 +695,24 @@ describe("IBosonGroupHandler", function () {
           group.id = "444";
 
           // Attempt to add offers to the group, expecting revert
-          await expect(groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
-            RevertReasons.NO_SUCH_GROUP
-          );
+          await expect(
+            groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_GROUP);
 
           // Set invalid id
           group.id = "0";
 
           // Attempt to add offers to group, expecting revert
-          await expect(groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
-            RevertReasons.NO_SUCH_GROUP
-          );
+          await expect(
+            groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_GROUP);
         });
 
         it("Caller is not the seller of the group", async function () {
           // Attempt to add offers to group, expecting revert
-          await expect(groupHandler.connect(rando).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
-            RevertReasons.NOT_ASSISTANT
-          );
+          await expect(
+            groupHandler.connect(rando).addOffersToGroup(group.id, offerIdsToAdd)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
         });
 
         it("Caller is not the seller of all offers", async function () {
@@ -700,9 +731,9 @@ describe("IBosonGroupHandler", function () {
           offerIdsToAdd = ["1", "6"];
 
           // Attempt to add offers to group, expecting revert
-          await expect(groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
-            RevertReasons.NOT_ASSISTANT
-          );
+          await expect(
+            groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
         });
 
         it("Offer is already part of another group", async function () {
@@ -711,9 +742,9 @@ describe("IBosonGroupHandler", function () {
           await groupHandler.connect(assistant).createGroup(group, condition);
 
           // Attempt to add offers to a group, expecting revert
-          await expect(groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
-            RevertReasons.OFFER_MUST_BE_UNIQUE
-          );
+          await expect(
+            groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_MUST_BE_UNIQUE);
         });
 
         it("Offer is duplicated", async function () {
@@ -721,9 +752,9 @@ describe("IBosonGroupHandler", function () {
           offerIdsToAdd = ["1", "1", "4"];
 
           // Attempt to add offers to a group, expecting revert
-          await expect(groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
-            RevertReasons.OFFER_MUST_BE_UNIQUE
-          );
+          await expect(
+            groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_MUST_BE_UNIQUE);
         });
 
         it("Adding nothing", async function () {
@@ -731,9 +762,9 @@ describe("IBosonGroupHandler", function () {
           offerIdsToAdd = [];
 
           // Attempt to add offers from the group, expecting revert
-          await expect(groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
-            RevertReasons.NOTHING_UPDATED
-          );
+          await expect(
+            groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOTHING_UPDATED);
         });
 
         it("Offer does not exist", async function () {
@@ -741,17 +772,17 @@ describe("IBosonGroupHandler", function () {
           offerIdsToAdd = ["1", "999"];
 
           // Attempt to add offers to a group, expecting revert
-          await expect(groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
-            RevertReasons.NO_SUCH_OFFER
-          );
+          await expect(
+            groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_OFFER);
 
           // Set invalid offer id
           offerIdsToAdd = ["0", "2"];
 
           // Attempt to add offers to a group, expecting revert
-          await expect(groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
-            RevertReasons.NO_SUCH_OFFER
-          );
+          await expect(
+            groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_OFFER);
         });
       });
     });
@@ -850,7 +881,7 @@ describe("IBosonGroupHandler", function () {
           // Attempt to remove offers to a group, expecting revert
           await expect(
             groupHandler.connect(assistant).removeOffersFromGroup(group.id, offerIdsToRemove)
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("Group does not exist", async function () {
@@ -860,7 +891,7 @@ describe("IBosonGroupHandler", function () {
           // Attempt to remove offers from the group, expecting revert
           await expect(
             groupHandler.connect(assistant).removeOffersFromGroup(group.id, offerIdsToRemove)
-          ).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_GROUP);
 
           // Set invalid id
           group.id = "0";
@@ -868,14 +899,14 @@ describe("IBosonGroupHandler", function () {
           // Attempt to remove offers from group, expecting revert
           await expect(
             groupHandler.connect(assistant).removeOffersFromGroup(group.id, offerIdsToRemove)
-          ).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_GROUP);
         });
 
         it("Caller is not the seller of the group", async function () {
           // Attempt to remove offers from the group, expecting revert
-          await expect(groupHandler.connect(rando).removeOffersFromGroup(group.id, offerIdsToRemove)).to.revertedWith(
-            RevertReasons.NOT_ASSISTANT
-          );
+          await expect(
+            groupHandler.connect(rando).removeOffersFromGroup(group.id, offerIdsToRemove)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
         });
 
         it("Offer is not a part of the group", async function () {
@@ -885,7 +916,7 @@ describe("IBosonGroupHandler", function () {
           // Attempt to remove offers from the group, expecting revert
           await expect(
             groupHandler.connect(assistant).removeOffersFromGroup(group.id, offerIdsToRemove)
-          ).to.revertedWith(RevertReasons.OFFER_NOT_IN_GROUP);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_NOT_IN_GROUP);
 
           // create an offer and add it to another group
           await offerHandler
@@ -897,7 +928,7 @@ describe("IBosonGroupHandler", function () {
           // Attempt to remove offers from a group, expecting revert
           await expect(
             groupHandler.connect(assistant).removeOffersFromGroup(group.id, offerIdsToRemove)
-          ).to.revertedWith(RevertReasons.OFFER_NOT_IN_GROUP);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_NOT_IN_GROUP);
         });
 
         it("Removing nothing", async function () {
@@ -907,7 +938,7 @@ describe("IBosonGroupHandler", function () {
           // Attempt to remove offers from the group, expecting revert
           await expect(
             groupHandler.connect(assistant).removeOffersFromGroup(group.id, offerIdsToRemove)
-          ).to.revertedWith(RevertReasons.NOTHING_UPDATED);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOTHING_UPDATED);
         });
       });
     });
@@ -967,9 +998,9 @@ describe("IBosonGroupHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
 
           // Attempt to set group condition, expecting revert
-          await expect(groupHandler.connect(assistant).setGroupCondition(group.id, condition)).to.revertedWith(
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(
+            groupHandler.connect(assistant).setGroupCondition(group.id, condition)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
         it("Group does not exist", async function () {
@@ -977,22 +1008,23 @@ describe("IBosonGroupHandler", function () {
           group.id = "444";
 
           // Attempt to update the group, expecting revert
-          await expect(groupHandler.connect(assistant).setGroupCondition(group.id, condition)).to.revertedWith(
-            RevertReasons.NO_SUCH_GROUP
-          );
+          await expect(
+            groupHandler.connect(assistant).setGroupCondition(group.id, condition)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_GROUP);
 
           // Set invalid id
           group.id = "0";
 
           // Attempt to update the group, expecting revert
-          await expect(groupHandler.connect(assistant).setGroupCondition(group.id, condition)).to.revertedWith(
-            RevertReasons.NO_SUCH_GROUP
-          );
+          await expect(
+            groupHandler.connect(assistant).setGroupCondition(group.id, condition)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_GROUP);
         });
 
         it("Caller is not the seller of the group", async function () {
           // Attempt to remove offers from the group, expecting revert
-          await expect(groupHandler.connect(rando).setGroupCondition(group.id, condition)).to.revertedWith(
+          await expect(groupHandler.connect(rando).setGroupCondition(group.id, condition)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NOT_ASSISTANT
           );
         });
@@ -1001,9 +1033,9 @@ describe("IBosonGroupHandler", function () {
           condition.method = EvaluationMethod.None;
 
           // Attempt to update the group, expecting revert
-          await expect(groupHandler.connect(assistant).setGroupCondition(group.id, condition)).to.revertedWith(
-            RevertReasons.INVALID_CONDITION_PARAMETERS
-          );
+          await expect(
+            groupHandler.connect(assistant).setGroupCondition(group.id, condition)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_CONDITION_PARAMETERS);
         });
 
         it("Condition 'Threshold' has zero token contract address", async function () {
@@ -1011,9 +1043,9 @@ describe("IBosonGroupHandler", function () {
           condition.tokenAddress = ZeroAddress;
 
           // Attempt to update the group, expecting revert
-          await expect(groupHandler.connect(assistant).setGroupCondition(group.id, condition)).to.revertedWith(
-            RevertReasons.INVALID_CONDITION_PARAMETERS
-          );
+          await expect(
+            groupHandler.connect(assistant).setGroupCondition(group.id, condition)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_CONDITION_PARAMETERS);
         });
 
         it("Condition 'Threshold' has zero max commits", async function () {
@@ -1021,9 +1053,9 @@ describe("IBosonGroupHandler", function () {
           condition.maxCommits = "0";
 
           // Attempt to update the group, expecting revert
-          await expect(groupHandler.connect(assistant).setGroupCondition(group.id, condition)).to.revertedWith(
-            RevertReasons.INVALID_CONDITION_PARAMETERS
-          );
+          await expect(
+            groupHandler.connect(assistant).setGroupCondition(group.id, condition)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_CONDITION_PARAMETERS);
         });
 
         it("Condition 'SpecificToken' has zero token contract address", async function () {
@@ -1031,9 +1063,9 @@ describe("IBosonGroupHandler", function () {
           condition.tokenAddress = ZeroAddress;
 
           // Attempt to update the group, expecting revert
-          await expect(groupHandler.connect(assistant).setGroupCondition(group.id, condition)).to.revertedWith(
-            RevertReasons.INVALID_CONDITION_PARAMETERS
-          );
+          await expect(
+            groupHandler.connect(assistant).setGroupCondition(group.id, condition)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_CONDITION_PARAMETERS);
         });
 
         it("Condition 'SpecificToken' has zero max commits", async function () {
@@ -1041,9 +1073,9 @@ describe("IBosonGroupHandler", function () {
           condition.maxCommits = "0";
 
           // Attempt to update the group, expecting revert
-          await expect(groupHandler.connect(assistant).setGroupCondition(group.id, condition)).to.revertedWith(
-            RevertReasons.INVALID_CONDITION_PARAMETERS
-          );
+          await expect(
+            groupHandler.connect(assistant).setGroupCondition(group.id, condition)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_CONDITION_PARAMETERS);
         });
       });
     });

@@ -42,7 +42,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxEscalationResponsePeriod(_limits.maxEscalationResponsePeriod);
         setBuyerEscalationDepositPercentage(_fees.buyerEscalationDepositPercentage);
         setMaxTotalOfferFeePercentage(_limits.maxTotalOfferFeePercentage);
-        setMaxRoyaltyPecentage(_limits.maxRoyaltyPecentage);
+        setMaxRoyaltyPercentage(_limits.maxRoyaltyPercentage);
         setMaxResolutionPeriod(_limits.maxResolutionPeriod);
         setMinResolutionPeriod(_limits.minResolutionPeriod);
         setMinDisputePeriod(_limits.minDisputePeriod);
@@ -81,7 +81,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _tokenAddress - the Boson Token (ERC-20 contract) address
      */
     function setTokenAddress(address payable _tokenAddress) public override onlyRole(ADMIN) nonReentrant {
-        require(_tokenAddress != address(0), INVALID_ADDRESS);
+        checkNonZeroAddress(_tokenAddress);
         protocolAddresses().token = _tokenAddress;
         emit TokenAddressChanged(_tokenAddress, msgSender());
     }
@@ -107,7 +107,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _treasuryAddress - the the multi-sig wallet address
      */
     function setTreasuryAddress(address payable _treasuryAddress) public override onlyRole(ADMIN) nonReentrant {
-        require(_treasuryAddress != address(0), INVALID_ADDRESS);
+        checkNonZeroAddress(_treasuryAddress);
         protocolAddresses().treasury = _treasuryAddress;
         emit TreasuryAddressChanged(_treasuryAddress, msgSender());
     }
@@ -133,7 +133,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _voucherBeaconAddress - the Boson Voucher beacon contract address
      */
     function setVoucherBeaconAddress(address _voucherBeaconAddress) public override onlyRole(ADMIN) nonReentrant {
-        require(_voucherBeaconAddress != address(0), INVALID_ADDRESS);
+        checkNonZeroAddress(_voucherBeaconAddress);
         protocolAddresses().voucherBeacon = _voucherBeaconAddress;
         emit VoucherBeaconAddressChanged(_voucherBeaconAddress, msgSender());
     }
@@ -159,7 +159,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _beaconProxyAddress - reference proxy implementation address
      */
     function setBeaconProxyAddress(address _beaconProxyAddress) public override onlyRole(ADMIN) nonReentrant {
-        require(_beaconProxyAddress != address(0), INVALID_ADDRESS);
+        checkNonZeroAddress(_beaconProxyAddress);
         protocolAddresses().beaconProxy = _beaconProxyAddress;
         emit BeaconProxyAddressChanged(_beaconProxyAddress, msgSender());
     }
@@ -189,7 +189,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function setProtocolFeePercentage(uint256 _protocolFeePercentage) public override onlyRole(ADMIN) nonReentrant {
         // Make sure percentage is less than 10000
-        require(_protocolFeePercentage <= 10000, FEE_PERCENTAGE_INVALID);
+        checkMaxPercententage(_protocolFeePercentage);
 
         // Store fee percentage
         protocolFees().percentage = _protocolFeePercentage;
@@ -249,7 +249,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         uint256 _maxEscalationResponsePeriod
     ) public override onlyRole(ADMIN) nonReentrant {
         // Make sure _maxEscalationResponsePeriod is greater than 0
-        checkNonZero(_maxEscalationResponsePeriod);
+        checkNonZeroValue(_maxEscalationResponsePeriod);
 
         protocolLimits().maxEscalationResponsePeriod = _maxEscalationResponsePeriod;
         emit MaxEscalationResponsePeriodChanged(_maxEscalationResponsePeriod, msgSender());
@@ -282,7 +282,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         uint16 _maxTotalOfferFeePercentage
     ) public override onlyRole(ADMIN) nonReentrant {
         // Make sure percentage is less than 10000
-        require(_maxTotalOfferFeePercentage <= 10000, FEE_PERCENTAGE_INVALID);
+        checkMaxPercententage(_maxTotalOfferFeePercentage);
 
         // Store fee percentage
         protocolLimits().maxTotalOfferFeePercentage = _maxTotalOfferFeePercentage;
@@ -307,27 +307,27 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Reverts if:
      * - The _maxRoyaltyPercentage is zero.
-     * - The _maxRoyaltyPecentage is greater than 10000.
+     * - The _maxRoyaltyPercentage is greater than 10000.
      *
      * @dev Caller must have ADMIN role.
      *
-     * @param _maxRoyaltyPecentage - the maximum royalty percentage
+     * @param _maxRoyaltyPercentage - the maximum royalty percentage
      *
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
      */
-    function setMaxRoyaltyPecentage(uint16 _maxRoyaltyPecentage) public override onlyRole(ADMIN) nonReentrant {
+    function setMaxRoyaltyPercentage(uint16 _maxRoyaltyPercentage) public override onlyRole(ADMIN) nonReentrant {
         // Make sure percentage is greater than 0
-        checkNonZero(_maxRoyaltyPecentage);
+        checkNonZeroValue(_maxRoyaltyPercentage);
 
         // Make sure percentage is less than 10000
-        require(_maxRoyaltyPecentage <= 10000, FEE_PERCENTAGE_INVALID);
+        checkMaxPercententage(_maxRoyaltyPercentage);
 
         // Store fee percentage
-        protocolLimits().maxRoyaltyPecentage = _maxRoyaltyPecentage;
+        protocolLimits().maxRoyaltyPercentage = _maxRoyaltyPercentage;
 
         // Notify watchers of state change
-        emit MaxRoyaltyPercentageChanged(_maxRoyaltyPecentage, msgSender());
+        emit MaxRoyaltyPercentageChanged(_maxRoyaltyPercentage, msgSender());
     }
 
     /**
@@ -335,8 +335,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @return the maximum royalty percentage
      */
-    function getMaxRoyaltyPecentage() external view override returns (uint16) {
-        return protocolLimits().maxRoyaltyPecentage;
+    function getMaxRoyaltyPercentage() external view override returns (uint16) {
+        return protocolLimits().maxRoyaltyPercentage;
     }
 
     /**
@@ -357,7 +357,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         uint256 _buyerEscalationDepositPercentage
     ) public override onlyRole(ADMIN) nonReentrant {
         // Make sure percentage is less than 10000
-        require(_buyerEscalationDepositPercentage <= 10000, FEE_PERCENTAGE_INVALID);
+        checkMaxPercententage(_buyerEscalationDepositPercentage);
 
         // Store fee percentage
         protocolFees().buyerEscalationDepositPercentage = _buyerEscalationDepositPercentage;
@@ -394,11 +394,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         AuthTokenType _authTokenType,
         address _authTokenContract
     ) external override onlyRole(ADMIN) nonReentrant {
-        require(
-            _authTokenType != AuthTokenType.None && _authTokenType != AuthTokenType.Custom,
-            INVALID_AUTH_TOKEN_TYPE
-        );
-        require(_authTokenContract != address(0), INVALID_ADDRESS);
+        if (_authTokenType == AuthTokenType.None || _authTokenType == AuthTokenType.Custom)
+            revert InvalidAuthTokenType();
+        checkNonZeroAddress(_authTokenContract);
         protocolLookups().authTokenContracts[_authTokenType] = _authTokenContract;
         emit AuthTokenContractChanged(_authTokenType, _authTokenContract, msgSender());
     }
@@ -426,13 +424,13 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function setMinResolutionPeriod(uint256 _minResolutionPeriod) public override onlyRole(ADMIN) nonReentrant {
         // Make sure _maxResolutionPeriod is greater than 0
-        checkNonZero(_minResolutionPeriod);
+        checkNonZeroValue(_minResolutionPeriod);
 
         // cache protocol limits
         ProtocolLib.ProtocolLimits storage limits = protocolLimits();
 
         // Make sure _minResolutionPeriod is less than _maxResolutionPeriod
-        require(_minResolutionPeriod <= limits.maxResolutionPeriod, INVALID_RESOLUTION_PERIOD);
+        if (_minResolutionPeriod > limits.maxResolutionPeriod) revert InvalidResolutionPeriod();
 
         limits.minResolutionPeriod = _minResolutionPeriod;
         emit MinResolutionPeriodChanged(_minResolutionPeriod, msgSender());
@@ -460,13 +458,13 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function setMaxResolutionPeriod(uint256 _maxResolutionPeriod) public override onlyRole(ADMIN) nonReentrant {
         // Make sure _maxResolutionPeriod is greater than 0
-        checkNonZero(_maxResolutionPeriod);
+        checkNonZeroValue(_maxResolutionPeriod);
 
         // cache protocol limits
         ProtocolLib.ProtocolLimits storage limits = protocolLimits();
 
         // Make sure _maxResolutionPeriod is greater than _minResolutionPeriod
-        require(_maxResolutionPeriod >= limits.minResolutionPeriod, INVALID_RESOLUTION_PERIOD);
+        if (_maxResolutionPeriod < limits.minResolutionPeriod) revert InvalidResolutionPeriod();
 
         limits.maxResolutionPeriod = _maxResolutionPeriod;
         emit MaxResolutionPeriodChanged(_maxResolutionPeriod, msgSender());
@@ -492,7 +490,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function setMinDisputePeriod(uint256 _minDisputePeriod) public override onlyRole(ADMIN) nonReentrant {
         // Make sure _minDisputePeriod is greater than 0
-        checkNonZero(_minDisputePeriod);
+        checkNonZeroValue(_minDisputePeriod);
 
         protocolLimits().minDisputePeriod = _minDisputePeriod;
         emit MinDisputePeriodChanged(_minDisputePeriod, msgSender());
@@ -519,7 +517,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     function setAccessControllerAddress(
         address _accessControllerAddress
     ) external override onlyRole(ADMIN) nonReentrant {
-        require(_accessControllerAddress != address(0), INVALID_ADDRESS);
+        checkNonZeroAddress(_accessControllerAddress);
         DiamondLib.diamondStorage().accessController = IAccessControl(_accessControllerAddress);
         emit AccessControllerAddressChanged(_accessControllerAddress, msgSender());
     }
@@ -533,7 +531,30 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         return address(DiamondLib.diamondStorage().accessController);
     }
 
-    function checkNonZero(uint256 _value) internal pure {
-        require(_value != 0, VALUE_ZERO_NOT_ALLOWED);
+    /**
+     * @notice Checks that supplied value is not 0.
+     *
+     * Reverts if the value is zero
+     */
+    function checkNonZeroValue(uint256 _value) internal pure {
+        if (_value == 0) revert ValueZeroNotAllowed();
+    }
+
+    /**
+     * @notice Checks that supplied value is not address 0.
+     *
+     * Reverts if the value is address zero
+     */
+    function checkNonZeroAddress(address _address) internal pure {
+        if (_address == address(0)) revert InvalidAddress();
+    }
+
+    /**
+     * @notice Checks that supplied value is less or equal to 10000 (100%).
+     *
+     * Reverts if the value more than 10000
+     */
+    function checkMaxPercententage(uint256 _percentage) internal pure {
+        if (_percentage > 10000) revert InvalidFeePercentage();
     }
 }

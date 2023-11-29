@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IAccessControl } from "../../interfaces/IAccessControl.sol";
 import { IClientExternalAddresses } from "../../interfaces/clients/IClientExternalAddresses.sol";
 import { IBosonConfigHandler } from "../../interfaces/handlers/IBosonConfigHandler.sol";
@@ -12,7 +13,7 @@ import { ClientLib } from "../libs/ClientLib.sol";
  *
  * @notice Helps minimal proxies.
  */
-contract ClientExternalAddressesBase is IClientExternalAddresses {
+contract ClientExternalAddressesBase is IClientExternalAddresses, BosonErrors {
     /**
      * @dev Modifier that checks that the caller has a specific role.
      *
@@ -23,7 +24,7 @@ contract ClientExternalAddressesBase is IClientExternalAddresses {
      * @param _role - the role to check
      */
     modifier onlyRole(bytes32 _role) {
-        require(ClientLib.hasRole(_role), "Access denied, caller doesn't have role");
+        if (!ClientLib.hasRole(_role)) revert AccessDenied();
         _;
     }
 
@@ -34,7 +35,7 @@ contract ClientExternalAddressesBase is IClientExternalAddresses {
      * @param _impl - the implementation address
      */
     constructor(address _protocolAddress, address _impl) {
-        require(_protocolAddress != address(0) && _impl != address(0), INVALID_ADDRESS);
+        if (_protocolAddress == address(0) || _impl == address(0)) revert InvalidAddress();
 
         // Get the ProxyStorage struct
         ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
@@ -70,7 +71,7 @@ contract ClientExternalAddressesBase is IClientExternalAddresses {
      * @param _impl - the implementation address
      */
     function setImplementation(address _impl) external override onlyRole(UPGRADER) {
-        require(_impl != address(0), INVALID_ADDRESS);
+        if (_impl == address(0)) revert InvalidAddress();
 
         // Get the ProxyStorage struct
         ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
@@ -114,7 +115,7 @@ contract ClientExternalAddressesBase is IClientExternalAddresses {
      * @param _protocolAddress - the ProtocolDiamond address
      */
     function setProtocolAddress(address _protocolAddress) external override onlyRole(UPGRADER) {
-        require(_protocolAddress != address(0), INVALID_ADDRESS);
+        if (_protocolAddress == address(0)) revert InvalidAddress();
 
         // Get the ProxyStorage struct
         ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();

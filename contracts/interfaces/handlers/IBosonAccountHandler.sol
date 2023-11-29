@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
 
 /**
@@ -9,9 +10,9 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x8946080b
+ * The ERC-165 identifier for this interface is: 0xbc56214a
  */
-interface IBosonAccountHandler is IBosonAccountEvents {
+interface IBosonAccountHandler is IBosonAccountEvents, BosonErrors {
     /**
      * @notice Creates a seller.
      *
@@ -145,6 +146,72 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _fieldsToUpdate - fields to update, see SellerUpdateFields enum
      */
     function optInToSellerUpdate(uint256 _sellerId, BosonTypes.SellerUpdateFields[] calldata _fieldsToUpdate) external;
+
+    /**
+     * @notice Adds royalty recipients to a seller.
+     *
+     * Emits a RoyalRecipientsUpdated event if successful.
+     *
+     *  Reverts if:
+     *  - The sellers region of protocol is paused
+     *  - Seller does not exist
+     *  - Caller is not the seller admin
+     *  - Caller does not own auth token
+     *  - Some recipient is not unique
+     *  - some royalty percentage is above the limit
+     *
+     * @param _sellerId - seller id
+     * @param _royaltyRecipients - list of royalty recipients to add
+     */
+    function addRoyaltyRecipients(
+        uint256 _sellerId,
+        BosonTypes.RoyaltyRecipient[] calldata _royaltyRecipients
+    ) external;
+
+    /**
+     * @notice Updates seller's royalty recipients.
+     *
+     * Emits a RoyalRecipientsUpdated event if successful.
+     *
+     *  Reverts if:
+     *  - The sellers region of protocol is paused
+     *  - Seller does not exist
+     *  - Caller is not the seller admin
+     *  - Caller does not own auth token
+     *  - Length of ids to change does not match length of new values
+     *  - Id to update does not exist
+     *  - Seller tries to update the address of default recipient
+     *  - Some recipient is not unique
+     *  - Some royalty percentage is above the limit
+     *
+     * @param _sellerId - seller id
+     * @param _royaltyRecipientIds - list of royalty recipient ids to update
+     * @param _royaltyRecipients - list of new royalty recipients corresponding to ids
+     */
+    function updateRoyaltyRecipients(
+        uint256 _sellerId,
+        uint256[] calldata _royaltyRecipientIds,
+        BosonTypes.RoyaltyRecipient[] calldata _royaltyRecipients
+    ) external;
+
+    /**
+     * @notice Removes seller's royalty recipients.
+     *
+     * Emits a RoyalRecipientsUpdated event if successful.
+     *
+     *  Reverts if:
+     *  - The sellers region of protocol is paused
+     *  - Seller does not exist
+     *  - Caller is not the seller admin
+     *  - Caller does not own auth token
+     *  - List of ids to remove is not sorted in ascending order
+     *  - Id to remove does not exist
+     *  - Seller tries to remove the default recipient
+     *
+     * @param _sellerId - seller id
+     * @param _royaltyRecipientIds - list of royalty recipient ids to remove
+     */
+    function removeRoyaltyRecipients(uint256 _sellerId, uint256[] calldata _royaltyRecipientIds) external;
 
     /**
      * @notice Updates a buyer, with the exception of the active flag.
@@ -431,6 +498,16 @@ interface IBosonAccountHandler is IBosonAccountEvents {
         uint256 _sellerId,
         bytes32 _collectionSalt
     ) external view returns (address collectionAddress, bool isAvailable);
+
+    /**
+     * @notice Gets seller's royalty recipients.
+     *
+     * @param _sellerId - seller id
+     * @return royaltyRecipients - list of royalty recipients
+     */
+    function getRoyaltyRecipients(
+        uint256 _sellerId
+    ) external view returns (BosonTypes.RoyaltyRecipient[] memory royaltyRecipients);
 
     /**
      * @notice Gets the details about a buyer.

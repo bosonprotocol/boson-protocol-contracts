@@ -1,5 +1,5 @@
-const hre = require("hardhat");
-const { ZeroAddress } = hre.ethers;
+const { ethers } = require("hardhat");
+const { ZeroAddress, getContractAt } = ethers;
 const { expect } = require("chai");
 
 const Agent = require("../../scripts/domain/Agent");
@@ -21,6 +21,7 @@ describe("AgentHandler", function () {
   let nextAccountId;
   let invalidAccountId, id, id2, key, value, exists;
   let snapshotId;
+  let bosonErrors;
 
   before(async function () {
     // Specify contracts needed for this test
@@ -33,6 +34,8 @@ describe("AgentHandler", function () {
       signers: [pauser, rando, other1, other2, other3],
       contractInstances: { accountHandler, pauseHandler },
     } = await setupTestEnvironment(contracts));
+
+    bosonErrors = await getContractAt("BosonErrors", await accountHandler.getAddress());
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -161,21 +164,30 @@ describe("AgentHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Agents]);
 
           // Attempt to create an agent, expecting revert
-          await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(RevertReasons.REGION_PAUSED);
+          await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.REGION_PAUSED
+          );
         });
 
         it("active is false", async function () {
           agent.active = false;
 
           // Attempt to Create an Agent, expecting revert
-          await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
+          await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.MUST_BE_ACTIVE
+          );
         });
 
         it("addresses are the zero address", async function () {
           agent.wallet = ZeroAddress;
 
           // Attempt to Create an Agent, expecting revert
-          await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+          await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.INVALID_ADDRESS
+          );
         });
 
         it("wallet address is not unique to this agentId", async function () {
@@ -183,7 +195,8 @@ describe("AgentHandler", function () {
           await accountHandler.connect(rando).createAgent(agent);
 
           // Attempt to create another buyer with same wallet address
-          await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(
+          await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.AGENT_ADDRESS_MUST_BE_UNIQUE
           );
         });
@@ -195,7 +208,8 @@ describe("AgentHandler", function () {
           expect(agent.isValid()).is.true;
 
           // Attempt to create another buyer with same wallet address
-          await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(
+          await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_AGENT_FEE_PERCENTAGE
           );
         });
@@ -383,7 +397,10 @@ describe("AgentHandler", function () {
           .withArgs(agent.id, agentStruct, await other2.getAddress());
 
         // Attempt to update the agent with original wallet address, expecting revert
-        await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWith(RevertReasons.NOT_AGENT_WALLET);
+        await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWithCustomError(
+          bosonErrors,
+          RevertReasons.NOT_AGENT_WALLET
+        );
       });
 
       it("should allow feePercentage of 0", async function () {
@@ -438,7 +455,10 @@ describe("AgentHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Agents]);
 
           // Attempt to update an agent, expecting revert
-          await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWith(RevertReasons.REGION_PAUSED);
+          await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.REGION_PAUSED
+          );
         });
 
         it("Agent does not exist", async function () {
@@ -446,18 +466,25 @@ describe("AgentHandler", function () {
           agent.id = "444";
 
           // Attempt to update the agent, expecting revert
-          await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
+          await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.NO_SUCH_AGENT
+          );
 
           // Set invalid id
           agent.id = "0";
 
           // Attempt to update the agent, expecting revert
-          await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
+          await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.NO_SUCH_AGENT
+          );
         });
 
         it("Caller is not agent wallet address", async function () {
           // Attempt to update the agent, expecting revert
-          await expect(accountHandler.connect(other2).updateAgent(agent)).to.revertedWith(
+          await expect(accountHandler.connect(other2).updateAgent(agent)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NOT_AGENT_WALLET
           );
         });
@@ -466,7 +493,8 @@ describe("AgentHandler", function () {
           agent.wallet = ZeroAddress;
 
           // Attempt to update the agent, expecting revert
-          await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWith(
+          await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_ADDRESS
           );
         });
@@ -478,7 +506,8 @@ describe("AgentHandler", function () {
           expect(agent.isValid()).is.true;
 
           // Attempt to update the agent, expecting revert
-          await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWith(
+          await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_AGENT_FEE_PERCENTAGE
           );
         });
@@ -500,7 +529,8 @@ describe("AgentHandler", function () {
           agent2.wallet = await other1.getAddress(); //already being used by agent 1
 
           // Attempt to update agent 2 with non-unique wallet address, expecting revert
-          await expect(accountHandler.connect(other2).updateAgent(agent2)).to.revertedWith(
+          await expect(accountHandler.connect(other2).updateAgent(agent2)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.AGENT_ADDRESS_MUST_BE_UNIQUE
           );
         });

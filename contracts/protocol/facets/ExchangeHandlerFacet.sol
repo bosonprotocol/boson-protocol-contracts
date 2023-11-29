@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.21;
 
+import "../../domain/BosonConstants.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
-import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { ITwinToken } from "../../interfaces/ITwinToken.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
@@ -10,7 +10,7 @@ import { BuyerBase } from "../bases/BuyerBase.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
-import "../../domain/BosonConstants.sol";
+import { IERC721Receiver } from "../../interfaces/IERC721Receiver.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
@@ -21,8 +21,9 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol.
  */
-contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
+contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler, IERC721Receiver {
     using Address for address;
+    using Address for address payable;
 
     uint256 private immutable EXCHANGE_ID_2_2_0; // solhint-disable-line
 
@@ -47,7 +48,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Commits to an offer (first step of an exchange).
+     * @notice Commits to a price static offer (first step of an exchange).
      *
      * Emits a BuyerCommitted event if successful.
      * Issues a voucher to the buyer address.
@@ -56,6 +57,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * - The exchanges region of protocol is paused
      * - The buyers region of protocol is paused
      * - OfferId is invalid
+     * - Offer price type is not static
      * - Offer has been voided
      * - Offer has expired
      * - Offer is not yet available for commits
@@ -78,9 +80,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         uint256 _offerId
     ) external payable override exchangesNotPaused buyersNotPaused nonReentrant {
         // Make sure buyer address is not zero address
-        require(_buyer != address(0), INVALID_ADDRESS);
+        if (_buyer == address(0)) revert InvalidAddress();
 
         Offer storage offer = getValidOffer(_offerId);
+        if (offer.priceType != PriceType.Static) revert InvalidPriceType();
 
         // For there to be a condition, there must be a group.
         (bool exists, uint256 groupId) = getGroupIdByOffer(offer.id);
@@ -89,7 +92,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             Condition storage condition = fetchCondition(groupId);
 
             // Make sure group doesn't have a condition. If it does, use commitToConditionalOffer instead.
-            require(condition.method == EvaluationMethod.None, GROUP_HAS_CONDITION);
+            if (condition.method != EvaluationMethod.None) revert GroupHasCondition();
         }
 
         commitToOfferInternal(_buyer, offer, 0, false);
@@ -130,15 +133,16 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         uint256 _tokenId
     ) external payable override exchangesNotPaused buyersNotPaused nonReentrant {
         // Make sure buyer address is not zero address
-        require(_buyer != address(0), INVALID_ADDRESS);
+        if (_buyer == address(0)) revert InvalidAddress();
 
         Offer storage offer = getValidOffer(_offerId);
+        if (offer.priceType != PriceType.Static) revert InvalidPriceType();
 
         // For there to be a condition, there must be a group.
         (bool exists, uint256 groupId) = getGroupIdByOffer(offer.id);
 
         // Make sure the group exists
-        require(exists, NO_SUCH_GROUP);
+        if (!exists) revert NoSuchGroup();
 
         // Get the condition
         Condition storage condition = fetchCondition(groupId);
@@ -155,76 +159,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Commits to a preminted offer (first step of an exchange).
-     *
-     * Emits BuyerCommitted and ConditionalCommitAuthorized events if successful.
-     *
-     * Reverts if:
-     * - The exchanges region of protocol is paused
-     * - The buyers region of protocol is paused
-     * - Caller is not the voucher contract, owned by the seller
-     * - Exchange exists already
-     * - Offer has been voided
-     * - Offer has expired
-     * - Offer is not yet available for commits
-     * - Buyer account is inactive
-     * - Buyer is token-gated (conditional commit requirements not met or already used)
-     * - Buyer is token-gated and condition has a range.
-     * - Seller has less funds available than sellerDeposit and price
-     *
-     * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
-     * @param _offerId - the id of the offer to commit to
-     * @param _exchangeId - the id of the exchange
-     */
-    function commitToPreMintedOffer(
-        address payable _buyer,
-        uint256 _offerId,
-        uint256 _exchangeId
-    ) external exchangesNotPaused buyersNotPaused nonReentrant {
-        Offer storage offer = getValidOffer(_offerId);
-        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-
-        // Make sure that the voucher was issued on the clone that is making a call
-        require(msg.sender == getCloneAddress(lookups, offer.sellerId, offer.collectionIndex), ACCESS_DENIED);
-
-        // Exchange must not exist already
-        (bool exists, ) = fetchExchange(_exchangeId);
-        require(!exists, EXCHANGE_ALREADY_EXISTS);
-
-        uint256 groupId;
-        (exists, groupId) = getGroupIdByOffer(offer.id);
-
-        if (exists) {
-            // Get the condition
-            Condition storage condition = fetchCondition(groupId);
-            EvaluationMethod method = condition.method;
-
-            if (method != EvaluationMethod.None) {
-                uint256 tokenId = 0;
-
-                // Allow commiting only to unambigous conditions, i.e. conditions with a single token id
-                if (condition.method == EvaluationMethod.SpecificToken || condition.tokenType == TokenType.MultiToken) {
-                    uint256 minTokenId = condition.minTokenId;
-                    uint256 maxTokenId = condition.maxTokenId;
-
-                    require(minTokenId == maxTokenId || maxTokenId == 0, CANNOT_COMMIT); // legacy conditions have maxTokenId == 0
-
-                    // Uses token id from the condition
-                    tokenId = minTokenId;
-                }
-
-                authorizeCommit(_buyer, condition, groupId, tokenId, _offerId);
-
-                // Store the condition to be returned afterward on getReceipt function
-                lookups.exchangeCondition[_exchangeId] = condition;
-            }
-        }
-
-        commitToOfferInternal(_buyer, offer, _exchangeId, true);
-    }
-
-    /**
-     * @notice Commits to an offer. Helper function reused by commitToOffer and commitToPreMintedOffer.
+     * @notice Commits to an offer. Helper function reused by commitToOffer and onPremintedVoucherTransferred.
      *
      * Emits a BuyerCommitted event if successful.
      * Issues a voucher to the buyer address for non preminted offers.
@@ -242,7 +177,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *   - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      *   - Received ERC20 token amount differs from the expected value
      *   - Seller has less funds available than sellerDeposit
-     * - Seller has less funds available than sellerDeposit and price for preminted offers
+     * - For preminted offers:
+     *   - Exchange aldready exists
+     *   - Seller has less funds available than sellerDeposit and price for preminted offers that price type is static
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offer - storage pointer to the offer
@@ -257,24 +194,29 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         bool _isPreminted
     ) internal returns (uint256) {
         uint256 _offerId = _offer.id;
-        // Make sure offer is available, and isn't void, expired, or sold out
+        // Make sure offer is available, expired, or sold out
         OfferDates storage offerDates = fetchOfferDates(_offerId);
-        require(block.timestamp >= offerDates.validFrom, OFFER_NOT_AVAILABLE);
-        require(block.timestamp <= offerDates.validUntil, OFFER_HAS_EXPIRED);
+        if (block.timestamp < offerDates.validFrom) revert OfferNotAvailable();
+        if (block.timestamp > offerDates.validUntil) revert OfferHasExpired();
 
         if (!_isPreminted) {
             // For non-preminted offers, quantityAvailable must be greater than zero, since it gets decremented
-            require(_offer.quantityAvailable > 0, OFFER_SOLD_OUT);
+            if (_offer.quantityAvailable == 0) revert OfferSoldOut();
 
             // Get next exchange id for non-preminted offers
             _exchangeId = protocolCounters().nextExchangeId++;
+        } else {
+            // Exchange must not exist already
+            (bool exists, ) = fetchExchange(_exchangeId);
+
+            if (exists) revert ExchangeAlreadyExists();
         }
 
         // Fetch or create buyer
         uint256 buyerId = getValidBuyer(_buyer);
 
-        // Encumber funds before creating the exchange
-        FundsLib.encumberFunds(_offerId, buyerId, _isPreminted);
+        // Encumber funds
+        FundsLib.encumberFunds(_offerId, buyerId, _offer.price, _isPreminted, _offer.priceType);
 
         // Create and store a new exchange
         Exchange storage exchange = protocolEntities().exchanges[_exchangeId];
@@ -365,7 +307,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // N.B. An existing buyer or seller may be the "anyone else" on an exchange they are not a part of
         if (!buyerExists || buyerId != exchange.buyerId) {
             uint256 elapsed = block.timestamp - voucher.redeemedDate;
-            require(elapsed >= fetchOfferDurations(offerId).disputePeriod, DISPUTE_PERIOD_NOT_ELAPSED);
+            if (elapsed < fetchOfferDurations(offerId).disputePeriod) revert DisputePeriodNotElapsed();
         }
 
         // Finalize the exchange
@@ -427,7 +369,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         (, Offer storage offer) = fetchOffer(offerId);
 
         // Only seller's assistant may call
-        require(sellerExists && offer.sellerId == sellerId, NOT_ASSISTANT);
+        if (!sellerExists || offer.sellerId != sellerId) revert NotAssistant();
 
         // Finalize the exchange, burning the voucher
         finalizeExchange(exchange, ExchangeState.Revoked);
@@ -481,7 +423,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
         // Make sure that the voucher has expired
-        require(block.timestamp > voucher.validUntilDate, VOUCHER_STILL_VALID);
+        if (block.timestamp <= voucher.validUntilDate) revert VoucherStillValid();
 
         // Finalize the exchange, burning the voucher
         finalizeExchange(exchange, ExchangeState.Canceled);
@@ -526,10 +468,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         (sellerExists, sellerId) = getSellerIdByAssistant(sender);
 
         // Only seller's assistant may call
-        require(sellerExists && offer.sellerId == sellerId, NOT_ASSISTANT);
+        if (!sellerExists || offer.sellerId != sellerId) revert NotAssistant();
 
         // Make sure the proposed date is later than the current one
-        require(_validUntilDate > voucher.validUntilDate, VOUCHER_EXTENSION_NOT_VALID);
+        if (_validUntilDate <= voucher.validUntilDate) revert VoucherExtensionNotValid();
 
         // Extend voucher
         voucher.validUntilDate = _validUntilDate;
@@ -565,11 +507,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         checkBuyer(exchange.buyerId);
 
         // Make sure the voucher is redeemable
-        require(
-            block.timestamp >= fetchOfferDates(offerId).voucherRedeemableFrom &&
-                block.timestamp <= voucher.validUntilDate,
-            VOUCHER_NOT_REDEEMABLE
-        );
+        if (
+            block.timestamp < fetchOfferDates(offerId).voucherRedeemableFrom || block.timestamp > voucher.validUntilDate
+        ) {
+            revert VoucherNotRedeemable();
+        }
 
         // Store the time the exchange was redeemed
         voucher.redeemedDate = block.timestamp;
@@ -593,6 +535,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * Emits a VoucherTransferred event if successful.
      *
      * Reverts if
+     * - The exchanges region of protocol is paused
      * - The buyers region of protocol is paused
      * - Caller is not a clone address associated with the seller
      * - Exchange does not exist
@@ -600,26 +543,29 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * - Voucher has expired
      * - New buyer's existing account is deactivated
      *
-     * @param _exchangeId - the id of the exchange
+     * @param _tokenId - the voucher id
      * @param _newBuyer - the address of the new buyer
      */
     function onVoucherTransferred(
-        uint256 _exchangeId,
+        uint256 _tokenId,
         address payable _newBuyer
-    ) external override buyersNotPaused nonReentrant {
+    ) external override buyersNotPaused exchangesNotPaused {
+        // Derive the exchange id
+        uint256 exchangeId = _tokenId & type(uint128).max;
+
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // Get the exchange, should be in committed state
-        (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
+        (Exchange storage exchange, Voucher storage voucher) = getValidExchange(exchangeId, ExchangeState.Committed);
 
         // Make sure that the voucher is still valid
-        require(block.timestamp <= voucher.validUntilDate, VOUCHER_HAS_EXPIRED);
+        if (block.timestamp > voucher.validUntilDate) revert VoucherHasExpired();
 
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // Make sure that the voucher was issued on the clone that is making a call
-        require(msg.sender == getCloneAddress(lookups, offer.sellerId, offer.collectionIndex), ACCESS_DENIED);
+        if (msg.sender != getCloneAddress(lookups, offer.sellerId, offer.collectionIndex)) revert AccessDenied();
 
         // Decrease voucher counter for old buyer
         lookups.voucherCount[exchange.buyerId]--;
@@ -633,8 +579,146 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Increase voucher counter for new buyer
         lookups.voucherCount[buyerId]++;
 
+        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
+
+        // Set incoming voucher id if we are in the middle of a price discovery call
+        if (ps.incomingVoucherCloneAddress != address(0)) {
+            uint256 incomingVoucherId = ps.incomingVoucherId;
+            if (incomingVoucherId != _tokenId) {
+                if (incomingVoucherId != 0) revert IncomingVoucherAlreadySet();
+                ps.incomingVoucherId = _tokenId;
+            }
+        }
+
         // Notify watchers of state change
-        emit VoucherTransferred(exchange.offerId, _exchangeId, buyerId, msgSender());
+        emit VoucherTransferred(exchange.offerId, exchangeId, buyerId, msgSender());
+    }
+
+    /**
+     * @notice Handle pre-minted voucher transfer
+     *
+     * Reverts if:
+     * - The exchanges region of protocol is paused
+     * - The buyers region of protocol is paused
+     * - Caller is not a clone address associated with the seller
+     * - Incoming voucher clone address is not the caller
+     * - Offer price is discovery, transaction is not starting from protocol nor seller is _from address
+     * - Any reason that ExchangeHandler commitToOfferInternal reverts. See ExchangeHandler.commitToOfferInternal
+     *
+     * @param _tokenId - the voucher id
+     * @param _to - the receiver address
+     * @param _from - the address of current owner
+     * @param _rangeOwner - the address of the preminted range owner
+     * @return committed - true if the voucher was committed
+     */
+    function onPremintedVoucherTransferred(
+        uint256 _tokenId,
+        address payable _to,
+        address _from,
+        address _rangeOwner
+    ) external override buyersNotPaused exchangesNotPaused returns (bool committed) {
+        // Cache protocol status for reference
+        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
+
+        // Make sure that protocol is not reentered
+        // Cannot use modifier `nonReentrant` since it also changes reentrancyStatus to `ENTERED`
+        // This would break the flow since the protocol should be allowed to re-enter in this case.
+        if (ps.reentrancyStatus == ENTERED) revert ReentrancyGuard();
+
+        // Derive the offer id
+        uint256 offerId = _tokenId >> 128;
+
+        // Derive the exchange id
+        uint256 exchangeId = _tokenId & type(uint128).max;
+
+        // Get the offer
+        Offer storage offer = getValidOffer(offerId);
+
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+        address bosonVoucher = getCloneAddress(lookups, offer.sellerId, offer.collectionIndex);
+
+        // Make sure that the voucher was issued on the clone that is making a call
+        if (msg.sender != bosonVoucher) revert AccessDenied();
+
+        (bool conditionExists, uint256 groupId) = getGroupIdByOffer(offerId);
+
+        if (conditionExists) {
+            // Get the condition
+            Condition storage condition = fetchCondition(groupId);
+            EvaluationMethod method = condition.method;
+
+            if (method != EvaluationMethod.None) {
+                uint256 tokenId = 0;
+
+                // Allow commiting only to unambigous conditions, i.e. conditions with a single token id
+                if (method == EvaluationMethod.SpecificToken || condition.tokenType == TokenType.MultiToken) {
+                    uint256 minTokenId = condition.minTokenId;
+                    uint256 maxTokenId = condition.maxTokenId;
+
+                    if (minTokenId != maxTokenId && maxTokenId != 0) revert CannotCommit(); // legacy conditions have maxTokenId == 0
+
+                    // Uses token id from the condition
+                    tokenId = minTokenId;
+                }
+
+                authorizeCommit(_to, condition, groupId, tokenId, offerId);
+
+                // Store the condition to be returned afterward on getReceipt function
+                lookups.exchangeCondition[exchangeId] = condition;
+            }
+        }
+
+        if (offer.priceType == PriceType.Discovery) {
+            //  transaction start from `commitToPriceDiscoveryOffer`, should commit
+            if (ps.incomingVoucherCloneAddress != address(0)) {
+                // During price discovery, the voucher is firs transferred to the protocol, which should
+                // not resulte in a commit yet. The commit should happen when the voucher is transferred
+                // from the protocol to the buyer.
+                if (_to == address(this)) {
+                    // Avoid reentrancy
+                    if (ps.incomingVoucherId != 0) revert IncomingVoucherAlreadySet();
+
+                    // Store the information about incoming voucher
+                    ps.incomingVoucherId = _tokenId;
+                } else {
+                    if (ps.incomingVoucherId == 0) {
+                        // Happens in wrapped voucher vase
+                        ps.incomingVoucherId = _tokenId;
+                    } else {
+                        // In other cases voucher was already once transferred to the protocol,
+                        // so ps.incomingVoucherId is set already. The incoming _tokenId must match.
+                        if (ps.incomingVoucherId != _tokenId) revert TokenIdMismatch();
+                    }
+                    commitToOfferInternal(_to, offer, exchangeId, true);
+
+                    committed = true;
+                }
+
+                return committed;
+            }
+
+            // If `onPremintedVoucherTransferred` is invoked without `commitToPriceDiscoveryOffer` first,
+            // we reach this point. This can happen in the following scenarios:
+            // 1. The preminted voucher owner is transferring the voucher to PD contract ["deposit"]
+            // 2. The PD is transferring the voucher back to the original owner ["withdraw"]. Happens if voucher was not sold.
+            // 3. The PD is transferring the voucher to the buyer ["buy"]. Happens if voucher was sold.
+            // 4. The preminted voucher owner is transferring the voucher "directly" to the buyer.
+
+            // 1. and 2. are allowed, while 3. and 4. and must revert. 3. and 4. should be executed via `commitToPriceDiscoveryOffer`
+            if (_from == _rangeOwner) {
+                // case 1. ["deposit"]
+                // Prevent direct transfer to EOA (case 4.)
+                if (!_to.isContract()) revert VoucherTransferNotAllowed();
+            } else {
+                // Case 2. ["withdraw"]
+                // Prevent transfer to the buyer (case 3.)
+                if (_to != _rangeOwner) revert VoucherTransferNotAllowed();
+            }
+        } else if (offer.priceType == PriceType.Static) {
+            // If price type is static, transaction can start from anywhere
+            commitToOfferInternal(_to, offer, exchangeId, true);
+            committed = true;
+        }
     }
 
     /**
@@ -774,6 +858,68 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         }
 
         return (true, 0, 0);
+    }
+
+    /**
+     * @notice Gets EIP2981 style royalty information for a chosen offer or exchange.
+     *
+     * EIP2981 supports only 1 recipient, therefore this method defaults to treasury address.
+     * This method is not exactly compliant with EIP2981, since it does not accept `salePrice` and does not return `royaltyAmount,
+     * but it rather returns `royaltyPercentage` which is the sum of all bps (exchange can have multiple royalty recipients).
+     *
+     * This function is meant to be primarly used by boson voucher client, which implements EIP2981.
+     *
+     * Reverts if exchange does not exist.
+     *
+     * @param _queryId - offer id or exchange id
+     * @param _isExchangeId - indicates if the query represents the exchange id
+     * @return receiver - the address of the royalty receiver (seller's treasury address)
+     * @return royaltyPercentage - the royalty percentage in bps
+     */
+    function getEIP2981Royalties(
+        uint256 _queryId,
+        bool _isExchangeId
+    ) external view returns (address receiver, uint256 royaltyPercentage) {
+        // EIP2981 returns only 1 recipient. Summ all bps and return treasury address as recipient
+        (RoyaltyInfo storage royaltyInfo, , address treasury) = fetchRoyalties(_queryId, _isExchangeId);
+
+        uint256 recipientLength = royaltyInfo.recipients.length;
+        if (recipientLength == 0) return (address(0), uint256(0));
+
+        uint256 totalBps = getTotalRoyaltyPercentage(royaltyInfo.bps);
+
+        return (royaltyInfo.recipients[0] == address(0) ? treasury : royaltyInfo.recipients[0], totalBps);
+    }
+
+    /**
+     * @notice Gets royalty information for a chosen offer or exchange.
+     *
+     * Returns a list of royalty recipients and corresponding bps. Format is compatible with Manifold and Foundation royalties
+     * and can be directly used by royalty registry.
+     *
+     * Reverts if exchange does not exist.
+     *
+     * @param _queryId - offer id or exchange id
+     * @param _isExchangeId - indicates if the query represents the exchange id
+     * @return royaltyInfo - list of royalty recipients and corresponding bps
+     */
+    function getRoyalties(uint256 _queryId, bool _isExchangeId) external view returns (RoyaltyInfo memory royaltyInfo) {
+        address treasury;
+        (royaltyInfo, , treasury) = fetchRoyalties(_queryId, _isExchangeId);
+
+        for (uint256 i = 0; i < royaltyInfo.recipients.length; ) {
+            if (royaltyInfo.recipients[i] == address(0)) {
+                // get treasury address!
+                royaltyInfo.recipients[i] = payable(treasury);
+                break;
+            }
+
+            unchecked {
+                i++;
+            }
+        }
+
+        return royaltyInfo;
     }
 
     /**
@@ -1045,36 +1191,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Checks if buyer exists for buyer address. If not, account is created for buyer address.
-     *
-     * Reverts if buyer exists but is inactive.
-     *
-     * @param _buyer - the buyer address to check
-     * @return buyerId - the buyer id
-     */
-    function getValidBuyer(address payable _buyer) internal returns (uint256 buyerId) {
-        // Find or create the account associated with the specified buyer address
-        bool exists;
-        (exists, buyerId) = getBuyerIdByWallet(_buyer);
-
-        if (!exists) {
-            // Create the buyer account
-            Buyer memory newBuyer;
-            newBuyer.wallet = _buyer;
-            newBuyer.active = true;
-
-            createBuyerInternal(newBuyer);
-            buyerId = newBuyer.id;
-        } else {
-            // Fetch the existing buyer account
-            (, Buyer storage buyer) = fetchBuyer(buyerId);
-
-            // Make sure buyer account is active
-            require(buyer.active, MUST_BE_ACTIVE);
-        }
-    }
-
-    /**
      * @notice Authorizes the potential buyer to commit to an offer
      *
      * Anyone can commit to an unconditional offer, and no state change occurs here.
@@ -1123,13 +1239,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         uint256 commitCount = conditionalCommits[_groupId];
         uint256 maxCommits = _condition.maxCommits;
 
-        require(commitCount < maxCommits, MAX_COMMITS_REACHED);
+        if (commitCount >= maxCommits) revert MaxCommitsReached();
 
         bool allow = _condition.method == EvaluationMethod.Threshold
             ? holdsThreshold(_buyer, _condition, _tokenId)
             : holdsSpecificToken(_buyer, _condition, _tokenId);
 
-        require(allow, CANNOT_COMMIT);
+        if (!allow) revert CannotCommit();
 
         // Increment number of commits to the group
         conditionalCommits[_groupId] = ++commitCount;
@@ -1194,11 +1310,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     function getReceipt(uint256 _exchangeId) external view returns (Receipt memory receipt) {
         // Get the exchange
         (bool exists, Exchange storage exchange) = fetchExchange(_exchangeId);
-        require(exists, NO_SUCH_EXCHANGE);
+        if (!exists) revert NoSuchExchange();
 
         // Verify if exchange is finalized, returns true if exchange is in one of the final states
         (, bool isFinalized) = isExchangeFinalized(_exchangeId);
-        require(isFinalized, EXCHANGE_IS_NOT_IN_A_FINAL_STATE);
+        if (!isFinalized) revert ExchangeIsNotInAFinalState();
 
         // Add exchange to receipt
         receipt.exchangeId = exchange.id;
@@ -1263,6 +1379,26 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
+     * @dev See {IERC721Receiver-onERC721Received}.
+     *
+     * Always returns `IERC721Receiver.onERC721Received.selector`.
+     */
+    function onERC721Received(
+        address,
+        address,
+        uint256 _tokenId,
+        bytes calldata
+    ) public virtual override returns (bytes4) {
+        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
+
+        if (ps.incomingVoucherId != _tokenId || ps.incomingVoucherCloneAddress != msg.sender) {
+            revert UnexpectedERC721Received();
+        }
+
+        return this.onERC721Received.selector;
+    }
+
+    /**
      * @notice Updates NFT ranges, so it's possible to reuse the tokens in other twins and to make
      * creation of new ranges viable
      *
@@ -1315,7 +1451,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         EvaluationMethod method = _condition.method;
         bool isMultitoken = _condition.tokenType == TokenType.MultiToken;
 
-        require(method != EvaluationMethod.None, GROUP_HAS_NO_CONDITION);
+        if (method == EvaluationMethod.None) revert GroupHasNoCondition();
 
         if (method == EvaluationMethod.SpecificToken || isMultitoken) {
             // In this cases, the token id is specified by the caller must be within the range of the condition
@@ -1323,12 +1459,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             uint256 maxTokenId = _condition.maxTokenId;
             if (maxTokenId == 0) maxTokenId = minTokenId; // legacy conditions have maxTokenId == 0
 
-            require(_tokenId >= minTokenId && _tokenId <= maxTokenId, TOKEN_ID_NOT_IN_CONDITION_RANGE);
+            if (_tokenId < minTokenId || _tokenId > maxTokenId) revert TokenIdNotInConditionRange();
         }
 
         // ERC20 and ERC721 threshold does not require a token id
         if (method == EvaluationMethod.Threshold && !isMultitoken) {
-            require(_tokenId == 0, INVALID_TOKEN_ID);
+            if (_tokenId != 0) revert InvalidTokenId();
         }
     }
 }

@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonPauseEvents } from "../events/IBosonPauseEvents.sol";
 
 /**
@@ -11,7 +12,7 @@ import { IBosonPauseEvents } from "../events/IBosonPauseEvents.sol";
  *
  * The ERC-165 identifier for this interface is: 0x770b96d0
  */
-interface IBosonPauseHandler is IBosonPauseEvents {
+interface IBosonPauseHandler is IBosonPauseEvents, BosonErrors {
     /**
      * @notice Pauses some or all of the protocol.
      *

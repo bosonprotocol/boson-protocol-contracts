@@ -24,7 +24,7 @@ module.exports = {
     maxDisputesPerBatch: "75",
     maxAllowedSellers: "140",
     maxTotalOfferFeePercentage: "10000", // 100%
-    maxRoyaltyPecentage: "10000", //100%
+    maxRoyaltyPercentage: "10000", //100%
     minResolutionPeriod: oneWeek.toString(),
     maxResolutionPeriod: ninetyDays.toString(),
     minDisputePeriod: oneWeek.toString(),
@@ -82,5 +82,15 @@ module.exports = {
     localhost: 1,
     goerli: 1,
     mainnet: 1,
+  },
+
+  WrappedNative: {
+    mainnet: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
+    hardhat: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
+    localhost: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
+    test: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
+    mumbai: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
+    polygon: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
+    goerli: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
   },
 };

@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import "../../domain/BosonConstants.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
@@ -14,13 +15,13 @@ import { ReentrancyGuardBase } from "./ReentrancyGuardBase.sol";
  *
  * @notice Provides domain and common modifiers to Protocol facets
  */
-abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
+abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors {
     /**
      * @notice Modifier to protect initializer function from being invoked twice.
      */
     modifier onlyUninitialized(bytes4 interfaceId) {
         ProtocolLib.ProtocolStatus storage ps = protocolStatus();
-        require(!ps.initializedInterfaces[interfaceId], ALREADY_INITIALIZED);
+        if (ps.initializedInterfaces[interfaceId]) revert AlreadyInitialized();
         ps.initializedInterfaces[interfaceId] = true;
         _;
     }
@@ -36,7 +37,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      */
     modifier onlyRole(bytes32 _role) {
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
-        require(ds.accessController.hasRole(_role, msgSender()), ACCESS_DENIED);
+        if (!ds.accessController.hasRole(_role, msgSender())) revert AccessDenied();
         _;
     }
 
@@ -497,10 +498,10 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
         (exists, offer) = fetchOffer(_offerId);
 
         // Offer must already exist
-        require(exists, NO_SUCH_OFFER);
+        if (!exists) revert NoSuchOffer();
 
         // Offer must not already be voided
-        require(!offer.voided, OFFER_HAS_BEEN_VOIDED);
+        if (offer.voided) revert OfferHasBeenVoided();
     }
 
     /**
@@ -522,7 +523,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
         (, Seller storage seller, ) = fetchSeller(offer.sellerId);
 
         // Caller must be seller's assistant address
-        require(seller.assistant == msgSender(), NOT_ASSISTANT);
+        if (seller.assistant != msgSender()) revert NotAssistant();
     }
 
     /**
@@ -585,7 +586,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
         (, uint256 buyerId) = getBuyerIdByWallet(msgSender());
 
         // Must be the buyer associated with the exchange (which is always voucher holder)
-        require(buyerId == _currentBuyer, NOT_VOUCHER_HOLDER);
+        if (buyerId != _currentBuyer) revert NotVoucherHolder();
     }
 
     /**
@@ -609,9 +610,10 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
         (exchangeExists, exchange) = fetchExchange(_exchangeId);
 
         // Make sure the exchange exists
-        require(exchangeExists, NO_SUCH_EXCHANGE);
+        if (!exchangeExists) revert NoSuchExchange();
+
         // Make sure the exchange is in expected state
-        require(exchange.state == _expectedState, INVALID_STATE);
+        if (exchange.state != _expectedState) revert InvalidState();
 
         // Get the voucher
         voucher = fetchVoucher(_exchangeId);
@@ -685,6 +687,21 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
+     * @notice calculate the protocol fee for a given exchange
+     *
+     * @param _exchangeToken - the token used for the exchange
+     * @param _price - the price of the exchange
+     * @return protocolFee - the protocol fee
+     */
+    function getProtocolFee(address _exchangeToken, uint256 _price) internal view returns (uint256 protocolFee) {
+        // Calculate and set the protocol fee
+        return
+            _exchangeToken == protocolAddresses().token
+                ? protocolFees().flatBoson
+                : (protocolFees().percentage * _price) / 10000;
+    }
+
+    /**
      * @notice Fetches a clone address from storage by seller id and collection index
      * If the collection index is 0, the clone address is the seller's main collection,
      * otherwise it is the clone address of the additional collection at the given index.
@@ -703,5 +720,57 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
             _collectionIndex == 0
                 ? _lookups.cloneAddress[_sellerId]
                 : _lookups.additionalCollections[_sellerId][_collectionIndex - 1].collectionAddress;
+    }
+
+    /**
+     * @notice Internal helper to get royalty information and seller for a chosen exchange.
+     *
+     * Reverts if exchange does not exist.
+     *
+     * @param _queryId - offer id or exchange id
+     * @param _isExchangeId - indicates if the query represents the exchange id
+     * @return royaltyInfo - list of royalty recipients and corresponding bps
+     * @return royaltyInfoIndex - index of the royalty info
+     * @return treasury - the seller's treasury address
+     */
+    function fetchRoyalties(
+        uint256 _queryId,
+        bool _isExchangeId
+    ) internal view returns (RoyaltyInfo storage royaltyInfo, uint256 royaltyInfoIndex, address treasury) {
+        RoyaltyInfo[] storage royaltyInfoAll;
+        if (_isExchangeId) {
+            (bool exists, Exchange storage exchange) = fetchExchange(_queryId);
+            if (!exists) revert NoSuchExchange();
+            _queryId = exchange.offerId;
+        }
+
+        // not using fetchOffer to reduce gas costs (limitation of royalty registry)
+        ProtocolLib.ProtocolEntities storage pe = protocolEntities();
+        Offer storage offer = pe.offers[_queryId];
+        treasury = pe.sellers[offer.sellerId].treasury;
+        royaltyInfoAll = pe.offers[_queryId].royaltyInfo;
+
+        uint256 royaltyInfoLength = royaltyInfoAll.length;
+        if (royaltyInfoLength == 0) revert NoSuchOffer();
+        royaltyInfoIndex = royaltyInfoLength - 1;
+        // get the last royalty info
+        return (royaltyInfoAll[royaltyInfoIndex], royaltyInfoIndex, treasury);
+    }
+
+    /**
+     * @notice Helper function that calculates the total royalty percentage for a given exchange
+     *
+     * @param _bps - storage slot for array of royalty percentages
+     * @return totalBps - the total royalty percentage
+     */
+    function getTotalRoyaltyPercentage(uint256[] storage _bps) internal view returns (uint256 totalBps) {
+        uint256 bpsLength = _bps.length;
+        for (uint256 i = 0; i < bpsLength; ) {
+            totalBps += _bps[i];
+
+            unchecked {
+                i++;
+            }
+        }
     }
 }

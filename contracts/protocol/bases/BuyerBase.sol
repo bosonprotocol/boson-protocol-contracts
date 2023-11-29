@@ -26,16 +26,16 @@ contract BuyerBase is ProtocolBase, IBosonAccountEvents {
      */
     function createBuyerInternal(Buyer memory _buyer) internal {
         //Check for zero address
-        require(_buyer.wallet != address(0), INVALID_ADDRESS);
+        if (_buyer.wallet == address(0)) revert InvalidAddress();
 
         //Check active is not set to false
-        require(_buyer.active, MUST_BE_ACTIVE);
+        if (!_buyer.active) revert MustBeActive();
 
         // Get the next account id and increment the counter
         uint256 buyerId = protocolCounters().nextAccountId++;
 
         //check that the wallet address is unique to one buyer id
-        require(protocolLookups().buyerIdByWallet[_buyer.wallet] == 0, BUYER_ADDRESS_MUST_BE_UNIQUE);
+        if (protocolLookups().buyerIdByWallet[_buyer.wallet] != 0) revert BuyerAddressMustBeUnique();
 
         _buyer.id = buyerId;
         storeBuyer(_buyer);
@@ -60,5 +60,35 @@ contract BuyerBase is ProtocolBase, IBosonAccountEvents {
 
         //Map the buyer's wallet address to the buyerId.
         protocolLookups().buyerIdByWallet[_buyer.wallet] = _buyer.id;
+    }
+
+    /**
+     * @notice Checks if buyer exists for buyer address. If not, account is created for buyer address.
+     *
+     * Reverts if buyer exists but is inactive.
+     *
+     * @param _buyer - the buyer address to check
+     * @return buyerId - the buyer id
+     */
+    function getValidBuyer(address payable _buyer) internal returns (uint256 buyerId) {
+        // Find or create the account associated with the specified buyer address
+        bool exists;
+        (exists, buyerId) = getBuyerIdByWallet(_buyer);
+
+        if (exists) {
+            // Fetch the existing buyer account
+            (, Buyer storage buyer) = fetchBuyer(buyerId);
+
+            // Make sure buyer account is active
+            if (!buyer.active) revert MustBeActive();
+        } else {
+            // Create the buyer account
+            Buyer memory newBuyer;
+            newBuyer.wallet = _buyer;
+            newBuyer.active = true;
+
+            createBuyerInternal(newBuyer);
+            buyerId = newBuyer.id;
+        }
     }
 }

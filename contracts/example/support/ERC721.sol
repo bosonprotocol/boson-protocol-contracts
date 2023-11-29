@@ -3,8 +3,8 @@
 
 pragma solidity 0.8.21;
 
-import "../../../interfaces/IERC721.sol";
-import "./IERC721Receiver.sol";
+import "../../interfaces/IERC721.sol";
+import "../../interfaces/IERC721Receiver.sol";
 import "./IERC721Metadata.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";

@@ -143,6 +143,8 @@ module.exports = {
   networks: {
     hardhat: {
       accounts: { mnemonic: environments.hardhat.mnemonic },
+      gasPrice: 0,
+      initialBaseFeePerGas: 0,
     },
     localhost: {
       url: environments.localhost.txNode || "http://127.0.0.1:8545",
@@ -182,20 +184,30 @@ module.exports = {
   solidity: {
     compilers: [
       {
+        version: "0.5.17", // Mock weth contract
+      },
+      {
         version: "0.8.9",
         settings: {
           optimizer: {
             enabled: true,
-            runs: 200,
+            runs: 50, // temporary until we upgrade compiler version
             details: {
               yul: true,
             },
           },
+          outputSelection: {
+            "*": {
+              "*": ["evm.bytecode.object", "evm.deployedBytecode*"],
+            },
+          },
         },
+        viaIR: true,
       },
       {
         version: "0.8.21",
         settings: {
+          viaIR: false,
           optimizer: {
             enabled: true,
             runs: 200,
@@ -203,11 +215,20 @@ module.exports = {
               yul: true,
             },
           },
-          evmVersion: "london", // for ethereum mainnet, use shanghai
+          evmVersion: "shanghai", // for ethereum mainnet, use shanghai
         },
       },
       {
         version: "0.8.17",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 190,
+            details: {
+              yul: true,
+            },
+          },
+        },
       },
       {
         version: "0.4.17",

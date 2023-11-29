@@ -98,7 +98,10 @@ async function deployProtocolFacets(facetNames, facetsToInit, maxPriorityFeePerG
     };
 
     if (facetsToInit[facetName] && facetsToInit[facetName].init && facetName !== "ProtocolInitializationHandlerFacet") {
-      const calldata = facetContract.interface.encodeFunctionData("initialize", facetsToInit[facetName].init || []);
+      const calldata = facetContract.interface.encodeFunctionData(
+        "initialize",
+        (facetsToInit[facetName].init.length && facetsToInit[facetName].init) || []
+      );
 
       deployedFacet.initialize = calldata;
     }

@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import "./../../domain/BosonConstants.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 
@@ -177,6 +178,6 @@ contract PausableBase is BosonTypes {
     function revertIfPaused(PausableRegion _region) internal view {
         // Region enum value must be used as the exponent in a power of 2
         uint256 powerOfTwo = 1 << uint256(_region);
-        require((ProtocolLib.protocolStatus().pauseScenario & powerOfTwo) != powerOfTwo, REGION_PAUSED);
+        if ((ProtocolLib.protocolStatus().pauseScenario & powerOfTwo) == powerOfTwo) revert BosonErrors.RegionPaused();
     }
 }

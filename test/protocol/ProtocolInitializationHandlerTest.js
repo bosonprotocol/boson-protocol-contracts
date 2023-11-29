@@ -39,6 +39,7 @@ describe("ProtocolInitializationHandler", async function () {
   let version;
   let maxPremintedVouchers, initializationData;
   let abiCoder;
+  let bosonErrors;
 
   before(async function () {
     // get interface Ids
@@ -69,6 +70,8 @@ describe("ProtocolInitializationHandler", async function () {
       "ProtocolInitializationHandlerFacet",
       await protocolDiamond.getAddress()
     );
+
+    bosonErrors = await getContractAt("BosonErrors", await protocolDiamond.getAddress());
 
     version = "2.2.0";
 
@@ -124,8 +127,9 @@ describe("ProtocolInitializationHandler", async function () {
             await getFees(maxPriorityFeePerGas),
           ];
 
-          await expect(diamondCutFacet.connect(deployer).diamondCut(...cutArgs)).to.revertedWith(
-            RevertReasons.ADDRESSES_AND_CALLDATA_MUST_BE_SAME_LENGTH
+          await expect(diamondCutFacet.connect(deployer).diamondCut(...cutArgs)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.ADDRESSES_AND_CALLDATA_LENGTH_MISMATCH
           );
         });
 
@@ -149,7 +153,8 @@ describe("ProtocolInitializationHandler", async function () {
             await getFees(maxPriorityFeePerGas),
           ];
 
-          await expect(diamondCutFacet.connect(deployer).diamondCut(...cutArgs)).to.revertedWith(
+          await expect(diamondCutFacet.connect(deployer).diamondCut(...cutArgs)).to.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.VERSION_MUST_BE_SET
           );
         });
@@ -197,7 +202,7 @@ describe("ProtocolInitializationHandler", async function () {
             await getFees(maxPriorityFeePerGas)
           );
 
-          await expect(cutTransaction).to.be.revertedWith(RevertReasons.ALREADY_INITIALIZED);
+          await expect(cutTransaction).to.be.revertedWithCustomError(bosonErrors, RevertReasons.ALREADY_INITIALIZED);
         });
 
         it("Initialize is not called via proxy", async function () {
@@ -238,7 +243,7 @@ describe("ProtocolInitializationHandler", async function () {
               [],
               []
             )
-          ).to.be.revertedWith(RevertReasons.DIRECT_INITIALIZATION_NOT_ALLOWED);
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.DIRECT_INITIALIZATION_NOT_ALLOWED);
         });
       });
     });
@@ -408,7 +413,7 @@ describe("ProtocolInitializationHandler", async function () {
             calldataProtocolInitialization,
             await getFees(maxPriorityFeePerGas)
           )
-        ).to.be.revertedWith(RevertReasons.PROTOCOL_INITIALIZATION_FAILED);
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.PROTOCOL_INITIALIZATION_FAILED);
       });
     });
   });
@@ -523,7 +528,7 @@ describe("ProtocolInitializationHandler", async function () {
             calldataProtocolInitialization,
             await getFees(maxPriorityFeePerGas)
           )
-        ).to.be.revertedWith(RevertReasons.VALUE_ZERO_NOT_ALLOWED);
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.VALUE_ZERO_NOT_ALLOWED);
       });
 
       it("Current version is not 0", async () => {
@@ -552,7 +557,7 @@ describe("ProtocolInitializationHandler", async function () {
             calldataProtocolInitialization,
             await getFees(maxPriorityFeePerGas)
           )
-        ).to.be.revertedWith(RevertReasons.WRONG_CURRENT_VERSION);
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.WRONG_CURRENT_VERSION);
       });
     });
   });
@@ -645,7 +650,7 @@ describe("ProtocolInitializationHandler", async function () {
             calldataProtocolInitialization,
             await getFees(maxPriorityFeePerGas)
           )
-        ).to.be.revertedWith(RevertReasons.WRONG_CURRENT_VERSION);
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.WRONG_CURRENT_VERSION);
       });
     });
   });
@@ -683,6 +688,7 @@ describe("ProtocolInitializationHandler", async function () {
           voucherBeacon: await beacon.getAddress(),
         };
 
+        let doPreprocess = true; // Due to "hardhat-preprocessor" way of caching, we need a workaround to toggle preprocessing on and off
         // Make initial deployment (simulate v2.2.1)
         // The new config initialization deploys the same voucher proxy as initV2_3_0, which makes the initV2_3_0 test fail
         // One way to approach would be to checkout the contracts from the previous tag.
@@ -690,17 +696,19 @@ describe("ProtocolInitializationHandler", async function () {
         hre.config.preprocess = {
           eachLine: () => ({
             transform: (line) => {
-              if (
-                line.includes("address beaconProxy = address(new BeaconClientProxy{ salt: VOUCHER_PROXY_SALT }());")
-              ) {
-                // comment out the proxy deployment
-                line = "//" + line;
-              } else if (line.includes("setBeaconProxyAddress(beaconProxy)")) {
-                // set beacon proxy from config, not the deployed one
-                line = line.replace(
-                  "setBeaconProxyAddress(beaconProxy)",
-                  "setBeaconProxyAddress(_addresses.beaconProxy)"
-                );
+              if (doPreprocess) {
+                if (
+                  line.includes("address beaconProxy = address(new BeaconClientProxy{ salt: VOUCHER_PROXY_SALT }());")
+                ) {
+                  // comment out the proxy deployment
+                  line = "//" + line;
+                } else if (line.includes("setBeaconProxyAddress(beaconProxy)")) {
+                  // set beacon proxy from config, not the deployed one
+                  line = line.replace(
+                    "setBeaconProxyAddress(beaconProxy)",
+                    "setBeaconProxyAddress(_addresses.beaconProxy)"
+                  );
+                }
               }
               return line;
             },
@@ -724,10 +732,9 @@ describe("ProtocolInitializationHandler", async function () {
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // Deploy v2.3.0 facets
-        // Remove preprocess
-        hre.config.preprocess = {};
-        // Compile old version
-        await hre.run("compile");
+        // Skip preprocessing and compile new version
+        doPreprocess = false;
+        await hre.run("compile", { force: true });
 
         [{ contract: deployedProtocolInitializationHandlerFacet }, { contract: configHandler }] =
           await deployProtocolFacets(
@@ -803,7 +810,7 @@ describe("ProtocolInitializationHandler", async function () {
             deployedProtocolInitializationHandlerFacetAddress,
             calldataProtocolInitialization
           )
-        ).to.be.revertedWith(RevertReasons.TWINS_ALREADY_EXIST);
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.TWINS_ALREADY_EXIST);
       });
 
       it("Min resolution period is zero", async function () {
@@ -823,15 +830,13 @@ describe("ProtocolInitializationHandler", async function () {
             deployedProtocolInitializationHandlerFacetAddress,
             calldataProtocolInitialization
           )
-        ).to.be.revertedWith(RevertReasons.VALUE_ZERO_NOT_ALLOWED);
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.VALUE_ZERO_NOT_ALLOWED);
       });
 
       it("Min resolution period is greater than max resolution period", async function () {
         version = "2.3.0";
-        console.log("oneMonth", oneMonth);
         await configHandler.connect(deployer).setMaxResolutionPeriod(oneMonth);
         minResolutionPeriod = oneMonth + 1n;
-        console.log("minResolutionPeriod", minResolutionPeriod);
         initializationData = abiCoder.encode(["uint256", "uint256[]", "address[]"], [minResolutionPeriod, [], []]);
         calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
           "initialize",
@@ -844,7 +849,7 @@ describe("ProtocolInitializationHandler", async function () {
             deployedProtocolInitializationHandlerFacetAddress,
             calldataProtocolInitialization
           )
-        ).to.be.revertedWith(RevertReasons.INVALID_RESOLUTION_PERIOD);
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_RESOLUTION_PERIOD);
       });
 
       it("Current version is not 2.2.1", async () => {
@@ -890,7 +895,7 @@ describe("ProtocolInitializationHandler", async function () {
             await deployedProtocolInitializationHandlerFacet.getAddress(),
             calldataProtocolInitialization
           )
-        ).to.be.revertedWith(RevertReasons.WRONG_CURRENT_VERSION);
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.WRONG_CURRENT_VERSION);
       });
     });
   });

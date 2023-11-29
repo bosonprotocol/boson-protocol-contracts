@@ -6,7 +6,8 @@ const { getInterfaceIds } = require("../../../scripts/config/supported-interface
 const Role = require("../../../scripts/domain/Role");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const Range = require("../../../scripts/domain/Range");
-const VoucherInitValues = require("../../../scripts/domain/VoucherInitValues");
+const { RoyaltyInfo } = require("../../../scripts/domain/RoyaltyInfo");
+const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../../scripts/domain/RoyaltyRecipient.js");
 const { Funds, FundsList } = require("../../../scripts/domain/Funds");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
 const {
@@ -34,12 +35,11 @@ const {
   deriveTokenId,
 } = require("../../util/utils.js");
 const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
-const { ZeroHash } = require("ethers");
 
 describe("IBosonVoucher", function () {
   let interfaceIds;
   let accessController;
-  let bosonVoucher, offerHandler, accountHandler, exchangeHandler, fundsHandler;
+  let bosonVoucher, offerHandler, accountHandler, exchangeHandler, fundsHandler, configHandler;
   let deployer,
     protocol,
     buyer,
@@ -59,6 +59,7 @@ describe("IBosonVoucher", function () {
   let forwarder;
   let snapshotId;
   let beaconProxyAddress;
+  let bosonErrors;
 
   before(async function () {
     accountId.next(true);
@@ -78,16 +79,19 @@ describe("IBosonVoucher", function () {
       offerHandler: "IBosonOfferHandler",
       exchangeHandler: "IBosonExchangeHandler",
       fundsHandler: "IBosonFundsHandler",
+      configHandler: "IBosonConfigHandler",
     };
 
     let bosonClientBeacon;
     ({
       signers: [protocol, buyer, rando, rando2, admin, treasury, adminDR, treasuryDR],
-      contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler },
+      contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, configHandler },
       extraReturnValues: { accessController, beacon: bosonClientBeacon },
     } = await setupTestEnvironment(contracts, {
       forwarderAddress: [await forwarder.getAddress()],
     }));
+
+    bosonErrors = await getContractAt("BosonErrors", await accountHandler.getAddress());
 
     // make all account the same
     assistant = admin;
@@ -169,7 +173,7 @@ describe("IBosonVoucher", function () {
     });
   });
 
-  context("Offer must exist", async function () {
+  context("Tests with an actual protocol offer", async function () {
     let offer, offerDates, offerDurations, disputeResolverId;
 
     before(async function () {
@@ -266,7 +270,8 @@ describe("IBosonVoucher", function () {
       context("💔 Revert Reasons", async function () {
         it("should revert if caller does not have PROTOCOL role", async function () {
           // Expect revert if random user attempts to issue voucher
-          await expect(bosonVoucher.connect(rando).issueVoucher(0, buyerWallet)).to.be.revertedWith(
+          await expect(bosonVoucher.connect(rando).issueVoucher(0, buyerWallet)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.ACCESS_DENIED
           );
 
@@ -291,7 +296,8 @@ describe("IBosonVoucher", function () {
           await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, await assistant.getAddress());
 
           // Expect revert if random user attempts to issue voucher
-          await expect(bosonVoucher.connect(protocol).issueVoucher(tokenId, buyerWallet)).to.be.revertedWith(
+          await expect(bosonVoucher.connect(protocol).issueVoucher(tokenId, buyerWallet)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.EXCHANGE_ID_IN_RESERVED_RANGE
           );
         });
@@ -363,7 +369,7 @@ describe("IBosonVoucher", function () {
         it("caller does not have PROTOCOL role", async function () {
           await expect(
             bosonVoucher.connect(rando).reserveRange(offerId, start, length, await assistant.getAddress())
-          ).to.be.revertedWith(RevertReasons.ACCESS_DENIED);
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
         });
 
         it("Start id is not greater than zero for the first range", async function () {
@@ -373,7 +379,7 @@ describe("IBosonVoucher", function () {
           // Try to reserve range, it should fail
           await expect(
             bosonVoucher.connect(protocol).reserveRange(offerId, start, length, await assistant.getAddress())
-          ).to.be.revertedWith(RevertReasons.INVALID_RANGE_START);
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_RANGE_START);
         });
 
         it("Range length is zero", async function () {
@@ -383,7 +389,7 @@ describe("IBosonVoucher", function () {
           // Try to reserve range, it should fail
           await expect(
             bosonVoucher.connect(protocol).reserveRange(offerId, start, length, await assistant.getAddress())
-          ).to.be.revertedWith(RevertReasons.INVALID_RANGE_LENGTH);
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_RANGE_LENGTH);
         });
 
         it("Range length is too large, i.e., would cause an overflow", async function () {
@@ -394,7 +400,7 @@ describe("IBosonVoucher", function () {
           // Try to reserve range, it should fail
           await expect(
             bosonVoucher.connect(protocol).reserveRange(offerId, start, length, await assistant.getAddress())
-          ).to.be.revertedWith(RevertReasons.INVALID_RANGE_LENGTH);
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_RANGE_LENGTH);
         });
 
         it("Offer id is already associated with a range", async function () {
@@ -406,14 +412,14 @@ describe("IBosonVoucher", function () {
           // Try to reserve range for the same offer, it should fail
           await expect(
             bosonVoucher.connect(protocol).reserveRange(offerId, start, length, await assistant.getAddress())
-          ).to.be.revertedWith(RevertReasons.OFFER_RANGE_ALREADY_RESERVED);
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_RANGE_ALREADY_RESERVED);
         });
 
         it("_to address isn't contract address or contract owner address", async function () {
           // Try to reserve range for rando address, it should fail
           await expect(
             bosonVoucher.connect(protocol).reserveRange(offerId, start, length, await rando.getAddress())
-          ).to.be.revertedWith(RevertReasons.INVALID_TO_ADDRESS);
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_TO_ADDRESS);
         });
       });
     });
@@ -593,7 +599,8 @@ describe("IBosonVoucher", function () {
           offerId = 15;
 
           // Try to premint, it should fail
-          await expect(bosonVoucher.connect(assistant).preMint(offerId, amount)).to.be.revertedWith(
+          await expect(bosonVoucher.connect(assistant).preMint(offerId, amount)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.NO_RESERVED_RANGE_FOR_OFFER
           );
         });
@@ -606,7 +613,8 @@ describe("IBosonVoucher", function () {
           amount = "990"; // length is 1000, already minted 50
 
           // Try to premint, it should fail
-          await expect(bosonVoucher.connect(assistant).preMint(offerId, amount)).to.be.revertedWith(
+          await expect(bosonVoucher.connect(assistant).preMint(offerId, amount)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.INVALID_AMOUNT_TO_MINT
           );
         });
@@ -616,7 +624,8 @@ describe("IBosonVoucher", function () {
           await setNextBlockTimestamp(Number(BigInt(offerDates.validUntil) + 1n));
 
           // Try to premint, it should fail
-          await expect(bosonVoucher.connect(assistant).preMint(offerId, amount)).to.be.revertedWith(
+          await expect(bosonVoucher.connect(assistant).preMint(offerId, amount)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.OFFER_EXPIRED_OR_VOIDED
           );
         });
@@ -625,7 +634,8 @@ describe("IBosonVoucher", function () {
           await offerHandler.connect(assistant).voidOffer(offerId);
 
           // Try to premint, it should fail
-          await expect(bosonVoucher.connect(assistant).preMint(offerId, amount)).to.be.revertedWith(
+          await expect(bosonVoucher.connect(assistant).preMint(offerId, amount)).to.be.revertedWithCustomError(
+            bosonErrors,
             RevertReasons.OFFER_EXPIRED_OR_VOIDED
           );
         });
@@ -769,9 +779,9 @@ describe("IBosonVoucher", function () {
         assert.equal(returnedRange.toString(), range.toString(), "Range mismatch");
 
         // Second call should revert since there's nothing to burn
-        await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)).to.be.revertedWith(
-          RevertReasons.AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN
-        );
+        await expect(
+          bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN);
       });
 
       context("Test that require non-voided offer", function () {
@@ -866,9 +876,9 @@ describe("IBosonVoucher", function () {
           offerId = 15;
 
           // Try to burn, it should fail
-          await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)).to.be.revertedWith(
-            RevertReasons.NO_RESERVED_RANGE_FOR_OFFER
-          );
+          await expect(
+            bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.NO_RESERVED_RANGE_FOR_OFFER);
         });
 
         it("Offer is still valid", async function () {
@@ -881,9 +891,9 @@ describe("IBosonVoucher", function () {
           await bosonVoucher.connect(assistant).preMint(offerId, 10);
 
           // Try to burn, it should fail
-          await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)).to.be.revertedWith(
-            RevertReasons.OFFER_STILL_VALID
-          );
+          await expect(
+            bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_STILL_VALID);
         });
 
         it("Nothing to burn", async function () {
@@ -891,9 +901,9 @@ describe("IBosonVoucher", function () {
           await bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount);
 
           // Try to burn, it should fail
-          await expect(bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)).to.be.revertedWith(
-            RevertReasons.AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN
-          );
+          await expect(
+            bosonVoucher.connect(assistant).burnPremintedVouchers(offerId, amount)
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.AMOUNT_EXCEEDS_RANGE_OR_NOTHING_TO_BURN);
         });
       });
     });
@@ -1429,7 +1439,7 @@ describe("IBosonVoucher", function () {
               assert.equal(tokenOwner, await rando.getAddress(), "Rando is not the owner");
             });
 
-            it("Should call commitToPreMintedOffer", async function () {
+            it("Should call onPremintedVoucherTransferred", async function () {
               const tx = await bosonVoucher
                 .connect(assistant)
                 [selector](await assistant.getAddress(), await rando.getAddress(), tokenId, ...additionalArgs);
@@ -1448,7 +1458,7 @@ describe("IBosonVoucher", function () {
               // Update the validUntilDate date in the expected exchange struct
               voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
-              // First transfer should call commitToPreMintedOffer
+              // First transfer should call onPremintedVoucherTransferred
               await expect(tx)
                 .to.emit(exchangeHandler, "BuyerCommitted")
                 .withArgs(
@@ -1462,21 +1472,21 @@ describe("IBosonVoucher", function () {
             });
 
             it("Second transfer should behave as normal voucher transfer", async function () {
-              // First transfer should call commitToPreMintedOffer, and not onVoucherTransferred
+              // First transfer should call onPremintedVoucherTransferred, and not onVoucherTransferred
               let tx = await bosonVoucher
                 .connect(assistant)
                 [selector](await assistant.getAddress(), await rando.getAddress(), tokenId, ...additionalArgs);
               await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
               await expect(tx).to.not.emit(exchangeHandler, "VoucherTransferred");
 
-              // Second transfer should call onVoucherTransferred, and not commitToPreMintedOffer
+              // Second transfer should call onVoucherTransferred, and not onPremintedVoucherTransferred
               tx = await bosonVoucher
                 .connect(rando)
                 [selector](await rando.getAddress(), await assistant.getAddress(), tokenId, ...additionalArgs);
               await expect(tx).to.emit(exchangeHandler, "VoucherTransferred");
               await expect(tx).to.not.emit(exchangeHandler, "BuyerCommitted");
 
-              // Next transfer should call onVoucherTransferred, and not commitToPreMintedOffer, even if seller is the owner
+              // Next transfer should call onVoucherTransferred, and not onPremintedVoucherTransferred, even if seller is the owner
               tx = await bosonVoucher
                 .connect(assistant)
                 [selector](await assistant.getAddress(), await rando.getAddress(), tokenId, ...additionalArgs);
@@ -1553,7 +1563,7 @@ describe("IBosonVoucher", function () {
                   bosonVoucher
                     .connect(assistant)
                     [selector](await assistant.getAddress(), await rando.getAddress(), tokenId, ...additionalArgs)
-                ).to.be.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
+                ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
               });
 
               it("Transfer preminted voucher, where offer has expired", async function () {
@@ -1565,7 +1575,7 @@ describe("IBosonVoucher", function () {
                   bosonVoucher
                     .connect(assistant)
                     [selector](await assistant.getAddress(), await rando.getAddress(), tokenId, ...additionalArgs)
-                ).to.be.revertedWith(RevertReasons.OFFER_HAS_EXPIRED);
+                ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_EXPIRED);
               });
 
               it("Transfer preminted voucher, but from is not the voucher owner", async function () {
@@ -1583,7 +1593,7 @@ describe("IBosonVoucher", function () {
                   bosonVoucher
                     .connect(rando)
                     [selector](await rando.getAddress(), await rando.getAddress(), tokenId, ...additionalArgs)
-                ).to.be.revertedWith(RevertReasons.NO_SILENT_MINT_ALLOWED);
+                ).to.be.revertedWith(RevertReasons.ERC721_CALLER_NOT_OWNER_OR_APPROVED);
               });
             });
           });
@@ -1675,110 +1685,34 @@ describe("IBosonVoucher", function () {
     });
 
     context("EIP2981 NFT Royalty fee", function () {
-      let offerId;
+      let offerId, tokenId;
       beforeEach(async function () {
         offerId = "1";
         exchangeId = "1";
         offerPrice = offer.price;
+        tokenId = deriveTokenId(offerId, exchangeId);
 
         await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: offer.price });
       });
 
-      context("setRoyaltyPercentage()", function () {
-        beforeEach(async function () {
-          // give ownership to assistant
-          await bosonVoucher.connect(protocol).transferOwnership(await assistant.getAddress());
-        });
-
-        it("should emit RoyaltyPercentageChanged event", async function () {
-          royaltyPercentage = "0"; //0%
-          await expect(bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage))
-            .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
-            .withArgs(royaltyPercentage);
-        });
-
-        it("should set a royalty fee percentage", async function () {
-          // First, set royalty fee as 0
-          royaltyPercentage = "0"; //0%
-          await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
-
-          let receiver, royaltyAmount;
-          [receiver, royaltyAmount] = await bosonVoucher.connect(rando).royaltyInfo(exchangeId, offerPrice);
-
-          // Expectations
-          let expectedRecipient = seller.treasury;
-          let expectedRoyaltyAmount = "0";
-
-          assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
-          assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
-
-          // Now, set royalty fee as 10%
-          royaltyPercentage = "1000"; //10%
-          await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
-
-          [receiver, royaltyAmount] = await bosonVoucher.connect(rando).royaltyInfo(exchangeId, offerPrice);
-
-          // Expectations
-          expectedRecipient = seller.treasury;
-          expectedRoyaltyAmount = applyPercentage(offerPrice, royaltyPercentage);
-
-          assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
-          assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
-        });
-
-        context("💔 Revert Reasons", async function () {
-          it("should revert if caller is not the owner", async function () {
-            // random caller
-            await expect(bosonVoucher.connect(rando).setRoyaltyPercentage(royaltyPercentage)).to.be.revertedWith(
-              RevertReasons.OWNABLE_NOT_OWNER
-            );
-
-            // protocol as the caller
-            await expect(bosonVoucher.connect(protocol).setRoyaltyPercentage(royaltyPercentage)).to.be.revertedWith(
-              RevertReasons.OWNABLE_NOT_OWNER
-            );
-          });
-
-          it("should revert if royaltyPercentage is greater than max royalty percentage defined in the protocol", async function () {
-            // Set royalty fee as 15% (protocol limit is 10%)
-            royaltyPercentage = "1500"; //15%
-
-            // royalty percentage too high, expecting revert
-            await expect(bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage)).to.be.revertedWith(
-              RevertReasons.ROYALTY_FEE_INVALID
-            );
-          });
-        });
-      });
-
-      context("getRoyaltyPercentage()", function () {
-        it("should return the royalty fee percentage", async function () {
-          // give ownership to assistant
-          await bosonVoucher.connect(protocol).transferOwnership(await assistant.getAddress());
-
-          royaltyPercentage = "1000"; //10%
-          await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
-
-          expect(await bosonVoucher.connect(rando).getRoyaltyPercentage()).to.equal(
-            royaltyPercentage,
-            "Invalid royalty percentage"
-          );
-        });
-      });
-
       context("royaltyInfo()", function () {
+        let agentId;
         beforeEach(async function () {
           // give ownership to assistant
           await bosonVoucher.connect(protocol).transferOwnership(await assistant.getAddress());
+
+          agentId = 0;
         });
 
         it("should return a recipient and royalty fee", async function () {
           // First, set royalty fee as 0
           royaltyPercentage = "0"; //0%
-          await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
+          await offerHandler
+            .connect(assistant)
+            .updateOfferRoyaltyRecipients(offerId, new RoyaltyInfo([ZeroAddress], [royaltyPercentage]));
 
           let receiver, royaltyAmount;
-          [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
+          [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offerPrice);
 
           // Expectations
           let expectedRecipient = seller.treasury;
@@ -1789,9 +1723,11 @@ describe("IBosonVoucher", function () {
 
           // Now, set royalty fee as 10%
           royaltyPercentage = "1000"; //10%
-          await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
+          await offerHandler
+            .connect(assistant)
+            .updateOfferRoyaltyRecipients(offerId, new RoyaltyInfo([ZeroAddress], [royaltyPercentage]));
 
-          [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
+          [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offerPrice);
 
           // Expectations
           expectedRecipient = seller.treasury;
@@ -1803,9 +1739,11 @@ describe("IBosonVoucher", function () {
           // Any random address can check the royalty info
           // Now, set royalty fee as 8%
           royaltyPercentage = "800"; //8%
-          await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
+          await offerHandler
+            .connect(assistant)
+            .updateOfferRoyaltyRecipients(offerId, new RoyaltyInfo([ZeroAddress], [royaltyPercentage]));
 
-          [receiver, royaltyAmount] = await bosonVoucher.connect(rando).royaltyInfo(exchangeId, offerPrice);
+          [receiver, royaltyAmount] = await bosonVoucher.connect(rando).royaltyInfo(tokenId, offerPrice);
 
           // Expectations
           expectedRecipient = seller.treasury;
@@ -1818,7 +1756,9 @@ describe("IBosonVoucher", function () {
         it("if exchange doesn't exist it should return 0 values", async function () {
           // Set royalty fee as 10%
           royaltyPercentage = "1000"; //10%
-          await bosonVoucher.connect(assistant).setRoyaltyPercentage(royaltyPercentage);
+          await offerHandler
+            .connect(assistant)
+            .updateOfferRoyaltyRecipients(offerId, new RoyaltyInfo([ZeroAddress], [royaltyPercentage]));
 
           // Set inexistent exchangeId
           exchangeId = "100000";
@@ -1828,26 +1768,163 @@ describe("IBosonVoucher", function () {
           assert.equal(receiver, ZeroAddress, "Recipient address is incorrect");
           assert.equal(royaltyAmount, 0n, "Royalty amount is incorrect");
         });
-      });
 
-      context("💔 Revert Reasons", async function () {
-        it("should revert during create seller if royaltyPercentage is greater than max royalty percentage defined in the protocol", async function () {
-          // create invalid voucherInitValues
-          royaltyPercentage = "2000"; // 20%
-          voucherInitValues = new VoucherInitValues("ContractURI", royaltyPercentage, ZeroHash);
+        it("eip2981 always returns only the first entry as the recipient", async function () {
+          await configHandler.connect(deployer).setMaxRoyaltyPercentage("10000");
 
-          // create another seller
-          seller = mockSeller(
-            await rando.getAddress(),
-            await rando.getAddress(),
-            ZeroAddress,
-            await rando.getAddress()
+          // Add multiple royalty recipients
+          const royaltyRecipientList = new RoyaltyRecipientList([
+            new RoyaltyRecipient(rando.address, "100", "other1"),
+            new RoyaltyRecipient(rando2.address, "200", "other2"),
+          ]);
+          await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+
+          // Create an offer with multiple recipients
+          const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+          offer.royaltyInfo = [
+            new RoyaltyInfo(
+              [rando.address, ZeroAddress, rando2.address],
+              ["200", voucherInitValues.royaltyPercentage, "250"]
+            ),
+          ];
+          offer.id = 2;
+
+          await offerHandler
+            .connect(assistant)
+            .createOffer(
+              offer.toStruct(),
+              offerDates.toStruct(),
+              offerDurations.toStruct(),
+              disputeResolverId,
+              agentId
+            );
+          await fundsHandler
+            .connect(admin)
+            .depositFunds(seller.id, ZeroAddress, offer.sellerDeposit, { value: offer.sellerDeposit });
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
+
+          // Set inexistent exchangeId
+          exchangeId = "2";
+          const tokenId = deriveTokenId(offer.id, exchangeId);
+          const [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offerPrice);
+
+          // Expectations
+          let expectedRecipient = rando.address;
+          let expectedRoyaltyAmount = applyPercentage(
+            offerPrice,
+            Number(voucherInitValues.royaltyPercentage) + 200 + 250
           );
 
-          // royalty percentage too high, expecting revert
-          await expect(
-            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
-          ).to.be.revertedWith(RevertReasons.ROYALTY_FEE_INVALID);
+          assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+          assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
+        });
+
+        it("for offer without royalty recipients, it returns 0 values", async function () {
+          // Create an offer with multiple recipients
+          const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+          offer.royaltyInfo = [new RoyaltyInfo([], [])];
+          offer.id = 2;
+
+          await offerHandler
+            .connect(assistant)
+            .createOffer(
+              offer.toStruct(),
+              offerDates.toStruct(),
+              offerDurations.toStruct(),
+              disputeResolverId,
+              agentId
+            );
+          await fundsHandler
+            .connect(admin)
+            .depositFunds(seller.id, ZeroAddress, offer.sellerDeposit, { value: offer.sellerDeposit });
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
+
+          // Set exchangeId
+          const exchangeId = "2";
+          const tokenId = deriveTokenId(offer.id, exchangeId);
+          const [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offerPrice);
+
+          // Expectations
+          let expectedRecipient = ZeroAddress;
+          let expectedRoyaltyAmount = "0";
+
+          assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+          assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
+        });
+
+        it("should return a recipient and royalty fee for preminted offers", async function () {
+          // Create an offer with multiple recipients
+          const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+          offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
+          offer.id = 2;
+          offer.quantityAvailable = 20;
+
+          await offerHandler
+            .connect(assistant)
+            .createOffer(
+              offer.toStruct(),
+              offerDates.toStruct(),
+              offerDurations.toStruct(),
+              disputeResolverId,
+              agentId
+            );
+          await fundsHandler
+            .connect(admin)
+            .depositFunds(seller.id, ZeroAddress, offer.sellerDeposit, { value: offer.sellerDeposit });
+          await offerHandler.connect(assistant).reserveRange(offer.id, 20, assistant.address);
+          await bosonVoucher.connect(assistant).preMint(offer.id, 20);
+
+          // Set exchangeId
+          const exchangeId = "2";
+          const tokenId = deriveTokenId(offer.id, exchangeId);
+          const [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offerPrice);
+
+          // Expectations
+          let expectedRecipient = seller.treasury;
+          let expectedRoyaltyAmount = applyPercentage(offerPrice, voucherInitValues.royaltyPercentage);
+
+          assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+          assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
+        });
+
+        it("should return 0 values if token does not exist", async function () {
+          // set invalid exchangeId
+          exchangeId = "1234";
+
+          let [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
+
+          // Expectations
+          let expectedRecipient = ZeroAddress;
+          let expectedRoyaltyAmount = "0";
+
+          assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+          assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
+        });
+
+        it("should return 0 values if voucher was redeemed", async function () {
+          await setNextBlockTimestamp("0x" + BigInt(offerDates.voucherRedeemableFrom).toString(16));
+          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+          let [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
+          // Expectations
+          let expectedRecipient = ZeroAddress;
+          let expectedRoyaltyAmount = "0";
+
+          assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+          assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
+        });
+
+        it("if exchange doesn't exist it should return 0 values", async function () {
+          // Set inexistent exchangeId
+          exchangeId = "100000";
+          const [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(exchangeId, offerPrice);
+
+          // Expectations
+          let expectedRecipient = ZeroAddress;
+          let expectedRoyaltyAmount = "0";
+
+          assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+          assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
         });
       });
     });
@@ -2011,7 +2088,10 @@ describe("IBosonVoucher", function () {
 
     it("should revert if caller does not have PROTOCOL role", async function () {
       // Expect revert if random user attempts to burn voucher
-      await expect(bosonVoucher.connect(rando).burnVoucher(0)).to.be.revertedWith(RevertReasons.ACCESS_DENIED);
+      await expect(bosonVoucher.connect(rando).burnVoucher(0)).to.be.revertedWithCustomError(
+        bosonErrors,
+        RevertReasons.ACCESS_DENIED
+      );
 
       // Grant PROTOCOL role to random user address
       await accessController.grantRole(Role.PROTOCOL, await rando.getAddress());
@@ -2049,9 +2129,9 @@ describe("IBosonVoucher", function () {
 
     context("💔 Revert Reasons", async function () {
       it("should revert if caller does not have PROTOCOL role", async function () {
-        await expect(bosonVoucher.connect(rando).transferOwnership(await assistant.getAddress())).to.be.revertedWith(
-          RevertReasons.ACCESS_DENIED
-        );
+        await expect(
+          bosonVoucher.connect(rando).transferOwnership(await assistant.getAddress())
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
       });
 
       it("Even the current owner cannot transfer the ownership", async function () {
@@ -2059,9 +2139,9 @@ describe("IBosonVoucher", function () {
         await bosonVoucher.connect(protocol).transferOwnership(await assistant.getAddress());
 
         // owner tries to transfer, it should fail
-        await expect(bosonVoucher.connect(assistant).transferOwnership(await rando.getAddress())).to.be.revertedWith(
-          RevertReasons.ACCESS_DENIED
-        );
+        await expect(
+          bosonVoucher.connect(assistant).transferOwnership(await rando.getAddress())
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
       });
 
       it("Current owner cannot renounce the ownership", async function () {
@@ -2071,7 +2151,10 @@ describe("IBosonVoucher", function () {
         const ownable = await getContractAt("OwnableUpgradeable", await bosonVoucher.getAddress());
 
         // owner tries to renounce ownership, it should fail
-        await expect(ownable.connect(assistant).renounceOwnership()).to.be.revertedWith(RevertReasons.ACCESS_DENIED);
+        await expect(ownable.connect(assistant).renounceOwnership()).to.be.revertedWithCustomError(
+          bosonErrors,
+          RevertReasons.ACCESS_DENIED
+        );
       });
 
       it("Transferring ownership to 0 is not allowed", async function () {
@@ -2154,9 +2237,9 @@ describe("IBosonVoucher", function () {
 
     context("💔 Revert Reasons", async function () {
       it("_to is the zero address", async function () {
-        await expect(bosonVoucher.connect(assistant).callExternalContract(ZeroAddress, calldata)).to.be.revertedWith(
-          RevertReasons.INVALID_ADDRESS
-        );
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(ZeroAddress, calldata)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
       });
 
       it("Caller is not the contract owner", async function () {
@@ -2185,9 +2268,9 @@ describe("IBosonVoucher", function () {
 
         // transfer
         calldata = erc20.interface.encodeFunctionData("transfer", [await assistant.getAddress(), 20]);
-        await expect(bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)).to.be.revertedWith(
-          RevertReasons.INTERACTION_NOT_ALLOWED
-        );
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INTERACTION_NOT_ALLOWED);
 
         // transferFrom
         calldata = erc20.interface.encodeFunctionData("transferFrom", [
@@ -2195,24 +2278,24 @@ describe("IBosonVoucher", function () {
           await assistant.getAddress(),
           20,
         ]);
-        await expect(bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)).to.be.revertedWith(
-          RevertReasons.INTERACTION_NOT_ALLOWED
-        );
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INTERACTION_NOT_ALLOWED);
 
         // approve
         calldata = erc20.interface.encodeFunctionData("approve", [await assistant.getAddress(), 20]);
-        await expect(bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)).to.be.revertedWith(
-          RevertReasons.INTERACTION_NOT_ALLOWED
-        );
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INTERACTION_NOT_ALLOWED);
 
         // DAI
         const dai = await getContractAt("DAIAliases", ZeroAddress);
 
         // push
         calldata = dai.interface.encodeFunctionData("push", [await assistant.getAddress(), 20]);
-        await expect(bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)).to.be.revertedWith(
-          RevertReasons.INTERACTION_NOT_ALLOWED
-        );
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INTERACTION_NOT_ALLOWED);
 
         // move
         calldata = dai.interface.encodeFunctionData("move", [
@@ -2220,9 +2303,9 @@ describe("IBosonVoucher", function () {
           await assistant.getAddress(),
           20,
         ]);
-        await expect(bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)).to.be.revertedWith(
-          RevertReasons.INTERACTION_NOT_ALLOWED
-        );
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(erc20Address, calldata)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INTERACTION_NOT_ALLOWED);
 
         // ERC721
         const erc721Address = await erc721.getAddress();
@@ -2232,9 +2315,9 @@ describe("IBosonVoucher", function () {
           await assistant.getAddress(),
           20,
         ]);
-        await expect(bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)).to.be.revertedWith(
-          RevertReasons.INTERACTION_NOT_ALLOWED
-        );
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INTERACTION_NOT_ALLOWED);
 
         // transferFrom
         calldata = erc721.interface.encodeFunctionData("safeTransferFrom(address,address,uint256)", [
@@ -2242,21 +2325,21 @@ describe("IBosonVoucher", function () {
           await assistant.getAddress(),
           20,
         ]);
-        await expect(bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)).to.be.revertedWith(
-          RevertReasons.INTERACTION_NOT_ALLOWED
-        );
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INTERACTION_NOT_ALLOWED);
 
         // approve
         calldata = erc721.interface.encodeFunctionData("approve", [await assistant.getAddress(), 20]);
-        await expect(bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)).to.be.revertedWith(
-          RevertReasons.INTERACTION_NOT_ALLOWED
-        );
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INTERACTION_NOT_ALLOWED);
 
         // setApprovalForAll
         calldata = erc721.interface.encodeFunctionData("setApprovalForAll", [await assistant.getAddress(), true]);
-        await expect(bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)).to.be.revertedWith(
-          RevertReasons.INTERACTION_NOT_ALLOWED
-        );
+        await expect(
+          bosonVoucher.connect(assistant).callExternalContract(erc721Address, calldata)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.INTERACTION_NOT_ALLOWED);
       });
     });
   });
@@ -2278,9 +2361,9 @@ describe("IBosonVoucher", function () {
 
       it("should revert if operator is zero address", async function () {
         // Expect revert if random user attempts to set approval
-        await expect(bosonVoucher.connect(assistant).setApprovalForAllToContract(ZeroAddress, true)).to.revertedWith(
-          RevertReasons.INVALID_ADDRESS
-        );
+        await expect(
+          bosonVoucher.connect(assistant).setApprovalForAllToContract(ZeroAddress, true)
+        ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
       });
     });
   });
