@@ -16,6 +16,7 @@ const {
   getContractFactory,
   getSigners,
   ZeroHash,
+  MaxUint256,
 } = hre.ethers;
 const AuthToken = require("../../scripts/domain/AuthToken");
 const { getMetaTransactionsHandlerFacetInitArgs } = require("../../scripts/config/facet-deploy.js");
@@ -532,11 +533,12 @@ async function populateProtocolContract(
       // choose one DR and agent
       const disputeResolverId = DRs[offerId % 3].disputeResolver.id;
       const agentId = agents[offerId % 2].agent.id;
+      const offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
 
       // create an offer
       await offerHandler
         .connect(sellers[j].wallet)
-        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
       offers.push({ offer, offerDates, offerDurations, disputeResolverId, agentId });
       sellers[j].offerIds.push(offerId);
@@ -1912,11 +1914,12 @@ async function populateVoucherContract(
       // choose one DR and agent
       const disputeResolverId = DRs[0].disputeResolver.id;
       const agentId = "0";
+      const offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
 
       // create an offer
       await offerHandler
         .connect(sellers[j].wallet)
-        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
       offers.push({ offer, offerDates, offerDurations, disputeResolverId, agentId });
       sellers[j].offerIds.push(offerId);

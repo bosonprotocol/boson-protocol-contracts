@@ -152,8 +152,10 @@ interface BosonErrors {
     error InvalidQuantityAvailable();
     // Chose DR does not support the fees in the chosen exchange token
     error DRUnsupportedFee();
-    // Sum of protocol and agent fee exceed the max allowed fee
+    // Sum of protocol and agent fee exceeds the max allowed fee
     error AgentFeeAmountTooHigh();
+    // Sum of protocol and agent fee exceeds the seller defined max fee
+    error TotalFeeExceedsLimit();
     // Collection does not exist
     error NoSuchCollection();
     // Royalty recipient is not allow listed for the seller

@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { ZeroAddress, provider, getContractAt } = ethers;
+const { ZeroAddress, provider, getContractAt, MaxUint256 } = ethers;
 const { expect } = require("chai");
 
 const {
@@ -152,9 +152,10 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       expect(offerDurations.isValid()).is.true;
 
       // Register the offer
+      const offerFeeLimit = MaxUint256;
       await offerHandler
         .connect(assistant)
-        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentAccount.id);
+        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentAccount.id, offerFeeLimit);
 
       // Deposit seller funds so the commit will succeed
       await fundsHandler

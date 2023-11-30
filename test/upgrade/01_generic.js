@@ -1,6 +1,6 @@
 const shell = require("shelljs");
-const hre = require("hardhat");
-const { ZeroAddress, provider } = hre.ethers;
+const { ethers } = require("hardhat");
+const { ZeroAddress, provider, MaxUint256 } = ethers;
 const { assert, expect } = require("chai");
 const { mockOffer, mockVoucher, mockExchange } = require("../util/mock");
 const { getEvent, calculateVoucherExpiry, getSnapshot, revertToSnapshot } = require("../util/utils.js");
@@ -238,12 +238,13 @@ function getGenericContext(
         offer.id = offerId.toString();
         const disputeResolverId = preUpgradeEntities.DRs[0].disputeResolver.id;
         const agentId = preUpgradeEntities.agents[0].agent.id;
+        const offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
         const seller = preUpgradeEntities.sellers[2];
 
         offerHandler = contractsAfter.offerHandler;
         await offerHandler
           .connect(seller.wallet)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
         await fundsHandler
           .connect(seller.wallet)
           .depositFunds(seller.seller.id, offer.exchangeToken, offer.sellerDeposit, {

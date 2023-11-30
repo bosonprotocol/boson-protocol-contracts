@@ -109,6 +109,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   let facetNames;
   let protocolDiamondAddress;
   let snapshotId;
+  let offerFeeLimit;
   let bosonErrors;
 
   before(async function () {
@@ -178,6 +179,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
     // Agent id is optional when creating an offer
     agentId = "0";
+    offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -1366,7 +1368,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Create the offer
             await offerHandler
               .connect(assistant)
-              .createOffer(offerToken, offerDates, offerDurations, disputeResolver.id, agentId);
+              .createOffer(offerToken, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit);
 
             // top up seller's and buyer's account
             await maliciousToken.mint(await assistant.getAddress(), sellerDeposit);
@@ -1645,7 +1647,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Create the offer
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+              .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit);
 
             // Set the offer Type
             offerType = [
@@ -1870,7 +1872,15 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Create the offer
             await orchestrationHandler
               .connect(assistant)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolver.id, condition, agentId);
+              .createOfferWithCondition(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                condition,
+                agentId,
+                offerFeeLimit
+              );
 
             // Set the offer Type
             offerType = [
@@ -2110,7 +2120,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           beforeEach(async function () {
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+              .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit);
 
             // Required exchange constructor params
             exchange = mockExchange({ buyerId, finalizedDate: "0" });
@@ -3444,6 +3454,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             offerDurations,
             disputeResolver.id,
             agentId,
+            offerFeeLimit,
           ]);
 
           // Set the message Type
@@ -3465,7 +3476,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.from = await assistant.getAddress();
           message.contractAddress = await offerHandler.getAddress();
           message.functionName =
-            "createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool,uint256,uint8,(address[],uint256[])[]),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256)";
+            "createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool,uint256,uint8,(address[],uint256[])[]),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256,uint256)";
           message.functionSignature = functionSignature;
         });
 
@@ -3517,6 +3528,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             offerDurations,
             disputeResolver.id,
             agentId,
+            offerFeeLimit,
           ]);
 
           // Prepare the message
@@ -3678,10 +3690,10 @@ describe("IBosonMetaTransactionsHandler", function () {
           await Promise.all([
             offerHandler
               .connect(assistant)
-              .createOffer(offerNative, offerDates, offerDurations, disputeResolver.id, agentId),
+              .createOffer(offerNative, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit),
             offerHandler
               .connect(assistant)
-              .createOffer(offerToken, offerDates, offerDurations, disputeResolver.id, agentId),
+              .createOffer(offerToken, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit),
           ]);
 
           // top up seller's and buyer's account
