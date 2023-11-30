@@ -37,7 +37,8 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Buyer cancel penalty is greater than price
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      * - Royalty recipient is not on seller's allow list
      * - Royalty percentage is less than the value decided by the admin
      * - Total royalty percentage is more than max royalty percentage
@@ -47,13 +48,15 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createOfferInternal(
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) internal {
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByAssistant(msgSender());
@@ -64,7 +67,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         _offer.id = offerId;
 
         // Store the offer
-        storeOffer(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
+        storeOffer(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId, _feeLimit);
     }
 
     /**
@@ -100,7 +103,8 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Buyer cancel penalty is greater than price
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      * - Royalty recipient is not on seller's allow list
      * - Royalty percentage is less than the value decided by the admin
      * - Total royalty percentage is more than max royalty percentage
@@ -110,13 +114,15 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function storeOffer(
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) internal {
         // validFrom date must be less than validUntil date
         if (_offerDates.validFrom >= _offerDates.validUntil) revert InvalidOfferPeriod();
@@ -133,23 +139,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             if (_offerDates.voucherRedeemableUntil < _offerDates.validUntil) revert InvalidRedemptionPeriod();
         } else {
             if (_offerDurations.voucherValid == 0) revert AmbiguousVoucherExpiry();
-        }
-
-        // Cache protocol limits for reference
-        ProtocolLib.ProtocolLimits storage limits = protocolLimits();
-
-        // Operate in a block to avoid "stack too deep" error
-        {
-            // dispute period must be greater than or equal to the minimum dispute period
-            if (_offerDurations.disputePeriod < limits.minDisputePeriod) revert InvalidDisputePeriod();
-
-            // resolution period must be between the minimum and maximum resolution periods
-            if (
-                _offerDurations.resolutionPeriod < limits.minResolutionPeriod ||
-                _offerDurations.resolutionPeriod > limits.maxResolutionPeriod
-            ) {
-                revert InvalidResolutionPeriod();
-            }
         }
 
         // when creating offer, it cannot be set to voided
@@ -213,6 +202,21 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                         revert NoSuchCollection();
                 }
             }
+            // Cache protocol limits for reference
+            ProtocolLib.ProtocolLimits storage limits = protocolLimits();
+            // Operate in a block to avoid "stack too deep" error
+            {
+                // dispute period must be greater than or equal to the minimum dispute period
+                if (_offerDurations.disputePeriod < limits.minDisputePeriod) revert InvalidDisputePeriod();
+
+                // resolution period must be between the minimum and maximum resolution periods
+                if (
+                    _offerDurations.resolutionPeriod < limits.minResolutionPeriod ||
+                    _offerDurations.resolutionPeriod > limits.maxResolutionPeriod
+                ) {
+                    revert InvalidResolutionPeriod();
+                }
+            }
 
             // Operate in a block to avoid "stack too deep" error
             {
@@ -236,8 +240,10 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
 
                 uint256 totalOfferFeeLimit = (limits.maxTotalOfferFeePercentage * offerPrice) / 10000;
 
-                // Sum of agent fee amount and protocol fee amount should be <= offer fee limit
-                if ((agentFeeAmount + protocolFee) > totalOfferFeeLimit) revert AgentFeeAmountTooHigh();
+                // Sum of agent fee amount and protocol fee amount should be <= offer fee limit and less that fee limit set by seller
+                uint256 totalFeeAmount = agentFeeAmount + protocolFee;
+                if (totalFeeAmount > totalOfferFeeLimit) revert AgentFeeAmountTooHigh();
+                if (totalFeeAmount > _feeLimit) revert TotalFeeExceedsLimit();
 
                 // Set offer fees props individually since calldata structs can't be copied to storage
                 offerFees.protocolFee = protocolFee;
@@ -255,6 +261,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             }
         }
         // Get storage location for offer
+
         (, Offer storage offer) = fetchOffer(_offer.id);
 
         // Set offer props individually since memory structs can't be copied to storage

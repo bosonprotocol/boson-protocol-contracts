@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { ZeroAddress, provider } = ethers;
+const { ZeroAddress, provider, MaxUint256 } = ethers;
 const { expect } = require("chai");
 
 const {
@@ -40,6 +40,8 @@ describe("[@skip-on-coverage] DR removes fee", function () {
 
   before(async function () {
     accountId.next(true);
+    const agentId = "0"; // agent id is optional while creating an offer
+    const offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
 
     // Specify contracts needed for this test
     const contracts = {
@@ -118,7 +120,9 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     expect(offerDurations.isValid()).is.true;
 
     // Create the offer
-    await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
+    await offerHandler
+      .connect(assistant)
+      .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
     // Deposit seller funds so the commit will succeed
     const fundsToDeposit = BigInt(offer.sellerDeposit) * BigInt(offer.quantityAvailable);

@@ -179,16 +179,17 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         uint256 _offset
     ) external view override returns (address[] memory tokenList) {
         address[] storage tokens = protocolLookups().tokenList[_entityId];
+        uint256 tokenCount = tokens.length;
 
-        if (_offset >= tokens.length) {
+        if (_offset >= tokenCount) {
             return new address[](0);
-        } else if (_offset + _limit > tokens.length) {
-            _limit = tokens.length - _offset;
+        } else if (_offset + _limit > tokenCount) {
+            _limit = tokenCount - _offset;
         }
 
         tokenList = new address[](_limit);
 
-        for (uint i = 0; i < _limit; ) {
+        for (uint256 i = 0; i < _limit; ) {
             tokenList[i] = tokens[_offset++];
 
             unchecked {

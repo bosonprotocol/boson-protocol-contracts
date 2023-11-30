@@ -717,7 +717,8 @@ contract SellerHandlerFacet is SellerBase {
     }
 
     /**
-     * @notice Gets the details about a seller's collections.
+     * @notice Gets the details about all seller's collections.
+     * In case seller has too many collections and this runs out of gas, please use getSellersCollectionsPaginated.
      *
      * @param _sellerId - the id of the seller to check
      * @return defaultVoucherAddress - the address of the default voucher contract for the seller
@@ -728,6 +729,53 @@ contract SellerHandlerFacet is SellerBase {
     ) external view returns (address defaultVoucherAddress, Collection[] memory additionalCollections) {
         ProtocolLib.ProtocolLookups storage pl = protocolLookups();
         return (pl.cloneAddress[_sellerId], pl.additionalCollections[_sellerId]);
+    }
+
+    /**
+     * @notice Gets the details about all seller's collections.
+     * Use getSellersCollectionCount to get the total number of collections.
+     *
+     * @param _sellerId - the id of the seller to check
+     * @param _limit - the maximum number of Collections that should be returned starting from the index defined by `_offset`. If `_offset` + `_limit` exceeds total number of collections, `_limit` is adjusted to return all remaining collections.
+     * @param _offset - the starting index from which to return collections. If `_offset` is greater than or equal to total number of collections, an empty list is returned.
+     * @return defaultVoucherAddress - the address of the default voucher contract for the seller
+     * @return additionalCollections - an array of additional collections that the seller has created
+     */
+    function getSellersCollectionsPaginated(
+        uint256 _sellerId,
+        uint256 _limit,
+        uint256 _offset
+    ) external view returns (address defaultVoucherAddress, Collection[] memory additionalCollections) {
+        ProtocolLib.ProtocolLookups storage pl = protocolLookups();
+        Collection[] storage sellersAdditionalCollections = pl.additionalCollections[_sellerId];
+        uint256 collectionCount = sellersAdditionalCollections.length;
+
+        if (_offset >= collectionCount) {
+            return (pl.cloneAddress[_sellerId], new Collection[](0));
+        } else if (_offset + _limit > collectionCount) {
+            _limit = collectionCount - _offset;
+        }
+
+        additionalCollections = new Collection[](_limit);
+
+        for (uint256 i = 0; i < _limit; ) {
+            additionalCollections[i] = sellersAdditionalCollections[_offset++];
+            unchecked {
+                i++;
+            }
+        }
+
+        return (pl.cloneAddress[_sellerId], additionalCollections);
+    }
+
+    /**
+     * @notice Returns the number of additional collections for a seller.
+     * Use this in conjunction with getSellersCollectionsPaginated to get all collections.
+     *
+     * @param _sellerId - the id of the seller to check
+     */
+    function getSellersCollectionCount(uint256 _sellerId) external view returns (uint256 collectionCount) {
+        return protocolLookups().additionalCollections[_sellerId].length;
     }
 
     /**

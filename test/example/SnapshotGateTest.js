@@ -1,5 +1,5 @@
-const hre = require("hardhat");
-const { getContractAt, parseUnits, ZeroAddress, getSigners } = hre.ethers;
+const { ethers } = require("hardhat");
+const { getContractAt, parseUnits, ZeroAddress, getSigners, MaxUint256 } = ethers;
 const { expect } = require("chai");
 
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -62,6 +62,7 @@ describe("SnapshotGate", function () {
   let offer, offers, otherSellerOfferId;
   let offerDates, offerDurations;
   let snapshot, snapshotTokenSupplies, snapshotTokenCount, holders, holderByAddress;
+  let offerFeeLimit;
   let bosonErrors;
 
   beforeEach(async function () {
@@ -196,6 +197,7 @@ describe("SnapshotGate", function () {
     offerId = "1";
     groupId = "1";
     agentId = "0"; // agent id is optional while creating an offer
+    offerFeeLimit = MaxUint256; // unlimited to not affect the test
 
     // Create a valid seller
     seller = mockSeller(
@@ -340,7 +342,7 @@ describe("SnapshotGate", function () {
         // Create the offer
         await offerHandler
           .connect(assistant)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
         offers.push(offer);
 
         // Required constructor params for Group
@@ -386,7 +388,7 @@ describe("SnapshotGate", function () {
     // Create the offer
     let tx = await offerHandler
       .connect(assistant2)
-      .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+      .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
     offers.push(offer);
 
     const txReceipt = await tx.wait();

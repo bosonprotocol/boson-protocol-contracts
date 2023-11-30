@@ -75,7 +75,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Collection does not exist
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _seller - the fully populated seller struct
@@ -85,6 +86,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createSellerAndOffer(
         Seller memory _seller,
@@ -94,10 +96,11 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         uint256 _disputeResolverId,
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) public sellersNotPaused offersNotPaused orchestrationNotPaused nonReentrant {
         createSellerInternal(_seller, _authToken, _voucherInitValues);
-        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId, _feeLimit);
     }
 
     /**
@@ -152,7 +155,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Collection does not exist
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
@@ -162,11 +166,11 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
-     * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
-     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
+     * @param _premintParameters - struct containing the amount of tokens to be reserved for preminting and the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createSellerAndPremintedOffer(
         Seller memory _seller,
@@ -174,11 +178,11 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _reservedRangeLength,
-        address _to,
+        PremintParameters calldata _premintParameters,
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external {
         createSellerAndOffer(
             _seller,
@@ -188,9 +192,10 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
             _disputeResolverId,
             _authToken,
             _voucherInitValues,
-            _agentId
+            _agentId,
+            _feeLimit
         );
-        reserveRangeInternal(_offer.id, _reservedRangeLength, _to);
+        reserveRangeInternal(_offer.id, _premintParameters.reservedRangeLength, _premintParameters.to);
     }
 
     /**
@@ -226,7 +231,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -234,6 +240,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createOfferWithCondition(
         Offer memory _offer,
@@ -241,10 +248,11 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         Condition calldata _condition,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) public offersNotPaused groupsNotPaused orchestrationNotPaused nonReentrant {
         // Create offer and update structs values to represent true state
-        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId, _feeLimit);
 
         // Construct new group
         // - group id is 0, and it is ignored
@@ -295,7 +303,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
@@ -304,22 +313,30 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
-     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _condition - the fully populated condition struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createPremintedOfferWithCondition(
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _reservedRangeLength,
-        address _to,
+        PremintParameters calldata _premintParameters,
         Condition calldata _condition,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) public {
-        createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
-        reserveRangeInternal(_offer.id, _reservedRangeLength, _to);
+        createOfferWithCondition(
+            _offer,
+            _offerDates,
+            _offerDurations,
+            _disputeResolverId,
+            _condition,
+            _agentId,
+            _feeLimit
+        );
+        reserveRangeInternal(_offer.id, _premintParameters.reservedRangeLength, _premintParameters.to);
     }
 
     /**
@@ -357,7 +374,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Caller is not the assistant of the group
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -365,6 +383,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _groupId - id of the group, to which offer will be added
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createOfferAddToGroup(
         Offer memory _offer,
@@ -372,10 +391,11 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _groupId,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) public offersNotPaused groupsNotPaused orchestrationNotPaused nonReentrant {
         // Create offer and update structs values to represent true state
-        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId, _feeLimit);
 
         // Create an array with offer ids and add it to the group
         uint256[] memory _offerIds = new uint256[](1);
@@ -422,7 +442,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Caller is not the assistant of the group
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
@@ -431,23 +452,23 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
-     * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
-     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
+     * @param _premintParameters - struct containing the amount of tokens to be reserved for preminting and the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _groupId - id of the group, to which offer will be added
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createPremintedOfferAddToGroup(
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _reservedRangeLength,
-        address _to,
+        PremintParameters calldata _premintParameters,
         uint256 _groupId,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external {
-        createOfferAddToGroup(_offer, _offerDates, _offerDurations, _disputeResolverId, _groupId, _agentId);
-        reserveRangeInternal(_offer.id, _reservedRangeLength, _to);
+        createOfferAddToGroup(_offer, _offerDates, _offerDurations, _disputeResolverId, _groupId, _agentId, _feeLimit);
+        reserveRangeInternal(_offer.id, _premintParameters.reservedRangeLength, _premintParameters.to);
     }
 
     /**
@@ -491,7 +512,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -499,6 +521,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _twin - the fully populated twin struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createOfferAndTwinWithBundle(
         Offer memory _offer,
@@ -506,10 +529,11 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         Twin memory _twin,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) public offersNotPaused twinsNotPaused bundlesNotPaused orchestrationNotPaused nonReentrant {
         // Create offer and update structs values to represent true state
-        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId, _feeLimit);
 
         // Create twin and pack everything into a bundle
         createTwinAndBundleAfterOffer(_twin, _offer.id, _offer.sellerId);
@@ -560,7 +584,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
@@ -569,25 +594,31 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
-     * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
-     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
+     * @param _premintParameters - struct containing the amount of tokens to be reserved for preminting and the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _twin - the fully populated twin struct
      * @param _agentId - the id of agent
-
-     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createPremintedOfferAndTwinWithBundle(
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _reservedRangeLength,
-        address _to,
+        PremintParameters calldata _premintParameters,
         Twin memory _twin,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) public {
-        createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _disputeResolverId, _twin, _agentId);
-        reserveRangeInternal(_offer.id, _reservedRangeLength, _to);
+        createOfferAndTwinWithBundle(
+            _offer,
+            _offerDates,
+            _offerDurations,
+            _disputeResolverId,
+            _twin,
+            _agentId,
+            _feeLimit
+        );
+        reserveRangeInternal(_offer.id, _premintParameters.reservedRangeLength, _premintParameters.to);
     }
 
     /**
@@ -634,7 +665,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -645,6 +677,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createOfferWithConditionAndTwinAndBundle(
         Offer memory _offer,
@@ -653,10 +686,19 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         uint256 _disputeResolverId,
         Condition calldata _condition,
         Twin memory _twin,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) public twinsNotPaused bundlesNotPaused {
         // Create offer with condition first
-        createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
+        createOfferWithCondition(
+            _offer,
+            _offerDates,
+            _offerDurations,
+            _disputeResolverId,
+            _condition,
+            _agentId,
+            _feeLimit
+        );
         // Create twin and pack everything into a bundle
         createTwinAndBundleAfterOffer(_twin, _offer.id, _offer.sellerId);
     }
@@ -709,7 +751,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
@@ -718,22 +761,22 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
-     * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
-     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
+     * @param _premintParameters - struct containing the amount of tokens to be reserved for preminting and the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createPremintedOfferWithConditionAndTwinAndBundle(
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _reservedRangeLength,
-        address _to,
+        PremintParameters calldata _premintParameters,
         Condition calldata _condition,
         Twin memory _twin,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) public {
         createOfferWithConditionAndTwinAndBundle(
             _offer,
@@ -742,9 +785,10 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
             _disputeResolverId,
             _condition,
             _twin,
-            _agentId
+            _agentId,
+            _feeLimit
         );
-        reserveRangeInternal(_offer.id, _reservedRangeLength, _to);
+        reserveRangeInternal(_offer.id, _premintParameters.reservedRangeLength, _premintParameters.to);
     }
 
     /**
@@ -799,7 +843,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -812,6 +857,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createSellerAndOfferWithCondition(
         Seller memory _seller,
@@ -822,10 +868,19 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         Condition calldata _condition,
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) public sellersNotPaused {
         createSellerInternal(_seller, _authToken, _voucherInitValues);
-        createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
+        createOfferWithCondition(
+            _offer,
+            _offerDates,
+            _offerDurations,
+            _disputeResolverId,
+            _condition,
+            _agentId,
+            _feeLimit
+        );
     }
 
     /**
@@ -884,7 +939,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
@@ -894,12 +950,12 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
-     * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
-     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
+     * @param _premintParameters - struct containing the amount of tokens to be reserved for preminting and the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _condition - the fully populated condition struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createSellerAndPremintedOfferWithCondition(
         Seller memory _seller,
@@ -907,12 +963,12 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _reservedRangeLength,
-        address _to,
+        PremintParameters calldata _premintParameters,
         Condition calldata _condition,
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external {
         createSellerAndOfferWithCondition(
             _seller,
@@ -923,9 +979,10 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
             _condition,
             _authToken,
             _voucherInitValues,
-            _agentId
+            _agentId,
+            _feeLimit
         );
-        reserveRangeInternal(_offer.id, _reservedRangeLength, _to);
+        reserveRangeInternal(_offer.id, _premintParameters.reservedRangeLength, _premintParameters.to);
     }
 
     /**
@@ -988,7 +1045,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -1001,6 +1059,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createSellerAndOfferAndTwinWithBundle(
         Seller memory _seller,
@@ -1011,10 +1070,19 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         Twin memory _twin,
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) public sellersNotPaused {
         createSellerInternal(_seller, _authToken, _voucherInitValues);
-        createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _disputeResolverId, _twin, _agentId);
+        createOfferAndTwinWithBundle(
+            _offer,
+            _offerDates,
+            _offerDurations,
+            _disputeResolverId,
+            _twin,
+            _agentId,
+            _feeLimit
+        );
     }
 
     /**
@@ -1081,7 +1149,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
@@ -1091,12 +1160,12 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
-     * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
-     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
+     * @param _premintParameters - struct containing the amount of tokens to be reserved for preminting and the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _twin - the fully populated twin struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createSellerAndPremintedOfferAndTwinWithBundle(
         Seller memory _seller,
@@ -1104,12 +1173,12 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _reservedRangeLength,
-        address _to,
+        PremintParameters calldata _premintParameters,
         Twin memory _twin,
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external {
         createSellerAndOfferAndTwinWithBundle(
             _seller,
@@ -1120,9 +1189,10 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
             _twin,
             _authToken,
             _voucherInitValues,
-            _agentId
+            _agentId,
+            _feeLimit
         );
-        reserveRangeInternal(_offer.id, _reservedRangeLength, _to);
+        reserveRangeInternal(_offer.id, _premintParameters.reservedRangeLength, _premintParameters.to);
     }
 
     /**
@@ -1187,7 +1257,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
@@ -1201,6 +1272,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createSellerAndOfferWithConditionAndTwinAndBundle(
         Seller memory _seller,
@@ -1212,7 +1284,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         Twin memory _twin,
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) public sellersNotPaused {
         createSellerInternal(_seller, _authToken, _voucherInitValues);
         createOfferWithConditionAndTwinAndBundle(
@@ -1222,7 +1295,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
             _disputeResolverId,
             _condition,
             _twin,
-            _agentId
+            _agentId,
+            _feeLimit
         );
     }
 
@@ -1293,7 +1367,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
@@ -1303,13 +1378,13 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
-     * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
-     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
+     * @param _premintParameters - struct containing the amount of tokens to be reserved for preminting and the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createSellerAndPremintedOfferWithConditionAndTwinAndBundle(
         Seller memory _seller,
@@ -1317,13 +1392,13 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _reservedRangeLength,
-        address _to,
+        PremintParameters calldata _premintParameters,
         Condition calldata _condition,
         Twin memory _twin,
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external {
         createSellerAndOfferWithConditionAndTwinAndBundle(
             _seller,
@@ -1335,9 +1410,10 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
             _twin,
             _authToken,
             _voucherInitValues,
-            _agentId
+            _agentId,
+            _feeLimit
         );
-        reserveRangeInternal(_offer.id, _reservedRangeLength, _to);
+        reserveRangeInternal(_offer.id, _premintParameters.reservedRangeLength, _premintParameters.to);
     }
 
     /**
