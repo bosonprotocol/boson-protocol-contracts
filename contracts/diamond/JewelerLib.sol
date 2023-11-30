@@ -24,8 +24,6 @@ import { IDiamondCut } from "../interfaces/diamond/IDiamondCut.sol";
  */
 
 library JewelerLib {
-    event DiamondCut(IDiamondCut.FacetCut[] _diamondCut, address _init, bytes _calldata);
-
     bytes32 internal constant CLEAR_ADDRESS_MASK = bytes32(uint256(0xffffffffffffffffffffffff));
     bytes32 internal constant CLEAR_SELECTOR_MASK = bytes32(uint256(0xffffffff << 224));
 
@@ -81,7 +79,7 @@ library JewelerLib {
         }
 
         // Notify listeners of state change
-        emit DiamondCut(_facetCuts, _init, _calldata);
+        emit IDiamondCut.DiamondCut(_facetCuts, _init, _calldata);
 
         // Initialize the facet
         initializeDiamondCut(_init, _calldata);
