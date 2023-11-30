@@ -3230,6 +3230,78 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.ARRAY_LENGTH_MISMATCH);
         });
 
+        it("Number of agents does not match the number of offers", async function () {
+          // Make agentids  longer
+          agentIds.push(agentId);
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler
+              .connect(assistant)
+              .createOfferBatch(
+                offers,
+                offerDatesList,
+                offerDurationsList,
+                disputeResolverIds,
+                agentIds,
+                offerFeeLimits
+              )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ARRAY_LENGTH_MISMATCH);
+
+          // Make agentIds shorter
+          agentIds = agentIds.slice(0, -2);
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler
+              .connect(assistant)
+              .createOfferBatch(
+                offers,
+                offerDatesList,
+                offerDurationsList,
+                disputeResolverIds,
+                agentIds,
+                offerFeeLimits
+              )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ARRAY_LENGTH_MISMATCH);
+        });
+
+        it("Number of offer fee limits does not match the number of offers", async function () {
+          // Make offer fee limits longer
+          offerFeeLimits.push(MaxUint256);
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler
+              .connect(assistant)
+              .createOfferBatch(
+                offers,
+                offerDatesList,
+                offerDurationsList,
+                disputeResolverIds,
+                agentIds,
+                offerFeeLimits
+              )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ARRAY_LENGTH_MISMATCH);
+
+          // Make offer fee limits shorter
+          offerFeeLimits = offerFeeLimits.slice(0, -2);
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler
+              .connect(assistant)
+              .createOfferBatch(
+                offers,
+                offerDatesList,
+                offerDurationsList,
+                disputeResolverIds,
+                agentIds,
+                offerFeeLimits
+              )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ARRAY_LENGTH_MISMATCH);
+        });
+
         it("For some offer, collection does not exist", async function () {
           // Set non existent collection index
           offers[3].collectionIndex = "1";

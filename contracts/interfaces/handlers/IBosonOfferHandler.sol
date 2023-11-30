@@ -68,7 +68,7 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      *
      * Reverts if:
      * - The offers region of protocol is paused
-     * - Number of elements in offers, offerDates and offerDurations do not match
+     * - Number of elements in offers, offerDates, offerDurations, disputeResolverIds, agentIds and feeLimits do not match
      * - For any offer:
      *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date

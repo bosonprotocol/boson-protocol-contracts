@@ -77,7 +77,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *
      * Reverts if:
      * - The offers region of protocol is paused
-     * - Number of elements in offers, offerDates and offerDurations do not match
+     * - Number of elements in offers, offerDates, offerDurations, disputeResolverIds, agentIds and feeLimits do not match
      * - For any offer:
      *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
@@ -124,7 +124,8 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
             _offers.length != _offerDates.length ||
             _offers.length != _offerDurations.length ||
             _offers.length != _disputeResolverIds.length ||
-            _offers.length != _agentIds.length
+            _offers.length != _agentIds.length ||
+            _offers.length != _feeLimits.length
         ) {
             revert ArrayLengthMismatch();
         }
