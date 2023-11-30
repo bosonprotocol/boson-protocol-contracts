@@ -10,7 +10,7 @@ import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x7481f095
+ * The ERC-165 identifier for this interface is: 0xfe4be526
  */
 interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
     /**
@@ -39,7 +39,8 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      * - Collection does not exist
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      * - Royalty recipient is not on seller's allow list
      * - Royalty percentage is less than the value decided by the admin
      * - Total royalty percentage is more than max royalty percentage
@@ -49,13 +50,15 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createOffer(
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates,
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external;
 
     /**
@@ -65,7 +68,7 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      *
      * Reverts if:
      * - The offers region of protocol is paused
-     * - Number of elements in offers, offerDates and offerDurations do not match
+     * - Number of elements in offers, offerDates, offerDurations, disputeResolverIds, agentIds and feeLimits do not match
      * - For any offer:
      *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
@@ -96,13 +99,15 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      * @param _offerDurations - the array of fully populated offer durations structs
      * @param _disputeResolverIds - the array of ids of chosen dispute resolvers (can be 0)
      * @param _agentIds - the array of ids of agents
+     * @param _feeLimits - the array of maximum fees that seller is willing to pay per exchange (for static offers)
      */
     function createOfferBatch(
         BosonTypes.Offer[] calldata _offers,
         BosonTypes.OfferDates[] calldata _offerDates,
         BosonTypes.OfferDurations[] calldata _offerDurations,
         uint256[] calldata _disputeResolverIds,
-        uint256[] calldata _agentIds
+        uint256[] calldata _agentIds,
+        uint256[] calldata _feeLimits
     ) external;
 
     /**

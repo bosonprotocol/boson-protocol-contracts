@@ -59,10 +59,14 @@ describe("IBosonVoucher", function () {
   let forwarder;
   let snapshotId;
   let beaconProxyAddress;
+  let agentId;
+  let offerFeeLimit;
   let bosonErrors;
 
   before(async function () {
     accountId.next(true);
+    agentId = "0"; // agent id is optional while creating an offer
+    offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
 
     // Get interface id
     const { IBosonVoucher, IERC721, IERC2981 } = await getInterfaceIds();
@@ -217,7 +221,9 @@ describe("IBosonVoucher", function () {
       ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
       offer.quantityAvailable = "1000";
 
-      await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
+      await offerHandler
+        .connect(assistant)
+        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
       const amount = BigInt(offer.sellerDeposit) * BigInt(offer.quantityAvailable);
 
@@ -466,7 +472,9 @@ describe("IBosonVoucher", function () {
         beforeEach(async function () {
           offer.id = offerId = ++offerId;
 
-          await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
+          await offerHandler
+            .connect(assistant)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
           // reserve a range
           start = "1010";
@@ -735,7 +743,9 @@ describe("IBosonVoucher", function () {
           offer.id = offerId = ++offerId;
           offer.quantityAvailable = "2000";
 
-          await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
+          await offerHandler
+            .connect(assistant)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
           // reserve a range
           start = "2000";
@@ -796,7 +806,9 @@ describe("IBosonVoucher", function () {
           start = "1";
 
           assistantAddress = await assistant.getAddress();
-          await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
+          await offerHandler
+            .connect(assistant)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
           await offerHandler.connect(assistant).reserveRange(offerId, length, assistantAddress);
           await bosonVoucher.connect(assistant).preMint(offerId, length);
         });
@@ -885,7 +897,9 @@ describe("IBosonVoucher", function () {
           // make offer not voided
           offer.id = offerId = ++offerId;
 
-          await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
+          await offerHandler
+            .connect(assistant)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
           await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, await assistant.getAddress());
           // Mint another 10 vouchers, so that there are 15 in total
           await bosonVoucher.connect(assistant).preMint(offerId, 10);
@@ -1106,7 +1120,7 @@ describe("IBosonVoucher", function () {
 
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
             // reserve length
             await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, await assistant.getAddress());
@@ -1168,7 +1182,9 @@ describe("IBosonVoucher", function () {
           let nextLength = "10";
           let nextAmount = "5";
 
-          await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
+          await offerHandler
+            .connect(assistant)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
           // reserve length
           await bosonVoucher
@@ -1796,7 +1812,8 @@ describe("IBosonVoucher", function () {
               offerDates.toStruct(),
               offerDurations.toStruct(),
               disputeResolverId,
-              agentId
+              agentId,
+              offerFeeLimit
             );
           await fundsHandler
             .connect(admin)
@@ -1832,7 +1849,8 @@ describe("IBosonVoucher", function () {
               offerDates.toStruct(),
               offerDurations.toStruct(),
               disputeResolverId,
-              agentId
+              agentId,
+              offerFeeLimit
             );
           await fundsHandler
             .connect(admin)
@@ -1866,7 +1884,8 @@ describe("IBosonVoucher", function () {
               offerDates.toStruct(),
               offerDurations.toStruct(),
               disputeResolverId,
-              agentId
+              agentId,
+              offerFeeLimit
             );
           await fundsHandler
             .connect(admin)

@@ -134,6 +134,7 @@ describe("IBosonExchangeHandler", function () {
   let protocolDiamondAddress;
   let snapshotId;
   let tokenId;
+  let offerFeeLimit;
   let bosonErrors;
 
   before(async function () {
@@ -252,6 +253,7 @@ describe("IBosonExchangeHandler", function () {
       // Initial ids for all the things
       exchangeId = offerId = "1";
       agentId = "0"; // agent id is optional while creating an offer
+      offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
 
       // Create a valid seller
       seller = mockSeller(
@@ -320,7 +322,9 @@ describe("IBosonExchangeHandler", function () {
       expect(offerDurations.isValid()).is.true;
 
       // Create the offer
-      await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+      await offerHandler
+        .connect(assistant)
+        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
       // Set used variables
       price = offer.price;
@@ -417,7 +421,9 @@ describe("IBosonExchangeHandler", function () {
         offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
 
         // Create the offer
-        await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+        await offerHandler
+          .connect(rando)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
         // Deposit seller funds so the commit will succeed
         await fundsHandler.connect(rando).depositFunds(seller.id, ZeroAddress, sellerPool, { value: sellerPool });
@@ -510,7 +516,9 @@ describe("IBosonExchangeHandler", function () {
         offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
         // Create the offer
-        await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+        await offerHandler
+          .connect(rando)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
         // Deposit seller funds so the commit will succeed
         await fundsHandler.connect(rando).depositFunds(seller.id, ZeroAddress, sellerPool, { value: sellerPool });
@@ -605,7 +613,7 @@ describe("IBosonExchangeHandler", function () {
         // Create the offer
         await offerHandler
           .connect(assistant)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
         exchange.offerId = offerId = "2"; // tested against second offer
 
         // Commit to offer, retrieving the event
@@ -661,7 +669,7 @@ describe("IBosonExchangeHandler", function () {
         expect(offer.isValid()).is.true;
 
         // Create the offer
-        await offerHandler.connect(assistant).createOffer(offer, ...Object.values(details), agentId);
+        await offerHandler.connect(assistant).createOffer(offer, ...Object.values(details), agentId, offerFeeLimit);
         exchange.offerId = offerId = "2"; // first offer is created on beforeEach
 
         // Commit to offer
@@ -701,7 +709,7 @@ describe("IBosonExchangeHandler", function () {
         // Create the offer
         await offerHandler
           .connect(assistant)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
         // Commit to offer
         await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId);
@@ -754,7 +762,7 @@ describe("IBosonExchangeHandler", function () {
         // Create the offer
         await offerHandler
           .connect(assistant)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
         // Commit to offer, creating a new exchange
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: price });
@@ -848,7 +856,7 @@ describe("IBosonExchangeHandler", function () {
 
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
           // Attempt to commit to the not available offer, expecting revert
           await expect(
@@ -871,7 +879,7 @@ describe("IBosonExchangeHandler", function () {
           offer.quantityAvailable = "1";
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
           // Commit to offer, so it's not available anymore
           await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), ++offerId, { value: price });
 
@@ -1044,7 +1052,7 @@ describe("IBosonExchangeHandler", function () {
         const rangeLength = "5";
         await offerHandler
           .connect(assistant)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
         // Deposit seller funds so the commit will succeed
         await fundsHandler
@@ -1303,7 +1311,7 @@ describe("IBosonExchangeHandler", function () {
         // Create the offer
         await offerHandler
           .connect(assistant)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
         // Reserve range
         await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
@@ -1440,7 +1448,7 @@ describe("IBosonExchangeHandler", function () {
 
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
           // Reserve a range and premint vouchers
           exchangeId = await exchangeHandler.getNextExchangeId();
@@ -1474,7 +1482,7 @@ describe("IBosonExchangeHandler", function () {
           offer.quantityAvailable = "1";
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
           // Commit to offer, so it's not available anymore
           await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), ++offerId, { value: price });
 
@@ -1723,7 +1731,7 @@ describe("IBosonExchangeHandler", function () {
             // Create a new offer
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
             await expect(
               exchangeHandler
@@ -2407,7 +2415,7 @@ describe("IBosonExchangeHandler", function () {
 
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
           // add offer to group
           await groupHandler.connect(assistant).addOffersToGroup(groupId, [++offerId]);
@@ -2437,7 +2445,7 @@ describe("IBosonExchangeHandler", function () {
           offer.quantityAvailable = "1";
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
           // add offer to group
           await groupHandler.connect(assistant).addOffersToGroup(groupId, [++offerId]);
@@ -2461,7 +2469,7 @@ describe("IBosonExchangeHandler", function () {
           // Create a new offer
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
           // Required constructor params for Group
           groupId = "1";
@@ -2914,7 +2922,7 @@ describe("IBosonExchangeHandler", function () {
         // Create the offer
         await offerHandler
           .connect(assistant)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
         // Commit to offer, creating a new exchange
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: price });
@@ -3033,7 +3041,7 @@ describe("IBosonExchangeHandler", function () {
         // Create the offer
         await offerHandler
           .connect(assistant)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
         // Commit to offer, creating a new exchange
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: price });
@@ -3311,7 +3319,7 @@ describe("IBosonExchangeHandler", function () {
         // Create the offer
         await offerHandler
           .connect(assistant)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
         // Commit to offer, creating a new exchange
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: price });
@@ -3503,7 +3511,7 @@ describe("IBosonExchangeHandler", function () {
           // Create a new offer
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
           // Create a new bundle
           bundle = new Bundle("1", seller.id, [++offerId], [twin20.id]);
@@ -3534,7 +3542,7 @@ describe("IBosonExchangeHandler", function () {
           // Create a new offer
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
           twin20.supplyAvailable = "3";
           twin20.id = "4";
@@ -3613,7 +3621,7 @@ describe("IBosonExchangeHandler", function () {
 
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
             // Set time forward to the offer's voucherRedeemableFrom
             voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
@@ -3696,7 +3704,7 @@ describe("IBosonExchangeHandler", function () {
             // Create a new offer and bundle
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
             bundle = new Bundle("2", seller.id, [`${++offerId}`], [twin20.id, twin20_2.id]);
             await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
@@ -3757,7 +3765,9 @@ describe("IBosonExchangeHandler", function () {
             offer.quantityAvailable = 1;
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, { gasLimit: 30000000 });
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+                gasLimit: 30000000,
+              });
             bundle = new Bundle("2", seller.id, [`${++offerId}`], twinIds);
             await bundleHandler.connect(assistant).createBundle(bundle.toStruct(), { gasLimit: 30000000 });
 
@@ -3805,7 +3815,7 @@ describe("IBosonExchangeHandler", function () {
             // Create a new offer and bundle
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
             bundle = new Bundle("2", seller.id, [`${++offerId}`], [twin20.id]);
             await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
@@ -3859,7 +3869,7 @@ describe("IBosonExchangeHandler", function () {
               // Create a new offer and bundle
               await offerHandler
                 .connect(assistant)
-                .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+                .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
               bundle = new Bundle("2", seller.id, [`${++offerId}`], [twin20.id]);
               await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
@@ -3918,7 +3928,7 @@ describe("IBosonExchangeHandler", function () {
             // Create a new offer and bundle
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
             bundle = new Bundle("2", seller.id, [`${++offerId}`], [twin20.id, twin20_2.id]);
             await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
@@ -4054,7 +4064,7 @@ describe("IBosonExchangeHandler", function () {
           // Create a new offer
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
           twin721.supplyAvailable = "1";
           twin721.tokenId = "11";
@@ -4196,7 +4206,7 @@ describe("IBosonExchangeHandler", function () {
 
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
             // Bundle offer with twin
             bundle = new Bundle("2", seller.id, [++offerId], [twin721.id]);
@@ -4302,7 +4312,7 @@ describe("IBosonExchangeHandler", function () {
             // Create a new offer
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
             // Change twin supply to unlimited and token address to the new token
             twin721.supplyAvailable = MaxUint256.toString();
@@ -4488,7 +4498,7 @@ describe("IBosonExchangeHandler", function () {
             // Create a new offer and bundle
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
             bundle = new Bundle("2", seller.id, [`${++offerId}`], [twin721.id, twin721_2.id]);
             await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
@@ -4545,7 +4555,9 @@ describe("IBosonExchangeHandler", function () {
             offer.quantityAvailable = 1;
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, { gasLimit: 30000000 });
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+                gasLimit: 30000000,
+              });
             bundle = new Bundle("2", seller.id, [`${++offerId}`], twinIds);
             await bundleHandler.connect(assistant).createBundle(bundle.toStruct(), { gasLimit: 30000000 });
 
@@ -4593,7 +4605,7 @@ describe("IBosonExchangeHandler", function () {
             // Create a new offer and bundle
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
             bundle = new Bundle("2", seller.id, [`${++offerId}`], [twin721.id]);
             await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
@@ -4648,7 +4660,7 @@ describe("IBosonExchangeHandler", function () {
               // Create a new offer and bundle
               await offerHandler
                 .connect(assistant)
-                .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+                .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
               bundle = new Bundle("2", seller.id, [`${++offerId}`], [twin721.id]);
               await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
@@ -4771,7 +4783,7 @@ describe("IBosonExchangeHandler", function () {
           // Create a new offer
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
           // Create a new bundle
           bundle = new Bundle("1", seller.id, [++offerId], [twin1155.id]);
@@ -4801,7 +4813,7 @@ describe("IBosonExchangeHandler", function () {
           // Create a new offer
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
           twin1155.supplyAvailable = "1";
           twin1155.id = "4";
@@ -4927,7 +4939,7 @@ describe("IBosonExchangeHandler", function () {
             // Create a new offer and bundle
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
             bundle = new Bundle("2", seller.id, [`${++offerId}`], [twin1155.id, twin1155_2.id]);
             await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
@@ -4998,7 +5010,9 @@ describe("IBosonExchangeHandler", function () {
             offer.quantityAvailable = 1;
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, { gasLimit: 30000000 });
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+                gasLimit: 30000000,
+              });
             bundle = new Bundle("2", seller.id, [`${++offerId}`], twinIds);
             await bundleHandler.connect(assistant).createBundle(bundle.toStruct(), { gasLimit: 30000000 });
 
@@ -5047,7 +5061,7 @@ describe("IBosonExchangeHandler", function () {
             // Create a new offer and bundle
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
             bundle = new Bundle("2", seller.id, [`${++offerId}`], [twin1155.id]);
             await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
@@ -5109,7 +5123,7 @@ describe("IBosonExchangeHandler", function () {
               // Create a new offer and bundle
               await offerHandler
                 .connect(assistant)
-                .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+                .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
               bundle = new Bundle("2", seller.id, [`${++offerId}`], [twin1155.id]);
               await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
@@ -5265,7 +5279,7 @@ describe("IBosonExchangeHandler", function () {
           // Create a new offer
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
           twin1155.supplyAvailable = "1";
           twin1155.id = "4";
@@ -5365,7 +5379,7 @@ describe("IBosonExchangeHandler", function () {
             // Create a new offer
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
             // Change twin supply to unlimited and token address to the new token
             twin721.supplyAvailable = MaxUint256.toString();
@@ -5610,7 +5624,7 @@ describe("IBosonExchangeHandler", function () {
             // Create a new offer and bundle
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
             bundle = new Bundle("2", seller.id, [`${++offerId}`], [twin20.id, twin721.id, twin1155.id]);
             await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
@@ -5697,7 +5711,9 @@ describe("IBosonExchangeHandler", function () {
             offer.quantityAvailable = 1;
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, { gasLimit: 30000000 });
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+                gasLimit: 30000000,
+              });
             bundle = new Bundle("2", seller.id, [`${++offerId}`], twinIds);
             await bundleHandler.connect(assistant).createBundle(bundle.toStruct(), { gasLimit: 30000000 });
 
@@ -5962,7 +5978,7 @@ describe("IBosonExchangeHandler", function () {
         // Create the offer
         await offerHandler
           .connect(assistant)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
         // Commit to offer, creating a new exchange
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: price });
@@ -6202,7 +6218,7 @@ describe("IBosonExchangeHandler", function () {
         // Create the offer
         await offerHandler
           .connect(assistant)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
         // Commit to offer, creating a new exchange
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: price });
@@ -6700,7 +6716,7 @@ describe("IBosonExchangeHandler", function () {
         // Create the offer
         await offerHandler
           .connect(assistant)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
         // Commit to offer
         tx = await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId);
@@ -6960,7 +6976,7 @@ describe("IBosonExchangeHandler", function () {
           // Create the offer
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
         });
 
         it("Receipt should contain twin receipt data if offer was bundled with twin", async function () {
@@ -7302,7 +7318,7 @@ describe("IBosonExchangeHandler", function () {
         // Create the offer
         await offerHandler
           .connect(assistant)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
         // Commit to offer
         let tx = await exchangeHandler
