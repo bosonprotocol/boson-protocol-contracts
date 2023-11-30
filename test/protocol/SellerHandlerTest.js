@@ -3465,6 +3465,45 @@ describe("SellerHandler", function () {
       });
     });
 
+    context("👉 getSellersCollectionCount()", async function () {
+      beforeEach(async function () {
+        // Create a seller
+        await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+      });
+
+      it("seller has no additional collections", async function () {
+        const expectedCollectionCount = 0;
+        const sellersCollectionCount = await accountHandler.connect(rando).getSellersCollectionCount(seller.id);
+
+        expect(sellersCollectionCount).to.equal(expectedCollectionCount, "Incorrect number of collections");
+      });
+
+      it("seller has additional collections", async function () {
+        const expectedCollectionCount = 4;
+
+        for (let i = 1; i <= expectedCollectionCount; i++) {
+          const externalId = `Brand${i}`;
+          voucherInitValues.collectionSalt = encodeBytes32String(externalId);
+          voucherInitValues.contractURI = `https://brand${i}.com`;
+
+          // Create a new collection
+          await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
+        }
+
+        const sellersCollectionCount = await accountHandler.connect(rando).getSellersCollectionCount(seller.id);
+
+        expect(sellersCollectionCount).to.equal(expectedCollectionCount, "Incorrect number of collections");
+      });
+
+      it("seller does not exist", async function () {
+        const sellerId = 200;
+        const expectedCollectionCount = 0;
+        const sellersCollectionCount = await accountHandler.connect(rando).getSellersCollectionCount(sellerId);
+
+        expect(sellersCollectionCount).to.equal(expectedCollectionCount, "Incorrect number of collections");
+      });
+    });
+
     context("👉 updateSellerSalt()", async function () {
       let newSellerSalt;
 
