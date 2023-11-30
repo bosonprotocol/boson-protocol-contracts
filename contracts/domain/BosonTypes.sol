@@ -340,4 +340,9 @@ contract BosonTypes {
         address payable[] recipients;
         uint256[] bps;
     }
+
+    struct PremintParameters {
+        uint256 reservedRangeLength;
+        address to;
+    }
 }

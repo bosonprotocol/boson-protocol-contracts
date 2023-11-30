@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { ZeroAddress, getContractAt, getContractFactory, provider, parseUnits, getSigners } = ethers;
+const { ZeroAddress, getContractAt, getContractFactory, provider, parseUnits, getSigners, MaxUint256 } = ethers;
 const { expect, assert } = require("chai");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
@@ -50,6 +50,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   let customSignatureType, message;
   let protocolDiamondAddress;
   let snapshotId;
+  let offerFeeLimit;
   let bosonErrors;
 
   before(async function () {
@@ -82,6 +83,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // Initial ids for all the things
     exchangeId = offerId = "1";
     agentId = "0"; // agent id is optional while creating an offer
+    offerFeeLimit = MaxUint256;
 
     // Get snapshot id
     snapshotId = await getSnapshot();
@@ -190,7 +192,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       expect(offerDurations.isValid()).is.true;
 
       // Create the offer
-      await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+      await offerHandler
+        .connect(assistant)
+        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
       // Set used variables
       price = offer.price;
@@ -420,7 +424,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       expect(offerDurations.isValid()).is.true;
 
       // Create the offer
-      await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+      await offerHandler
+        .connect(assistant)
+        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
       // Set used variables
       price = offer.price;
@@ -720,10 +726,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         await Promise.all([
           offerHandler
             .connect(assistant)
-            .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId),
+            .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit),
           offerHandler
             .connect(assistant)
-            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId),
+            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit),
         ]);
 
         // Set used variables

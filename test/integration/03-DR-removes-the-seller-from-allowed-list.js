@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { ZeroAddress } = ethers;
+const { ZeroAddress, MaxUint256 } = ethers;
 const { expect } = require("chai");
 
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
@@ -73,6 +73,7 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       // Initial ids for all the things
       const offerId = "1";
       const agentId = "0"; // agent id is optional while creating an offer
+      const offerFeeLimit = MaxUint256;
 
       // Create a valid seller
       seller = mockSeller(
@@ -141,7 +142,9 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
 
       // Create the offer
       disputeResolverId = disputeResolver.id;
-      await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+      await offerHandler
+        .connect(assistant)
+        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
       // Set used variables
       const price = offer.price;

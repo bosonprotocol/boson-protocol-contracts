@@ -14,7 +14,7 @@ import { IBosonBundleEvents } from "../events/IBosonBundleEvents.sol";
  *
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  *
- * The ERC-165 identifier for this interface is: 0x1d958474
+ * The ERC-165 identifier for this interface is: 0xb0f85bb8
  */
 interface IBosonOrchestrationHandler is
     IBosonAccountEvents,
@@ -102,7 +102,8 @@ interface IBosonOrchestrationHandler is
      *   - Collection does not exist
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _seller - the fully populated seller struct
@@ -112,6 +113,7 @@ interface IBosonOrchestrationHandler is
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createSellerAndOffer(
         BosonTypes.Seller calldata _seller,
@@ -121,7 +123,8 @@ interface IBosonOrchestrationHandler is
         uint256 _disputeResolverId,
         BosonTypes.AuthToken calldata _authToken,
         BosonTypes.VoucherInitValues calldata _voucherInitValues,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external;
 
     /**
@@ -178,7 +181,8 @@ interface IBosonOrchestrationHandler is
      *   - Collection does not exist
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
@@ -188,11 +192,11 @@ interface IBosonOrchestrationHandler is
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
-     * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
-     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
+     * @param _premintParameters - struct containing the amount of tokens to be reserved for preminting and the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createSellerAndPremintedOffer(
         BosonTypes.Seller memory _seller,
@@ -200,11 +204,11 @@ interface IBosonOrchestrationHandler is
         BosonTypes.OfferDates calldata _offerDates,
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _reservedRangeLength,
-        address _to,
+        BosonTypes.PremintParameters calldata _premintParameters,
         BosonTypes.AuthToken calldata _authToken,
         BosonTypes.VoucherInitValues calldata _voucherInitValues,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external;
 
     /**
@@ -240,7 +244,8 @@ interface IBosonOrchestrationHandler is
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -248,6 +253,7 @@ interface IBosonOrchestrationHandler is
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createOfferWithCondition(
         BosonTypes.Offer memory _offer,
@@ -255,7 +261,8 @@ interface IBosonOrchestrationHandler is
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         BosonTypes.Condition memory _condition,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external;
 
     /**
@@ -295,7 +302,8 @@ interface IBosonOrchestrationHandler is
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
@@ -304,20 +312,20 @@ interface IBosonOrchestrationHandler is
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
-     * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
-     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
+     * @param _premintParameters - struct containing the amount of tokens to be reserved for preminting and the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _condition - the fully populated condition struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createPremintedOfferWithCondition(
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates,
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _reservedRangeLength,
-        address _to,
+        BosonTypes.PremintParameters calldata _premintParameters,
         BosonTypes.Condition calldata _condition,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external;
 
     /**
@@ -355,7 +363,8 @@ interface IBosonOrchestrationHandler is
      *   - Caller is not the assistant of the group
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -363,6 +372,7 @@ interface IBosonOrchestrationHandler is
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _groupId - id of the group, to which offer will be added
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createOfferAddToGroup(
         BosonTypes.Offer memory _offer,
@@ -370,7 +380,8 @@ interface IBosonOrchestrationHandler is
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _groupId,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external;
 
     /**
@@ -412,7 +423,8 @@ interface IBosonOrchestrationHandler is
      *   - Caller is not the assistant of the group
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
@@ -421,20 +433,20 @@ interface IBosonOrchestrationHandler is
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
-     * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
-     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
+     * @param _premintParameters - struct containing the amount of tokens to be reserved for preminting and the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _groupId - id of the group, to which offer will be added
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createPremintedOfferAddToGroup(
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates,
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _reservedRangeLength,
-        address _to,
+        BosonTypes.PremintParameters calldata _premintParameters,
         uint256 _groupId,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external;
 
     /**
@@ -478,7 +490,8 @@ interface IBosonOrchestrationHandler is
      *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -486,6 +499,7 @@ interface IBosonOrchestrationHandler is
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _twin - the fully populated twin struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createOfferAndTwinWithBundle(
         BosonTypes.Offer memory _offer,
@@ -493,7 +507,8 @@ interface IBosonOrchestrationHandler is
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         BosonTypes.Twin memory _twin,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external;
 
     /**
@@ -541,7 +556,8 @@ interface IBosonOrchestrationHandler is
      *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
@@ -550,20 +566,20 @@ interface IBosonOrchestrationHandler is
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
-     * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
-     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
+     * @param _premintParameters - struct containing the amount of tokens to be reserved for preminting and the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _twin - the fully populated twin struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createPremintedOfferAndTwinWithBundle(
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates,
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _reservedRangeLength,
-        address _to,
+        BosonTypes.PremintParameters calldata _premintParameters,
         BosonTypes.Twin memory _twin,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external;
 
     /**
@@ -610,7 +626,8 @@ interface IBosonOrchestrationHandler is
      *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -619,6 +636,7 @@ interface IBosonOrchestrationHandler is
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createOfferWithConditionAndTwinAndBundle(
         BosonTypes.Offer memory _offer,
@@ -627,7 +645,8 @@ interface IBosonOrchestrationHandler is
         uint256 _disputeResolverId,
         BosonTypes.Condition memory _condition,
         BosonTypes.Twin memory _twin,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external;
 
     /**
@@ -678,7 +697,8 @@ interface IBosonOrchestrationHandler is
      *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
@@ -687,22 +707,22 @@ interface IBosonOrchestrationHandler is
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
-     * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
-     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
+     * @param _premintParameters - struct containing the amount of tokens to be reserved for preminting and the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createPremintedOfferWithConditionAndTwinAndBundle(
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates,
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _reservedRangeLength,
-        address _to,
+        BosonTypes.PremintParameters calldata _premintParameters,
         BosonTypes.Condition calldata _condition,
         BosonTypes.Twin memory _twin,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external;
 
     /**
@@ -759,7 +779,8 @@ interface IBosonOrchestrationHandler is
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      *
      * @param _seller - the fully populated seller struct
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
@@ -770,6 +791,7 @@ interface IBosonOrchestrationHandler is
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createSellerAndOfferWithCondition(
         BosonTypes.Seller memory _seller,
@@ -780,7 +802,8 @@ interface IBosonOrchestrationHandler is
         BosonTypes.Condition memory _condition,
         BosonTypes.AuthToken calldata _authToken,
         BosonTypes.VoucherInitValues calldata _voucherInitValues,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external;
 
     /**
@@ -841,7 +864,8 @@ interface IBosonOrchestrationHandler is
      * - Condition includes invalid combination of parameters
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
@@ -851,12 +875,12 @@ interface IBosonOrchestrationHandler is
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
-     * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
-     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
+     * @param _premintParameters - struct containing the amount of tokens to be reserved for preminting and the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _condition - the fully populated condition struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createSellerAndPremintedOfferWithCondition(
         BosonTypes.Seller memory _seller,
@@ -864,12 +888,12 @@ interface IBosonOrchestrationHandler is
         BosonTypes.OfferDates calldata _offerDates,
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _reservedRangeLength,
-        address _to,
+        BosonTypes.PremintParameters calldata _premintParameters,
         BosonTypes.Condition calldata _condition,
         BosonTypes.AuthToken calldata _authToken,
         BosonTypes.VoucherInitValues calldata _voucherInitValues,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external;
 
     /**
@@ -934,7 +958,8 @@ interface IBosonOrchestrationHandler is
      *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      *
      * @param _seller - the fully populated seller struct
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
@@ -945,6 +970,7 @@ interface IBosonOrchestrationHandler is
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createSellerAndOfferAndTwinWithBundle(
         BosonTypes.Seller memory _seller,
@@ -955,7 +981,8 @@ interface IBosonOrchestrationHandler is
         BosonTypes.Twin memory _twin,
         BosonTypes.AuthToken calldata _authToken,
         BosonTypes.VoucherInitValues calldata _voucherInitValues,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external;
 
     /**
@@ -1024,7 +1051,8 @@ interface IBosonOrchestrationHandler is
      *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
@@ -1034,12 +1062,12 @@ interface IBosonOrchestrationHandler is
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
-     * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
-     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
+     * @param _premintParameters - struct containing the amount of tokens to be reserved for preminting and the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _twin - the fully populated twin struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createSellerAndPremintedOfferAndTwinWithBundle(
         BosonTypes.Seller memory _seller,
@@ -1047,12 +1075,12 @@ interface IBosonOrchestrationHandler is
         BosonTypes.OfferDates calldata _offerDates,
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _reservedRangeLength,
-        address _to,
+        BosonTypes.PremintParameters calldata _premintParameters,
         BosonTypes.Twin memory _twin,
         BosonTypes.AuthToken calldata _authToken,
         BosonTypes.VoucherInitValues calldata _voucherInitValues,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external;
 
     /**
@@ -1119,7 +1147,8 @@ interface IBosonOrchestrationHandler is
      *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      *
      * @param _seller - the fully populated seller struct
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
@@ -1131,6 +1160,7 @@ interface IBosonOrchestrationHandler is
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createSellerAndOfferWithConditionAndTwinAndBundle(
         BosonTypes.Seller memory _seller,
@@ -1142,7 +1172,8 @@ interface IBosonOrchestrationHandler is
         BosonTypes.Twin memory _twin,
         BosonTypes.AuthToken calldata _authToken,
         BosonTypes.VoucherInitValues calldata _voucherInitValues,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external;
 
     /**
@@ -1214,7 +1245,8 @@ interface IBosonOrchestrationHandler is
      *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      * - _to is not the BosonVoucher contract address or the BosonVoucher contract owner
      *
      * @dev No reentrancy guard here since already implemented by called functions. If added here, they would clash.
@@ -1224,13 +1256,13 @@ interface IBosonOrchestrationHandler is
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
-     * @param _reservedRangeLength - the amount of tokens to be reserved for preminting
-     * @param _to - the address to send the pre-minted vouchers to (contract address or contract owner)
+     * @param _premintParameters - struct containing the amount of tokens to be reserved for preminting and the address to send the pre-minted vouchers to (contract address or contract owner)
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
     function createSellerAndPremintedOfferWithConditionAndTwinAndBundle(
         BosonTypes.Seller memory _seller,
@@ -1238,12 +1270,12 @@ interface IBosonOrchestrationHandler is
         BosonTypes.OfferDates calldata _offerDates,
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _reservedRangeLength,
-        address _to,
+        BosonTypes.PremintParameters calldata _premintParameters,
         BosonTypes.Condition calldata _condition,
         BosonTypes.Twin memory _twin,
         BosonTypes.AuthToken calldata _authToken,
         BosonTypes.VoucherInitValues calldata _voucherInitValues,
-        uint256 _agentId
+        uint256 _agentId,
+        uint256 _feeLimit
     ) external;
 }
