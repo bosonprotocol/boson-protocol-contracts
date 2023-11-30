@@ -8,6 +8,7 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IBosonFundsLibEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
 
 /**
  * @title FundsLib
@@ -16,33 +17,6 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
  */
 library FundsLib {
     using SafeERC20 for IERC20;
-
-    event FundsEncumbered(
-        uint256 indexed entityId,
-        address indexed exchangeToken,
-        uint256 amount,
-        address indexed executedBy
-    );
-    event FundsReleased(
-        uint256 indexed exchangeId,
-        uint256 indexed entityId,
-        address indexed exchangeToken,
-        uint256 amount,
-        address executedBy
-    );
-    event ProtocolFeeCollected(
-        uint256 indexed exchangeId,
-        address indexed exchangeToken,
-        uint256 amount,
-        address indexed executedBy
-    );
-    event FundsWithdrawn(
-        uint256 indexed sellerId,
-        address indexed withdrawnTo,
-        address indexed tokenAddress,
-        uint256 amount,
-        address executedBy
-    );
 
     /**
      * @notice Takes in the offer id and buyer id and encumbers buyer's and seller's funds during the commitToOffer.
@@ -86,7 +60,7 @@ library FundsLib {
         // if offer is non-preminted, validate incoming payment
         if (!_isPreminted) {
             validateIncomingPayment(exchangeToken, _price);
-            emit FundsEncumbered(_buyerId, exchangeToken, _price, sender);
+            emit IBosonFundsLibEvents.FundsEncumbered(_buyerId, exchangeToken, _price, sender);
         }
 
         bool isPriceDiscovery = _priceType == BosonTypes.PriceType.Discovery;
@@ -97,7 +71,7 @@ library FundsLib {
         decreaseAvailableFunds(sellerId, exchangeToken, sellerFundsEncumbered);
 
         // notify external observers
-        emit FundsEncumbered(sellerId, exchangeToken, sellerFundsEncumbered, sender);
+        emit IBosonFundsLibEvents.FundsEncumbered(sellerId, exchangeToken, sellerFundsEncumbered, sender);
     }
 
     /**
@@ -235,7 +209,7 @@ library FundsLib {
 
         if (protocolFee > 0) {
             increaseAvailableFunds(0, exchangeToken, protocolFee);
-            emit ProtocolFeeCollected(_exchangeId, exchangeToken, protocolFee, sender);
+            emit IBosonFundsLibEvents.ProtocolFeeCollected(_exchangeId, exchangeToken, protocolFee, sender);
         }
         if (agentFee > 0) {
             // Get the agent for offer
@@ -390,7 +364,7 @@ library FundsLib {
         address _sender
     ) internal {
         increaseAvailableFunds(_entityId, _tokenAddress, _amount);
-        emit FundsReleased(_exchangeId, _entityId, _tokenAddress, _amount, _sender);
+        emit IBosonFundsLibEvents.FundsReleased(_exchangeId, _entityId, _tokenAddress, _amount, _sender);
     }
 
     /**
@@ -464,7 +438,7 @@ library FundsLib {
         transferFundsFromProtocol(_tokenAddress, _to, _amount);
 
         // notify the external observers
-        emit FundsWithdrawn(_entityId, _to, _tokenAddress, _amount, EIP712Lib.msgSender());
+        emit IBosonFundsLibEvents.FundsWithdrawn(_entityId, _to, _tokenAddress, _amount, EIP712Lib.msgSender());
     }
 
     /**
