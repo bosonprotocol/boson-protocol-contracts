@@ -451,7 +451,7 @@ interface IBosonAccountHandler is IBosonAccountEvents, BosonErrors {
 
     /**
      * @notice Gets the details about all seller's collections.
-     * In case seller has too many collections and this runs out of gas, pleas use getSellersCollectionsPaginated.
+     * In case seller has too many collections and this runs out of gas, please use getSellersCollectionsPaginated.
      *
      * @param _sellerId - the id of the seller to check
      * @return defaultVoucherAddress - the address of the default voucher contract for the seller
@@ -463,7 +463,7 @@ interface IBosonAccountHandler is IBosonAccountEvents, BosonErrors {
 
     /**
      * @notice Gets the details about all seller's collections.
-     * In case seller has too many collections and this runs out of gas, pleas use getSellersCollectionsPaginated.
+     * In case seller has too many collections and this runs out of gas, please use getSellersCollectionsPaginated.
      *
      * @param _sellerId - the id of the seller to check
      * @param _limit - the maximum number of Collections that should be returned starting from the index defined by `_offset`. If `_offset` + `_limit` exceeds total number of collections, `_limit` is adjusted to return all remaining collections.
