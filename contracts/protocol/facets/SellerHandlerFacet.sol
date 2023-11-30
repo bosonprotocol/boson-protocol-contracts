@@ -733,7 +733,7 @@ contract SellerHandlerFacet is SellerBase {
 
     /**
      * @notice Gets the details about all seller's collections.
-     * In case seller has too many collections and this runs out of gas, please use getSellersCollectionsPaginated.
+     * Use getSellersCollectionCount to get the total number of collections.
      *
      * @param _sellerId - the id of the seller to check
      * @param _limit - the maximum number of Collections that should be returned starting from the index defined by `_offset`. If `_offset` + `_limit` exceeds total number of collections, `_limit` is adjusted to return all remaining collections.
@@ -766,6 +766,16 @@ contract SellerHandlerFacet is SellerBase {
         }
 
         return (pl.cloneAddress[_sellerId], additionalCollections);
+    }
+
+    /**
+     * @notice Returns the number of additional collections for a seller.
+     * Use this in conjunction with getSellersCollectionsPaginated to get all collections.
+     *
+     * @param _sellerId - the id of the seller to check
+     */
+    function getSellersCollectionCount(uint256 _sellerId) external view returns (uint256 collectionCount) {
+        return protocolLookups().additionalCollections[_sellerId].length;
     }
 
     /**
