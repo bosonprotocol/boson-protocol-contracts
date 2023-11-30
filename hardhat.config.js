@@ -205,7 +205,7 @@ module.exports = {
         viaIR: true,
       },
       {
-        version: "0.8.21",
+        version: "0.8.22",
         settings: {
           viaIR: false,
           optimizer: {
@@ -215,7 +215,7 @@ module.exports = {
               yul: true,
             },
           },
-          evmVersion: "shanghai", // for ethereum mainnet, use shanghai
+          evmVersion: "london", // for ethereum mainnet, use shanghai, for polygon, use london
         },
       },
       {

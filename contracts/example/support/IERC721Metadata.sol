@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts v4.4.1 (token/ERC721/extensions/IERC721Metadata.sol)
 
-pragma solidity 0.8.21;
+pragma solidity 0.8.22;
 
 import "../../interfaces/IERC721.sol";
 
