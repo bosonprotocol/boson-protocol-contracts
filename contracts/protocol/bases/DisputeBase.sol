@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.21;
+pragma solidity 0.8.22;
 
 import { IBosonDisputeEvents } from "../../interfaces/events/IBosonDisputeEvents.sol";
 import { IBosonFundsLibEvents } from "../../interfaces/events/IBosonFundsEvents.sol";

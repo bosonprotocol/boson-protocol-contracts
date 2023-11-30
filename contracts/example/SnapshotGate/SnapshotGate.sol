@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.21;
+pragma solidity 0.8.22;
 
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
