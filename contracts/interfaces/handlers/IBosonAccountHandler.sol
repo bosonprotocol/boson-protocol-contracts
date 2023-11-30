@@ -10,7 +10,7 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x890d5d20
+ * The ERC-165 identifier for this interface is: 0x079a9d3b
  */
 interface IBosonAccountHandler is IBosonAccountEvents, BosonErrors {
     /**
@@ -450,7 +450,8 @@ interface IBosonAccountHandler is IBosonAccountEvents, BosonErrors {
     ) external view returns (bool exists, BosonTypes.Seller memory seller, BosonTypes.AuthToken memory authToken);
 
     /**
-     * @notice Gets the details about a seller's collections.
+     * @notice Gets the details about all seller's collections.
+     * In case seller has too many collections and this runs out of gas, please use getSellersCollectionsPaginated.
      *
      * @param _sellerId - the id of the seller to check
      * @return defaultVoucherAddress - the address of the default voucher contract for the seller
@@ -459,6 +460,30 @@ interface IBosonAccountHandler is IBosonAccountEvents, BosonErrors {
     function getSellersCollections(
         uint256 _sellerId
     ) external view returns (address defaultVoucherAddress, BosonTypes.Collection[] memory additionalCollections);
+
+    /**
+     * @notice Gets the details about all seller's collections.
+     * Use getSellersCollectionCount to get the total number of collections.
+     *
+     * @param _sellerId - the id of the seller to check
+     * @param _limit - the maximum number of Collections that should be returned starting from the index defined by `_offset`. If `_offset` + `_limit` exceeds total number of collections, `_limit` is adjusted to return all remaining collections.
+     * @param _offset - the starting index from which to return collections. If `_offset` is greater than or equal to total number of collections, an empty list is returned.
+     * @return defaultVoucherAddress - the address of the default voucher contract for the seller
+     * @return additionalCollections - an array of additional collections that the seller has created
+     */
+    function getSellersCollectionsPaginated(
+        uint256 _sellerId,
+        uint256 _limit,
+        uint256 _offset
+    ) external view returns (address defaultVoucherAddress, BosonTypes.Collection[] memory additionalCollections);
+
+    /**
+     * @notice Returns the number of additional collections for a seller.
+     * Use this in conjunction with getSellersCollectionsPaginated to get all collections.
+     *
+     * @param _sellerId - the id of the seller to check
+     */
+    function getSellersCollectionCount(uint256 _sellerId) external view returns (uint256 collectionCount);
 
     /**
      * @notice Returns the availability of salt for a seller.
