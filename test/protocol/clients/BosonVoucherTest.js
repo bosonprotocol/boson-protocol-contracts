@@ -1812,7 +1812,8 @@ describe("IBosonVoucher", function () {
               offerDates.toStruct(),
               offerDurations.toStruct(),
               disputeResolverId,
-              agentId
+              agentId,
+              offerFeeLimit
             );
           await fundsHandler
             .connect(admin)
@@ -1848,7 +1849,8 @@ describe("IBosonVoucher", function () {
               offerDates.toStruct(),
               offerDurations.toStruct(),
               disputeResolverId,
-              agentId
+              agentId,
+              offerFeeLimit
             );
           await fundsHandler
             .connect(admin)
@@ -1882,7 +1884,8 @@ describe("IBosonVoucher", function () {
               offerDates.toStruct(),
               offerDurations.toStruct(),
               disputeResolverId,
-              agentId
+              agentId,
+              offerFeeLimit
             );
           await fundsHandler
             .connect(admin)
