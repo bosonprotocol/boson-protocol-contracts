@@ -92,7 +92,7 @@
     "dotenv": "^16.3.0",
     "eip55": "^2.1.0",
     "eslint": "^8.54.0",
-    "eslint-config-prettier": "^8.6.0",
+    "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-no-only-tests": "^3.1.0",
     "ethereum-input-data-decoder": "^0.4.2",
     "ethers": "^6.8.1",
