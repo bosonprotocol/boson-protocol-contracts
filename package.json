@@ -106,7 +106,7 @@
     "merkletreejs": "^0.3.10",
     "opensea-js": "^6.1.12",
     "prettier": "^2.8.4",
-    "prettier-plugin-solidity": "^1.0.0-beta.19",
+    "prettier-plugin-solidity": "^1.2.0",
     "simple-statistics": "^7.8.2",
     "solhint": "^3.3.8",
     "truffle": "^5.11.5",
