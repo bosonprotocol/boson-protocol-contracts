@@ -16,6 +16,7 @@ import { BeaconClientProxy } from "../../protocol/clients/proxy/BeaconClientProx
  */
 contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandler, ProtocolBase {
     address private immutable thisAddress; // used to prevent invocation of initialize directly on deployed contract. Variable is not used by the protocol.
+    bytes32 internal constant PROTOCOL_INIT_TX_POSITION = keccak256("boson.protocol.initFunctions");
 
     /**
      * @notice Modifier to protect initializer function from being invoked twice for a given version.
@@ -34,6 +35,12 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      */
     constructor() {
         thisAddress = address(this);
+
+        mapping(bytes32 => function(bytes calldata) internal) storage initFunctions = initFunctionsPtr();
+        initFunctions[bytes32("2.2.0")] = initV2_2_0;
+        initFunctions[bytes32("2.2.1")] = initV2_2_1;
+        initFunctions[bytes32("2.3.0")] = initV2_3_0;
+        initFunctions[bytes32("2.4.0")] = initV2_4_0;
     }
 
     /**
@@ -94,23 +101,33 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
             }
         }
 
-        ProtocolLib.ProtocolStatus storage status = protocolStatus();
+        // ProtocolLib.ProtocolStatus storage status = protocolStatus();
         if (_isUpgrade) {
-            if (_version == bytes32("2.2.0")) {
-                initV2_2_0(_initializationData);
-            } else if (_version == bytes32("2.2.1")) {
-                initV2_2_1();
-            } else if (_version == bytes32("2.3.0")) {
-                initV2_3_0(_initializationData);
-            }
+            initVersion(_version, _initializationData);
         }
 
         removeInterfaces(_interfacesToRemove);
         addInterfaces(_interfacesToAdd);
 
-        status.version = _version;
+        protocolStatus().version = _version;
 
         emit ProtocolInitialized(string(abi.encodePacked(_version)));
+    }
+
+    /**
+     * @notice Retrieves correct initialization function based on the version and passes the _initializationData to it.
+     *
+     *
+     * @param _initializationData - data representing uint256 _maxPremintedVouchers
+     */
+    function initVersion(bytes32 _version, bytes calldata _initializationData) internal {
+        mapping(bytes32 => function(bytes calldata) internal) storage initFunctions = initFunctionsPtr();
+        function(bytes calldata) internal initFunction = initFunctions[_version];
+
+        // If _version is not on the list, skip initialization
+        if (initFunction != initFunctions[0x0]) {
+            initFunction(_initializationData);
+        }
     }
 
     /**
@@ -134,7 +151,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
     /**
      * @notice Initializes the version 2.2.0.
      */
-    function initV2_2_1() internal view {
+    function initV2_2_1(bytes calldata) internal view {
         // Current version must be 2.2.0
         if (protocolStatus().version != bytes32("2.2.0")) revert WrongCurrentVersion();
     }
@@ -177,6 +194,18 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
     }
 
     /**
+     * @notice Initializes the version 2.4.0.
+     *
+     * Reverts if:
+     *  - Current version is not 2.3.0
+     *
+     */
+    function initV2_4_0(bytes calldata) internal view {
+        // Current version must be 2.3.0
+        if (protocolStatus().version != bytes32("2.3.0")) revert WrongCurrentVersion();
+    }
+
+    /**
      * @notice Gets the current protocol version.
      *
      */
@@ -202,6 +231,21 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
             unchecked {
                 i++;
             }
+        }
+    }
+
+    /**
+     * @notice Returns the pointer to initialization functions mappings.
+     *
+     */
+    function initFunctionsPtr()
+        internal
+        pure
+        returns (mapping(bytes32 => function(bytes calldata) internal) storage initFunctions)
+    {
+        bytes32 position = PROTOCOL_INIT_TX_POSITION;
+        assembly {
+            initFunctions.slot := position
         }
     }
 }
