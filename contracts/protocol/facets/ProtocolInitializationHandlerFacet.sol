@@ -94,7 +94,6 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
             }
         }
 
-        // ProtocolLib.ProtocolStatus storage status = protocolStatus();
         if (_isUpgrade) {
             if (_version == bytes32("2.2.0")) {
                 initV2_2_0(_initializationData);
@@ -181,12 +180,12 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
     /**
      * @notice Initializes the version 2.4.0.
      *
-     * Initliaziation data is used to back-fill the royalty recipients for existing offers and sellers.
+     * Initialization data is used to back-fill the royalty recipients for existing offers and sellers.
      * The data is grouped by royalty percentage, so if more sellers and/or have the same royalty percentage, they can be grouped together.
      * Supplied royalty percentage should match the current percentage set in seller's boson voucher contract.
      * If seller has multiple collections with different royalty precentages:
      *  - the sellerId should be included in the group, corresponding to the minimal royalty percentage
-     *  - the _offerIds array should should be included in the group, corresponding to the royalty percentage that matches the royalty of the collection to which offer belongs
+     *  - the _offerIds array should be included in the group, corresponding to the royalty percentage that matches the royalty of the collection to which offer belongs
      * If some offer is voided, or has no active vouchers, it can be omitted.
      *
      * If the amount of data is too large, it can be split into multiple `initV2_4_0Public` calls, that should be made before calling initialize.
@@ -235,7 +234,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
     /**
      * @notice Method to initialize the protocol if it cannot be done in a single transaction.
      *
-     * This shuld be used only if the amount of data is too large, and it cannot be done in a single `initialize` transaction.
+     * This should be used only if the amount of data is too large, and it cannot be done in a single `initialize` transaction.
      * This method should be called before `initialize` method.
      * This method should not be registered as a diamond public method.
      * Refer to initV2_4_0 for more details about the data structure.
