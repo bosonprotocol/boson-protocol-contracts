@@ -16,7 +16,6 @@ import { BeaconClientProxy } from "../../protocol/clients/proxy/BeaconClientProx
  */
 contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandler, ProtocolBase {
     address private immutable thisAddress; // used to prevent invocation of initialize directly on deployed contract. Variable is not used by the protocol.
-    bytes32 internal constant PROTOCOL_INIT_TX_POSITION = keccak256("boson.protocol.initFunctions");
 
     /**
      * @notice Modifier to protect initializer function from being invoked twice for a given version.
