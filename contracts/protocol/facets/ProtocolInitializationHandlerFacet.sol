@@ -94,7 +94,6 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
             }
         }
 
-        ProtocolLib.ProtocolStatus storage status = protocolStatus();
         if (_isUpgrade) {
             if (_version == bytes32("2.2.0")) {
                 initV2_2_0(_initializationData);
@@ -102,13 +101,15 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
                 initV2_2_1();
             } else if (_version == bytes32("2.3.0")) {
                 initV2_3_0(_initializationData);
+            } else if (_version == bytes32("2.4.0")) {
+                initV2_4_0(_initializationData);
             }
         }
 
         removeInterfaces(_interfacesToRemove);
         addInterfaces(_interfacesToAdd);
 
-        status.version = _version;
+        protocolStatus().version = _version;
 
         emit ProtocolInitialized(string(abi.encodePacked(_version)));
     }
@@ -174,6 +175,74 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
 
         // Deploy a new voucher proxy
         protocolAddresses().beaconProxy = address(new BeaconClientProxy{ salt: VOUCHER_PROXY_SALT }());
+    }
+
+    /**
+     * @notice Initializes the version 2.4.0.
+     *
+     * Initialization data is used to back-fill the royalty recipients for existing offers and sellers.
+     * The data is grouped by royalty percentage, so if more sellers and/or have the same royalty percentage, they can be grouped together.
+     * Supplied royalty percentage should match the current percentage set in seller's boson voucher contract.
+     * If seller has multiple collections with different royalty precentages:
+     *  - the sellerId should be included in the group, corresponding to the minimal royalty percentage
+     *  - the _offerIds array should be included in the group, corresponding to the royalty percentage that matches the royalty of the collection to which offer belongs
+     * If some offer is voided, or has no active vouchers, it can be omitted.
+     *
+     * If the amount of data is too large, it can be split into multiple `initV2_4_0Public` calls, that should be made before calling initialize.
+     *
+     * N.B. this method does not validate that the seller exists, or that it's unique.
+     *
+     * Reverts if:
+     *  - Current version is not 2.3.0
+     *  - Length of _sellerIds, _royaltyPercentages and _offerIds arrays do not match
+     *  - Any of the offerIds does not exist
+     *
+     * @param _initializationData - data representing uint256[] _sellerIds, uint256[] _royaltyPercentages, uint256[][] _offerIds
+     */
+    function initV2_4_0(bytes calldata _initializationData) internal {
+        // Current version must be 2.3.0
+        if (protocolStatus().version != bytes32("2.3.0")) revert WrongCurrentVersion();
+
+        (uint256[] memory _royaltyPercentages, uint256[][] memory _sellerIds, uint256[][] memory _offerIds) = abi
+            .decode(_initializationData, (uint256[], uint256[][], uint256[][]));
+
+        if (_royaltyPercentages.length != _sellerIds.length || _royaltyPercentages.length != _offerIds.length)
+            revert ArrayLengthMismatch();
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+        for (uint256 i = 0; i < _royaltyPercentages.length; i++) {
+            // Populate sellers' Royalty Recipients
+            for (uint256 j = 0; j < _sellerIds[i].length; j++) {
+                RoyaltyRecipient storage defaultRoyaltyRecipient = lookups
+                    .royaltyRecipientsBySeller[_sellerIds[i][j]]
+                    .push();
+                defaultRoyaltyRecipient.minRoyaltyPercentage = _royaltyPercentages[i];
+            }
+
+            // Populate offers' Royalty Info
+            for (uint256 j = 0; j < _offerIds[i].length; j++) {
+                (bool exist, Offer storage offer) = fetchOffer(_offerIds[i][j]);
+                if (!exist) revert NoSuchOffer();
+
+                RoyaltyInfo storage royaltyInfo = offer.royaltyInfo.push();
+                royaltyInfo.recipients.push(payable(address(0))); // default recipient
+                royaltyInfo.bps.push(_royaltyPercentages[i]);
+            }
+        }
+    }
+
+    /**
+     * @notice Method to initialize the protocol if it cannot be done in a single transaction.
+     *
+     * This should be used only if the amount of data is too large, and it cannot be done in a single `initialize` transaction.
+     * This method should be called before `initialize` method.
+     * This method should not be registered as a diamond public method.
+     * Refer to initV2_4_0 for more details about the data structure.
+     *
+     * @param _initializationData - data representing uint256[] _sellerIds, uint256[] _royaltyPercentages, uint256[][] _offerIds
+     */
+    function initV2_4_0External(bytes calldata _initializationData) external onlyRole(UPGRADER) {
+        initV2_4_0(_initializationData);
     }
 
     /**
