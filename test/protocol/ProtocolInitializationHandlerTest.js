@@ -10,11 +10,13 @@ const {
   ZeroAddress,
   keccak256,
   toUtf8Bytes,
+  MaxUint256,
+  id,
 } = hre.ethers;
 const { getSnapshot, revertToSnapshot } = require("../util/utils.js");
 const { expect } = require("chai");
 const Role = require("../../scripts/domain/Role");
-const { mockTwin, mockSeller, mockAuthToken, mockVoucherInitValues } = require("../util/mock");
+const { mockTwin, mockSeller, mockAuthToken, mockVoucherInitValues, mockOffer } = require("../util/mock");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployAndCutFacets, deployProtocolFacets } = require("../../scripts/util/deploy-protocol-handler-facets");
 const { getInterfaceIds, interfaceImplementers } = require("../../scripts/config/supported-interfaces");
@@ -23,11 +25,13 @@ const { maxPriorityFeePerGas, oneWeek, oneMonth } = require("../util/constants")
 const { getFees } = require("../../scripts/util/utils");
 const { getFacetAddCut, getFacetReplaceCut } = require("../../scripts/util/diamond-utils");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const { getFacetsWithArgs } = require("../util/utils.js");
+const { getFacetsWithArgs, getMappingStoragePosition, paddingType } = require("../util/utils.js");
 const { getV2_2_0DeployConfig } = require("../upgrade/00_config.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const TokenType = require("../../scripts/domain/TokenType");
-const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
+const { getStorageAt, setStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
+const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo.js");
+const { RoyaltyRecipientList, RoyaltyRecipient } = require("../../scripts/domain/RoyaltyRecipient.js");
 
 describe("ProtocolInitializationHandler", async function () {
   // Common vars
@@ -897,6 +901,385 @@ describe("ProtocolInitializationHandler", async function () {
           )
         ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.WRONG_CURRENT_VERSION);
       });
+    });
+  });
+
+  describe("initV2_4_0", async function () {
+    let deployedProtocolInitializationHandlerFacet;
+    let facetCut;
+    let calldataProtocolInitialization;
+
+    beforeEach(async function () {
+      version = "2.3.0";
+      let protocolDiamondAddress = await protocolDiamond.getAddress();
+
+      // NEED TO ACTUALLY DEPLOY VOUCHER IMPLEMENTATIONS
+      const protocolClientArgs = [protocolDiamondAddress];
+      const [, beacons] = await deployProtocolClients(
+        protocolClientArgs,
+        maxPriorityFeePerGas,
+        [rando.address] // random address in place of forwarder
+      );
+      const [beacon] = beacons;
+
+      const facetsToDeploy = await getV2_2_0DeployConfig(); // To deploy 2.3.0, we can use 2.2.0 config
+      facetsToDeploy.ConfigHandlerFacet.init[0] = {
+        ...facetsToDeploy.ConfigHandlerFacet.init[0],
+        voucherBeacon: await beacon.getAddress(),
+      };
+
+      // Make initial deployment (simulate v2.3.0)
+      await deployAndCutFacets(await protocolDiamond.getAddress(), facetsToDeploy, maxPriorityFeePerGas, version);
+
+      version = "2.4.0";
+
+      // Deploy v2.4.0 facets
+      [{ contract: deployedProtocolInitializationHandlerFacet }] = await deployProtocolFacets(
+        ["ProtocolInitializationHandlerFacet", "AccountHandlerFacet", "OfferHandlerFacet"],
+        {},
+        maxPriorityFeePerGas
+      );
+
+      // Prepare cut data
+      facetCut = await getFacetReplaceCut(deployedProtocolInitializationHandlerFacet, [
+        deployedProtocolInitializationHandlerFacet.interface.fragments.find((f) => f.name == "initialize").selector,
+      ]);
+
+      initializationData = abiCoder.encode(["uint256[]", "uint256[][]", "uint256[][]"], [[], [], []]);
+
+      // Prepare calldata
+      calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
+        "initialize",
+        [encodeBytes32String(version), [], [], true, initializationData, [], []]
+      );
+    });
+
+    it("Should initialize version 2.4.0 and emit ProtocolInitialized", async function () {
+      // Make the cut, check the event
+      const tx = await diamondCutFacet.diamondCut(
+        [facetCut],
+        await deployedProtocolInitializationHandlerFacet.getAddress(),
+        calldataProtocolInitialization,
+        await getFees(maxPriorityFeePerGas)
+      );
+      expect(tx).to.emit(deployedProtocolInitializationHandlerFacet, "ProtocolInitialized");
+    });
+
+    context("Data backfilling", async function () {
+      let accountHandler, offerHandler;
+      let expectedRoyaltyRecipientLists, expectedRoyaltyInfo;
+
+      beforeEach(async function () {
+        const protocolAddress = await diamondCutFacet.getAddress();
+        // Create some sellers and offers before making an upgrade
+        accountHandler = await getContractAt("IBosonAccountHandler", protocolAddress);
+        offerHandler = await getContractAt("IBosonOfferHandler", protocolAddress);
+
+        const accounts = await getSigners();
+        const agentId = "0";
+        const offerFeeLimit = MaxUint256;
+        const { offer, offerDates, offerDurations } = await mockOffer();
+        // make absolute zero offer
+        const disputeResolverId = "0";
+        offer.price = "0";
+        offer.sellerDeposit = "0";
+        offer.buyerCancelPenalty = "0";
+
+        for (let i = 0; i < 3; i++) {
+          const sellerWallet = accounts[i + 2];
+          const seller = mockSeller(sellerWallet.address, sellerWallet.address, ZeroAddress, sellerWallet.address);
+          const emptyAuthToken = mockAuthToken();
+          const voucherInitValues = mockVoucherInitValues();
+          await accountHandler.connect(sellerWallet).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+          for (let j = 0; j < 3; j++) {
+            // Create the offer
+            await offerHandler
+              .connect(sellerWallet)
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+          }
+        }
+
+        // Empty the sellers' royaltyRecipients, simulating a v2.3.0 state
+        const protocolLookupsSlot = id("boson.protocol.lookups");
+        const protocolLookupsSlotNumber = BigInt(protocolLookupsSlot);
+        for (let sellerId = 1; sellerId <= 3; sellerId++) {
+          const royaltyRecipientsLength = BigInt(
+            getMappingStoragePosition(protocolLookupsSlotNumber + 37n, Number(sellerId), paddingType.START)
+          );
+          await setStorageAt(protocolAddress, royaltyRecipientsLength, "0x"); // royaltyRecipientsBySeller length set to zero
+        }
+
+        // Empty the offer.royaltyInfo storage slot, simulating a v2.3.0 state
+        const protocolEntitiesSlot = id("boson.protocol.entities");
+        const protocolEntitiesSlotNumber = BigInt(protocolEntitiesSlot);
+        for (let offerId = 1; offerId <= 9; offerId++) {
+          const offerSlot = BigInt(
+            getMappingStoragePosition(protocolEntitiesSlotNumber + 0n, Number(offerId), paddingType.START)
+          );
+          const royaltyInfoLength = offerSlot + 12n;
+          await setStorageAt(protocolAddress, royaltyInfoLength, "0x"); // royaltyInfo length set to zero
+          const royaltyInfoSlot = BigInt(keccak256(Buffer.from((offerSlot + 12n).toString(16), "hex")));
+          await setStorageAt(protocolAddress, royaltyInfoSlot + 0n, "0x"); // set royaltyInfo.recipients length to zero
+          await setStorageAt(protocolAddress, royaltyInfoSlot + 1n, "0x"); // set royaltyInfo.bps length to zero
+
+          // Validate that the royalty info is zero
+          const [, offer] = await offerHandler.getOffer(offerId);
+          expect(offer.royaltyInfo.length).to.equal(0);
+        }
+
+        const royaltyPercentages = ["0", "1400", "2500"];
+        const sellerIds = [[1], [2, 3], []];
+        const offerIds = [
+          [1, 2, 3],
+          [4, 5, 7],
+          [6, 8, 9],
+        ];
+
+        initializationData = abiCoder.encode(
+          ["uint256[]", "uint256[][]", "uint256[][]"],
+          [royaltyPercentages, sellerIds, offerIds]
+        );
+
+        expectedRoyaltyRecipientLists = [
+          new RoyaltyRecipientList([new RoyaltyRecipient(ZeroAddress, "0", "Treasury")]),
+          new RoyaltyRecipientList([new RoyaltyRecipient(ZeroAddress, "1400", "Treasury")]),
+          new RoyaltyRecipientList([new RoyaltyRecipient(ZeroAddress, "1400", "Treasury")]),
+        ];
+
+        expectedRoyaltyInfo = [
+          new RoyaltyInfo([ZeroAddress], ["0"]),
+          new RoyaltyInfo([ZeroAddress], ["0"]),
+          new RoyaltyInfo([ZeroAddress], ["0"]),
+          new RoyaltyInfo([ZeroAddress], ["1400"]),
+          new RoyaltyInfo([ZeroAddress], ["1400"]),
+          new RoyaltyInfo([ZeroAddress], ["2500"]),
+          new RoyaltyInfo([ZeroAddress], ["1400"]),
+          new RoyaltyInfo([ZeroAddress], ["2500"]),
+          new RoyaltyInfo([ZeroAddress], ["2500"]),
+        ];
+      });
+
+      it("Via initialize", async function () {
+        // Prepare calldata
+        calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
+          "initialize",
+          [encodeBytes32String(version), [], [], true, initializationData, [], []]
+        );
+
+        // Make the cut
+        await diamondCutFacet.diamondCut(
+          [facetCut],
+          await deployedProtocolInitializationHandlerFacet.getAddress(),
+          calldataProtocolInitialization,
+          await getFees(maxPriorityFeePerGas)
+        );
+
+        // Validate that the royalty recipients are set correctly
+        for (let sellerId = 1; sellerId <= 3; sellerId++) {
+          const returnedRoyaltyRecipientStruct = RoyaltyRecipientList.fromStruct(
+            await accountHandler.getRoyaltyRecipients(sellerId)
+          );
+          expect(returnedRoyaltyRecipientStruct).to.deep.equal(expectedRoyaltyRecipientLists[sellerId - 1]);
+        }
+
+        // Validate that the royalty info is set correctly
+        for (let offerId = 1; offerId <= 9; offerId++) {
+          const [, offer] = await offerHandler.getOffer(offerId);
+          expect(offer.royaltyInfo.length).to.equal(1);
+          const returnedRoyaltyInfo = RoyaltyInfo.fromStruct(offer.royaltyInfo[0]);
+          expect(returnedRoyaltyInfo).to.deep.equal(expectedRoyaltyInfo[offerId - 1]);
+        }
+      });
+
+      it("Via initV2_4_0External", async function () {
+        // Prepare calldata
+        calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
+          "initV2_4_0External",
+          [initializationData]
+        );
+
+        // Make the "cut", i.e. call initV2_4_0External via diamond
+        await diamondCutFacet.diamondCut(
+          [],
+          await deployedProtocolInitializationHandlerFacet.getAddress(),
+          calldataProtocolInitialization,
+          await getFees(maxPriorityFeePerGas)
+        );
+
+        // Validate that the royalty recipients are set correctly
+        for (let sellerId = 1; sellerId <= 3; sellerId++) {
+          const returnedRoyaltyRecipientStruct = RoyaltyRecipientList.fromStruct(
+            await accountHandler.getRoyaltyRecipients(sellerId)
+          );
+          expect(returnedRoyaltyRecipientStruct).to.deep.equal(expectedRoyaltyRecipientLists[sellerId - 1]);
+        }
+
+        // Validate that the royalty info is set correctly
+        for (let offerId = 1; offerId <= 9; offerId++) {
+          const [, offer] = await offerHandler.getOffer(offerId);
+          expect(offer.royaltyInfo.length).to.equal(1);
+          const returnedRoyaltyInfo = RoyaltyInfo.fromStruct(offer.royaltyInfo[0]);
+          expect(returnedRoyaltyInfo).to.deep.equal(expectedRoyaltyInfo[offerId - 1]);
+        }
+      });
+    });
+
+    context("💔 Revert Reasons", async function () {
+      it("Current version is not 2.3.0", async () => {
+        // Deploy higher version
+        const wrongVersion = "0.0.0";
+
+        // Prepare calldata
+        const calldataProtocolInitializationWrong =
+          deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData("initialize", [
+            encodeBytes32String(wrongVersion),
+            [],
+            [],
+            true,
+            "0x",
+            [],
+            [],
+          ]);
+
+        await diamondCutFacet.diamondCut(
+          [facetCut],
+          await deployedProtocolInitializationHandlerFacet.getAddress(),
+          calldataProtocolInitializationWrong,
+          await getFees(maxPriorityFeePerGas)
+        );
+
+        const [{ contract: accountHandler }] = await deployProtocolFacets(
+          ["AccountHandlerFacet"],
+          {},
+          maxPriorityFeePerGas
+        );
+
+        // Prepare cut data
+        facetCut = await getFacetReplaceCut(accountHandler, [
+          accountHandler.interface.fragments.find((f) => f.name == "initialize").selector,
+        ]);
+
+        // Make diamond cut, expect revert
+        await expect(
+          diamondCutFacet.diamondCut(
+            [facetCut],
+            await deployedProtocolInitializationHandlerFacet.getAddress(),
+            calldataProtocolInitialization,
+            await getFees(maxPriorityFeePerGas)
+          )
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.WRONG_CURRENT_VERSION);
+      });
+
+      const scenario = {
+        sellerIdLonger: {
+          sellerIds: [[1], [2], [], [3]],
+          offerIds: [
+            [1, 2, 3],
+            [4, 5, 7],
+            [6, 8, 9],
+          ],
+        },
+        sellerIdShorter: {
+          sellerIds: [[1], [2, 3]],
+          offerIds: [
+            [1, 2, 3],
+            [4, 5, 7],
+            [6, 8, 9],
+          ],
+        },
+        offerIdsLonger: {
+          sellerIds: [[1], [2, 3], []],
+          offerIds: [[1, 2, 3], [4, 5, 7], [6, 8], [9]],
+        },
+        offerIdsShorter: {
+          sellerIds: [[1], [2, 3], []],
+          offerIds: [
+            [1, 2, 3],
+            [4, 5, 7],
+          ],
+        },
+      };
+
+      for (const [key, value] of Object.entries(scenario)) {
+        it(`Initialization data array length mismatch: ${key}`, async () => {
+          const royaltyPercentages = ["0", "1400", "2500"];
+          const { sellerIds, offerIds } = value;
+
+          initializationData = abiCoder.encode(
+            ["uint256[]", "uint256[][]", "uint256[][]"],
+            [royaltyPercentages, sellerIds, offerIds]
+          );
+
+          calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
+            "initialize",
+            [encodeBytes32String(version), [], [], true, initializationData, [], []]
+          );
+
+          // Make diamond cut, expect revert
+          await expect(
+            diamondCutFacet.diamondCut(
+              [facetCut],
+              await deployedProtocolInitializationHandlerFacet.getAddress(),
+              calldataProtocolInitialization,
+              await getFees(maxPriorityFeePerGas)
+            )
+          ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.ARRAY_LENGTH_MISMATCH);
+        });
+      }
+    });
+
+    it("Offer does not exist", async () => {
+      const royaltyPercentages = ["0"];
+      const sellerIds = [[1]];
+      const offerIds = [[234]];
+
+      initializationData = abiCoder.encode(
+        ["uint256[]", "uint256[][]", "uint256[][]"],
+        [royaltyPercentages, sellerIds, offerIds]
+      );
+
+      calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
+        "initialize",
+        [encodeBytes32String(version), [], [], true, initializationData, [], []]
+      );
+
+      // Make diamond cut, expect revert
+      await expect(
+        diamondCutFacet.diamondCut(
+          [facetCut],
+          await deployedProtocolInitializationHandlerFacet.getAddress(),
+          calldataProtocolInitialization,
+          await getFees(maxPriorityFeePerGas)
+        )
+      ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_OFFER);
+    });
+
+    it("Calling initV2_4_0External after v2.4.0 already initialized", async () => {
+      // Initialize normally
+      await diamondCutFacet.diamondCut(
+        [facetCut],
+        await deployedProtocolInitializationHandlerFacet.getAddress(),
+        calldataProtocolInitialization,
+        await getFees(maxPriorityFeePerGas)
+      );
+
+      // Try to initialize again via initV2_4_0External
+      // Prepare calldata
+      calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
+        "initV2_4_0External",
+        [initializationData]
+      );
+
+      // Make diamond cut, expect revert
+      await expect(
+        diamondCutFacet.diamondCut(
+          [],
+          await deployedProtocolInitializationHandlerFacet.getAddress(),
+          calldataProtocolInitialization,
+          await getFees(maxPriorityFeePerGas)
+        )
+      ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.WRONG_CURRENT_VERSION);
     });
   });
 });

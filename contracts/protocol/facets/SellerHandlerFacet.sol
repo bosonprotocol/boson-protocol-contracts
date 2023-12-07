@@ -159,8 +159,9 @@ contract SellerHandlerFacet is SellerBase {
                     .royaltyRecipientIndexBySellerAndRecipient[_seller.id];
                 uint256 royaltyRecipientId = royaltyRecipientIndexBySellerAndRecipient[_seller.treasury];
 
-                RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_seller.id];
                 if (royaltyRecipientId != 0) {
+                    RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_seller.id];
+
                     // If the new treasury is already a royalty recipient, remove it
                     royaltyRecipientId--; // royaltyRecipientId is 1-based, so we need to decrement it to get the index
                     uint256 lastRoyaltyRecipientsId = royaltyRecipients.length - 1;
@@ -178,7 +179,7 @@ contract SellerHandlerFacet is SellerBase {
 
                 updateApplied = true;
 
-                emit RoyaltyRecipientsChanged(_seller.id, royaltyRecipients, msgSender());
+                emit RoyaltyRecipientsChanged(_seller.id, fetchRoyaltyRecipients(_seller.id), msgSender());
             }
 
             if (keccak256(bytes(_seller.metadataUri)) != keccak256(bytes(seller.metadataUri))) {
@@ -505,7 +506,7 @@ contract SellerHandlerFacet is SellerBase {
             }
         }
 
-        emit RoyaltyRecipientsChanged(_sellerId, royaltyRecipients, sender);
+        emit RoyaltyRecipientsChanged(_sellerId, fetchRoyaltyRecipients(_sellerId), sender);
     }
 
     /**
@@ -584,7 +585,7 @@ contract SellerHandlerFacet is SellerBase {
             }
         }
 
-        emit RoyaltyRecipientsChanged(_sellerId, royaltyRecipients, msgSender());
+        emit RoyaltyRecipientsChanged(_sellerId, fetchRoyaltyRecipients(_sellerId), msgSender());
     }
 
     /**
@@ -648,7 +649,7 @@ contract SellerHandlerFacet is SellerBase {
             }
         }
 
-        emit RoyaltyRecipientsChanged(_sellerId, royaltyRecipients, sender);
+        emit RoyaltyRecipientsChanged(_sellerId, fetchRoyaltyRecipients(_sellerId), sender);
     }
 
     /**
@@ -845,7 +846,7 @@ contract SellerHandlerFacet is SellerBase {
     function getRoyaltyRecipients(
         uint256 _sellerId
     ) external view returns (RoyaltyRecipient[] memory royaltyRecipients) {
-        return protocolLookups().royaltyRecipientsBySeller[_sellerId];
+        return fetchRoyaltyRecipients(_sellerId);
     }
 
     /**
