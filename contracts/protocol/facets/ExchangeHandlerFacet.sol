@@ -908,16 +908,16 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler, 
     ) external view returns (address payable[] memory recipients, uint256[] memory bps) {
         uint256 _queryId = _tokenId >> 128; // Assume that tokenId contains offer in the upper 128 bits
 
-        // If offerId is 0, then the tokenId contains represents only the exchangeId
+        // If _queryId is 0, then the tokenId represents only the exchangeId
         bool _isExchangeId;
         if (_queryId == 0) {
             _isExchangeId = true;
             _queryId = _tokenId;
         }
 
-        // address treasury;
         (RoyaltyInfo memory royaltyInfo, , address treasury) = fetchRoyalties(_queryId, _isExchangeId);
 
+        // replace default recipient with the treasury address
         for (uint256 i = 0; i < royaltyInfo.recipients.length; ) {
             if (royaltyInfo.recipients[i] == address(0)) {
                 // get treasury address!

@@ -57,13 +57,6 @@ module.exports = {
             if (!line.includes(";")) brokenLine = true;
             for (const [from, to] of getRemappings()) {
               if (line.includes(from)) {
-                // if (from.includes("IERC165")) {
-                if (absolutePath.includes("ERC165")) {
-                  console.log("absolutePath", absolutePath);
-                  console.log("from", from);
-                  console.log("to", to);
-                  console.log("line", line);
-                }
                 line = line.replace(from, to.replace("${submodule}", submodule));
                 break;
               }
