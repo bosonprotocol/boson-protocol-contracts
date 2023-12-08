@@ -6,6 +6,8 @@ const {
   applyPercentage,
   setupTestEnvironment,
   deriveTokenId,
+  getSnapshot,
+  revertToSnapshot,
 } = require("../../util/utils.js");
 const { ROYALTY_REGISTRY_ADDRESS } = require("../../util/constants.js");
 
@@ -31,8 +33,9 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
   let bosonVoucher;
   let assistant, buyer, DR, other1, other2;
   let seller, royaltyInfo;
-  let offerHandler, exchangeHandler;
+  let offerHandler, exchangeHandler, fundsHandler, accountHandler;
   let offerId, offerPrice, exchangeId, tokenId;
+  let snapshotId;
 
   before(async function () {
     accountId.next(true);
@@ -45,7 +48,6 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
       fundsHandler: "IBosonFundsHandler",
       exchangeHandler: "IBosonExchangeHandler",
     };
-    let accountHandler, fundsHandler;
 
     ({
       signers: [assistant, buyer, DR, other1, other2],
@@ -74,162 +76,177 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
 
     await accountHandler.connect(DR).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
-    const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
-    offer.quantityAvailable = 10;
-    offer.royaltyInfo = [new RoyaltyInfo([other1.address], [100])];
-    royaltyInfo = offer.royaltyInfo[0];
-    offerPrice = offer.price;
-    const agentId = "0";
-    const offerFeeLimit = MaxUint256;
-
-    await offerHandler
-      .connect(assistant)
-      .createOffer(
-        offer.toStruct(),
-        offerDates.toStruct(),
-        offerDurations.toStruct(),
-        disputeResolverId,
-        agentId,
-        offerFeeLimit
-      );
-
-    const beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
-    const voucherAddress = calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, seller.admin);
-    bosonVoucher = await getContractAt("BosonVoucher", voucherAddress);
-
-    // Pool needs to cover both seller deposit and price
-    const pool = BigInt(offer.sellerDeposit) + BigInt(offer.price);
-    await fundsHandler.connect(assistant).depositFunds(seller.id, ZeroAddress, pool, {
-      value: pool,
-    });
-
-    exchangeId = 1;
-    offerId = 1;
-    tokenId = deriveTokenId(offerId, exchangeId);
+    // Get snapshot id
+    snapshotId = await getSnapshot();
   });
 
-  context("EIP2981", function () {
-    it("Normal voucher", async function () {
-      // Commit to an offer
-      await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: offerPrice });
+  afterEach(async function () {
+    await revertToSnapshot(snapshotId);
+    snapshotId = await getSnapshot();
 
-      // get royalty info directly from voucher contract
-      let [recipient, royaltyAmount] = await bosonVoucher.royaltyInfo(tokenId, offerPrice);
+    // Reset
+    accountId.next(true);
+  });
 
-      // Expectations
-      let expectedRecipient = other1.address;
-      let expectedRoyaltyAmount = applyPercentage(offerPrice, royaltyInfo.bps[0]);
+  const recipients = ["other", "treasury"];
 
-      assert.equal(recipient, expectedRecipient, "Receiver address is incorrect");
-      assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
+  recipients.forEach((recipient) => {
+    context(recipient, function () {
+      let expectedRecipient;
+      let offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit;
 
-      // get royalty info directly from royalty registry
-      let [recipients, amounts] = await royaltyRegistry.getRoyaltyView(
-        await bosonVoucher.getAddress(),
-        tokenId,
-        offerPrice
-      );
+      beforeEach(async function () {
+        expectedRecipient = recipient === "other" ? other1.address : seller.treasury;
 
-      // Expectations
-      let expectedRecipients = [expectedRecipient];
-      let expectedRoyaltyAmounts = [expectedRoyaltyAmount];
+        ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+        offer.quantityAvailable = 10;
+        offer.royaltyInfo = [
+          new RoyaltyInfo([expectedRecipient == seller.treasury ? ZeroAddress : expectedRecipient], [100]),
+        ];
+        royaltyInfo = offer.royaltyInfo[0];
+        offerPrice = offer.price;
+        agentId = "0";
+        offerFeeLimit = MaxUint256;
 
-      assert.deepEqual(recipients, expectedRecipients, "Receiver address is incorrect");
-      assert.deepEqual(
-        amounts.map((a) => a.toString()),
-        expectedRoyaltyAmounts,
-        "Royalty amount is incorrect"
-      );
-    });
-
-    it("Preminted voucher", async function () {
-      await offerHandler.connect(assistant).reserveRange(offerId, 1, assistant.address);
-      await bosonVoucher.connect(assistant).preMint(offerId, 1);
-
-      // get royalty info directly from voucher contract
-      let [recipient, royaltyAmount] = await bosonVoucher.royaltyInfo(tokenId, offerPrice);
-
-      // Expectations
-      let expectedRecipient = other1.address;
-      let expectedRoyaltyAmount = applyPercentage(offerPrice, royaltyInfo.bps[0]);
-
-      assert.equal(recipient, expectedRecipient, "Receiver address is incorrect");
-      assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
-
-      // get royalty info directly from royalty registry
-      let [recipients, amounts] = await royaltyRegistry.getRoyaltyView(
-        await bosonVoucher.getAddress(),
-        tokenId,
-        offerPrice
-      );
-
-      // Expectations
-      let expectedRecipients = [expectedRecipient];
-      let expectedRoyaltyAmounts = [expectedRoyaltyAmount];
-
-      assert.deepEqual(recipients, expectedRecipients, "Receiver address is incorrect");
-      assert.deepEqual(
-        amounts.map((a) => a.toString()),
-        expectedRoyaltyAmounts,
-        "Royalty amount is incorrect"
-      );
-    });
-
-    it("Preminted voucher - multiple ranges", async function () {
-      // create offer
-      const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
-      offer.quantityAvailable = "10";
-      offer.royaltyInfo = [new RoyaltyInfo([other1.address], [100])];
-      royaltyInfo = offer.royaltyInfo[0];
-      offerPrice = offer.price;
-      const offerStruct = offer.toStruct();
-      const offerDatesStruct = offerDates.toStruct();
-      const offerDurationsStruct = offerDurations.toStruct();
-      const agentId = "0";
-      const offerFeeLimit = MaxUint256;
-
-      for (let i = 0; i < 50; i++) {
         await offerHandler
           .connect(assistant)
-          .createOffer(offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolverId, agentId, offerFeeLimit);
-        offerId++;
+          .createOffer(
+            offer.toStruct(),
+            offerDates.toStruct(),
+            offerDurations.toStruct(),
+            disputeResolverId,
+            agentId,
+            offerFeeLimit
+          );
 
-        // reserve length
-        await offerHandler.connect(assistant).reserveRange(offerId, 10, assistant.address);
-      }
-      offerId = 25;
-      exchangeId = (offerId - 2) * 10 + 5;
+        const beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
+        const voucherAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          seller.admin
+        );
+        bosonVoucher = await getContractAt("BosonVoucher", voucherAddress);
 
-      await bosonVoucher.connect(assistant).preMint(offerId, 10);
+        // Pool needs to cover both seller deposit and price
+        const pool = BigInt(offer.sellerDeposit) + BigInt(offer.price);
+        await fundsHandler.connect(assistant).depositFunds(seller.id, ZeroAddress, pool, {
+          value: pool,
+        });
 
-      // get royalty info directly from voucher contract
-      tokenId = deriveTokenId(offerId, exchangeId);
-      let [recipient, royaltyAmount] = await bosonVoucher.royaltyInfo(tokenId, offerPrice);
+        exchangeId = 1;
+        offerId = 1;
+        tokenId = deriveTokenId(offerId, exchangeId);
+      });
 
-      // Expectations
-      let expectedRecipient = other1.address;
-      let expectedRoyaltyAmount = applyPercentage(offerPrice, royaltyInfo.bps[0]);
+      context("EIP2981", function () {
+        it("Normal voucher", async function () {
+          // Commit to an offer
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: offerPrice });
 
-      assert.equal(recipient, expectedRecipient, "Receiver address is incorrect");
-      assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
+          // get royalty info directly from voucher contract
+          let [recipient, royaltyAmount] = await bosonVoucher.royaltyInfo(tokenId, offerPrice);
 
-      // get royalty info directly from royalty registry
-      let [recipients, amounts] = await royaltyRegistry.getRoyaltyView(
-        await bosonVoucher.getAddress(),
-        tokenId,
-        offerPrice
-      );
+          // Expectations
+          let expectedRoyaltyAmount = applyPercentage(offerPrice, royaltyInfo.bps[0]);
 
-      // Expectations
-      let expectedRecipients = [expectedRecipient];
-      let expectedRoyaltyAmounts = [expectedRoyaltyAmount];
+          assert.equal(recipient, expectedRecipient, "Receiver address is incorrect");
+          assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
 
-      assert.deepEqual(recipients, expectedRecipients, "Receiver address is incorrect");
-      assert.deepEqual(
-        amounts.map((a) => a.toString()),
-        expectedRoyaltyAmounts,
-        "Royalty amount is incorrect"
-      );
+          // get royalty info directly from royalty registry
+          let [recipients, amounts] = await royaltyRegistry.getRoyaltyView(
+            await bosonVoucher.getAddress(),
+            tokenId,
+            offerPrice
+          );
+
+          // Expectations
+          let expectedRecipients = [expectedRecipient];
+          let expectedRoyaltyAmounts = [expectedRoyaltyAmount];
+
+          assert.deepEqual(recipients, expectedRecipients, "Receiver address is incorrect");
+          assert.deepEqual(
+            amounts.map((a) => a.toString()),
+            expectedRoyaltyAmounts,
+            "Royalty amount is incorrect"
+          );
+        });
+
+        it("Preminted voucher", async function () {
+          await offerHandler.connect(assistant).reserveRange(offerId, 1, assistant.address);
+          await bosonVoucher.connect(assistant).preMint(offerId, 1);
+
+          // get royalty info directly from voucher contract
+          let [recipient, royaltyAmount] = await bosonVoucher.royaltyInfo(tokenId, offerPrice);
+
+          // Expectations
+          let expectedRoyaltyAmount = applyPercentage(offerPrice, royaltyInfo.bps[0]);
+
+          assert.equal(recipient, expectedRecipient, "Receiver address is incorrect");
+          assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
+
+          // get royalty info directly from royalty registry
+          let [recipients, amounts] = await royaltyRegistry.getRoyaltyView(
+            await bosonVoucher.getAddress(),
+            tokenId,
+            offerPrice
+          );
+
+          // Expectations
+          let expectedRecipients = [expectedRecipient];
+          let expectedRoyaltyAmounts = [expectedRoyaltyAmount];
+
+          assert.deepEqual(recipients, expectedRecipients, "Receiver address is incorrect");
+          assert.deepEqual(
+            amounts.map((a) => a.toString()),
+            expectedRoyaltyAmounts,
+            "Royalty amount is incorrect"
+          );
+        });
+
+        it("Preminted voucher - multiple ranges", async function () {
+          for (let i = 0; i < 50; i++) {
+            await offerHandler
+              .connect(assistant)
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+            offerId++;
+
+            // reserve length
+            await offerHandler.connect(assistant).reserveRange(offerId, 10, assistant.address);
+          }
+          offerId = 25;
+          exchangeId = (offerId - 2) * 10 + 5;
+
+          await bosonVoucher.connect(assistant).preMint(offerId, 10);
+
+          // get royalty info directly from voucher contract
+          tokenId = deriveTokenId(offerId, exchangeId);
+          let [recipient, royaltyAmount] = await bosonVoucher.royaltyInfo(tokenId, offerPrice);
+
+          // Expectations
+          let expectedRoyaltyAmount = applyPercentage(offerPrice, royaltyInfo.bps[0]);
+
+          assert.equal(recipient, expectedRecipient, "Receiver address is incorrect");
+          assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
+
+          // get royalty info directly from royalty registry
+          let [recipients, amounts] = await royaltyRegistry.getRoyaltyView(
+            await bosonVoucher.getAddress(),
+            tokenId,
+            offerPrice
+          );
+
+          // Expectations
+          let expectedRecipients = [expectedRecipient];
+          let expectedRoyaltyAmounts = [expectedRoyaltyAmount];
+
+          assert.deepEqual(recipients, expectedRecipients, "Receiver address is incorrect");
+          assert.deepEqual(
+            amounts.map((a) => a.toString()),
+            expectedRoyaltyAmounts,
+            "Royalty amount is incorrect"
+          );
+        });
+      });
     });
   });
 });
