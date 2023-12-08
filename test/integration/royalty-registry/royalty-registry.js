@@ -1,10 +1,13 @@
 const { ethers } = require("hardhat");
-const { ZeroAddress, getContractAt, getSigners, parseUnits } = ethers;
-const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients.js");
-const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond.js");
-const { deployAndCutFacets } = require("../../../scripts/util/deploy-protocol-handler-facets.js");
-const { getFacetsWithArgs, calculateContractAddress, applyPercentage } = require("../../util/utils.js");
-const { oneWeek, oneMonth, maxPriorityFeePerGas, ROYALTY_REGISTRY_ADDRESS } = require("../../util/constants.js");
+const { ZeroAddress, getContractAt, MaxUint256 } = ethers;
+const {
+  calculateBosonProxyAddress,
+  calculateCloneAddress,
+  applyPercentage,
+  setupTestEnvironment,
+  deriveTokenId,
+} = require("../../util/utils.js");
+const { ROYALTY_REGISTRY_ADDRESS } = require("../../util/constants.js");
 
 const {
   mockSeller,
@@ -12,10 +15,9 @@ const {
   mockVoucherInitValues,
   mockOffer,
   mockDisputeResolver,
+  accountId,
 } = require("../../util/mock.js");
 const { assert } = require("chai");
-const Role = require("../../../scripts/domain/Role.js");
-const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens.js");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee.js");
 const { RoyaltyInfo } = require("../../../scripts/domain/RoyaltyInfo.js");
 const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../../scripts/domain/RoyaltyRecipient.js");
@@ -23,100 +25,35 @@ const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../../scripts/dom
 // Requirements to run this test:
 // - Royalty registry is a submodule. If you didn't clone repository recursively, run `git submodule update --init --recursive` to get it.
 // - Set hardhat config to hardhat-fork.config.js. e.g.:
-//   npx hardhat test test/integration/royalty-registry.js --config ./hardhat-fork.config.js
+//   npx hardhat test test/integration/royalty-registry/royalty-registry.js --config ./hardhat-fork.config.js
 describe("[@skip-on-coverage] Royalty registry integration", function () {
   let royaltyRegistry;
-  let bosonVoucher, bosonToken;
-  let deployer, protocol, assistant, buyer, DR, other1, other2;
+  let bosonVoucher;
+  let assistant, buyer, DR, other1, other2;
   let seller, royaltyInfo;
   let offerHandler, exchangeHandler;
-  let offerId, offerPrice, exchangeId;
+  let offerId, offerPrice, exchangeId, tokenId;
 
   before(async function () {
-    let protocolTreasury;
-    [deployer, protocol, assistant, protocolTreasury, buyer, DR, other1, other2] = await getSigners();
-
+    accountId.next(true);
     royaltyRegistry = await getContractAt("RoyaltyEngineV1", ROYALTY_REGISTRY_ADDRESS);
 
-    // Deploy diamond
-    let [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
+    // Specify contracts needed for this test
+    const contracts = {
+      accountHandler: "IBosonAccountHandler",
+      offerHandler: "IBosonOfferHandler",
+      fundsHandler: "IBosonFundsHandler",
+      exchangeHandler: "IBosonExchangeHandler",
+    };
+    let accountHandler, fundsHandler;
 
-    // Cast Diamond to contract interfaces
-    const accountHandler = await getContractAt("IBosonAccountHandler", protocolDiamond.address);
-    offerHandler = await getContractAt("IBosonOfferHandler", protocolDiamond.address);
-    const fundsHandler = await getContractAt("IBosonFundsHandler", protocolDiamond.address);
-    exchangeHandler = await getContractAt("IBosonExchangeHandler", protocolDiamond.address);
+    ({
+      signers: [assistant, buyer, DR, other1, other2],
+      contractInstances: { accountHandler, offerHandler, fundsHandler, exchangeHandler },
+      extraReturnValues: { bosonVoucher },
+    } = await setupTestEnvironment(contracts));
 
-    // Grant roles
-    await accessController.grantRole(Role.PROTOCOL, protocol.address);
-    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
-    await accessController.grantRole(Role.UPGRADER, deployer.address);
-
-    const protocolClientArgs = [protocolDiamond.address];
-
-    const [, beacons, proxies, bv] = await deployProtocolClients(protocolClientArgs, maxPriorityFeePerGas);
-
-    [bosonVoucher] = bv;
-    const [beacon] = beacons;
-    const [proxy] = proxies;
-
-    const protocolFeeFlatBoson = parseUnits("0.01", "ether").toString();
-    const buyerEscalationDepositPercentage = "1000"; // 10%
-
-    [bosonToken] = await deployMockTokens();
-
-    // Add config Handler, so ids start at 1, and so voucher address can be found
-    const protocolConfig = [
-      // Protocol addresses
-      {
-        treasury: protocolTreasury.address,
-        token: bosonToken.address,
-        voucherBeacon: beacon.address,
-        beaconProxy: proxy.address,
-      },
-      // Protocol limits
-      {
-        maxExchangesPerBatch: 100,
-        maxOffersPerGroup: 100,
-        maxTwinsPerBundle: 100,
-        maxOffersPerBundle: 100,
-        maxOffersPerBatch: 100,
-        maxTokensPerWithdrawal: 100,
-        maxFeesPerDisputeResolver: 100,
-        maxEscalationResponsePeriod: oneMonth,
-        maxDisputesPerBatch: 100,
-        maxAllowedSellers: 100,
-        maxTotalOfferFeePercentage: 4000, //40%
-        maxRoyaltyPercentage: 1000, //10%
-        maxResolutionPeriod: oneMonth,
-        minDisputePeriod: oneWeek,
-        maxPremintedVouchers: 10000,
-      },
-      //Protocol fees
-      {
-        percentage: 200, // 2%
-        flatBoson: protocolFeeFlatBoson,
-        buyerEscalationDepositPercentage,
-      },
-    ];
-
-    const facetNames = [
-      "DisputeResolverHandlerFacet",
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
-      "AccountHandlerFacet",
-      "SellerHandlerFacet",
-      "FundsHandlerFacet",
-      "ProtocolInitializationHandlerFacet",
-      "ConfigHandlerFacet",
-    ];
-
-    const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
-
-    // Cut the protocol handler facets into the Diamond
-    await deployAndCutFacets(protocolDiamond.address, facetsToDeploy, maxPriorityFeePerGas);
-
-    seller = mockSeller(assistant.address, assistant.address, assistant.address, assistant.address);
+    seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
 
     const emptyAuthToken = mockAuthToken();
     const voucherInitValues = mockVoucherInitValues();
@@ -130,7 +67,7 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
     ]);
     await accountHandler.connect(assistant).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
 
-    const disputeResolver = mockDisputeResolver(DR.address, DR.address, DR.address, DR.address, true);
+    const disputeResolver = mockDisputeResolver(DR.address, DR.address, ZeroAddress, DR.address, true);
 
     const disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", "0")];
     const sellerAllowList = [];
@@ -140,14 +77,24 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
     const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
     offer.quantityAvailable = 10;
     offer.royaltyInfo = [new RoyaltyInfo([other1.address], [100])];
-    royaltyInfo = offer.royaltyInfo;
+    royaltyInfo = offer.royaltyInfo[0];
     offerPrice = offer.price;
+    const agentId = "0";
+    const offerFeeLimit = MaxUint256;
 
     await offerHandler
       .connect(assistant)
-      .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, "0");
+      .createOffer(
+        offer.toStruct(),
+        offerDates.toStruct(),
+        offerDurations.toStruct(),
+        disputeResolverId,
+        agentId,
+        offerFeeLimit
+      );
 
-    const voucherAddress = calculateContractAddress(accountHandler.address, seller.id);
+    const beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
+    const voucherAddress = calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, seller.admin);
     bosonVoucher = await getContractAt("BosonVoucher", voucherAddress);
 
     // Pool needs to cover both seller deposit and price
@@ -158,6 +105,7 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
 
     exchangeId = 1;
     offerId = 1;
+    tokenId = deriveTokenId(offerId, exchangeId);
   });
 
   context("EIP2981", function () {
@@ -166,7 +114,7 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
       await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: offerPrice });
 
       // get royalty info directly from voucher contract
-      let [recipient, royaltyAmount] = await bosonVoucher.royaltyInfo(exchangeId, offerPrice);
+      let [recipient, royaltyAmount] = await bosonVoucher.royaltyInfo(tokenId, offerPrice);
 
       // Expectations
       let expectedRecipient = other1.address;
@@ -176,7 +124,11 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
       assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
 
       // get royalty info directly from royalty registry
-      let [recipients, amounts] = await royaltyRegistry.getRoyaltyView(bosonVoucher.address, exchangeId, offerPrice);
+      let [recipients, amounts] = await royaltyRegistry.getRoyaltyView(
+        await bosonVoucher.getAddress(),
+        tokenId,
+        offerPrice
+      );
 
       // Expectations
       let expectedRecipients = [expectedRecipient];
@@ -195,7 +147,7 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
       await bosonVoucher.connect(assistant).preMint(offerId, 1);
 
       // get royalty info directly from voucher contract
-      let [recipient, royaltyAmount] = await bosonVoucher.royaltyInfo(exchangeId, offerPrice);
+      let [recipient, royaltyAmount] = await bosonVoucher.royaltyInfo(tokenId, offerPrice);
 
       // Expectations
       let expectedRecipient = other1.address;
@@ -205,7 +157,11 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
       assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
 
       // get royalty info directly from royalty registry
-      let [recipients, amounts] = await royaltyRegistry.getRoyaltyView(bosonVoucher.address, exchangeId, offerPrice);
+      let [recipients, amounts] = await royaltyRegistry.getRoyaltyView(
+        await bosonVoucher.getAddress(),
+        tokenId,
+        offerPrice
+      );
 
       // Expectations
       let expectedRecipients = [expectedRecipient];
@@ -223,30 +179,32 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
       // create offer
       const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
       offer.quantityAvailable = "10";
-      offer.royaltyInfo = [new RoyaltyInfo([new RoyaltyInfo([other1.address], [100])])];
-      royaltyInfo = offer.royaltyInfo;
+      offer.royaltyInfo = [new RoyaltyInfo([other1.address], [100])];
+      royaltyInfo = offer.royaltyInfo[0];
       offerPrice = offer.price;
       const offerStruct = offer.toStruct();
       const offerDatesStruct = offerDates.toStruct();
       const offerDurationsStruct = offerDurations.toStruct();
+      const agentId = "0";
+      const offerFeeLimit = MaxUint256;
 
       for (let i = 0; i < 50; i++) {
         await offerHandler
           .connect(assistant)
-          .createOffer(offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolverId, "0");
+          .createOffer(offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolverId, agentId, offerFeeLimit);
         offerId++;
 
         // reserve length
         await offerHandler.connect(assistant).reserveRange(offerId, 10, assistant.address);
-        // await bosonVoucher.connect(assistant).preMint(offerId, 10);
       }
       offerId = 25;
-      exchangeId = (offerId - 2) * 10 + 5; // offer 5 has vouchers between 31 and 40
+      exchangeId = (offerId - 2) * 10 + 5;
 
       await bosonVoucher.connect(assistant).preMint(offerId, 10);
 
       // get royalty info directly from voucher contract
-      let [recipient, royaltyAmount] = await bosonVoucher.royaltyInfo(exchangeId, offerPrice);
+      tokenId = deriveTokenId(offerId, exchangeId);
+      let [recipient, royaltyAmount] = await bosonVoucher.royaltyInfo(tokenId, offerPrice);
 
       // Expectations
       let expectedRecipient = other1.address;
@@ -256,7 +214,11 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
       assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
 
       // get royalty info directly from royalty registry
-      let [recipients, amounts] = await royaltyRegistry.getRoyaltyView(bosonVoucher.address, exchangeId, offerPrice);
+      let [recipients, amounts] = await royaltyRegistry.getRoyaltyView(
+        await bosonVoucher.getAddress(),
+        tokenId,
+        offerPrice
+      );
 
       // Expectations
       let expectedRecipients = [expectedRecipient];

@@ -1,8 +1,5 @@
-@openzeppelin/contracts/utils/introspection/IERC165.sol=contracts/interfaces/IERC165.sol
-./IERC165.sol=contracts/interfaces/IERC165.sol
-ds-test/=submodules/lssvm/lib/ds-test/src/
+@manifoldxyz/=submodules/${submodule}/lib/
 solmate/=submodules/${submodule}/lib/solmate/src/
-@manifoldxyz/=submodules/lssvm/lib/
-@manifoldxyz/=submodules/lssvm/lib/royalty-registry-solidity.git/contracts/
-@manifoldxyz/libraries-solidity/=submodules/royalty-registry-solidity/lib/libraries-solidity/
+ds-test/=submodules/lssvm/lib/ds-test/src/
 @sudoswap/=submodules/lssvm/src/
+manifoldxyz/=submodules/lssvm/lib/royalty-registry-solidity.git/contracts/

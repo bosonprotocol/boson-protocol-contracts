@@ -34,6 +34,7 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS, async (_, { config }, runSuper) 
   return [...files, ...submodules, ...submodulesWithLib].map(path.normalize);
 });
 
+let brokenLine = false;
 module.exports = {
   ...defaultConfig,
   networks: {
@@ -51,9 +52,18 @@ module.exports = {
       transform: (line, { absolutePath }) => {
         if (absolutePath.includes("submodules")) {
           const submodule = absolutePath.split("submodules/")[1].split("/")[0];
-          if (line.match(/^\s*import /i)) {
+          if (line.match(/^\s*import /i) || brokenLine) {
+            brokenLine = false;
+            if (!line.includes(";")) brokenLine = true;
             for (const [from, to] of getRemappings()) {
               if (line.includes(from)) {
+                // if (from.includes("IERC165")) {
+                if (absolutePath.includes("ERC165")) {
+                  console.log("absolutePath", absolutePath);
+                  console.log("from", from);
+                  console.log("to", to);
+                  console.log("line", line);
+                }
                 line = line.replace(from, to.replace("${submodule}", submodule));
                 break;
               }
