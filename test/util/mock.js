@@ -72,11 +72,11 @@ async function mockOffer({ refreshModule } = {}) {
   const buyerCancelPenalty = parseUnits("0.05", "ether").toString();
   const quantityAvailable = "1";
   const exchangeToken = ZeroAddress.toString(); // Zero addy ~ chain base currency
+  const priceType = PriceType.Static;
   const metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual metadataHash, just some data for tests
   const metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
   const voided = false;
   const collectionIndex = "0";
-  const priceType = PriceType.Static;
   const royaltyInfo = [new RoyaltyInfo([ZeroAddress], ["0"])];
 
   // Create a valid offer, then set fields in tests directly
@@ -88,11 +88,11 @@ async function mockOffer({ refreshModule } = {}) {
     buyerCancelPenalty,
     quantityAvailable,
     exchangeToken,
+    priceType,
     metadataUri,
     metadataHash,
     voided,
     collectionIndex,
-    priceType,
     royaltyInfo
   );
 

@@ -19,11 +19,11 @@ describe("Offer", function () {
     buyerCancelPenalty,
     quantityAvailable,
     exchangeToken,
+    priceType,
     metadataUri,
     metadataHash,
     voided,
     collectionIndex,
-    priceType,
     royaltyInfo;
 
   beforeEach(async function () {
@@ -37,11 +37,11 @@ describe("Offer", function () {
     buyerCancelPenalty = parseUnits("0.05", "ether").toString();
     quantityAvailable = "1";
     exchangeToken = ZeroAddress.toString(); // Zero addy ~ chain base currency
+    priceType = PriceType.Static;
     metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual metadataHash, just some data for tests
     metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
     voided = false;
     collectionIndex = "2";
-    priceType = PriceType.Static;
     royaltyInfo = [
       new RoyaltyInfo(
         accounts.slice(0, 3).map((a) => a.address),
@@ -61,11 +61,11 @@ describe("Offer", function () {
         buyerCancelPenalty,
         quantityAvailable,
         exchangeToken,
+        priceType,
         metadataUri,
         metadataHash,
         voided,
         collectionIndex,
-        priceType,
         royaltyInfo
       );
       expect(offer.idIsValid()).is.true;
@@ -75,11 +75,11 @@ describe("Offer", function () {
       expect(offer.buyerCancelPenaltyIsValid()).is.true;
       expect(offer.quantityAvailableIsValid()).is.true;
       expect(offer.exchangeTokenIsValid()).is.true;
+      expect(offer.priceTypeIsValid()).is.true;
       expect(offer.metadataUriIsValid()).is.true;
       expect(offer.metadataHashIsValid()).is.true;
       expect(offer.voidedIsValid()).is.true;
       expect(offer.collectionIndexIsValid()).is.true;
-      expect(offer.priceTypeIsValid()).is.true;
       expect(offer.royaltyInfoIsValid()).is.true;
       expect(offer.isValid()).is.true;
     });
@@ -96,11 +96,11 @@ describe("Offer", function () {
         buyerCancelPenalty,
         quantityAvailable,
         exchangeToken,
+        priceType,
         metadataUri,
         metadataHash,
         voided,
         collectionIndex,
-        priceType,
         royaltyInfo
       );
       expect(offer.isValid()).is.true;
@@ -260,6 +260,43 @@ describe("Offer", function () {
       expect(offer.isValid()).is.true;
     });
 
+    it("Always present, priceType must be a valid PriceType", async function () {
+      // Invalid field value
+      offer.priceType = "zedzdeadbaby";
+      expect(offer.priceTypeIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Invalid field value
+      offer.priceType = new Date();
+      expect(offer.priceTypeIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Invalid field value
+      offer.priceType = 12;
+      expect(offer.priceTypeIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Invalid field value
+      offer.priceType = "0";
+      expect(offer.priceTypeIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Invalid field value
+      offer.priceType = "126";
+      expect(offer.priceTypeIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Valid field value
+      offer.priceType = PriceType.Static;
+      expect(offer.priceTypeIsValid()).is.true;
+      expect(offer.isValid()).is.true;
+
+      // Valid field value
+      offer.priceType = PriceType.Discovery;
+      expect(offer.priceTypeIsValid()).is.true;
+      expect(offer.isValid()).is.true;
+    });
+
     it("Always present, metadataUri must be a non-empty string", async function () {
       // Invalid field value
       offer.metadataUri = 12;
@@ -343,43 +380,6 @@ describe("Offer", function () {
       expect(offer.isValid()).is.true;
     });
 
-    it("Always present, priceType must be a valid PriceType", async function () {
-      // Invalid field value
-      offer.priceType = "zedzdeadbaby";
-      expect(offer.priceTypeIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Invalid field value
-      offer.priceType = new Date();
-      expect(offer.priceTypeIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Invalid field value
-      offer.priceType = 12;
-      expect(offer.priceTypeIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Invalid field value
-      offer.priceType = "0";
-      expect(offer.priceTypeIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Invalid field value
-      offer.priceType = "126";
-      expect(offer.priceTypeIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Valid field value
-      offer.priceType = PriceType.Static;
-      expect(offer.priceTypeIsValid()).is.true;
-      expect(offer.isValid()).is.true;
-
-      // Valid field value
-      offer.priceType = PriceType.Discovery;
-      expect(offer.priceTypeIsValid()).is.true;
-      expect(offer.isValid()).is.true;
-    });
-
     it("Always present, royaltyInfo must be a RoyaltyInfo instance", async function () {
       // Invalid field value
       offer.royaltyInfo = 12;
@@ -421,11 +421,11 @@ describe("Offer", function () {
         buyerCancelPenalty,
         quantityAvailable,
         exchangeToken,
+        priceType,
         metadataUri,
         metadataHash,
         voided,
         collectionIndex,
-        priceType,
         royaltyInfo
       );
       expect(offer.isValid()).is.true;
@@ -439,11 +439,11 @@ describe("Offer", function () {
         buyerCancelPenalty,
         quantityAvailable,
         exchangeToken,
+        priceType,
         metadataUri,
         metadataHash,
         voided,
         collectionIndex,
-        priceType,
         royaltyInfo,
       };
     });
@@ -471,11 +471,11 @@ describe("Offer", function () {
           offer.buyerCancelPenalty,
           offer.quantityAvailable,
           offer.exchangeToken,
+          offer.priceType,
           offer.metadataUri,
           offer.metadataHash,
           offer.voided,
           offer.collectionIndex,
-          offer.priceType,
           royaltyInfo.map((ri) => ri.toStruct()),
         ];
 

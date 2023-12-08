@@ -153,11 +153,11 @@ contract BosonTypes {
         uint256 buyerCancelPenalty;
         uint256 quantityAvailable;
         address exchangeToken;
+        PriceType priceType;
         string metadataUri;
         string metadataHash;
         bool voided;
         uint256 collectionIndex;
-        PriceType priceType;
         RoyaltyInfo[] royaltyInfo;
     }
 
