@@ -23,11 +23,11 @@ class Offer {
             uint256 buyerCancelPenalty;
             uint256 quantityAvailable;
             address exchangeToken;
+            PriceType priceType;
             string metadataUri;
             string metadataHash;
             bool voided;
             uint256 collectionIndex;            
-            PriceType priceType;
             RoyaltyInfo[] royaltyInfo;
         }
     */
@@ -40,11 +40,11 @@ class Offer {
     buyerCancelPenalty,
     quantityAvailable,
     exchangeToken,
+    priceType,
     metadataUri,
     metadataHash,
     voided,
     collectionIndex,
-    priceType,
     royaltyInfo
   ) {
     this.id = id;
@@ -54,11 +54,11 @@ class Offer {
     this.buyerCancelPenalty = buyerCancelPenalty;
     this.quantityAvailable = quantityAvailable;
     this.exchangeToken = exchangeToken;
+    this.priceType = priceType;
     this.metadataUri = metadataUri;
     this.metadataHash = metadataHash;
     this.voided = voided;
     this.collectionIndex = collectionIndex;
-    this.priceType = priceType;
     this.royaltyInfo = royaltyInfo;
   }
 
@@ -76,11 +76,11 @@ class Offer {
       buyerCancelPenalty,
       quantityAvailable,
       exchangeToken,
+      priceType,
       metadataUri,
       metadataHash,
       voided,
       collectionIndex,
-      priceType,
       royaltyInfo,
     } = o;
 
@@ -92,11 +92,11 @@ class Offer {
       buyerCancelPenalty,
       quantityAvailable,
       exchangeToken,
+      priceType,
       metadataUri,
       metadataHash,
       voided,
       collectionIndex,
-      priceType,
       royaltyInfo.map((ri) => RoyaltyInfo.fromObject(ri))
     );
   }
@@ -114,11 +114,11 @@ class Offer {
       buyerCancelPenalty,
       quantityAvailable,
       exchangeToken,
+      priceType,
       metadataUri,
       metadataHash,
       voided,
       collectionIndex,
-      priceType,
       royaltyInfo;
 
     // destructure struct
@@ -130,11 +130,11 @@ class Offer {
       buyerCancelPenalty,
       quantityAvailable,
       exchangeToken,
+      priceType,
       metadataUri,
       metadataHash,
       voided,
       collectionIndex,
-      priceType,
       royaltyInfo,
     ] = struct;
     if (!collectionIndex) {
@@ -149,11 +149,11 @@ class Offer {
       buyerCancelPenalty: buyerCancelPenalty.toString(),
       quantityAvailable: quantityAvailable.toString(),
       exchangeToken,
+      priceType: Number(priceType),
       metadataUri,
       metadataHash,
       voided,
       collectionIndex: collectionIndex.toString(),
-      priceType: Number(priceType),
       royaltyInfo: royaltyInfo.map((ri) => RoyaltyInfo.fromStruct(ri)),
     });
   }
@@ -187,11 +187,11 @@ class Offer {
       this.buyerCancelPenalty,
       this.quantityAvailable,
       this.exchangeToken,
+      this.priceType,
       this.metadataUri,
       this.metadataHash,
       this.voided,
       this.collectionIndex,
-      this.priceType,
       new RoyaltyInfoList(this.royaltyInfo).toStruct(),
     ];
   }
@@ -270,6 +270,14 @@ class Offer {
   }
 
   /**
+   * Is this Offer instance's priceType field valid?
+   * @returns {boolean}
+   */
+  priceTypeIsValid() {
+    return enumIsValid(this.priceType, PriceType.Types);
+  }
+
+  /**
    * Is this Offer instance's metadataUri field valid?
    * Always present, must be a string
    *
@@ -307,14 +315,6 @@ class Offer {
   }
 
   /**
-   * Is this Offer instance's priceType field valid?
-   * @returns {boolean}
-   */
-  priceTypeIsValid() {
-    return enumIsValid(this.priceType, PriceType.Types);
-  }
-
-  /**
    * Is this Offer instance's royaltyInfo field valid?
    * Must be a valid RoyaltyInfo instance
    * @returns {boolean}
@@ -342,11 +342,11 @@ class Offer {
       this.buyerCancelPenaltyIsValid() &&
       this.quantityAvailableIsValid() &&
       this.exchangeTokenIsValid() &&
+      this.priceTypeIsValid() &&
       this.metadataUriIsValid() &&
       this.metadataHashIsValid() &&
       this.voidedIsValid() &&
       this.collectionIndexIsValid() &&
-      this.priceTypeIsValid() &&
       this.royaltyInfoIsValid()
     );
   }
