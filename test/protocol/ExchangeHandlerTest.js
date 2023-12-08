@@ -8270,10 +8270,10 @@ describe("IBosonExchangeHandler", function () {
           });
 
           it("treasury is the only recipient", async function () {
-            const returnedRoyaltyInfo = await exchangeHandler.getRoyalties(queryId);
+            const [returnedRecipients, returnedBps] = await exchangeHandler.getRoyalties(queryId);
 
-            const expectedRoyaltyInfo = new RoyaltyInfo([treasury.address], [voucherInitValues.royaltyPercentage]);
-            expect(expectedRoyaltyInfo).to.eql(RoyaltyInfo.fromStruct(returnedRoyaltyInfo));
+            expect(returnedRecipients).to.eql([treasury.address]);
+            expect(returnedBps).to.eql([BigInt(voucherInitValues.royaltyPercentage)]);
           });
 
           it("if treasury changes, offer does not have to be updated", async function () {
@@ -8281,10 +8281,10 @@ describe("IBosonExchangeHandler", function () {
             seller.treasury = newOwner.address;
             await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
-            const returnedRoyaltyInfo = await exchangeHandler.getRoyalties(queryId);
+            const [returnedRecipients, returnedBps] = await exchangeHandler.getRoyalties(queryId);
 
-            const expectedRoyaltyInfo = new RoyaltyInfo([newOwner.address], [voucherInitValues.royaltyPercentage]);
-            expect(expectedRoyaltyInfo).to.eql(RoyaltyInfo.fromStruct(returnedRoyaltyInfo));
+            expect(returnedRecipients).to.eql([newOwner.address]);
+            expect(returnedBps).to.eql([BigInt(voucherInitValues.royaltyPercentage)]);
           });
 
           it("no recipients", async function () {
@@ -8296,10 +8296,10 @@ describe("IBosonExchangeHandler", function () {
               .connect(assistant)
               .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo(recipients, bps));
 
-            const returnedRoyaltyInfo = await exchangeHandler.getRoyalties(queryId);
+            const [returnedRecipients, returnedBps] = await exchangeHandler.getRoyalties(queryId);
 
-            const expectedRoyaltyInfo = new RoyaltyInfo([], []);
-            expect(expectedRoyaltyInfo).to.eql(RoyaltyInfo.fromStruct(returnedRoyaltyInfo));
+            expect(returnedRecipients).to.eql([]);
+            expect(returnedBps).to.eql([]);
           });
 
           context("multiple recipients", async function () {
@@ -8320,14 +8320,16 @@ describe("IBosonExchangeHandler", function () {
               await offerHandler
                 .connect(assistant)
                 .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo(recipients, bps));
+
+              bps = bps.map((bp) => BigInt(bp));
             });
 
             it("multiple recipients - the first recipient gets the sum", async function () {
-              const returnedRoyaltyInfo = await exchangeHandler.getRoyalties(queryId);
+              const [returnedRecipients, returnedBps] = await exchangeHandler.getRoyalties(queryId);
 
               recipients[2] = seller.treasury; // getRoyalties replaces ZeroAddress with treasury
-              const expectedRoyaltyInfo = new RoyaltyInfo(recipients, bps);
-              expect(expectedRoyaltyInfo).to.eql(RoyaltyInfo.fromStruct(returnedRoyaltyInfo));
+              expect(returnedRecipients).to.eql(recipients);
+              expect(returnedBps).to.eql(bps);
             });
 
             it("if treasury changes, offer does not have to be updated - multiple recipients", async function () {
@@ -8335,11 +8337,11 @@ describe("IBosonExchangeHandler", function () {
               seller.treasury = newOwner.address;
               await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
-              const returnedRoyaltyInfo = await exchangeHandler.getRoyalties(queryId);
+              const [returnedRecipients, returnedBps] = await exchangeHandler.getRoyalties(queryId);
 
               recipients[2] = newOwner.address; // getRoyalties replaces ZeroAddress with treasury
-              const expectedRoyaltyInfo = new RoyaltyInfo(recipients, bps);
-              expect(expectedRoyaltyInfo).to.eql(RoyaltyInfo.fromStruct(returnedRoyaltyInfo));
+              expect(returnedRecipients).to.eql(recipients);
+              expect(returnedBps).to.eql(bps);
             });
           });
         });

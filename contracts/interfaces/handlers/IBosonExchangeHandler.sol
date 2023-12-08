@@ -304,9 +304,12 @@ interface IBosonExchangeHandler is BosonErrors, IBosonExchangeEvents, IBosonFund
      * Reverts if exchange does not exist.
      *
      * @param _tokenId - tokenId
-     * @return royaltyInfo - list of royalty recipients and corresponding bps
+     * @return recipients - list of royalty recipients
+     * @return bps - list of corresponding bps
      */
-    function getRoyalties(uint256 _tokenId) external view returns (BosonTypes.RoyaltyInfo memory royaltyInfo);
+    function getRoyalties(
+        uint256 _tokenId
+    ) external view returns (address payable[] memory recipients, uint256[] memory bps);
 
     /**
      * @notice Gets exchange receipt.
