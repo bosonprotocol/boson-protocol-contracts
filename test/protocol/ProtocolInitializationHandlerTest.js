@@ -1017,9 +1017,9 @@ describe("ProtocolInitializationHandler", async function () {
           const offerSlot = BigInt(
             getMappingStoragePosition(protocolEntitiesSlotNumber + 0n, Number(offerId), paddingType.START)
           );
-          const royaltyInfoLength = offerSlot + 12n;
+          const royaltyInfoLength = offerSlot + 11n;
           await setStorageAt(protocolAddress, royaltyInfoLength, "0x"); // royaltyInfo length set to zero
-          const royaltyInfoSlot = BigInt(keccak256(Buffer.from((offerSlot + 12n).toString(16), "hex")));
+          const royaltyInfoSlot = BigInt(keccak256(Buffer.from((offerSlot + 11n).toString(16), "hex")));
           await setStorageAt(protocolAddress, royaltyInfoSlot + 0n, "0x"); // set royaltyInfo.recipients length to zero
           await setStorageAt(protocolAddress, royaltyInfoSlot + 1n, "0x"); // set royaltyInfo.bps length to zero
 
