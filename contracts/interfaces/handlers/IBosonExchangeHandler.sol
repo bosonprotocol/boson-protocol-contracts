@@ -12,7 +12,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xe480bd0f
+ * The ERC-165 identifier for this interface is: 0x66e9075a
  */
 interface IBosonExchangeHandler is BosonErrors, IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents {
     /**
@@ -303,14 +303,10 @@ interface IBosonExchangeHandler is BosonErrors, IBosonExchangeEvents, IBosonFund
      *
      * Reverts if exchange does not exist.
      *
-     * @param _queryId - offer id or exchange id
-     * @param _isExchangeId - indicates if the query represents the exchange id
+     * @param _tokenId - tokenId
      * @return royaltyInfo - list of royalty recipients and corresponding bps
      */
-    function getRoyalties(
-        uint256 _queryId,
-        bool _isExchangeId
-    ) external view returns (BosonTypes.RoyaltyInfo memory royaltyInfo);
+    function getRoyalties(uint256 _tokenId) external view returns (BosonTypes.RoyaltyInfo memory royaltyInfo);
 
     /**
      * @notice Gets exchange receipt.
