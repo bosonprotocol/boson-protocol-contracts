@@ -899,14 +899,25 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler, 
      *
      * Reverts if exchange does not exist.
      *
-     * @param _queryId - offer id or exchange id
-     * @param _isExchangeId - indicates if the query represents the exchange id
-     * @return royaltyInfo - list of royalty recipients and corresponding bps
+     * @param _tokenId - tokenId
+     * @return recipients - list of royalty recipients
+     * @return bps - list of corresponding bps
      */
-    function getRoyalties(uint256 _queryId, bool _isExchangeId) external view returns (RoyaltyInfo memory royaltyInfo) {
-        address treasury;
-        (royaltyInfo, , treasury) = fetchRoyalties(_queryId, _isExchangeId);
+    function getRoyalties(
+        uint256 _tokenId
+    ) external view returns (address payable[] memory recipients, uint256[] memory bps) {
+        uint256 _queryId = _tokenId >> 128; // Assume that tokenId contains offer in the upper 128 bits
 
+        // If _queryId is 0, then the tokenId represents only the exchangeId
+        bool _isExchangeId;
+        if (_queryId == 0) {
+            _isExchangeId = true;
+            _queryId = _tokenId;
+        }
+
+        (RoyaltyInfo memory royaltyInfo, , address treasury) = fetchRoyalties(_queryId, _isExchangeId);
+
+        // replace default recipient with the treasury address
         for (uint256 i = 0; i < royaltyInfo.recipients.length; ) {
             if (royaltyInfo.recipients[i] == address(0)) {
                 // get treasury address!
@@ -919,7 +930,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler, 
             }
         }
 
-        return royaltyInfo;
+        return (royaltyInfo.recipients, royaltyInfo.bps);
     }
 
     /**
