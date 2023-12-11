@@ -12,8 +12,8 @@ updates:
     groups:
     # Group only dev dependencies updates. Production dependencies should have a separate PR per update.
     # Exclude major version updates from the dev dependencies group. Major version updates should have a separate PR per update.
-      - dev-dependencies:
-          dependency-type: "development"
-          update-types:
-          - "minor"
-          - "patch"
+      dev-dependencies:
+        dependency-type: "development"
+        update-types:
+        - "minor"
+        - "patch"

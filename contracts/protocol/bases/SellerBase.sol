@@ -98,8 +98,8 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[sellerId];
         RoyaltyRecipient storage defaultRoyaltyRecipient = royaltyRecipients.push();
         // We don't store the defaultRoyaltyRecipient.wallet, since it's always the trasury
+        // We don't store the defaultRoyaltyRecipient.externalId, since the default recipient is always the treasury
         defaultRoyaltyRecipient.minRoyaltyPercentage = _voucherInitValues.royaltyPercentage;
-        defaultRoyaltyRecipient.externalId = DEFAULT_ROYALTY_RECIPIENT;
 
         // Calculate seller salt and check that it is unique
         bytes32 sellerSalt = keccak256(abi.encodePacked(sender, _voucherInitValues.collectionSalt));
@@ -113,7 +113,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
 
         // Notify watchers of state change
         emit SellerCreated(sellerId, _seller, voucherCloneAddress, _authToken, sender);
-        emit RoyaltyRecipientsChanged(sellerId, royaltyRecipients, sender);
+        emit RoyaltyRecipientsChanged(sellerId, fetchRoyaltyRecipients(sellerId), sender);
     }
 
     /**
@@ -233,5 +233,24 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
             sellerPendingUpdate.admin != address(0) ||
             sellerPendingUpdate.assistant != address(0) ||
             authTokenPendingUpdate.tokenType != AuthTokenType.None;
+    }
+
+    /**
+     * @notice Gets seller's royalty recipients.
+     *
+     * @param _sellerId - seller id
+     * @return royaltyRecipients - list of royalty recipients
+     */
+    function fetchRoyaltyRecipients(
+        uint256 _sellerId
+    ) internal view returns (RoyaltyRecipient[] memory royaltyRecipients) {
+        royaltyRecipients = protocolLookups().royaltyRecipientsBySeller[_sellerId];
+
+        // If the seller did not change the default recipient name, return the default name
+        // royaltyRecipients[0] exists because the default recipient is always present
+        if (bytes(royaltyRecipients[0].externalId).length == 0) {
+            royaltyRecipients[0].externalId = DEFAULT_ROYALTY_RECIPIENT;
+        }
+        return royaltyRecipients;
     }
 }

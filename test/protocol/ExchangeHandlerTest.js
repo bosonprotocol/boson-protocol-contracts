@@ -8263,15 +8263,17 @@ describe("IBosonExchangeHandler", function () {
               await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
               queryId = "2";
             } else {
-              queryId = offerId;
+              // For preminted offers. To test this function, no need to actually reserve range
+              exchangeId = "1";
+              queryId = deriveTokenId(offerId, exchangeId);
             }
           });
 
           it("treasury is the only recipient", async function () {
-            const returnedRoyaltyInfo = await exchangeHandler.getRoyalties(queryId, isExchangeId);
+            const [returnedRecipients, returnedBps] = await exchangeHandler.getRoyalties(queryId);
 
-            const expectedRoyaltyInfo = new RoyaltyInfo([treasury.address], [voucherInitValues.royaltyPercentage]);
-            expect(expectedRoyaltyInfo).to.eql(RoyaltyInfo.fromStruct(returnedRoyaltyInfo));
+            expect(returnedRecipients).to.eql([treasury.address]);
+            expect(returnedBps).to.eql([BigInt(voucherInitValues.royaltyPercentage)]);
           });
 
           it("if treasury changes, offer does not have to be updated", async function () {
@@ -8279,10 +8281,10 @@ describe("IBosonExchangeHandler", function () {
             seller.treasury = newOwner.address;
             await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
-            const returnedRoyaltyInfo = await exchangeHandler.getRoyalties(queryId, isExchangeId);
+            const [returnedRecipients, returnedBps] = await exchangeHandler.getRoyalties(queryId);
 
-            const expectedRoyaltyInfo = new RoyaltyInfo([newOwner.address], [voucherInitValues.royaltyPercentage]);
-            expect(expectedRoyaltyInfo).to.eql(RoyaltyInfo.fromStruct(returnedRoyaltyInfo));
+            expect(returnedRecipients).to.eql([newOwner.address]);
+            expect(returnedBps).to.eql([BigInt(voucherInitValues.royaltyPercentage)]);
           });
 
           it("no recipients", async function () {
@@ -8294,10 +8296,10 @@ describe("IBosonExchangeHandler", function () {
               .connect(assistant)
               .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo(recipients, bps));
 
-            const returnedRoyaltyInfo = await exchangeHandler.getRoyalties(queryId, isExchangeId);
+            const [returnedRecipients, returnedBps] = await exchangeHandler.getRoyalties(queryId);
 
-            const expectedRoyaltyInfo = new RoyaltyInfo([], []);
-            expect(expectedRoyaltyInfo).to.eql(RoyaltyInfo.fromStruct(returnedRoyaltyInfo));
+            expect(returnedRecipients).to.eql([]);
+            expect(returnedBps).to.eql([]);
           });
 
           context("multiple recipients", async function () {
@@ -8318,14 +8320,16 @@ describe("IBosonExchangeHandler", function () {
               await offerHandler
                 .connect(assistant)
                 .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo(recipients, bps));
+
+              bps = bps.map((bp) => BigInt(bp));
             });
 
             it("multiple recipients - the first recipient gets the sum", async function () {
-              const returnedRoyaltyInfo = await exchangeHandler.getRoyalties(queryId, isExchangeId);
+              const [returnedRecipients, returnedBps] = await exchangeHandler.getRoyalties(queryId);
 
               recipients[2] = seller.treasury; // getRoyalties replaces ZeroAddress with treasury
-              const expectedRoyaltyInfo = new RoyaltyInfo(recipients, bps);
-              expect(expectedRoyaltyInfo).to.eql(RoyaltyInfo.fromStruct(returnedRoyaltyInfo));
+              expect(returnedRecipients).to.eql(recipients);
+              expect(returnedBps).to.eql(bps);
             });
 
             it("if treasury changes, offer does not have to be updated - multiple recipients", async function () {
@@ -8333,11 +8337,11 @@ describe("IBosonExchangeHandler", function () {
               seller.treasury = newOwner.address;
               await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
-              const returnedRoyaltyInfo = await exchangeHandler.getRoyalties(queryId, isExchangeId);
+              const [returnedRecipients, returnedBps] = await exchangeHandler.getRoyalties(queryId);
 
               recipients[2] = newOwner.address; // getRoyalties replaces ZeroAddress with treasury
-              const expectedRoyaltyInfo = new RoyaltyInfo(recipients, bps);
-              expect(expectedRoyaltyInfo).to.eql(RoyaltyInfo.fromStruct(returnedRoyaltyInfo));
+              expect(returnedRecipients).to.eql(recipients);
+              expect(returnedBps).to.eql(bps);
             });
           });
         });
@@ -8345,10 +8349,12 @@ describe("IBosonExchangeHandler", function () {
 
       context("💔 Revert Reasons", async function () {
         it("offer does not exist", async function () {
-          // Update the offer, so it doesn't have any recipients in the protocol
+          // Invalid offerId
           offerId = "999";
+          exchangeId = "1";
+          const queryId = deriveTokenId(offerId, exchangeId);
 
-          await expect(exchangeHandler.getRoyalties(offerId, false)).to.be.revertedWithCustomError(
+          await expect(exchangeHandler.getRoyalties(queryId)).to.be.revertedWithCustomError(
             bosonErrors,
             RevertReasons.NO_SUCH_OFFER
           );
@@ -8358,7 +8364,7 @@ describe("IBosonExchangeHandler", function () {
           // If no commit happens, exchangeId 1 does not exist
           exchangeId = "1";
 
-          await expect(exchangeHandler.getRoyalties(exchangeId, true)).to.be.revertedWithCustomError(
+          await expect(exchangeHandler.getRoyalties(exchangeId)).to.be.revertedWithCustomError(
             bosonErrors,
             RevertReasons.NO_SUCH_EXCHANGE
           );
