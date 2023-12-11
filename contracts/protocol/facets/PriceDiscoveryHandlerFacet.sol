@@ -75,7 +75,7 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
         address payable _buyer,
         uint256 _tokenIdOrOfferId,
         PriceDiscovery calldata _priceDiscovery
-    ) external payable override exchangesNotPaused buyersNotPaused {
+    ) external payable override exchangesNotPaused buyersNotPaused nonReentrant {
         // Make sure buyer address is not zero address
         if (_buyer == address(0)) revert InvalidAddress();
 
