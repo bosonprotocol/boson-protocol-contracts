@@ -543,6 +543,10 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler, 
      * - Voucher has expired
      * - New buyer's existing account is deactivated
      *
+     * N.B. This method is not protected with reentrancy guard, since it clashes with price discovery flows.
+     * Given that it does not rely on msgSender() for authentication and it does not modify it, it is safe to leave it unprotected.
+     * In case of reentrancy the only inconvenience that could happen is that `executedBy` field in `VoucherTransferred` event would not be set correctly.
+     *
      * @param _tokenId - the voucher id
      * @param _newBuyer - the address of the new buyer
      */
@@ -605,6 +609,10 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler, 
      * - Offer price is discovery, transaction is not starting from protocol nor seller is _from address
      * - Any reason that ExchangeHandler commitToOfferInternal reverts. See ExchangeHandler.commitToOfferInternal
      *
+     * N.B. This method is not protected with reentrancy guard, since it clashes with price discovery flows.
+     * Given that it does not rely on msgSender() for authentication and it does not modify it, it is safe to leave it unprotected.
+     * In case of reentrancy the only inconvenience that could happen is that `executedBy` field in `BuyerCommitted` event would not be set correctly.
+     *
      * @param _tokenId - the voucher id
      * @param _to - the receiver address
      * @param _from - the address of current owner
@@ -619,11 +627,6 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler, 
     ) external override buyersNotPaused exchangesNotPaused returns (bool committed) {
         // Cache protocol status for reference
         ProtocolLib.ProtocolStatus storage ps = protocolStatus();
-
-        // Make sure that protocol is not reentered
-        // Cannot use modifier `nonReentrant` since it also changes reentrancyStatus to `ENTERED`
-        // This would break the flow since the protocol should be allowed to re-enter in this case.
-        if (ps.reentrancyStatus == ENTERED) revert ReentrancyGuard();
 
         // Derive the offer id
         uint256 offerId = _tokenId >> 128;
