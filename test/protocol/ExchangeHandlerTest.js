@@ -910,743 +910,6 @@ describe("IBosonExchangeHandler", function () {
       });
     });
 
-    context("👉 onPremintedVoucherTransferred()", async function () {
-      // These tests are mainly for preminted vouchers of fixed price offers
-      // The part of onPremintedVoucherTransferred that is specific to
-      // price discovery offers is indirectly tested in `PriceDiscoveryHandlerFacet.js`
-      let tokenId;
-      beforeEach(async function () {
-        // Reserve range
-        await offerHandler
-          .connect(assistant)
-          .reserveRange(offer.id, offer.quantityAvailable, await assistant.getAddress());
-
-        // expected address of the first clone
-        const voucherCloneAddress = calculateCloneAddress(
-          await accountHandler.getAddress(),
-          beaconProxyAddress,
-          admin.address
-        );
-        bosonVoucher = await getContractAt("BosonVoucher", voucherCloneAddress);
-        await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
-
-        tokenId = deriveTokenId(offer.id, exchangeId);
-      });
-
-      it("should emit a BuyerCommitted event", async function () {
-        // Commit to preminted offer, retrieving the event
-        tx = await bosonVoucher
-          .connect(assistant)
-          .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
-        txReceipt = await tx.wait();
-        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
-
-        // Get the block timestamp of the confirmed tx
-        blockNumber = tx.blockNumber;
-        block = await provider.getBlock(blockNumber);
-
-        // Update the committed date in the expected exchange struct with the block timestamp of the tx
-        voucher.committedDate = block.timestamp.toString();
-
-        // Update the validUntilDate date in the expected exchange struct
-        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
-
-        // Examine event
-        assert.equal(event.exchangeId.toString(), exchangeId, "Exchange id is incorrect");
-        assert.equal(event.offerId.toString(), offerId, "Offer id is incorrect");
-        assert.equal(event.buyerId.toString(), buyerId, "Buyer id is incorrect");
-
-        // Examine the exchange struct
-        assert.equal(
-          Exchange.fromStruct(event.exchange).toString(),
-          exchange.toString(),
-          "Exchange struct is incorrect"
-        );
-
-        // Examine the voucher struct
-        assert.equal(Voucher.fromStruct(event.voucher).toString(), voucher.toString(), "Voucher struct is incorrect");
-      });
-
-      it("should not increment the next exchange id counter", async function () {
-        // Get the next exchange id
-        let nextExchangeIdBefore = await exchangeHandler.connect(rando).getNextExchangeId();
-
-        // Commit to preminted offer, creating a new exchange
-        await bosonVoucher
-          .connect(assistant)
-          .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
-
-        // Get the next exchange id and ensure it was incremented by the creation of the offer
-        nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
-        expect(nextExchangeId).to.equal(nextExchangeIdBefore);
-      });
-
-      it("should not issue a new voucher on the clone", async function () {
-        // Get next exchange id
-        nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
-
-        // Voucher with nextExchangeId should not exist
-        await expect(bosonVoucher.ownerOf(nextExchangeId)).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
-
-        // Commit to preminted offer, creating a new exchange
-        await bosonVoucher
-          .connect(assistant)
-          .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
-
-        // Voucher with nextExchangeId still should not exist
-        await expect(bosonVoucher.ownerOf(nextExchangeId)).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
-      });
-
-      it("ERC2981: issued voucher should have royalty fees", async function () {
-        // Before voucher is transferred, it should already have royalty fee
-        let [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offer.price);
-        assert.equal(receiver, treasury.address, "Recipient address is incorrect");
-        assert.equal(
-          royaltyAmount.toString(),
-          applyPercentage(offer.price, royaltyPercentage1),
-          "Royalty amount is incorrect"
-        );
-
-        // Commit to preminted offer, creating a new exchange
-        await bosonVoucher
-          .connect(assistant)
-          .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
-
-        // After voucher is transferred, it should have royalty fee
-        [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offer.price);
-        assert.equal(receiver, await treasury.getAddress(), "Recipient address is incorrect");
-        assert.equal(
-          royaltyAmount.toString(),
-          applyPercentage(offer.price, royaltyPercentage1),
-          "Royalty amount is incorrect"
-        );
-      });
-
-      it("Should not decrement quantityAvailable", async function () {
-        // Offer quantityAvailable should be decremented
-        let [, offer] = await offerHandler.connect(rando).getOffer(offerId);
-        const quantityAvailableBefore = offer.quantityAvailable;
-
-        // Commit to preminted offer
-        await bosonVoucher
-          .connect(assistant)
-          .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
-
-        // Offer quantityAvailable should be decremented
-        [, offer] = await offerHandler.connect(rando).getOffer(offerId);
-        assert.equal(
-          offer.quantityAvailable.toString(),
-          quantityAvailableBefore.toString(),
-          "Quantity available should not change"
-        );
-      });
-
-      it("should still be possible to commit if offer is not fully preminted", async function () {
-        // Create a new offer
-        offerId = await offerHandler.getNextOfferId();
-        const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
-        offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
-
-        // Create the offer
-        offer.quantityAvailable = "10";
-        const rangeLength = "5";
-        await offerHandler
-          .connect(assistant)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
-
-        // Deposit seller funds so the commit will succeed
-        await fundsHandler
-          .connect(rando)
-          .depositFunds(seller.id, ZeroAddress, offer.sellerDeposit, { value: offer.sellerDeposit });
-
-        // reserve half of the offer, so it's still possible to commit directly
-        await offerHandler.connect(assistant).reserveRange(offerId, rangeLength, await assistant.getAddress());
-
-        // Commit to offer directly
-        await expect(
-          exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: offer.price })
-        ).to.emit(exchangeHandler, "BuyerCommitted");
-      });
-
-      context("Offer is part of a group", async function () {
-        let groupId;
-        let offerIds;
-
-        beforeEach(async function () {
-          // Required constructor params for Group
-          groupId = "1";
-          offerIds = [offerId];
-        });
-
-        it("Offer is part of a group that has no condition", async function () {
-          condition = mockCondition({
-            tokenAddress: ZeroAddress,
-            threshold: "0",
-            maxCommits: "0",
-            tokenType: TokenType.FungibleToken,
-            method: EvaluationMethod.None,
-          });
-
-          expect(condition.isValid()).to.be.true;
-
-          group = new Group(groupId, seller.id, offerIds);
-          expect(group.isValid()).is.true;
-
-          await groupHandler.connect(assistant).createGroup(group, condition);
-
-          await foreign721.connect(buyer).mint("123", 1);
-
-          const tx = bosonVoucher
-            .connect(assistant)
-            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
-          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
-
-          await expect(tx).to.not.emit(exchangeHandler, "ConditionalCommitAuthorized");
-        });
-
-        it("Offer is part of a group with condition [ERC20, gating per address]", async function () {
-          // Create Condition
-          condition = mockCondition({ tokenAddress: await foreign20.getAddress(), threshold: "50", maxCommits: "3" });
-          expect(condition.isValid()).to.be.true;
-
-          // Create Group
-          group = new Group(groupId, seller.id, offerIds);
-          expect(group.isValid()).is.true;
-
-          await groupHandler.connect(assistant).createGroup(group, condition);
-
-          // mint enough tokens for the buyer
-          await foreign20.connect(buyer).mint(await buyer.getAddress(), condition.threshold);
-
-          const tx = bosonVoucher
-            .connect(assistant)
-            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
-          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
-
-          await expect(tx)
-            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
-            .withArgs(offerId, condition.gating, buyer.address, 0, 1, condition.maxCommits);
-        });
-
-        it("Offer is part of a group with condition [ERC721, threshold, gating per address]", async function () {
-          condition = mockCondition({
-            tokenAddress: await foreign721.getAddress(),
-            threshold: "1",
-            maxCommits: "3",
-            tokenType: TokenType.NonFungibleToken,
-            method: EvaluationMethod.Threshold,
-          });
-
-          expect(condition.isValid()).to.be.true;
-
-          // Create Group
-          group = new Group(groupId, seller.id, offerIds);
-          expect(group.isValid()).is.true;
-
-          await groupHandler.connect(assistant).createGroup(group, condition);
-
-          await foreign721.connect(buyer).mint("123", 1);
-
-          const tx = bosonVoucher
-            .connect(assistant)
-            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
-
-          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
-
-          await expect(tx)
-            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
-            .withArgs(offerId, condition.gating, buyer.address, condition.minTokenId, 1, condition.maxCommits);
-        });
-
-        it("Offer is part of a group with condition [ERC721, specificToken, gating per address] with range length == 1", async function () {
-          // Required constructor params for Group
-          groupId = "1";
-          offerIds = [offerId];
-
-          condition = mockCondition({
-            tokenAddress: await foreign721.getAddress(),
-            threshold: "0",
-            maxCommits: "3",
-            tokenType: TokenType.NonFungibleToken,
-            method: EvaluationMethod.SpecificToken,
-            gating: GatingType.PerAddress,
-          });
-
-          expect(condition.isValid()).to.be.true;
-
-          // Create Group
-          group = new Group(groupId, seller.id, offerIds);
-          expect(group.isValid()).is.true;
-
-          await groupHandler.connect(assistant).createGroup(group, condition);
-
-          // mint enough tokens for the buyer
-          await foreign721.connect(buyer).mint(condition.minTokenId, 1);
-
-          const tx = bosonVoucher
-            .connect(assistant)
-            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
-
-          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
-
-          await expect(tx)
-            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
-            .withArgs(offerId, condition.gating, buyer.address, condition.minTokenId, 1, condition.maxCommits);
-        });
-
-        it("Offer is part of a group with condition [ERC721, specificToken, gating per tokenid] with range length == 1", async function () {
-          // Required constructor params for Group
-          groupId = "1";
-          offerIds = [offerId];
-
-          condition = mockCondition({
-            tokenAddress: await foreign721.getAddress(),
-            threshold: "0",
-            maxCommits: "3",
-            tokenType: TokenType.NonFungibleToken,
-            method: EvaluationMethod.SpecificToken,
-            gating: GatingType.PerTokenId,
-          });
-
-          expect(condition.isValid()).to.be.true;
-
-          // Create Group
-          group = new Group(groupId, seller.id, offerIds);
-          expect(group.isValid()).is.true;
-
-          await groupHandler.connect(assistant).createGroup(group, condition);
-
-          // mint enough tokens for the buyer
-          await foreign721.connect(buyer).mint(condition.minTokenId, 1);
-
-          const tx = bosonVoucher
-            .connect(assistant)
-            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
-
-          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
-
-          await expect(tx)
-            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
-            .withArgs(offerId, condition.gating, buyer.address, condition.minTokenId, 1, condition.maxCommits);
-        });
-
-        it("Offer is part of a group with condition [ERC1155, gating per address] with range length == 1", async function () {
-          condition = mockCondition({
-            tokenAddress: await foreign1155.getAddress(),
-            threshold: "2",
-            maxCommits: "3",
-            tokenType: TokenType.MultiToken,
-            method: EvaluationMethod.Threshold,
-            minTokenId: "123",
-            maxTokenId: "123",
-            gating: GatingType.PerAddress,
-          });
-
-          expect(condition.isValid()).to.be.true;
-
-          // Create Group
-          group = new Group(groupId, seller.id, offerIds);
-          expect(group.isValid()).is.true;
-
-          await groupHandler.connect(assistant).createGroup(group, condition);
-
-          await foreign1155.connect(buyer).mint(condition.minTokenId, condition.threshold);
-
-          const tx = bosonVoucher
-            .connect(assistant)
-            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
-          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
-
-          await expect(tx)
-            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
-            .withArgs(offerId, condition.gating, buyer.address, condition.minTokenId, 1, condition.maxCommits);
-        });
-
-        it("Offer is part of a group with condition [ERC1155, gating per tokenId] with range length == 1", async function () {
-          condition = mockCondition({
-            tokenAddress: await foreign1155.getAddress(),
-            threshold: "2",
-            maxCommits: "3",
-            tokenType: TokenType.MultiToken,
-            method: EvaluationMethod.Threshold,
-            minTokenId: "123",
-            maxTokenId: "123",
-            gating: GatingType.PerTokenId,
-          });
-
-          expect(condition.isValid()).to.be.true;
-
-          // Create Group
-          group = new Group(groupId, seller.id, offerIds);
-          expect(group.isValid()).is.true;
-
-          await groupHandler.connect(assistant).createGroup(group, condition);
-
-          await foreign1155.connect(buyer).mint(condition.minTokenId, condition.threshold);
-
-          const tx = bosonVoucher
-            .connect(assistant)
-            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
-          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
-
-          await expect(tx)
-            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
-            .withArgs(offerId, condition.gating, buyer.address, condition.minTokenId, 1, condition.maxCommits);
-        });
-      });
-
-      it("should work on an additional collection", async function () {
-        // Create a new collection
-        const externalId = `Brand1`;
-        voucherInitValues.collectionSalt = encodeBytes32String(externalId);
-        await accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues);
-
-        offer.collectionIndex = 1;
-        offer.id = await offerHandler.getNextOfferId();
-        exchangeId = await exchangeHandler.getNextExchangeId();
-        exchange.offerId = offer.id.toString();
-        exchange.id = exchangeId.toString();
-        const tokenId = deriveTokenId(offer.id, exchangeId);
-
-        // Create the offer
-        await offerHandler
-          .connect(assistant)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
-
-        // Reserve range
-        await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
-
-        // expected address of the additional collection
-        const voucherCloneAddress = calculateCloneAddress(
-          await accountHandler.getAddress(),
-          beaconProxyAddress,
-          admin.address,
-          voucherInitValues.collectionSalt
-        );
-        bosonVoucher = await getContractAt("BosonVoucher", voucherCloneAddress);
-        await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
-
-        // Commit to preminted offer, retrieving the event
-        tx = await bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId);
-        txReceipt = await tx.wait();
-        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
-
-        // Get the block timestamp of the confirmed tx
-        blockNumber = tx.blockNumber;
-        block = await provider.getBlock(blockNumber);
-
-        // Update the committed date in the expected exchange struct with the block timestamp of the tx
-        voucher.committedDate = block.timestamp.toString();
-
-        // Update the validUntilDate date in the expected exchange struct
-        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
-
-        // Examine event
-        assert.equal(event.exchangeId.toString(), exchangeId, "Exchange id is incorrect");
-        assert.equal(event.offerId.toString(), offer.id, "Offer id is incorrect");
-        assert.equal(event.buyerId.toString(), buyerId, "Buyer id is incorrect");
-
-        // Examine the exchange struct
-        assert.equal(
-          Exchange.fromStruct(event.exchange).toString(),
-          exchange.toString(),
-          "Exchange struct is incorrect"
-        );
-
-        // Examine the voucher struct
-        assert.equal(Voucher.fromStruct(event.voucher).toString(), voucher.toString(), "Voucher struct is incorrect");
-      });
-
-      context("💔 Revert Reasons", async function () {
-        it("The exchanges region of protocol is paused", async function () {
-          // Pause the exchanges region of the protocol
-          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
-
-          // Attempt to create an exchange, expecting revert
-          await expect(
-            bosonVoucher
-              .connect(assistant)
-              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
-        });
-
-        it("The buyers region of protocol is paused", async function () {
-          // Pause the buyers region of the protocol
-          await pauseHandler.connect(pauser).pause([PausableRegion.Buyers]);
-
-          // Attempt to create a buyer, expecting revert
-          await expect(
-            bosonVoucher
-              .connect(assistant)
-              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
-        });
-
-        it("Caller is not the voucher contract, owned by the seller", async function () {
-          // Attempt to commit to preminted offer, expecting revert
-          await expect(
-            exchangeHandler
-              .connect(rando)
-              .onPremintedVoucherTransferred(
-                tokenId,
-                await buyer.getAddress(),
-                await assistant.getAddress(),
-                await assistant.getAddress()
-              )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
-        });
-
-        it("Exchange exists already", async function () {
-          // Commit to preminted offer, creating a new exchange
-          await bosonVoucher
-            .connect(assistant)
-            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
-
-          // impersonate voucher contract and give it some funds
-          const impersonatedBosonVoucher = await getImpersonatedSigner(await bosonVoucher.getAddress());
-          await provider.send("hardhat_setBalance", [
-            await impersonatedBosonVoucher.getAddress(),
-            toBeHex(parseEther("10")),
-          ]);
-
-          // Simulate a second commit with the same token id
-          await expect(
-            exchangeHandler
-              .connect(impersonatedBosonVoucher)
-              .onPremintedVoucherTransferred(
-                tokenId,
-                await buyer.getAddress(),
-                await assistant.getAddress(),
-                await assistant.getAddress()
-              )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.EXCHANGE_ALREADY_EXISTS);
-        });
-
-        it("offer is voided", async function () {
-          // Void the offer first
-          await offerHandler.connect(assistant).voidOffer(offerId);
-
-          // Attempt to commit to the voided offer, expecting revert
-          await expect(
-            bosonVoucher
-              .connect(assistant)
-              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
-        });
-
-        it("offer is not yet available for commits", async function () {
-          // Create an offer with staring date in the future
-          // get current block timestamp
-          const block = await provider.getBlock("latest");
-          const now = block.timestamp.toString();
-
-          // Get next offer id
-          offerId = await offerHandler.getNextOfferId();
-          // set validFrom date in the past
-          offerDates.validFrom = BigInt(now + oneMonth * 6n).toString(); // 6 months in the future
-          offerDates.validUntil = BigInt(offerDates.validFrom + 10n).toString(); // just after the valid from so it succeeds.
-
-          await offerHandler
-            .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
-
-          // Reserve a range and premint vouchers
-          exchangeId = await exchangeHandler.getNextExchangeId();
-          await offerHandler.connect(assistant).reserveRange(offerId, "1", await assistant.getAddress());
-          await bosonVoucher.connect(assistant).preMint(offerId, "1");
-
-          tokenId = deriveTokenId(offerId, exchangeId);
-
-          // Attempt to commit to the not available offer, expecting revert
-          await expect(
-            bosonVoucher
-              .connect(assistant)
-              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_NOT_AVAILABLE);
-        });
-
-        it("offer has expired", async function () {
-          // Go past offer expiration date
-          await setNextBlockTimestamp(Number(offerDates.validUntil) + 1);
-
-          // Attempt to commit to the expired offer, expecting revert
-          await expect(
-            bosonVoucher
-              .connect(assistant)
-              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_EXPIRED);
-        });
-
-        it("should not be able to commit directly if whole offer preminted", async function () {
-          // Create an offer with only 1 item
-          offer.quantityAvailable = "1";
-          await offerHandler
-            .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
-          // Commit to offer, so it's not available anymore
-          await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), ++offerId, { value: price });
-
-          // Attempt to commit to the sold out offer, expecting revert
-          await expect(
-            exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_SOLD_OUT);
-        });
-
-        it("buyer does not meet condition for commit", async function () {
-          // Required constructor params for Group
-          groupId = "1";
-          offerIds = [offerId];
-
-          condition = mockCondition({
-            tokenAddress: await foreign721.getAddress(),
-            threshold: "1",
-            maxCommits: "3",
-            tokenType: TokenType.NonFungibleToken,
-            tokenId: "0",
-            method: EvaluationMethod.Threshold,
-          });
-
-          expect(condition.isValid()).to.be.true;
-
-          // Create Group
-          group = new Group(groupId, seller.id, offerIds);
-          expect(group.isValid()).is.true;
-
-          await groupHandler.connect(assistant).createGroup(group, condition);
-
-          await expect(
-            bosonVoucher
-              .connect(assistant)
-              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
-        });
-
-        it("Offer is part of a group with condition [ERC721, specificToken, gating per address] with length > 1", async function () {
-          // Required constructor params for Group
-          groupId = "1";
-          offerIds = [offerId];
-
-          condition = mockCondition({
-            tokenAddress: await foreign721.getAddress(),
-            threshold: "0",
-            maxCommits: "3",
-            tokenType: TokenType.NonFungibleToken, // ERC721
-            minTokenId: "0",
-            method: EvaluationMethod.SpecificToken, // per-token
-            maxTokenId: "12",
-            gating: GatingType.PerAddress,
-          });
-
-          expect(condition.isValid()).to.be.true;
-
-          // Create Group
-          group = new Group(groupId, seller.id, offerIds);
-          expect(group.isValid()).is.true;
-
-          await groupHandler.connect(assistant).createGroup(group, condition);
-
-          await expect(
-            bosonVoucher
-              .connect(assistant)
-              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
-        });
-
-        it("Offer is part of a group with condition [ERC721, specificToken, gating per tokenId] with length > 1", async function () {
-          // Required constructor params for Group
-          groupId = "1";
-          offerIds = [offerId];
-
-          condition = mockCondition({
-            tokenAddress: await foreign721.getAddress(),
-            threshold: "0",
-            maxCommits: "3",
-            tokenType: TokenType.NonFungibleToken, // ERC721
-            minTokenId: "0",
-            method: EvaluationMethod.SpecificToken, // per-token
-            maxTokenId: "12",
-            gating: GatingType.PerTokenId,
-          });
-
-          expect(condition.isValid()).to.be.true;
-
-          // Create Group
-          group = new Group(groupId, seller.id, offerIds);
-          expect(group.isValid()).is.true;
-
-          await groupHandler.connect(assistant).createGroup(group, condition);
-
-          await expect(
-            bosonVoucher
-              .connect(assistant)
-              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
-        });
-
-        it("Offer is part of a group with condition [ERC1155, gating per address] with length > 1", async function () {
-          // Required constructor params for Group
-          groupId = "1";
-          offerIds = [offerId];
-
-          condition = mockCondition({
-            tokenAddress: await foreign1155.getAddress(),
-            threshold: "2",
-            maxCommits: "3",
-            tokenType: TokenType.MultiToken, // ERC1155
-            tokenId: "1",
-            method: EvaluationMethod.Threshold, // per-wallet
-            length: "2",
-            gating: GatingType.PerAddress,
-          });
-
-          expect(condition.isValid()).to.be.true;
-
-          // Create Group
-          group = new Group(groupId, seller.id, offerIds);
-          expect(group.isValid()).is.true;
-
-          await groupHandler.connect(assistant).createGroup(group, condition);
-
-          await expect(
-            bosonVoucher
-              .connect(assistant)
-              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
-        });
-
-        it("Offer is part of a group with condition [ERC1155, gating per tokenId] with length > 1", async function () {
-          // Required constructor params for Group
-          groupId = "1";
-          offerIds = [offerId];
-
-          condition = mockCondition({
-            tokenAddress: await foreign1155.getAddress(),
-            threshold: "2",
-            maxCommits: "3",
-            tokenType: TokenType.MultiToken, // ERC1155
-            tokenId: "1",
-            method: EvaluationMethod.Threshold, // per-wallet
-            length: "2",
-            gating: GatingType.PerTokenId,
-          });
-
-          expect(condition.isValid()).to.be.true;
-
-          // Create Group
-          group = new Group(groupId, seller.id, offerIds);
-          expect(group.isValid()).is.true;
-
-          await groupHandler.connect(assistant).createGroup(group, condition);
-
-          await expect(
-            bosonVoucher
-              .connect(assistant)
-              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
-        });
-      });
-    });
-
     context("👉 commitToConditionalOffer()", async function () {
       context("✋ Threshold ERC20", async function () {
         beforeEach(async function () {
@@ -6079,125 +5342,391 @@ describe("IBosonExchangeHandler", function () {
     });
 
     context("👉 onPremintedVoucherTransferred()", async function () {
+      // These tests are mainly for preminted vouchers of fixed price offers
+      // The part of onPremintedVoucherTransferred that is specific to
+      // price discovery offers is indirectly tested in `PriceDiscoveryHandlerFacet.js`
+      let tokenId;
       beforeEach(async function () {
-        // Commit to offer, retrieving the event
-        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+        // Reserve range
+        await offerHandler
+          .connect(assistant)
+          .reserveRange(offer.id, offer.quantityAvailable, await assistant.getAddress());
 
-        // Client used for tests
-        bosonVoucherCloneAddress = calculateCloneAddress(
+        // expected address of the first clone
+        const voucherCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
           beaconProxyAddress,
           admin.address
         );
-        bosonVoucherClone = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
+        bosonVoucher = await getContractAt("BosonVoucher", voucherCloneAddress);
+        await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
 
-        tokenId = deriveTokenId(offerId, exchange.id);
+        tokenId = deriveTokenId(offer.id, exchangeId);
       });
 
-      it("should emit an VoucherTransferred event when called by CLIENT-roled address", async function () {
-        // Get the next buyer id
-        nextAccountId = await accountHandler.connect(rando).getNextAccountId();
+      it("should emit a BuyerCommitted event", async function () {
+        // Commit to preminted offer, retrieving the event
+        tx = await bosonVoucher
+          .connect(assistant)
+          .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+        txReceipt = await tx.wait();
+        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
-        // Call onVoucherTransferred, expecting event
-        await expect(
-          bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId)
-        )
-          .to.emit(exchangeHandler, "VoucherTransferred")
-          .withArgs(offerId, exchange.id, nextAccountId, await bosonVoucherClone.getAddress());
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        voucher.committedDate = block.timestamp.toString();
+
+        // Update the validUntilDate date in the expected exchange struct
+        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+
+        // Examine event
+        assert.equal(event.exchangeId.toString(), exchangeId, "Exchange id is incorrect");
+        assert.equal(event.offerId.toString(), offerId, "Offer id is incorrect");
+        assert.equal(event.buyerId.toString(), buyerId, "Buyer id is incorrect");
+
+        // Examine the exchange struct
+        assert.equal(
+          Exchange.fromStruct(event.exchange).toString(),
+          exchange.toString(),
+          "Exchange struct is incorrect"
+        );
+
+        // Examine the voucher struct
+        assert.equal(Voucher.fromStruct(event.voucher).toString(), voucher.toString(), "Voucher struct is incorrect");
       });
 
-      it("should update exchange when new buyer (with existing, active account) is passed", async function () {
-        // Get the next buyer id
-        nextAccountId = await accountHandler.connect(rando).getNextAccountId();
-
-        // Create a buyer account for the new owner
-        await accountHandler.connect(newOwner).createBuyer(mockBuyer(await newOwner.getAddress()));
-
-        // Call onVoucherTransferred
-        await bosonVoucherClone
-          .connect(buyer)
-          .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId);
-
-        // Get the exchange
-        [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
-
-        // Marshal response to entity
-        exchange = Exchange.fromStruct(response);
-        expect(exchange.isValid());
-
-        // Exchange's voucher expired flag should be true
-        assert.equal(exchange.buyerId, nextAccountId, "Exchange.buyerId not updated");
-      });
-
-      it("should update exchange when new buyer (no account) is passed", async function () {
-        // Get the next buyer id
-        nextAccountId = await accountHandler.connect(rando).getNextAccountId();
-
-        // Call onVoucherTransferred
-        await bosonVoucherClone
-          .connect(buyer)
-          .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId);
-
-        // Get the exchange
-        [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
-
-        // Marshal response to entity
-        exchange = Exchange.fromStruct(response);
-        expect(exchange.isValid());
-
-        // Exchange's voucher expired flag should be true
-        assert.equal(exchange.buyerId, nextAccountId, "Exchange.buyerId not updated");
-      });
-
-      it("should be triggered when a voucher is transferred", async function () {
-        // Transfer voucher, expecting event
-        await expect(
-          bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId)
-        ).to.emit(exchangeHandler, "VoucherTransferred");
-      });
-
-      it("should not be triggered when a voucher is issued", async function () {
+      it("should not increment the next exchange id counter", async function () {
         // Get the next exchange id
-        nextExchangeId = await exchangeHandler.getNextExchangeId();
+        let nextExchangeIdBefore = await exchangeHandler.connect(rando).getNextExchangeId();
 
-        // Create a buyer account
-        await accountHandler.connect(newOwner).createBuyer(mockBuyer(await newOwner.getAddress()));
+        // Commit to preminted offer, creating a new exchange
+        await bosonVoucher
+          .connect(assistant)
+          .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
 
-        // Grant PROTOCOL role to EOA address for test
-        await accessController.grantRole(Role.PROTOCOL, await rando.getAddress());
-
-        // Issue voucher, expecting no event
-        await expect(
-          bosonVoucherClone.connect(rando).issueVoucher(nextExchangeId, await buyer.getAddress())
-        ).to.not.emit(exchangeHandler, "VoucherTransferred");
+        // Get the next exchange id and ensure it was incremented by the creation of the offer
+        nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
+        expect(nextExchangeId).to.equal(nextExchangeIdBefore);
       });
 
-      it("should not be triggered when a voucher is burned", async function () {
-        // Grant PROTOCOL role to EOA address for test
-        await accessController.grantRole(Role.PROTOCOL, await rando.getAddress());
+      it("should not issue a new voucher on the clone", async function () {
+        // Get next exchange id
+        nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
 
-        // Burn voucher, expecting no event
-        await expect(bosonVoucherClone.connect(rando).burnVoucher(tokenId)).to.not.emit(
-          exchangeHandler,
-          "VoucherTransferred"
+        // Voucher with nextExchangeId should not exist
+        await expect(bosonVoucher.ownerOf(nextExchangeId)).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
+
+        // Commit to preminted offer, creating a new exchange
+        await bosonVoucher
+          .connect(assistant)
+          .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+
+        // Voucher with nextExchangeId still should not exist
+        await expect(bosonVoucher.ownerOf(nextExchangeId)).to.be.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
+      });
+
+      it("ERC2981: issued voucher should have royalty fees", async function () {
+        // Before voucher is transferred, it should already have royalty fee
+        let [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offer.price);
+        assert.equal(receiver, treasury.address, "Recipient address is incorrect");
+        assert.equal(
+          royaltyAmount.toString(),
+          applyPercentage(offer.price, royaltyPercentage1),
+          "Royalty amount is incorrect"
+        );
+
+        // Commit to preminted offer, creating a new exchange
+        await bosonVoucher
+          .connect(assistant)
+          .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+
+        // After voucher is transferred, it should have royalty fee
+        [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offer.price);
+        assert.equal(receiver, await treasury.getAddress(), "Recipient address is incorrect");
+        assert.equal(
+          royaltyAmount.toString(),
+          applyPercentage(offer.price, royaltyPercentage1),
+          "Royalty amount is incorrect"
         );
       });
 
-      it("Should not be triggered when from and to addresses are the same", async function () {
-        // Transfer voucher, expecting event
-        await expect(
-          bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await buyer.getAddress(), tokenId)
-        ).to.not.emit(exchangeHandler, "VoucherTransferred");
+      it("Should not decrement quantityAvailable", async function () {
+        // Offer quantityAvailable should be decremented
+        let [, offer] = await offerHandler.connect(rando).getOffer(offerId);
+        const quantityAvailableBefore = offer.quantityAvailable;
+
+        // Commit to preminted offer
+        await bosonVoucher
+          .connect(assistant)
+          .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+
+        // Offer quantityAvailable should be decremented
+        [, offer] = await offerHandler.connect(rando).getOffer(offerId);
+        assert.equal(
+          offer.quantityAvailable.toString(),
+          quantityAvailableBefore.toString(),
+          "Quantity available should not change"
+        );
       });
 
-      it("Should not be triggered when first transfer of preminted voucher happens", async function () {
-        // Transfer voucher, expecting event
+      it("should still be possible to commit if offer is not fully preminted", async function () {
+        // Create a new offer
+        offerId = await offerHandler.getNextOfferId();
+        const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+        offer.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
+
+        // Create the offer
+        offer.quantityAvailable = "10";
+        const rangeLength = "5";
+        await offerHandler
+          .connect(assistant)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+
+        // Deposit seller funds so the commit will succeed
+        await fundsHandler
+          .connect(rando)
+          .depositFunds(seller.id, ZeroAddress, offer.sellerDeposit, { value: offer.sellerDeposit });
+
+        // reserve half of the offer, so it's still possible to commit directly
+        await offerHandler.connect(assistant).reserveRange(offerId, rangeLength, await assistant.getAddress());
+
+        // Commit to offer directly
         await expect(
-          bosonVoucherClone.connect(buyer).transferFrom(await buyer.getAddress(), await buyer.getAddress(), tokenId)
-        ).to.not.emit(exchangeHandler, "VoucherTransferred");
+          exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: offer.price })
+        ).to.emit(exchangeHandler, "BuyerCommitted");
       });
 
-      it("should work with additional collections", async function () {
+      context("Offer is part of a group", async function () {
+        let groupId;
+        let offerIds;
+
+        beforeEach(async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+        });
+
+        it("Offer is part of a group that has no condition", async function () {
+          condition = mockCondition({
+            tokenAddress: ZeroAddress,
+            threshold: "0",
+            maxCommits: "0",
+            tokenType: TokenType.FungibleToken,
+            method: EvaluationMethod.None,
+          });
+
+          expect(condition.isValid()).to.be.true;
+
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          await foreign721.connect(buyer).mint("123", 1);
+
+          const tx = bosonVoucher
+            .connect(assistant)
+            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+          await expect(tx).to.not.emit(exchangeHandler, "ConditionalCommitAuthorized");
+        });
+
+        it("Offer is part of a group with condition [ERC20, gating per address]", async function () {
+          // Create Condition
+          condition = mockCondition({ tokenAddress: await foreign20.getAddress(), threshold: "50", maxCommits: "3" });
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          // mint enough tokens for the buyer
+          await foreign20.connect(buyer).mint(await buyer.getAddress(), condition.threshold);
+
+          const tx = bosonVoucher
+            .connect(assistant)
+            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+            .withArgs(offerId, condition.gating, buyer.address, 0, 1, condition.maxCommits);
+        });
+
+        it("Offer is part of a group with condition [ERC721, threshold, gating per address]", async function () {
+          condition = mockCondition({
+            tokenAddress: await foreign721.getAddress(),
+            threshold: "1",
+            maxCommits: "3",
+            tokenType: TokenType.NonFungibleToken,
+            method: EvaluationMethod.Threshold,
+          });
+
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          await foreign721.connect(buyer).mint("123", 1);
+
+          const tx = bosonVoucher
+            .connect(assistant)
+            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+
+          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+            .withArgs(offerId, condition.gating, buyer.address, condition.minTokenId, 1, condition.maxCommits);
+        });
+
+        it("Offer is part of a group with condition [ERC721, specificToken, gating per address] with range length == 1", async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+
+          condition = mockCondition({
+            tokenAddress: await foreign721.getAddress(),
+            threshold: "0",
+            maxCommits: "3",
+            tokenType: TokenType.NonFungibleToken,
+            method: EvaluationMethod.SpecificToken,
+            gating: GatingType.PerAddress,
+          });
+
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          // mint enough tokens for the buyer
+          await foreign721.connect(buyer).mint(condition.minTokenId, 1);
+
+          const tx = bosonVoucher
+            .connect(assistant)
+            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+
+          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+            .withArgs(offerId, condition.gating, buyer.address, condition.minTokenId, 1, condition.maxCommits);
+        });
+
+        it("Offer is part of a group with condition [ERC721, specificToken, gating per tokenid] with range length == 1", async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+
+          condition = mockCondition({
+            tokenAddress: await foreign721.getAddress(),
+            threshold: "0",
+            maxCommits: "3",
+            tokenType: TokenType.NonFungibleToken,
+            method: EvaluationMethod.SpecificToken,
+            gating: GatingType.PerTokenId,
+          });
+
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          // mint enough tokens for the buyer
+          await foreign721.connect(buyer).mint(condition.minTokenId, 1);
+
+          const tx = bosonVoucher
+            .connect(assistant)
+            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+
+          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+            .withArgs(offerId, condition.gating, buyer.address, condition.minTokenId, 1, condition.maxCommits);
+        });
+
+        it("Offer is part of a group with condition [ERC1155, gating per address] with range length == 1", async function () {
+          condition = mockCondition({
+            tokenAddress: await foreign1155.getAddress(),
+            threshold: "2",
+            maxCommits: "3",
+            tokenType: TokenType.MultiToken,
+            method: EvaluationMethod.Threshold,
+            minTokenId: "123",
+            maxTokenId: "123",
+            gating: GatingType.PerAddress,
+          });
+
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          await foreign1155.connect(buyer).mint(condition.minTokenId, condition.threshold);
+
+          const tx = bosonVoucher
+            .connect(assistant)
+            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+            .withArgs(offerId, condition.gating, buyer.address, condition.minTokenId, 1, condition.maxCommits);
+        });
+
+        it("Offer is part of a group with condition [ERC1155, gating per tokenId] with range length == 1", async function () {
+          condition = mockCondition({
+            tokenAddress: await foreign1155.getAddress(),
+            threshold: "2",
+            maxCommits: "3",
+            tokenType: TokenType.MultiToken,
+            method: EvaluationMethod.Threshold,
+            minTokenId: "123",
+            maxTokenId: "123",
+            gating: GatingType.PerTokenId,
+          });
+
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          await foreign1155.connect(buyer).mint(condition.minTokenId, condition.threshold);
+
+          const tx = bosonVoucher
+            .connect(assistant)
+            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
+          await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+            .withArgs(offerId, condition.gating, buyer.address, condition.minTokenId, 1, condition.maxCommits);
+        });
+      });
+
+      it("should work on an additional collection", async function () {
         // Create a new collection
         const externalId = `Brand1`;
         voucherInitValues.collectionSalt = encodeBytes32String(externalId);
@@ -6205,115 +5734,346 @@ describe("IBosonExchangeHandler", function () {
 
         offer.collectionIndex = 1;
         offer.id = await offerHandler.getNextOfferId();
-        exchange.id = await exchangeHandler.getNextExchangeId();
-        bosonVoucherCloneAddress = calculateCloneAddress(
-          await accountHandler.getAddress(),
-          beaconProxyAddress,
-          admin.address,
-          voucherInitValues.collectionSalt
-        );
-        bosonVoucherClone = await getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
-        const tokenId = deriveTokenId(offer.id, exchange.id);
+        exchangeId = await exchangeHandler.getNextExchangeId();
+        exchange.offerId = offer.id.toString();
+        exchange.id = exchangeId.toString();
+        const tokenId = deriveTokenId(offer.id, exchangeId);
 
         // Create the offer
         await offerHandler
           .connect(assistant)
           .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
-        // Commit to offer, creating a new exchange
-        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: price });
+        // Reserve range
+        await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
 
-        // Get the next buyer id
-        nextAccountId = await accountHandler.connect(rando).getNextAccountId();
+        // expected address of the additional collection
+        const voucherCloneAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          admin.address,
+          voucherInitValues.collectionSalt
+        );
+        bosonVoucher = await getContractAt("BosonVoucher", voucherCloneAddress);
+        await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
 
-        // Call onVoucherTransferred, expecting event
-        await expect(bosonVoucherClone.connect(buyer).transferFrom(buyer.address, newOwner.address, tokenId))
-          .to.emit(exchangeHandler, "VoucherTransferred")
-          .withArgs(offer.id, exchange.id, nextAccountId, await bosonVoucherClone.getAddress());
+        // Commit to preminted offer, retrieving the event
+        tx = await bosonVoucher.connect(assistant).transferFrom(assistant.address, buyer.address, tokenId);
+        txReceipt = await tx.wait();
+        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        voucher.committedDate = block.timestamp.toString();
+
+        // Update the validUntilDate date in the expected exchange struct
+        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+
+        // Examine event
+        assert.equal(event.exchangeId.toString(), exchangeId, "Exchange id is incorrect");
+        assert.equal(event.offerId.toString(), offer.id, "Offer id is incorrect");
+        assert.equal(event.buyerId.toString(), buyerId, "Buyer id is incorrect");
+
+        // Examine the exchange struct
+        assert.equal(
+          Exchange.fromStruct(event.exchange).toString(),
+          exchange.toString(),
+          "Exchange struct is incorrect"
+        );
+
+        // Examine the voucher struct
+        assert.equal(Voucher.fromStruct(event.voucher).toString(), voucher.toString(), "Voucher struct is incorrect");
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The exchanges region of protocol is paused", async function () {
+          // Pause the exchanges region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
+
+          // Attempt to create an exchange, expecting revert
+          await expect(
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+        });
+
         it("The buyers region of protocol is paused", async function () {
           // Pause the buyers region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Buyers]);
 
           // Attempt to create a buyer, expecting revert
           await expect(
-            bosonVoucherClone
-              .connect(buyer)
-              .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId)
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
         });
 
-        it("Caller is not a clone address", async function () {
-          // Attempt to call onVoucherTransferred, expecting revert
+        it("Caller is not the voucher contract, owned by the seller", async function () {
+          // Attempt to commit to preminted offer, expecting revert
           await expect(
-            exchangeHandler.connect(rando).onVoucherTransferred(exchange.id, await newOwner.getAddress())
+            exchangeHandler
+              .connect(rando)
+              .onPremintedVoucherTransferred(
+                tokenId,
+                await buyer.getAddress(),
+                await assistant.getAddress(),
+                await assistant.getAddress()
+              )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
         });
 
-        it("Caller is not a clone address associated with the seller", async function () {
-          // Create a new seller to get new clone
-          seller = mockSeller(
-            await rando.getAddress(),
-            await rando.getAddress(),
-            ZeroAddress,
-            await rando.getAddress()
-          );
-          expect(seller.isValid()).is.true;
+        it("Exchange exists already", async function () {
+          // Commit to preminted offer, creating a new exchange
+          await bosonVoucher
+            .connect(assistant)
+            .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
 
-          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
-          expectedCloneAddress = calculateCloneAddress(
-            await accountHandler.getAddress(),
-            beaconProxyAddress,
-            rando.address
-          );
-          const bosonVoucherClone2 = await getContractAt("IBosonVoucher", expectedCloneAddress);
+          // impersonate voucher contract and give it some funds
+          const impersonatedBosonVoucher = await getImpersonatedSigner(await bosonVoucher.getAddress());
+          await provider.send("hardhat_setBalance", [
+            await impersonatedBosonVoucher.getAddress(),
+            toBeHex(parseEther("10")),
+          ]);
 
-          // For the sake of test, mint token on bv2 with the id of token on bv1
-          // Temporarily grant PROTOCOL role to deployer account
-          await accessController.grantRole(Role.PROTOCOL, await deployer.getAddress());
-
-          const newBuyer = mockBuyer(await buyer.getAddress());
-          newBuyer.id = buyerId;
-          await bosonVoucherClone2.issueVoucher(exchange.id, newBuyer.wallet);
-
-          // Attempt to call onVoucherTransferred, expecting revert
+          // Simulate a second commit with the same token id
           await expect(
-            bosonVoucherClone2
-              .connect(buyer)
-              .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), exchange.id)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
+            exchangeHandler
+              .connect(impersonatedBosonVoucher)
+              .onPremintedVoucherTransferred(
+                tokenId,
+                await buyer.getAddress(),
+                await assistant.getAddress(),
+                await assistant.getAddress()
+              )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.EXCHANGE_ALREADY_EXISTS);
         });
 
-        it("exchange id is invalid", async function () {
-          // An invalid exchange id
-          exchangeId = "666";
+        it("offer is voided", async function () {
+          // Void the offer first
+          await offerHandler.connect(assistant).voidOffer(offerId);
 
-          // Attempt to call onVoucherTransferred, expecting revert
+          // Attempt to commit to the voided offer, expecting revert
           await expect(
-            exchangeHandler.connect(fauxClient).onVoucherTransferred(exchangeId, await newOwner.getAddress())
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
         });
 
-        it("exchange is not in committed state", async function () {
-          // Revoke the voucher
-          await exchangeHandler.connect(assistant).revokeVoucher(exchange.id);
+        it("offer is not yet available for commits", async function () {
+          // Create an offer with staring date in the future
+          // get current block timestamp
+          const block = await provider.getBlock("latest");
+          const now = block.timestamp.toString();
 
-          // Attempt to call onVoucherTransferred, expecting revert
+          // Get next offer id
+          offerId = await offerHandler.getNextOfferId();
+          // set validFrom date in the past
+          offerDates.validFrom = BigInt(now + oneMonth * 6n).toString(); // 6 months in the future
+          offerDates.validUntil = BigInt(offerDates.validFrom + 10n).toString(); // just after the valid from so it succeeds.
+
+          await offerHandler
+            .connect(assistant)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+
+          // Reserve a range and premint vouchers
+          exchangeId = await exchangeHandler.getNextExchangeId();
+          await offerHandler.connect(assistant).reserveRange(offerId, "1", await assistant.getAddress());
+          await bosonVoucher.connect(assistant).preMint(offerId, "1");
+
+          tokenId = deriveTokenId(offerId, exchangeId);
+
+          // Attempt to commit to the not available offer, expecting revert
           await expect(
-            exchangeHandler.connect(fauxClient).onVoucherTransferred(exchangeId, await newOwner.getAddress())
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_STATE);
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_NOT_AVAILABLE);
         });
 
-        it("Voucher has expired", async function () {
-          // Set time forward past the voucher's validUntilDate
-          await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid) + Number(oneWeek));
+        it("offer has expired", async function () {
+          // Go past offer expiration date
+          await setNextBlockTimestamp(Number(offerDates.validUntil) + 1);
 
-          // Attempt to call onVoucherTransferred, expecting revert
+          // Attempt to commit to the expired offer, expecting revert
           await expect(
-            exchangeHandler.connect(fauxClient).onVoucherTransferred(exchangeId, await newOwner.getAddress())
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.VOUCHER_HAS_EXPIRED);
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_EXPIRED);
+        });
+
+        it("should not be able to commit directly if whole offer preminted", async function () {
+          // Create an offer with only 1 item
+          offer.quantityAvailable = "1";
+          await offerHandler
+            .connect(assistant)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+          // Commit to offer, so it's not available anymore
+          await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), ++offerId, { value: price });
+
+          // Attempt to commit to the sold out offer, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_SOLD_OUT);
+        });
+
+        it("buyer does not meet condition for commit", async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+
+          condition = mockCondition({
+            tokenAddress: await foreign721.getAddress(),
+            threshold: "1",
+            maxCommits: "3",
+            tokenType: TokenType.NonFungibleToken,
+            tokenId: "0",
+            method: EvaluationMethod.Threshold,
+          });
+
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          await expect(
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
+        });
+
+        it("Offer is part of a group with condition [ERC721, specificToken, gating per address] with length > 1", async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+
+          condition = mockCondition({
+            tokenAddress: await foreign721.getAddress(),
+            threshold: "0",
+            maxCommits: "3",
+            tokenType: TokenType.NonFungibleToken, // ERC721
+            minTokenId: "0",
+            method: EvaluationMethod.SpecificToken, // per-token
+            maxTokenId: "12",
+            gating: GatingType.PerAddress,
+          });
+
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          await expect(
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
+        });
+
+        it("Offer is part of a group with condition [ERC721, specificToken, gating per tokenId] with length > 1", async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+
+          condition = mockCondition({
+            tokenAddress: await foreign721.getAddress(),
+            threshold: "0",
+            maxCommits: "3",
+            tokenType: TokenType.NonFungibleToken, // ERC721
+            minTokenId: "0",
+            method: EvaluationMethod.SpecificToken, // per-token
+            maxTokenId: "12",
+            gating: GatingType.PerTokenId,
+          });
+
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          await expect(
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
+        });
+
+        it("Offer is part of a group with condition [ERC1155, gating per address] with length > 1", async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+
+          condition = mockCondition({
+            tokenAddress: await foreign1155.getAddress(),
+            threshold: "2",
+            maxCommits: "3",
+            tokenType: TokenType.MultiToken, // ERC1155
+            tokenId: "1",
+            method: EvaluationMethod.Threshold, // per-wallet
+            length: "2",
+            gating: GatingType.PerAddress,
+          });
+
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          await expect(
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
+        });
+
+        it("Offer is part of a group with condition [ERC1155, gating per tokenId] with length > 1", async function () {
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+
+          condition = mockCondition({
+            tokenAddress: await foreign1155.getAddress(),
+            threshold: "2",
+            maxCommits: "3",
+            tokenType: TokenType.MultiToken, // ERC1155
+            tokenId: "1",
+            method: EvaluationMethod.Threshold, // per-wallet
+            length: "2",
+            gating: GatingType.PerTokenId,
+          });
+
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, seller.id, offerIds);
+          expect(group.isValid()).is.true;
+
+          await groupHandler.connect(assistant).createGroup(group, condition);
+
+          await expect(
+            bosonVoucher
+              .connect(assistant)
+              .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
         });
       });
     });
