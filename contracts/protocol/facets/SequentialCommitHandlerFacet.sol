@@ -179,7 +179,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                 }
 
                 if (payout > 0) {
-                    FundsLib.transferFundsFromProtocol(exchangeToken, payable(seller), payout); // also emits FundsWithdrawn
+                    FundsLib.transferFundsFromProtocol(exchangeToken, payable(seller), payout);
                 }
             }
         }
