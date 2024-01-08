@@ -487,19 +487,21 @@ contract SellerHandlerFacet is SellerBase {
 
         RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
         for (uint256 i = 0; i < _royaltyRecipients.length; ) {
+            // Cache storage pointer to avoid multiple lookups
+            mapping(address => uint256) storage royaltyRecipientIndexByRecipient = lookups
+                .royaltyRecipientIndexBySellerAndRecipient[_sellerId];
+
             // No uniqueness check for externalIds since they are not used in the protocol
             if (
                 _royaltyRecipients[i].wallet == treasury ||
-                lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][_royaltyRecipients[i].wallet] != 0
+                royaltyRecipientIndexByRecipient[_royaltyRecipients[i].wallet] != 0
             ) revert RecipientNotUnique();
 
             if (_royaltyRecipients[i].minRoyaltyPercentage > protocolLimits().maxRoyaltyPercentage)
                 revert InvalidRoyaltyPercentage();
 
             royaltyRecipients.push(_royaltyRecipients[i]);
-            lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
-                _royaltyRecipients[i].wallet
-            ] = royaltyRecipients.length; // can be optimized to use counter instead of array length
+            royaltyRecipientIndexByRecipient[_royaltyRecipients[i].wallet] = royaltyRecipients.length; // can be optimized to use counter instead of array length
 
             unchecked {
                 i++;
@@ -559,18 +561,16 @@ contract SellerHandlerFacet is SellerBase {
             if (royaltyRecipientId == 0) {
                 if (_royaltyRecipients[i].wallet != address(0)) revert WrongDefaultRecipient();
             } else {
-                uint256 royaltyRecipientIndex = lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
-                    _royaltyRecipients[i].wallet
-                ];
+                // Cache storage pointer to avoid multiple lookups
+                mapping(address => uint256) storage royaltyRecipientIndexByRecipient = lookups
+                    .royaltyRecipientIndexBySellerAndRecipient[_sellerId];
+
+                uint256 royaltyRecipientIndex = royaltyRecipientIndexByRecipient[_royaltyRecipients[i].wallet];
 
                 if (royaltyRecipientIndex == 0) {
                     // update index
-                    lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][_royaltyRecipients[i].wallet] =
-                        royaltyRecipientId +
-                        1;
-                    delete lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
-                        royaltyRecipients[royaltyRecipientId].wallet
-                    ];
+                    royaltyRecipientIndexByRecipient[_royaltyRecipients[i].wallet] = royaltyRecipientId + 1;
+                    delete royaltyRecipientIndexByRecipient[royaltyRecipients[royaltyRecipientId].wallet];
                 } else {
                     if (royaltyRecipientIndex - 1 != royaltyRecipientId) revert RecipientNotUnique();
                 }
@@ -628,15 +628,15 @@ contract SellerHandlerFacet is SellerBase {
             if (royaltyRecipientId >= previousId) revert RoyaltyRecipientIdsNotSorted(); // this also ensures that royaltyRecipientId will never be out of bounds
             if (royaltyRecipientId == 0) revert CannotRemoveDefaultRecipient();
 
-            delete lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
-                royaltyRecipients[royaltyRecipientId].wallet
-            ];
+            // Cache storage pointer to avoid multiple lookups
+            mapping(address => uint256) storage royaltyRecipientIndexByRecipient = lookups
+                .royaltyRecipientIndexBySellerAndRecipient[_sellerId];
+
+            delete royaltyRecipientIndexByRecipient[royaltyRecipients[royaltyRecipientId].wallet];
 
             if (royaltyRecipientId != lastRoyaltyRecipientsId) {
                 royaltyRecipients[royaltyRecipientId] = royaltyRecipients[lastRoyaltyRecipientsId];
-                lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][
-                    royaltyRecipients[royaltyRecipientId].wallet
-                ] = royaltyRecipientId;
+                royaltyRecipientIndexByRecipient[royaltyRecipients[royaltyRecipientId].wallet] = royaltyRecipientId;
             }
             royaltyRecipients.pop();
             lastRoyaltyRecipientsId--; // will never underflow. Even if all non-default royalty recipients are removed, default recipient will remain
