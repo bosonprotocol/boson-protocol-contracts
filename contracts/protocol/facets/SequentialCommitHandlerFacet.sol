@@ -131,7 +131,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                     (royaltyInfo, exchangeCost.royaltyInfoIndex, ) = fetchRoyalties(offerId, false);
                     exchangeCost.royaltyAmount =
                         (getTotalRoyaltyPercentage(royaltyInfo.bps) * exchangeCost.price) /
-                        10000;
+                        HUNDRED_PERCENT;
                 }
 
                 // Verify that fees and royalties are not higher than the price.

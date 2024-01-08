@@ -175,7 +175,7 @@ library FundsLib {
                 } else {
                     // RESOLVED or DECIDED
                     uint256 pot = price + sellerDeposit + buyerEscalationDeposit;
-                    buyerPayoff = (pot * dispute.buyerPercent) / 10000;
+                    buyerPayoff = (pot * dispute.buyerPercent) / HUNDRED_PERCENT;
                     sellerPayoff = pot - buyerPayoff;
                 }
             }
@@ -257,7 +257,7 @@ library FundsLib {
             {
                 if (_exchangeState == BosonTypes.ExchangeState.Completed) {
                     // COMPLETED, buyer pays full price
-                    effectivePriceMultiplier = 10000;
+                    effectivePriceMultiplier = HUNDRED_PERCENT;
                 } else if (
                     _exchangeState == BosonTypes.ExchangeState.Revoked ||
                     _exchangeState == BosonTypes.ExchangeState.Canceled
@@ -272,13 +272,13 @@ library FundsLib {
 
                     if (disputeState == BosonTypes.DisputeState.Retracted) {
                         // RETRACTED - same as "COMPLETED"
-                        effectivePriceMultiplier = 10000;
+                        effectivePriceMultiplier = HUNDRED_PERCENT;
                     } else if (disputeState == BosonTypes.DisputeState.Refused) {
                         // REFUSED, buyer pays nothing
                         effectivePriceMultiplier = 0;
                     } else {
                         // RESOLVED or DECIDED
-                        effectivePriceMultiplier = 10000 - dispute.buyerPercent;
+                        effectivePriceMultiplier = HUNDRED_PERCENT - dispute.buyerPercent;
                     }
                 }
             }
@@ -318,9 +318,9 @@ library FundsLib {
                     (
                         reducedSecondaryPrice > resellerBuyPrice
                             ? effectivePriceMultiplier * (reducedSecondaryPrice - resellerBuyPrice)
-                            : (10000 - effectivePriceMultiplier) * (resellerBuyPrice - reducedSecondaryPrice)
+                            : (HUNDRED_PERCENT - effectivePriceMultiplier) * (resellerBuyPrice - reducedSecondaryPrice)
                     ) /
-                    10000;
+                    HUNDRED_PERCENT;
 
                 resellerBuyPrice = price;
             }
@@ -341,7 +341,7 @@ library FundsLib {
         }
 
         // protocolFee and sellerRoyalties can be multiplied by effectivePriceMultiplier just at the end
-        protocolFee = (protocolFee * effectivePriceMultiplier) / 10000;
+        protocolFee = (protocolFee * effectivePriceMultiplier) / HUNDRED_PERCENT;
         sellerRoyalties = sellerRoyalties;
     }
 
@@ -562,10 +562,10 @@ library FundsLib {
         BosonTypes.RoyaltyInfo storage _royaltyInfo = _offer.royaltyInfo[_royaltyInfoIndex];
         uint256 len = _royaltyInfo.recipients.length;
         uint256 totalAmount;
-        uint256 effectivePrice = (_price * _effectivePriceMultiplier) / 10000;
+        uint256 effectivePrice = (_price * _effectivePriceMultiplier) / HUNDRED_PERCENT;
         for (uint256 i = 0; i < len; ) {
             address payable recipient = _royaltyInfo.recipients[i];
-            uint256 amount = (_royaltyInfo.bps[i] * effectivePrice) / 10000;
+            uint256 amount = (_royaltyInfo.bps[i] * effectivePrice) / HUNDRED_PERCENT;
             totalAmount += amount;
             if (recipient == address(0)) {
                 // goes to seller's treasury
@@ -581,6 +581,6 @@ library FundsLib {
         }
 
         // if there is a remainder due to rounding, it goes to the seller's treasury
-        sellerRoyalties += (_effectivePriceMultiplier * _escrowedRoyaltyAmount) / 10000 - totalAmount;
+        sellerRoyalties += (_effectivePriceMultiplier * _escrowedRoyaltyAmount) / HUNDRED_PERCENT - totalAmount;
     }
 }
