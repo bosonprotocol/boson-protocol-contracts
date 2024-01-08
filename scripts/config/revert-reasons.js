@@ -134,6 +134,7 @@ exports.RevertReasons = {
   EXCHANGE_IS_NOT_IN_A_FINAL_STATE: "ExchangeIsNotInAFinalState",
   INVALID_RANGE_LENGTH: "InvalidRangeLength",
   EXCHANGE_ALREADY_EXISTS: "ExchangeAlreadyExists",
+  INVALID_TARGET_EXCHANGE_STATE: "InvalidTargeExchangeState",
 
   // Voucher related
   EXCHANGE_ID_IN_RESERVED_RANGE: "ExchangeIdInReservedRange",
@@ -190,6 +191,7 @@ exports.RevertReasons = {
   DISPUTE_STILL_VALID: "DisputeStillValid",
   INVALID_DISPUTE_TIMEOUT: "InvalidDisputeTimeout",
   ESCALATION_NOT_ALLOWED: "EscalationNotAllowed",
+  INVALID_TARGET_DISPUTE_STATE: "InvalidTargeDisputeState",
 
   // Config related
   FEE_PERCENTAGE_INVALID: "InvalidFeePercentage",

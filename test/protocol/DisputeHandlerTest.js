@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { ZeroAddress, provider, zeroPadBytes, MaxUint256, parseUnits, getContractAt } = ethers;
+const { ZeroAddress, provider, zeroPadBytes, MaxUint256, parseUnits, getContractAt, id } = ethers;
 const { expect, assert } = require("chai");
 const Exchange = require("../../scripts/domain/Exchange");
 const Dispute = require("../../scripts/domain/Dispute");
@@ -29,6 +29,7 @@ const {
   mockBuyer,
   accountId,
 } = require("../util/mock");
+const { FacetCutAction } = require("../../scripts/util/diamond-utils.js");
 
 /**
  *  Test the Boson Dispute Handler interface
@@ -2576,6 +2577,48 @@ describe("IBosonDisputeHandler", function () {
               RevertReasons.INVALID_STATE
             );
           });
+        });
+      });
+    });
+  });
+
+  // Internal functions, tested with TestDisputeHandlerFacet
+  context("📋 Internal Dispute Handler Methods", async function () {
+    let testDisputeHandler;
+    beforeEach(async function () {
+      // Deploy test facet and cut the test functions
+      const TestDisputeHandlerFacet = await ethers.getContractFactory("TestDisputeHandlerFacet");
+      const testDisputeHandlerFacet = await TestDisputeHandlerFacet.deploy();
+      await testDisputeHandlerFacet.waitForDeployment();
+
+      const protocolDiamondAddress = await disputeHandler.getAddress();
+      const cutFacetViaDiamond = await getContractAt("DiamondCutFacet", protocolDiamondAddress);
+
+      // Define the facet cut
+      const facetCuts = [
+        {
+          facetAddress: await testDisputeHandlerFacet.getAddress(),
+          action: FacetCutAction.Add,
+          functionSelectors: [id("finalizeDispute(uint256,uint8)").slice(0, 10)],
+        },
+      ];
+
+      // Send the DiamondCut transaction
+      await cutFacetViaDiamond.diamondCut(facetCuts, ZeroAddress, "0x");
+
+      testDisputeHandler = await getContractAt("TestDisputeHandlerFacet", protocolDiamondAddress);
+    });
+
+    context("👉 finalizeDispute()", async function () {
+      const invalidFinalStates = ["Resolving", "Escalated"];
+
+      invalidFinalStates.forEach((finalState) => {
+        it(`final state is ${finalState}`, async function () {
+          const exchangeId = 1;
+
+          await expect(
+            testDisputeHandler.finalizeDispute(exchangeId, DisputeState[finalState])
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_TARGET_DISPUTE_STATE);
         });
       });
     });
