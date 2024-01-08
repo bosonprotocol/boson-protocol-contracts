@@ -147,7 +147,7 @@ contract PriceDiscoveryBase is ProtocolBase {
             if (_bosonVoucher.ownerOf(_tokenId) != address(this)) revert VoucherNotReceived();
 
             // Transfer voucher to buyer
-            _bosonVoucher.transferFrom(address(this), _buyer, _tokenId);
+            _bosonVoucher.safeTransferFrom(address(this), _buyer, _tokenId);
         }
 
         uint256 overchargedAmount = _priceDiscovery.price - actualPrice;

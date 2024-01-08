@@ -65,7 +65,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
      *   - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      *   - Received ERC20 token amount differs from the expected value
      *   - Protocol does not receive the voucher
-     *   - Transfer of voucher to the buyer fails for some reasong (e.g. buyer is contract that doesn't accept voucher)
+     *   - Transfer of voucher to the buyer fails for some reason (e.g. buyer is contract that doesn't accept voucher)
      *   - Reseller did not approve protocol to transfer exchange token in escrow
      * - Call to price discovery contract fails
      * - Protocol fee and royalties combined exceed the secondary price
