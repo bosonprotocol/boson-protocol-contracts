@@ -37,6 +37,7 @@ contract PriceDiscoveryBase is ProtocolBase {
      */
     //solhint-disable-next-line
     constructor(address _wNative, uint256 _firstExchangeId2_2_0) {
+        if (_wNative == address(0)) revert InvalidAddress();
         wNative = IWrappedNative(_wNative);
         EXCHANGE_ID_2_2_0 = _firstExchangeId2_2_0;
     }

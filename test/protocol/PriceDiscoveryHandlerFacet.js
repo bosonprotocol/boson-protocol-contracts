@@ -152,6 +152,17 @@ describe("IPriceDiscoveryHandlerFacet", function () {
     });
   });
 
+  context("📋 Constructor", async function () {
+    it("Deployment fails if wrapped native address is 0", async function () {
+      const priceDiscoveryFactory = await getContractFactory("PriceDiscoveryHandlerFacet");
+
+      await expect(priceDiscoveryFactory.deploy(ZeroAddress, 0)).to.revertedWithCustomError(
+        bosonErrors,
+        RevertReasons.INVALID_ADDRESS
+      );
+    });
+  });
+
   // All supported Price discovery methods
   context("📋 Price discovery Methods", async function () {
     beforeEach(async function () {
