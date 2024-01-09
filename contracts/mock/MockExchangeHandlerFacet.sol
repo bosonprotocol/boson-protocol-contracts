@@ -7,6 +7,7 @@ import { DisputeBase } from "../protocol/bases/DisputeBase.sol";
 import { FundsLib } from "../protocol/libs/FundsLib.sol";
 import "../domain/BosonConstants.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import { ExchangeHandlerFacet } from "../protocol/facets/ExchangeHandlerFacet.sol";
 
 /**
  * @title MockExchangeHandlerFacet
@@ -535,5 +536,26 @@ contract MockExchangeHandlerFacetWithDefect is MockExchangeHandlerFacet {
 
         // Notify watchers of state change
         emit VoucherCanceled2(exchange.offerId, _exchangeId, msgSender());
+    }
+}
+
+/**
+ * @title TestExchangeHandlerFacet
+ *
+ * @notice Extended ExchangeHandlerFacet with additional external functions for testing
+ */
+contract TestExchangeHandlerFacet is ExchangeHandlerFacet {
+    //solhint-disable-next-line
+    constructor(uint256 _firstExchangeId2_2_0) ExchangeHandlerFacet(_firstExchangeId2_2_0) {}
+
+    /**
+     * @notice Test function to test invalid final exchange state
+     *
+     * @param _exchangeId - the id of the exchange to finalize
+     * @param _targetState - the target state to which the exchange should be transitioned
+     */
+    function finalizeExchange(uint256 _exchangeId, ExchangeState _targetState) external {
+        (, Exchange storage exchange) = fetchExchange(_exchangeId);
+        finalizeExchange(exchange, _targetState);
     }
 }

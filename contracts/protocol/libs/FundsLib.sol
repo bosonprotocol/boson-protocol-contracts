@@ -342,7 +342,6 @@ library FundsLib {
 
         // protocolFee and sellerRoyalties can be multiplied by effectivePriceMultiplier just at the end
         protocolFee = (protocolFee * effectivePriceMultiplier) / 10000;
-        sellerRoyalties = sellerRoyalties;
     }
 
     /**
