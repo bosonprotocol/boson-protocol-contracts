@@ -3947,6 +3947,28 @@ describe("SellerHandler", function () {
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.RECIPIENT_NOT_UNIQUE);
           });
 
+          it("The default recipient cannot be added to the list", async function () {
+            // Make duplicate entry
+            royaltyRecipientList = new RoyaltyRecipientList([
+              new RoyaltyRecipient(ZeroAddress, "100", "duplicateDefault"),
+            ]);
+
+            // Attempt to add royalty recipients expecting revert
+            await expect(
+              accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct())
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.RECIPIENT_NOT_UNIQUE);
+          });
+
+          it("the treasury address cannot be added to the list", async function () {
+            // Make duplicate entry
+            royaltyRecipientList = new RoyaltyRecipientList([new RoyaltyRecipient(treasury, "100", "treasury")]);
+
+            // Attempt to add royalty recipients expecting revert
+            await expect(
+              accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct())
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.RECIPIENT_NOT_UNIQUE);
+          });
+
           it("some royalty percentage is above the limit", async function () {
             royaltyRecipientList.royaltyRecipients[0].minRoyaltyPercentage = "8000";
 
@@ -4111,6 +4133,36 @@ describe("SellerHandler", function () {
 
           it("some recipient is not unique - two txs", async function () {
             royaltyRecipientListUpdates.royaltyRecipients[0].wallet = other3.address; // address was already added to different recipientid
+
+            // Attempt to update royalty recipients expecting revert
+            await expect(
+              accountHandler
+                .connect(admin)
+                .updateRoyaltyRecipients(seller.id, royaltyRecipientIds, royaltyRecipientListUpdates.toStruct())
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.RECIPIENT_NOT_UNIQUE);
+          });
+
+          it("the default recipient cannot be added to the list", async function () {
+            royaltyRecipientListUpdates = new RoyaltyRecipientList([
+              new RoyaltyRecipient(ZeroAddress, "100", "duplicateDefault"),
+            ]);
+
+            royaltyRecipientIds = [2];
+
+            // Attempt to update royalty recipients expecting revert
+            await expect(
+              accountHandler
+                .connect(admin)
+                .updateRoyaltyRecipients(seller.id, royaltyRecipientIds, royaltyRecipientListUpdates.toStruct())
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.RECIPIENT_NOT_UNIQUE);
+          });
+
+          it("the treasury address cannot be added to the list", async function () {
+            royaltyRecipientListUpdates = new RoyaltyRecipientList([
+              new RoyaltyRecipient(treasury.address, "100", "treasury"),
+            ]);
+
+            royaltyRecipientIds = [1];
 
             // Attempt to update royalty recipients expecting revert
             await expect(

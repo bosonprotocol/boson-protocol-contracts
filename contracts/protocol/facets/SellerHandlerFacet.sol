@@ -490,6 +490,7 @@ contract SellerHandlerFacet is SellerBase {
             // No uniqueness check for externalIds since they are not used in the protocol
             if (
                 _royaltyRecipients[i].wallet == treasury ||
+                _royaltyRecipients[i].wallet == address(0) ||
                 lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][_royaltyRecipients[i].wallet] != 0
             ) revert RecipientNotUnique();
 
@@ -547,7 +548,6 @@ contract SellerHandlerFacet is SellerBase {
         if (_royaltyRecipientIds.length != _royaltyRecipients.length) revert ArrayLengthMismatch();
 
         RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
-        // uint256 royaltyRecipientIdsLength = _royaltyRecipientIds.length; // TODO can be optimized?
         uint256 royaltyRecipientsLength = royaltyRecipients.length;
         for (uint256 i = 0; i < _royaltyRecipientIds.length; ) {
             uint256 royaltyRecipientId = _royaltyRecipientIds[i];
@@ -564,6 +564,8 @@ contract SellerHandlerFacet is SellerBase {
                 ];
 
                 if (royaltyRecipientIndex == 0) {
+                    if (_royaltyRecipients[i].wallet == address(0)) revert RecipientNotUnique();
+
                     // update index
                     lookups.royaltyRecipientIndexBySellerAndRecipient[_sellerId][_royaltyRecipients[i].wallet] =
                         royaltyRecipientId +
