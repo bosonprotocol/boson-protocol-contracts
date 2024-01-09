@@ -28,14 +28,8 @@ contract BuyerBase is ProtocolBase, IBosonAccountEvents {
         //Check for zero address
         if (_buyer.wallet == address(0)) revert InvalidAddress();
 
-        //Check active is not set to false
-        if (!_buyer.active) revert MustBeActive();
-
         // Get the next account id and increment the counter
         uint256 buyerId = protocolCounters().nextAccountId++;
-
-        //check that the wallet address is unique to one buyer id
-        if (protocolLookups().buyerIdByWallet[_buyer.wallet] != 0) revert BuyerAddressMustBeUnique();
 
         _buyer.id = buyerId;
         storeBuyer(_buyer);

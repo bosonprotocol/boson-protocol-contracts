@@ -34,6 +34,12 @@ contract BuyerHandlerFacet is BuyerBase {
      * @param _buyer - the fully populated struct with buyer id set to 0x0
      */
     function createBuyer(Buyer memory _buyer) external buyersNotPaused nonReentrant {
+        //Check active is not set to false
+        if (!_buyer.active) revert MustBeActive();
+
+        //check that the wallet address is unique to one buyer id
+        if (protocolLookups().buyerIdByWallet[_buyer.wallet] != 0) revert BuyerAddressMustBeUnique();
+
         createBuyerInternal(_buyer);
     }
 
