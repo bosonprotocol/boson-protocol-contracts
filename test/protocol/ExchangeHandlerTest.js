@@ -8132,4 +8132,45 @@ describe("IBosonExchangeHandler", function () {
       });
     });
   });
+
+  // Internal functions, tested with TestExchangeHandlerFacet
+  context("📋 Internal Exchange Handler Methods", async function () {
+    let testExchangeHandler;
+    beforeEach(async function () {
+      // Deploy test facet and cut the test functions
+      const TestExchangeHandlerFacet = await ethers.getContractFactory("TestExchangeHandlerFacet");
+      const testExchangeHandlerFacet = await TestExchangeHandlerFacet.deploy(0);
+      await testExchangeHandlerFacet.waitForDeployment();
+
+      const cutFacetViaDiamond = await getContractAt("DiamondCutFacet", protocolDiamondAddress);
+
+      // Define the facet cut
+      const facetCuts = [
+        {
+          facetAddress: await testExchangeHandlerFacet.getAddress(),
+          action: FacetCutAction.Add,
+          functionSelectors: [id("finalizeExchange(uint256,uint8)").slice(0, 10)],
+        },
+      ];
+
+      // Send the DiamondCut transaction
+      await cutFacetViaDiamond.connect(deployer).diamondCut(facetCuts, ZeroAddress, "0x");
+
+      testExchangeHandler = await getContractAt("TestExchangeHandlerFacet", protocolDiamondAddress);
+    });
+
+    context("👉 finalizeExchange()", async function () {
+      const invalidFinalStates = ["Committed", "Redeemed", "Disputed"];
+
+      invalidFinalStates.forEach((finalState) => {
+        it(`final state is ${finalState}`, async function () {
+          const exchangeId = 1;
+
+          await expect(
+            testExchangeHandler.finalizeExchange(exchangeId, ExchangeState[finalState])
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_TARGET_EXCHANGE_STATE);
+        });
+      });
+    });
+  });
 });

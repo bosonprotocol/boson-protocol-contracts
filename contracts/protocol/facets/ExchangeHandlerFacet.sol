@@ -947,11 +947,11 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler, 
      */
     function finalizeExchange(Exchange storage _exchange, ExchangeState _targetState) internal {
         // Make sure target state is a final state
-        require(
-            _targetState == ExchangeState.Completed ||
-                _targetState == ExchangeState.Revoked ||
-                _targetState == ExchangeState.Canceled
-        );
+        if (
+            _targetState != ExchangeState.Completed &&
+            _targetState != ExchangeState.Revoked &&
+            _targetState != ExchangeState.Canceled
+        ) revert InvalidTargeExchangeState();
 
         // Set the exchange state to the target state
         _exchange.state = _targetState;
