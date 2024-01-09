@@ -706,6 +706,55 @@ describe("IBosonSequentialCommitHandler", function () {
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.VOUCHER_NOT_RECEIVED);
             });
+
+            context("Buyer rejects the voucher", async function () {
+              it("Buyer contract does not implement the receiver", async function () {
+                const [buyerContract] = await deployMockTokens(["Foreign20"]);
+
+                // Sequential commit to offer, expect revert
+                await expect(
+                  sequentialCommitHandler
+                    .connect(rando)
+                    .sequentialCommitToOffer(await buyerContract.getAddress(), tokenId, priceDiscovery, {
+                      value: price2,
+                    })
+                ).to.revertedWith(RevertReasons.ERC721_NON_RECEIVER);
+              });
+
+              it("Buyer contract reverts with custom error", async function () {
+                const buyerContractFactory = await getContractFactory("BuyerContract");
+                const buyerContract = await buyerContractFactory.deploy();
+                await buyerContract.waitForDeployment();
+
+                await buyerContract.setFailType(1); // Type 1 = revert with own error
+
+                // Sequential commit to offer, expect revert
+                await expect(
+                  sequentialCommitHandler
+                    .connect(rando)
+                    .sequentialCommitToOffer(await buyerContract.getAddress(), tokenId, priceDiscovery, {
+                      value: price2,
+                    })
+                ).to.revertedWith(RevertReasons.BUYER_CONTRACT_REVERT);
+              });
+
+              it("Buyer contract returns the wrong selector", async function () {
+                const buyerContractFactory = await getContractFactory("BuyerContract");
+                const buyerContract = await buyerContractFactory.deploy();
+                await buyerContract.waitForDeployment();
+
+                await buyerContract.setFailType(2); // Type 2 = wrong selector
+
+                // Sequential commit to offer, expect revert
+                await expect(
+                  sequentialCommitHandler
+                    .connect(rando)
+                    .sequentialCommitToOffer(await buyerContract.getAddress(), tokenId, priceDiscovery, {
+                      value: price2,
+                    })
+                ).to.revertedWith(RevertReasons.ERC721_NON_RECEIVER);
+              });
+            });
           });
         });
 

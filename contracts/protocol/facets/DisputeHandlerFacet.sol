@@ -439,6 +439,9 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         DisputeState _targetState,
         uint256 _buyerPercent
     ) internal disputesNotPaused {
+        if (_targetState == DisputeState.Escalated || _targetState == DisputeState.Resolving)
+            revert InvalidTargeDisputeState();
+
         // update dispute and exchange
         _disputeDates.finalized = block.timestamp;
         _dispute.state = _targetState;
