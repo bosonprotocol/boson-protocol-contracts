@@ -224,4 +224,6 @@ exports.RevertReasons = {
   FEE_AMOUNT_TOO_HIGH: "FeeAmountTooHigh",
   INVALID_PRICE_DISCOVERY: "InvalidPriceDiscovery",
   INVALID_CONDUIT_ADDRESS: "InvalidConduitAddress",
+  TOKEN_ID_MANDATORY: "TokenIdMandatory",
+  NEGATIVE_PRICE_NOT_ALLOWED: "NegativePriceNotAllowed",
 };
