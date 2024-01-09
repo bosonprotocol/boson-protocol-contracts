@@ -313,7 +313,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     }
 
     /**
-     * @notice Internal fucntion to void a given offer, used by both single and batch void functions.
+     * @notice Internal function to void a given offer, used by both single and batch void functions.
      * Existing exchanges are not affected.
      * No further vouchers can be issued against a voided offer.
      *
