@@ -3885,7 +3885,72 @@ describe("SellerHandler", function () {
           );
           expect(returnedRoyaltyRecipientList).to.deep.equal(
             expectedRoyaltyRecipientList,
-            "Default royalty recipient mismatch"
+            "Royalty recipient mismatch"
+          );
+        });
+
+        it("correctly handle treasury during the seller update", async function () {
+          // Add royalty recipients
+          await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+
+          // Update the seller, so one of the recipients is removed
+          seller.treasury = other1.address;
+          await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+
+          // other1 is not a recipient anymore
+          let returnedRoyaltyRecipientList = RoyaltyRecipientList.fromStruct(
+            await accountHandler.connect(rando).getRoyaltyRecipients(seller.id)
+          );
+
+          royaltyRecipientList = new RoyaltyRecipientList([
+            new RoyaltyRecipient(other3.address, "300", "other3"),
+            new RoyaltyRecipient(other2.address, "200", "other2"),
+          ]);
+
+          expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+            new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+            ...royaltyRecipientList.royaltyRecipients,
+          ]);
+
+          expect(returnedRoyaltyRecipientList).to.deep.equal(
+            expectedRoyaltyRecipientList,
+            "Royalty recipient mismatch"
+          );
+
+          // other 1 now cannot be added as another recipient
+          royaltyRecipientList = new RoyaltyRecipientList([new RoyaltyRecipient(other1.address, "100", "other1")]);
+
+          // Adding other 1 should fail
+          await expect(
+            accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct())
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.RECIPIENT_NOT_UNIQUE);
+
+          // Update the seller again, so other 1 can later be added as a recipient
+          seller.treasury = rando.address;
+          await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
+
+          // Now adding should succeed
+          await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+
+          // other1 is back on the list
+          returnedRoyaltyRecipientList = RoyaltyRecipientList.fromStruct(
+            await accountHandler.connect(rando).getRoyaltyRecipients(seller.id)
+          );
+
+          royaltyRecipientList = new RoyaltyRecipientList([
+            new RoyaltyRecipient(other3.address, "300", "other3"),
+            new RoyaltyRecipient(other2.address, "200", "other2"),
+            new RoyaltyRecipient(other1.address, "100", "other1"),
+          ]);
+
+          expectedRoyaltyRecipientList = new RoyaltyRecipientList([
+            new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage, DEFAULT_ROYALTY_RECIPIENT),
+            ...royaltyRecipientList.royaltyRecipients,
+          ]);
+
+          expect(returnedRoyaltyRecipientList).to.deep.equal(
+            expectedRoyaltyRecipientList,
+            "Royalty recipient mismatch"
           );
         });
 
