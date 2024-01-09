@@ -21,24 +21,17 @@ contract PriceDiscoveryBase is ProtocolBase {
     using SafeERC20 for IERC20;
 
     IWrappedNative internal immutable wNative;
-    uint256 private immutable EXCHANGE_ID_2_2_0; // solhint-disable-line
 
     /**
      * @notice
      * For offers with native exchange token, it is expected the the price discovery contracts will
      * operate with wrapped native token. Set the address of the wrapped native token in the constructor.
      *
-     * After v2.2.0, token ids are derived from offerId and exchangeId.
-     * EXCHANGE_ID_2_2_0 is the first exchange id to use for 2.2.0.
-     * Set EXCHANGE_ID_2_2_0 in the constructor.
-     *
      * @param _wNative - the address of the wrapped native token
-     * @param _firstExchangeId2_2_0 - the first exchange id to use for 2.2.0
      */
     //solhint-disable-next-line
-    constructor(address _wNative, uint256 _firstExchangeId2_2_0) {
+    constructor(address _wNative) {
         wNative = IWrappedNative(_wNative);
-        EXCHANGE_ID_2_2_0 = _firstExchangeId2_2_0;
     }
 
     /**
@@ -147,7 +140,7 @@ contract PriceDiscoveryBase is ProtocolBase {
             if (_bosonVoucher.ownerOf(_tokenId) != address(this)) revert VoucherNotReceived();
 
             // Transfer voucher to buyer
-            _bosonVoucher.transferFrom(address(this), _buyer, _tokenId);
+            _bosonVoucher.safeTransferFrom(address(this), _buyer, _tokenId);
         }
 
         uint256 overchargedAmount = _priceDiscovery.price - actualPrice;

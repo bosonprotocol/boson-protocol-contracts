@@ -214,6 +214,8 @@ interface BosonErrors {
     error ExchangeAlreadyExists();
     // Range length is 0, is more than quantity available or it would cause an overflow
     error InvalidRangeLength();
+    // Exchange is being finalized into an invalid state
+    error InvalidTargeExchangeState();
 
     // Twin related
     // Twin does not exist
@@ -300,6 +302,8 @@ interface BosonErrors {
     error InvalidDisputeTimeout();
     // Absolute zero offers cannot be escalated
     error EscalationNotAllowed();
+    // Dispute is being finalized into an invalid state
+    error InvalidTargeDisputeState();
 
     // Config related
     // Percentage exceeds 100%
