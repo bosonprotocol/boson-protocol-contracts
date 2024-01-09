@@ -238,7 +238,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         uint8 _sigV
     ) external override nonReentrant {
         // buyer should get at most 100%
-        if (_buyerPercent > 10000) revert InvalidBuyerPercent();
+        if (_buyerPercent > HUNDRED_PERCENT) revert InvalidBuyerPercent();
 
         // Get the exchange, should be in disputed state
         (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
@@ -340,7 +340,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      */
     function decideDispute(uint256 _exchangeId, uint256 _buyerPercent) external override nonReentrant {
         // Buyer should get at most 100%
-        if (_buyerPercent > 10000) revert InvalidBuyerPercent();
+        if (_buyerPercent > HUNDRED_PERCENT) revert InvalidBuyerPercent();
 
         // Make sure the dispute is valid and the caller is the dispute resolver
         (Exchange storage exchange, Dispute storage dispute, DisputeDates storage disputeDates) = disputeResolverChecks(
