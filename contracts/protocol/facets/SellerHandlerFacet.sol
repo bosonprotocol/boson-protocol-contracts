@@ -527,7 +527,7 @@ contract SellerHandlerFacet is SellerBase {
      *  - Some royalty percentage is above the limit
      *
      * @param _sellerId - seller id
-     * @param _royaltyRecipientIds - list of royalty recipient ids to update
+     * @param _royaltyRecipientIds - list of royalty recipient ids to update. Ids are zero based and corresponds to ids returned by `getRoyaltyRecipients`.
      * @param _royaltyRecipients - list of new royalty recipients corresponding to ids
      */
     function updateRoyaltyRecipients(
@@ -605,7 +605,7 @@ contract SellerHandlerFacet is SellerBase {
      *  - Seller tries to remove the default recipient
      *
      * @param _sellerId - seller id
-     * @param _royaltyRecipientIds - list of royalty recipient ids to remove
+     * @param _royaltyRecipientIds - list of royalty recipient ids to remove. Ids are zero based and corresponds to ids returned by `getRoyaltyRecipients`.
      */
     function removeRoyaltyRecipients(
         uint256 _sellerId,
