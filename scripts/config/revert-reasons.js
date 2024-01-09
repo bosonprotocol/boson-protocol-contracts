@@ -175,6 +175,8 @@ exports.RevertReasons = {
   SAFE_ERC20_LOW_LEVEL_CALL: "SafeERC20: low-level call failed",
   SAFE_ERC20_OPERATION_FAILED: "SafeERC20: ERC20 operation did not succeed",
   INITIALIZABLE_ALREADY_INITIALIZED: "Initializable: contract is already initialized",
+  ERC721_NON_RECEIVER: "ERC721: transfer to non ERC721Receiver implementer",
+  BUYER_CONTRACT_REVERT: "BuyerContract: revert",
 
   // Meta-Transactions related
   NONCE_USED_ALREADY: "NonceUsedAlready",
