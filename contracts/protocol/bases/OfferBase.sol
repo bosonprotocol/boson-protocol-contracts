@@ -191,7 +191,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                         disputeResolutionTerms.feeAmount = feeAmount;
                         disputeResolutionTerms.buyerEscalationDeposit =
                             (feeAmount * fees.buyerEscalationDepositPercentage) /
-                            10000;
+                            HUNDRED_PERCENT;
                     }
                     protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
                 }
@@ -236,9 +236,9 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                 uint256 protocolFee = getProtocolFee(_offer.exchangeToken, offerPrice);
 
                 // Calculate the agent fee amount
-                uint256 agentFeeAmount = (agent.feePercentage * offerPrice) / 10000;
+                uint256 agentFeeAmount = (agent.feePercentage * offerPrice) / HUNDRED_PERCENT;
 
-                uint256 totalOfferFeeLimit = (limits.maxTotalOfferFeePercentage * offerPrice) / 10000;
+                uint256 totalOfferFeeLimit = (limits.maxTotalOfferFeePercentage * offerPrice) / HUNDRED_PERCENT;
 
                 // Sum of agent fee amount and protocol fee amount should be <= offer fee limit and less that fee limit set by seller
                 uint256 totalFeeAmount = agentFeeAmount + protocolFee;
