@@ -156,7 +156,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
     it("Deployment fails if wrapped native address is 0", async function () {
       const priceDiscoveryFactory = await getContractFactory("PriceDiscoveryHandlerFacet");
 
-      await expect(priceDiscoveryFactory.deploy(ZeroAddress, 0)).to.revertedWithCustomError(
+      await expect(priceDiscoveryFactory.deploy(ZeroAddress)).to.revertedWithCustomError(
         bosonErrors,
         RevertReasons.INVALID_ADDRESS
       );

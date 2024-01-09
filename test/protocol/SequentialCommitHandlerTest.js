@@ -155,7 +155,7 @@ describe("IBosonSequentialCommitHandler", function () {
     it("Deployment fails if wrapped native address is 0", async function () {
       const sequentialCommitFactory = await getContractFactory("SequentialCommitHandlerFacet");
 
-      await expect(sequentialCommitFactory.deploy(ZeroAddress, 0)).to.revertedWithCustomError(
+      await expect(sequentialCommitFactory.deploy(ZeroAddress)).to.revertedWithCustomError(
         bosonErrors,
         RevertReasons.INVALID_ADDRESS
       );
