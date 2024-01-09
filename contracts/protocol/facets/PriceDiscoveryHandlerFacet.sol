@@ -122,7 +122,7 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
         {
             // Calculate royalties
             (RoyaltyInfo storage royaltyInfo, uint256 royaltyInfoIndex, ) = fetchRoyalties(offerId, false);
-            uint256 royaltyAmount = (getTotalRoyaltyPercentage(royaltyInfo.bps) * actualPrice) / 10000;
+            uint256 royaltyAmount = (getTotalRoyaltyPercentage(royaltyInfo.bps) * actualPrice) / HUNDRED_PERCENT;
 
             // Verify that fees and royalties are not higher than the price.
             if (protocolFeeAmount + royaltyAmount > actualPrice) revert FeeAmountTooHigh();
