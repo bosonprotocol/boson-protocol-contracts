@@ -134,9 +134,12 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                     revert FeeAmountTooHigh();
                 }
 
-                // Get price paid by current buyer
-                uint256 len = exchangeCosts.length;
-                uint256 currentPrice = len == 0 ? offer.price : exchangeCosts[len - 1].price;
+                uint256 currentPrice;
+                unchecked {
+                    // Get price paid by current buyer
+                    uint256 len = exchangeCosts.length;
+                    currentPrice = len == 0 ? offer.price : exchangeCosts[len - 1].price;
+                }
 
                 // Calculate the minimal amount to be kept in the escrow
                 escrowAmount =
@@ -151,7 +154,10 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
             }
 
             // Make sure enough get escrowed
-            payout = exchangeCost.price - escrowAmount;
+            // Escrow amount is guaranteed to be less than or equal to price
+            unchecked {
+                payout = exchangeCost.price - escrowAmount;
+            }
 
             if (_priceDiscovery.side == Side.Ask) {
                 if (escrowAmount > 0) {
