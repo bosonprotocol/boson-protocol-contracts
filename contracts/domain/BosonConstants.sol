@@ -11,6 +11,9 @@ bytes32 constant CLIENT = keccak256("CLIENT"); // Role for clients of the Protoc
 bytes32 constant UPGRADER = keccak256("UPGRADER"); // Role for performing contract and config upgrades
 bytes32 constant FEE_COLLECTOR = keccak256("FEE_COLLECTOR"); // Role for collecting fees from the protocol
 
+// Generic
+uint256 constant HUNDRED_PERCENT = 10000; // 100% in basis points
+
 // Pause Handler
 uint256 constant ALL_REGIONS_MASK = (1 << (uint256(type(BosonTypes.PausableRegion).max) + 1)) - 1;
 
