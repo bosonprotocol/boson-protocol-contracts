@@ -172,6 +172,8 @@ contract SellerHandlerFacet is SellerBase {
                             1;
                     }
                     royaltyRecipients.pop();
+
+                    delete royaltyRecipientIndexBySellerAndRecipient[_seller.treasury];
                 }
 
                 // Update treasury
