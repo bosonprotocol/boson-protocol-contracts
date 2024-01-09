@@ -24,15 +24,10 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
      * For offers with native exchange token, it is expected the the price discovery contracts will
      * operate with wrapped native token. Set the address of the wrapped native token in the constructor.
      *
-     * After v2.2.0, token ids are derived from offerId and exchangeId.
-     * EXCHANGE_ID_2_2_0 is the first exchange id to use for 2.2.0.
-     * Set EXCHANGE_ID_2_2_0 in the constructor.
-     *
      * @param _wNative - the address of the wrapped native token
-     * @param _firstExchangeId2_2_0 - the first exchange id to use for 2.2.0
      */
     //solhint-disable-next-line
-    constructor(address _wNative, uint256 _firstExchangeId2_2_0) PriceDiscoveryBase(_wNative, _firstExchangeId2_2_0) {}
+    constructor(address _wNative) PriceDiscoveryBase(_wNative) {}
 
     /**
      * @notice Initializes facet.
@@ -65,7 +60,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
      *   - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      *   - Received ERC20 token amount differs from the expected value
      *   - Protocol does not receive the voucher
-     *   - Transfer of voucher to the buyer fails for some reasong (e.g. buyer is contract that doesn't accept voucher)
+     *   - Transfer of voucher to the buyer fails for some reason (e.g. buyer is contract that doesn't accept voucher)
      *   - Reseller did not approve protocol to transfer exchange token in escrow
      * - Call to price discovery contract fails
      * - Protocol fee and royalties combined exceed the secondary price
@@ -139,9 +134,12 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                     revert FeeAmountTooHigh();
                 }
 
-                // Get price paid by current buyer
-                uint256 len = exchangeCosts.length;
-                uint256 currentPrice = len == 0 ? offer.price : exchangeCosts[len - 1].price;
+                uint256 currentPrice;
+                unchecked {
+                    // Get price paid by current buyer
+                    uint256 len = exchangeCosts.length;
+                    currentPrice = len == 0 ? offer.price : exchangeCosts[len - 1].price;
+                }
 
                 // Calculate the minimal amount to be kept in the escrow
                 escrowAmount =
@@ -156,7 +154,10 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
             }
 
             // Make sure enough get escrowed
-            payout = exchangeCost.price - escrowAmount;
+            // Escrow amount is guaranteed to be less than or equal to price
+            unchecked {
+                payout = exchangeCost.price - escrowAmount;
+            }
 
             if (_priceDiscovery.side == Side.Ask) {
                 if (escrowAmount > 0) {
@@ -179,7 +180,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                 }
 
                 if (payout > 0) {
-                    FundsLib.transferFundsFromProtocol(exchangeToken, payable(seller), payout); // also emits FundsWithdrawn
+                    FundsLib.transferFundsFromProtocol(exchangeToken, payable(seller), payout);
                 }
             }
         }

@@ -1222,6 +1222,127 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               expect(voucher.committedDate).to.equal(timestamp);
             });
           });
+
+          context("💔 Revert Reasons", async function () {
+            let price;
+            let wrappedBosonVoucher;
+            beforeEach(async function () {
+              // Deploy wrapped voucher contract
+              const wrappedBosonVoucherFactory = await ethers.getContractFactory("MockWrapper");
+              wrappedBosonVoucher = await wrappedBosonVoucherFactory
+                .connect(assistant)
+                .deploy(
+                  await bosonVoucher.getAddress(),
+                  await mockAuction.getAddress(),
+                  await exchangeHandler.getAddress(),
+                  await weth.getAddress()
+                );
+
+              // Price discovery data
+              price = 10n;
+              const calldata = wrappedBosonVoucher.interface.encodeFunctionData("unwrap", [tokenId]);
+              priceDiscovery = new PriceDiscovery(
+                price,
+                Side.Wrapper,
+                await wrappedBosonVoucher.getAddress(),
+                await wrappedBosonVoucher.getAddress(),
+                calldata
+              );
+            });
+
+            it("Committing with offer id", async function () {
+              const tokenIdOrOfferId = offer.id;
+
+              // Attempt to commit, expecting revert
+              await expect(
+                priceDiscoveryHandler
+                  .connect(assistant)
+                  .commitToPriceDiscoveryOffer(buyer.address, tokenIdOrOfferId, priceDiscovery)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_ID_MANDATORY);
+            });
+
+            it("Price discovery is not the owner", async function () {
+              // Attempt to commit, expecting revert
+              await expect(
+                priceDiscoveryHandler
+                  .connect(assistant)
+                  .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_VOUCHER_HOLDER);
+            });
+
+            context("Malfunctioning wrapper", async function () {
+              beforeEach(async function () {
+                // 3. Wrap voucher
+                await bosonVoucher.connect(assistant).setApprovalForAll(await wrappedBosonVoucher.getAddress(), true);
+                await wrappedBosonVoucher.connect(assistant).wrap(tokenId);
+
+                // 4. Create an auction
+                const tokenContract = await wrappedBosonVoucher.getAddress();
+                const curator = assistant.address;
+                const auctionCurrency = offer.exchangeToken;
+
+                await mockAuction.connect(assistant).createAuction(tokenId, tokenContract, auctionCurrency, curator);
+
+                auctionId = 0;
+
+                await mockAuction.connect(buyer).createBid(auctionId, price, { value: price });
+
+                // 6. End auction
+                await getCurrentBlockAndSetTimeForward(oneWeek);
+                await mockAuction.connect(assistant).endAuction(auctionId);
+
+                expect(await wrappedBosonVoucher.ownerOf(tokenId)).to.equal(buyer.address);
+                expect(await weth.balanceOf(await wrappedBosonVoucher.getAddress())).to.equal(price);
+              });
+
+              it("Wrapper sends some ether", async function () {
+                // send some ether to wrapper
+                await wrappedBosonVoucher.topUp({ value: parseUnits("1", "ether") });
+
+                // Attempt to commit, expecting revert
+                await expect(
+                  priceDiscoveryHandler
+                    .connect(assistant)
+                    .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.NATIVE_NOT_ALLOWED);
+              });
+
+              it("Price mismatch", async function () {
+                priceDiscovery.price += 10n;
+
+                // Attempt to commit, expecting revert
+                await expect(
+                  priceDiscoveryHandler
+                    .connect(assistant)
+                    .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.PRICE_TOO_LOW);
+              });
+
+              it("Negative price", async function () {
+                // Deposit some weth to the protocol
+                const wethAddress = await weth.getAddress();
+                await weth.connect(assistant).deposit({ value: parseUnits("1", "ether") });
+                await weth.connect(assistant).approve(await fundsHandler.getAddress(), parseUnits("1", "ether"));
+                await fundsHandler.connect(assistant).depositFunds(seller.id, wethAddress, parseUnits("1", "ether"));
+
+                const calldata = weth.interface.encodeFunctionData("transfer", [
+                  rando.address,
+                  parseUnits("1", "ether"),
+                ]);
+                priceDiscovery = new PriceDiscovery(price, Side.Wrapper, wethAddress, wethAddress, calldata);
+
+                // Transfer the voucher to weth to pass the "is owner" check
+                await bosonVoucher.connect(assistant).transferFrom(assistant.address, wethAddress, tokenId);
+
+                // Attempt to commit, expecting revert
+                await expect(
+                  priceDiscoveryHandler
+                    .connect(assistant)
+                    .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.NEGATIVE_PRICE_NOT_ALLOWED);
+              });
+            });
+          });
         });
       });
     });
