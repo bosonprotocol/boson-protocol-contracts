@@ -496,6 +496,7 @@ contract SellerHandlerFacet is SellerBase {
             // No uniqueness check for externalIds since they are not used in the protocol
             if (
                 _royaltyRecipients[i].wallet == treasury ||
+                _royaltyRecipients[i].wallet == address(0) ||
                 royaltyRecipientIndexByRecipient[_royaltyRecipients[i].wallet] != 0
             ) revert RecipientNotUnique();
 
@@ -530,7 +531,7 @@ contract SellerHandlerFacet is SellerBase {
      *  - Some royalty percentage is above the limit
      *
      * @param _sellerId - seller id
-     * @param _royaltyRecipientIds - list of royalty recipient ids to update
+     * @param _royaltyRecipientIds - list of royalty recipient ids to update. Ids are zero based and corresponds to ids returned by `getRoyaltyRecipients`.
      * @param _royaltyRecipients - list of new royalty recipients corresponding to ids
      */
     function updateRoyaltyRecipients(
@@ -551,7 +552,6 @@ contract SellerHandlerFacet is SellerBase {
         if (_royaltyRecipientIds.length != _royaltyRecipients.length) revert ArrayLengthMismatch();
 
         RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
-        // uint256 royaltyRecipientIdsLength = _royaltyRecipientIds.length; // TODO can be optimized?
         uint256 royaltyRecipientsLength = royaltyRecipients.length;
         for (uint256 i = 0; i < _royaltyRecipientIds.length; ) {
             uint256 royaltyRecipientId = _royaltyRecipientIds[i];
@@ -570,6 +570,8 @@ contract SellerHandlerFacet is SellerBase {
                 uint256 royaltyRecipientIndex = royaltyRecipientIndexByRecipient[_royaltyRecipients[i].wallet];
 
                 if (royaltyRecipientIndex == 0) {
+                    if (_royaltyRecipients[i].wallet == address(0)) revert RecipientNotUnique();
+
                     // update index
                     royaltyRecipientIndexByRecipient[_royaltyRecipients[i].wallet] = royaltyRecipientId + 1;
                     delete royaltyRecipientIndexByRecipient[royaltyRecipients[royaltyRecipientId].wallet];
@@ -605,7 +607,7 @@ contract SellerHandlerFacet is SellerBase {
      *  - Seller tries to remove the default recipient
      *
      * @param _sellerId - seller id
-     * @param _royaltyRecipientIds - list of royalty recipient ids to remove
+     * @param _royaltyRecipientIds - list of royalty recipient ids to remove. Ids are zero based and corresponds to ids returned by `getRoyaltyRecipients`.
      */
     function removeRoyaltyRecipients(
         uint256 _sellerId,
