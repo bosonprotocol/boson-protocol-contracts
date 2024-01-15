@@ -8,8 +8,7 @@ import { IWrappedNative } from "../../interfaces/IWrappedNative.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
-import { Address } from "@openzeppelin/contracts/utils/Address.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { BosonPriceDiscovery } from "./../clients/priceDiscovery/BosonPriceDiscovery.sol";
 
 /**
  * @title PriceDiscoveryBase
@@ -17,10 +16,8 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
  * @dev Provides methods for fulfiling orders on external price discovery contracts.
  */
 contract PriceDiscoveryBase is ProtocolBase {
-    using Address for address;
-    using SafeERC20 for IERC20;
-
     IWrappedNative internal immutable wNative;
+    BosonPriceDiscovery internal immutable bosonPriceDiscovery; // make interface
 
     /**
      * @notice
@@ -30,8 +27,9 @@ contract PriceDiscoveryBase is ProtocolBase {
      * @param _wNative - the address of the wrapped native token
      */
     //solhint-disable-next-line
-    constructor(address _wNative) {
+    constructor(address _wNative, address _bosonPriceDiscovery) {
         wNative = IWrappedNative(_wNative);
+        bosonPriceDiscovery = BosonPriceDiscovery(_bosonPriceDiscovery);
     }
 
     /**
@@ -113,42 +111,22 @@ contract PriceDiscoveryBase is ProtocolBase {
     ) internal returns (uint256 actualPrice) {
         // Transfer buyers funds to protocol
         FundsLib.validateIncomingPayment(_exchangeToken, _priceDiscovery.price);
+        FundsLib.transferFundsFromProtocol(
+            _exchangeToken,
+            payable(address(bosonPriceDiscovery)),
+            _priceDiscovery.price
+        );
+        // ^^ we could skip 1 transfer if the caller approved bosonPriceDiscovery directly
 
-        // If token is ERC20, approve price discovery contract to transfer protocol funds
-        if (_exchangeToken != address(0)) {
-            IERC20(_exchangeToken).forceApprove(_priceDiscovery.conduit, _priceDiscovery.price);
-        }
-
-        uint256 protocolBalanceBefore = getBalance(_exchangeToken, address(this));
-
-        // Call the price discovery contract
-        _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
-
-        uint256 protocolBalanceAfter = getBalance(_exchangeToken, address(this));
-        if (protocolBalanceBefore < protocolBalanceAfter) revert NegativePriceNotAllowed();
-        actualPrice = protocolBalanceBefore - protocolBalanceAfter;
-
-        // If token is ERC20, reset approval
-        if (_exchangeToken != address(0)) {
-            IERC20(_exchangeToken).forceApprove(address(_priceDiscovery.conduit), 0);
-        }
-
-        _tokenId = getAndVerifyTokenId(_tokenId);
-
-        {
-            // Make sure that the price discovery contract has transferred the voucher to the protocol
-            if (_bosonVoucher.ownerOf(_tokenId) != address(this)) revert VoucherNotReceived();
-
-            // Transfer voucher to buyer
-            _bosonVoucher.safeTransferFrom(address(this), _buyer, _tokenId);
-        }
-
-        uint256 overchargedAmount = _priceDiscovery.price - actualPrice;
-
-        if (overchargedAmount > 0) {
-            // Return the surplus to caller
-            FundsLib.transferFundsFromProtocol(_exchangeToken, payable(msgSender()), overchargedAmount);
-        }
+        return
+            bosonPriceDiscovery.fulfilAskOrder(
+                _tokenId,
+                _exchangeToken,
+                _priceDiscovery,
+                _buyer,
+                _bosonVoucher,
+                payable(msgSender())
+            );
     }
 
     /**
@@ -184,44 +162,13 @@ contract PriceDiscoveryBase is ProtocolBase {
         address sender = msgSender();
         if (_seller != sender) revert NotVoucherHolder();
 
-        // Transfer seller's voucher to protocol
-        // Don't need to use safe transfer from, since that protocol can handle the voucher
-        _bosonVoucher.transferFrom(sender, address(this), _tokenId);
-
-        // Approve conduit to transfer voucher. There is no need to reset approval afterwards, since protocol is not the voucher owner anymore
-        _bosonVoucher.approve(_priceDiscovery.conduit, _tokenId);
-        if (_exchangeToken == address(0)) _exchangeToken = address(wNative);
-
-        // Track native balance just in case if seller sends some native currency or price discovery contract does
-        // This is the balance that protocol had, before commit to offer was called
-        uint256 protocolNativeBalanceBefore = getBalance(address(0), address(this)) - msg.value;
-
-        // Get protocol balance before calling price discovery contract
-        uint256 protocolBalanceBefore = getBalance(_exchangeToken, address(this));
-
-        // Call the price discovery contract
-        _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
-
-        // Get protocol balance after calling price discovery contract
-        uint256 protocolBalanceAfter = getBalance(_exchangeToken, address(this));
-
-        // Check the native balance and return the surplus to seller
-        uint256 protocolNativeBalanceAfter = getBalance(address(0), address(this));
-        if (protocolNativeBalanceAfter > protocolNativeBalanceBefore) {
-            // Return the surplus to seller
-            FundsLib.transferFundsFromProtocol(
-                address(0),
-                payable(sender),
-                protocolNativeBalanceAfter - protocolNativeBalanceBefore
-            );
-        }
-
-        // Calculate actual price
-        if (protocolBalanceAfter < protocolBalanceBefore) revert NegativePriceNotAllowed();
-        actualPrice = protocolBalanceAfter - protocolBalanceBefore;
-
-        // Make sure that balance change is at least the expected price
-        if (actualPrice < _priceDiscovery.price) revert InsufficientValueReceived();
+        actualPrice = bosonPriceDiscovery.fulfilBidOrder(
+            _tokenId,
+            _exchangeToken,
+            _priceDiscovery,
+            _seller,
+            _bosonVoucher
+        );
 
         // Verify that token id provided by caller matches the token id that the price discovery contract has sent to buyer
         getAndVerifyTokenId(_tokenId);
@@ -254,33 +201,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         address owner = _bosonVoucher.ownerOf(_tokenId);
         if (owner != _priceDiscovery.priceDiscoveryContract) revert NotVoucherHolder();
 
-        // Check balance before calling wrapper
-        bool isNative = _exchangeToken == address(0);
-        if (isNative) _exchangeToken = address(wNative);
-        uint256 protocolBalanceBefore = getBalance(_exchangeToken, address(this));
-
-        // Track native balance just in case if seller sends some native currency.
-        // All native currency is forwarded to the wrapper, which should not return any back.
-        // If it does, we revert later in the code.
-        uint256 protocolNativeBalanceBefore = getBalance(address(0), address(this)) - msg.value;
-
-        // Call the price discovery contract
-        _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
-
-        // Check the native balance and revert if there is a surplus
-        uint256 protocolNativeBalanceAfter = getBalance(address(0), address(this));
-        if (protocolNativeBalanceAfter != protocolNativeBalanceBefore) revert NativeNotAllowed();
-
-        // Check balance after the price discovery call
-        uint256 protocolBalanceAfter = getBalance(_exchangeToken, address(this));
-
-        // Verify that actual price is within the expected range
-        if (protocolBalanceAfter < protocolBalanceBefore) revert NegativePriceNotAllowed();
-        actualPrice = protocolBalanceAfter - protocolBalanceBefore;
-
-        // when working with wrappers, price is already known, so the caller should set it exactly
-        // If protocol receive more than expected, it does not return the surplus to the caller
-        if (actualPrice != _priceDiscovery.price) revert PriceTooLow();
+        actualPrice = bosonPriceDiscovery.handleWrapper(_exchangeToken, _priceDiscovery);
 
         // Verify that token id provided by caller matches the token id that the price discovery contract has sent to buyer
         getAndVerifyTokenId(_tokenId);

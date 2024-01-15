@@ -10,7 +10,6 @@ import { BuyerBase } from "../bases/BuyerBase.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
-import { IERC721Receiver } from "../../interfaces/IERC721Receiver.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
@@ -21,7 +20,7 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol.
  */
-contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler, IERC721Receiver {
+contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
     using Address for address;
     using Address for address payable;
 
@@ -1392,25 +1391,25 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler, 
         }
     }
 
-    /**
-     * @dev See {IERC721Receiver-onERC721Received}.
-     *
-     * Always returns `IERC721Receiver.onERC721Received.selector`.
-     */
-    function onERC721Received(
-        address,
-        address,
-        uint256 _tokenId,
-        bytes calldata
-    ) public virtual override returns (bytes4) {
-        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
+    // /**
+    //  * @dev See {IERC721Receiver-onERC721Received}.
+    //  *
+    //  * Always returns `IERC721Receiver.onERC721Received.selector`.
+    //  */
+    // function onERC721Received(
+    //     address,
+    //     address,
+    //     uint256 _tokenId,
+    //     bytes calldata
+    // ) public virtual override returns (bytes4) {
+    //     ProtocolLib.ProtocolStatus storage ps = protocolStatus();
 
-        if (ps.incomingVoucherId != _tokenId || ps.incomingVoucherCloneAddress != msg.sender) {
-            revert UnexpectedERC721Received();
-        }
+    //     if (ps.incomingVoucherId != _tokenId || ps.incomingVoucherCloneAddress != msg.sender) {
+    //         revert UnexpectedERC721Received();
+    //     }
 
-        return this.onERC721Received.selector;
-    }
+    //     return this.onERC721Received.selector;
+    // }
 
     /**
      * @notice Updates NFT ranges, so it's possible to reuse the tokens in other twins and to make

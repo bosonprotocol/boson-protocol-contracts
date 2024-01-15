@@ -362,6 +362,8 @@ interface BosonErrors {
     error NegativePriceNotAllowed();
     // Price discovery did not send the voucher to the protocol
     error VoucherNotReceived();
+    // Price discovery did not send the voucher from the protocol
+    error VoucherNotTransferred();
     // Either token with wrong id received or wrong voucher contract made the transfer
     error UnexpectedERC721Received();
     // Royalty fee exceeds the price

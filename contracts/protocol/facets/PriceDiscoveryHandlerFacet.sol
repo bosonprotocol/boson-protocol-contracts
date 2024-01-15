@@ -32,7 +32,7 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
      * @param _wNative - the address of the wrapped native token
      */
     //solhint-disable-next-line
-    constructor(address _wNative) PriceDiscoveryBase(_wNative) {}
+    constructor(address _wNative, address _pdc) PriceDiscoveryBase(_wNative, _pdc) {}
 
     /**
      * @notice Facet Initializer
