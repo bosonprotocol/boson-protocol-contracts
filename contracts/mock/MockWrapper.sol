@@ -25,6 +25,7 @@ contract MockWrapper is BosonTypes, ERC721, IERC721Receiver {
     address private immutable voucherAddress;
     address private immutable mockAuctionAddress;
     address private immutable protocolAddress;
+    address private immutable unwrapperAddress;
     address private immutable wethAddress;
 
     // Token ID for which the price is not yet known
@@ -48,12 +49,14 @@ contract MockWrapper is BosonTypes, ERC721, IERC721Receiver {
         address _voucherAddress,
         address _mockAuctionAddress,
         address _protocolAddress,
-        address _wethAddress
+        address _wethAddress,
+        address _unwrapperAddress
     ) ERC721(getVoucherName(_voucherAddress), getVoucherSymbol(_voucherAddress)) {
         voucherAddress = _voucherAddress;
         mockAuctionAddress = _mockAuctionAddress;
         protocolAddress = _protocolAddress;
         wethAddress = _wethAddress;
+        unwrapperAddress = _unwrapperAddress;
 
         // Approve Mock Auction to transfer wrapped vouchers
         _setApprovalForAll(address(this), _mockAuctionAddress, true);
@@ -107,7 +110,7 @@ contract MockWrapper is BosonTypes, ERC721, IERC721Receiver {
         // Either contract owner or protocol can unwrap
         // If contract owner is unwrapping, this is equivalent to canceled auction
         require(
-            msg.sender == protocolAddress || wrappedVoucherOwner == msg.sender,
+            msg.sender == unwrapperAddress || wrappedVoucherOwner == msg.sender,
             "MockWrapper: Only owner or protocol can unwrap"
         );
 
@@ -125,7 +128,7 @@ contract MockWrapper is BosonTypes, ERC721, IERC721Receiver {
 
         // Transfer token to protocol
         if (priceToPay > 0) {
-            IERC20(cachedExchangeToken[_tokenId]).safeTransfer(protocolAddress, priceToPay);
+            IERC20(cachedExchangeToken[_tokenId]).safeTransfer(unwrapperAddress, priceToPay);
         }
 
         delete cachedExchangeToken[_tokenId]; // gas refund

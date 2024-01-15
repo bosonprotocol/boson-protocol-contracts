@@ -66,7 +66,7 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
         address _buyer,
         IBosonVoucher _bosonVoucher,
         address payable _msgSender
-    ) external payable returns (uint256 actualPrice) {
+    ) external returns (uint256 actualPrice) {
         // ToDo: allow only protocol calls
 
         // Boson protocol (the caller) is trusted, so it can be assumed that all funds were forwarded to this contract
@@ -76,13 +76,16 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
             IERC20(_exchangeToken).forceApprove(_priceDiscovery.conduit, _priceDiscovery.price);
         }
 
-        uint256 thisBalanceBefore = getBalance(_exchangeToken, address(this));
+        uint256 thisBalanceBefore = getBalance(_exchangeToken);
 
         // Call the price discovery contract
         voucherExpected = true;
-        _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
+        _priceDiscovery.priceDiscoveryContract.functionCallWithValue(
+            _priceDiscovery.priceDiscoveryData,
+            _priceDiscovery.price
+        );
 
-        uint256 thisBalanceAfter = getBalance(_exchangeToken, address(this));
+        uint256 thisBalanceAfter = getBalance(_exchangeToken);
         if (thisBalanceBefore < thisBalanceAfter) revert NegativePriceNotAllowed();
         actualPrice = thisBalanceBefore - thisBalanceAfter;
 
@@ -97,7 +100,11 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
         if (incomingTokenId == 0) revert VoucherNotReceived();
 
         // Incoming token id must match the expected token id
-        if (_tokenId != incomingTokenId) revert TokenIdMismatch();
+        if (_tokenId == 0) {
+            _tokenId = incomingTokenId;
+        } else {
+            if (_tokenId != incomingTokenId) revert TokenIdMismatch();
+        }
 
         // Transfer voucher to buyer
         _bosonVoucher.safeTransferFrom(address(this), _buyer, _tokenId);
@@ -111,6 +118,11 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
 
         delete incomingTokenId;
         delete voucherExpected;
+
+        // Send the actual price back to the protocol
+        // if (actualPrice>0) {
+        // FundsLib.transferFundsFromProtocol(_exchangeToken, payable(msg.sender), actualPrice);
+        // }
     }
 
     /**
@@ -153,19 +165,19 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
 
         // Track native balance just in case if seller sends some native currency or price discovery contract does
         // This is the balance that protocol had, before commit to offer was called
-        uint256 thisNativeBalanceBefore = getBalance(address(0), address(this)) - msg.value;
+        uint256 thisNativeBalanceBefore = getBalance(address(0)) - msg.value;
 
         // Get protocol balance before calling price discovery contract
-        uint256 thisBalanceBefore = getBalance(_exchangeToken, address(this));
+        uint256 thisBalanceBefore = getBalance(_exchangeToken);
 
         // Call the price discovery contract
         _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
 
         // Get protocol balance after calling price discovery contract
-        uint256 thisBalanceAfter = getBalance(_exchangeToken, address(this));
+        uint256 thisBalanceAfter = getBalance(_exchangeToken);
 
         // Check the native balance and return the surplus to seller
-        uint256 thisNativeBalanceAfter = getBalance(address(0), address(this));
+        uint256 thisNativeBalanceAfter = getBalance(address(0));
         if (thisNativeBalanceAfter > thisNativeBalanceBefore) {
             // Return the surplus to seller
             FundsLib.transferFundsFromProtocol(
@@ -189,6 +201,14 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
         if (_bosonVoucher.ownerOf(_tokenId) == address(this)) {
             revert VoucherNotTransferred();
         }
+
+        // Send the actual price back to the protocol
+        if (actualPrice > 0) {
+            FundsLib.transferFundsFromProtocol(_exchangeToken, payable(msg.sender), actualPrice);
+        }
+
+        delete incomingTokenId;
+        delete voucherExpected;
     }
 
     /*
@@ -213,22 +233,22 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
         // Check balance before calling wrapper
         bool isNative = _exchangeToken == address(0);
         if (isNative) _exchangeToken = address(wNative);
-        uint256 thisBalanceBefore = getBalance(_exchangeToken, address(this));
+        uint256 thisBalanceBefore = getBalance(_exchangeToken);
 
         // Track native balance just in case if seller sends some native currency.
         // All native currency is forwarded to the wrapper, which should not return any back.
         // If it does, we revert later in the code.
-        uint256 thisNativeBalanceBefore = getBalance(address(0), address(this)) - msg.value;
+        uint256 thisNativeBalanceBefore = getBalance(address(0)) - msg.value;
 
         // Call the price discovery contract
         _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
 
         // Check the native balance and revert if there is a surplus
-        uint256 thisNativeBalanceAfter = getBalance(address(0), address(this));
+        uint256 thisNativeBalanceAfter = getBalance(address(0));
         if (thisNativeBalanceAfter != thisNativeBalanceBefore) revert NativeNotAllowed();
 
         // Check balance after the price discovery call
-        uint256 thisBalanceAfter = getBalance(_exchangeToken, address(this));
+        uint256 thisBalanceAfter = getBalance(_exchangeToken);
 
         // Verify that actual price is within the expected range
         if (thisBalanceAfter < thisBalanceBefore) revert NegativePriceNotAllowed();
@@ -240,6 +260,13 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
 
         // Verify that token id provided by caller matches the token id that the price discovery contract has sent to buyer
         // getAndVerifyTokenId(_tokenId);
+        // Send the actual price back to the protocol
+        if (actualPrice > 0) {
+            FundsLib.transferFundsFromProtocol(_exchangeToken, payable(msg.sender), actualPrice);
+        }
+
+        delete incomingTokenId;
+        delete voucherExpected;
     }
 
     /**
@@ -248,8 +275,8 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
      * @param _tokenAddress - the address of the token to check the balance for
      * @return balance - the balance of the protocol for the given token address
      */
-    function getBalance(address _tokenAddress, address entity) internal view returns (uint256) {
-        return _tokenAddress == address(0) ? entity.balance : IERC20(_tokenAddress).balanceOf(entity);
+    function getBalance(address _tokenAddress) internal view returns (uint256) {
+        return _tokenAddress == address(0) ? address(this).balance : IERC20(_tokenAddress).balanceOf(address(this));
     }
 
     /**
@@ -268,5 +295,9 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
         incomingTokenId = _tokenId;
 
         return this.onERC721Received.selector;
+    }
+
+    receive() external payable {
+        // This is needed to receive native currency
     }
 }

@@ -50,6 +50,7 @@ contract ZoraWrapper is BosonTypes, ERC721, IERC721Receiver {
     address private immutable voucherAddress;
     address private immutable zoraAuctionHouseAddress;
     address private immutable protocolAddress;
+    address private immutable unwrapperAddress;
     address private immutable wethAddress;
 
     // Token ID for which the price is not yet known
@@ -73,12 +74,14 @@ contract ZoraWrapper is BosonTypes, ERC721, IERC721Receiver {
         address _voucherAddress,
         address _zoraAuctionHouseAddress,
         address _protocolAddress,
-        address _wethAddress
+        address _wethAddress,
+        address _unwrapperAddress
     ) ERC721(getVoucherName(_voucherAddress), getVoucherSymbol(_voucherAddress)) {
         voucherAddress = _voucherAddress;
         zoraAuctionHouseAddress = _zoraAuctionHouseAddress;
         protocolAddress = _protocolAddress;
         wethAddress = _wethAddress;
+        unwrapperAddress = _unwrapperAddress;
 
         // Approve Zora Auction House to transfer wrapped vouchers
         _setApprovalForAll(address(this), _zoraAuctionHouseAddress, true);
@@ -132,7 +135,7 @@ contract ZoraWrapper is BosonTypes, ERC721, IERC721Receiver {
         // Either contract owner or protocol can unwrap
         // If contract owner is unwrapping, this is equivalent to canceled auction
         require(
-            msg.sender == protocolAddress || wrappedVoucherOwner == msg.sender,
+            msg.sender == unwrapperAddress || wrappedVoucherOwner == msg.sender,
             "ZoraWrapper: Only owner or protocol can unwrap"
         );
 
@@ -151,7 +154,7 @@ contract ZoraWrapper is BosonTypes, ERC721, IERC721Receiver {
         // Transfer token to protocol
         if (priceToPay > 0) {
             // No need to handle native separately, since Zora Auction House always sends WETH
-            IERC20(cachedExchangeToken[_tokenId]).safeTransfer(protocolAddress, priceToPay);
+            IERC20(cachedExchangeToken[_tokenId]).safeTransfer(unwrapperAddress, priceToPay);
         }
 
         delete cachedExchangeToken[_tokenId]; // gas refund

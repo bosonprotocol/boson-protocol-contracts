@@ -29,7 +29,7 @@ contract PriceDiscoveryBase is ProtocolBase {
     //solhint-disable-next-line
     constructor(address _wNative, address _bosonPriceDiscovery) {
         wNative = IWrappedNative(_wNative);
-        bosonPriceDiscovery = BosonPriceDiscovery(_bosonPriceDiscovery);
+        bosonPriceDiscovery = BosonPriceDiscovery(payable(_bosonPriceDiscovery));
     }
 
     /**

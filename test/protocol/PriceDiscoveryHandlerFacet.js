@@ -79,6 +79,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
   let bosonVoucher;
   let offerFeeLimit;
   let bosonErrors;
+  let bpd;
 
   before(async function () {
     accountId.next(true);
@@ -90,6 +91,11 @@ describe("IPriceDiscoveryHandlerFacet", function () {
     const wethFactory = await getContractFactory("WETH9");
     weth = await wethFactory.deploy();
     await weth.waitForDeployment();
+
+    // Add PriceDiscoveryBase
+    const bpdFactory = await getContractFactory("BosonPriceDiscovery");
+    bpd = await bpdFactory.deploy(await weth.getAddress());
+    await bpd.waitForDeployment();
 
     // Specify contracts needed for this test
     const contracts = {
@@ -117,7 +123,10 @@ describe("IPriceDiscoveryHandlerFacet", function () {
       },
       protocolConfig: [, , { percentage: protocolFeePercentage }],
       diamondAddress: protocolDiamondAddress,
-    } = await setupTestEnvironment(contracts, { wethAddress: await weth.getAddress() }));
+    } = await setupTestEnvironment(contracts, {
+      wethAddress: await weth.getAddress(),
+      bpdAddress: await bpd.getAddress(),
+    }));
 
     bosonErrors = await getContractAt("BosonErrors", await configHandler.getAddress());
 
@@ -619,7 +628,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(buyer)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_ID_MISMATCH);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.VOUCHER_NOT_RECEIVED);
           });
 
           it("price discovery does not send the voucher to the protocol", async function () {
@@ -728,7 +737,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
           // Seller approves protocol to transfer the voucher
           bosonVoucherClone = await getContractAt("IBosonVoucher", expectedCloneAddress);
-          await bosonVoucherClone.connect(assistant).setApprovalForAll(await priceDiscoveryHandler.getAddress(), true);
+          await bosonVoucherClone.connect(assistant).setApprovalForAll(await bpd.getAddress(), true);
 
           newBuyer = mockBuyer(buyer.address);
           exchange.buyerId = newBuyer.id;
@@ -976,7 +985,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
           it("voucher transfer not approved", async function () {
             // revoke approval
-            await bosonVoucherClone.connect(assistant).setApprovalForAll(await exchangeHandler.getAddress(), false);
+            await bosonVoucherClone.connect(assistant).setApprovalForAll(await bpd.getAddress(), false);
 
             // Attempt to commit to, expecting revert
             await expect(
@@ -1103,7 +1112,8 @@ describe("IPriceDiscoveryHandlerFacet", function () {
                   await bosonVoucher.getAddress(),
                   await mockAuction.getAddress(),
                   await exchangeHandler.getAddress(),
-                  await weth.getAddress()
+                  await weth.getAddress(),
+                  await bpd.getAddress()
                 );
 
               // 3. Wrap voucher
@@ -1224,7 +1234,8 @@ describe("IPriceDiscoveryHandlerFacet", function () {
                   await bosonVoucher.getAddress(),
                   await mockAuction.getAddress(),
                   await exchangeHandler.getAddress(),
-                  await weth.getAddress()
+                  await weth.getAddress(),
+                  await bpd.getAddress()
                 );
 
               // Price discovery data
@@ -1311,8 +1322,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
                 // Deposit some weth to the protocol
                 const wethAddress = await weth.getAddress();
                 await weth.connect(assistant).deposit({ value: parseUnits("1", "ether") });
-                await weth.connect(assistant).approve(await fundsHandler.getAddress(), parseUnits("1", "ether"));
-                await fundsHandler.connect(assistant).depositFunds(seller.id, wethAddress, parseUnits("1", "ether"));
+                await weth.connect(assistant).transfer(await bpd.getAddress(), parseUnits("1", "ether"));
 
                 const calldata = weth.interface.encodeFunctionData("transfer", [
                   rando.address,

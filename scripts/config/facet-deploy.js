@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const network = hre.network.name;
 const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const protocolConfig = require("./protocol-parameters");
+const { ZeroAddress } = require("ethers");
 
 /**
  * Get the configuration data to be passed to the ConfigHandlerFacet initializer
@@ -80,11 +81,11 @@ async function getFacets(config) {
   facetArgs["ExchangeHandlerFacet"] = { init: [], constructorArgs: [protocolConfig.EXCHANGE_ID_2_2_0[network]] };
   facetArgs["SequentialCommitHandlerFacet"] = {
     init: [],
-    constructorArgs: [protocolConfig.WrappedNative[network]],
+    constructorArgs: [protocolConfig.WrappedNative[network], ZeroAddress],
   };
   facetArgs["PriceDiscoveryHandlerFacet"] = {
     init: [],
-    constructorArgs: [protocolConfig.WrappedNative[network]],
+    constructorArgs: [protocolConfig.WrappedNative[network], ZeroAddress],
   };
 
   // metaTransactionsHandlerFacet initializer arguments.
