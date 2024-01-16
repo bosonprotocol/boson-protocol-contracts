@@ -162,7 +162,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         address sender = msgSender();
         if (_seller != sender) revert NotVoucherHolder();
 
-        actualPrice = bosonPriceDiscovery.fulfilBidOrder(
+        actualPrice = bosonPriceDiscovery.fulfilBidOrder{ value: msg.value }(
             _tokenId,
             _exchangeToken,
             _priceDiscovery,
@@ -201,7 +201,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         address owner = _bosonVoucher.ownerOf(_tokenId);
         if (owner != _priceDiscovery.priceDiscoveryContract) revert NotVoucherHolder();
 
-        actualPrice = bosonPriceDiscovery.handleWrapper(_exchangeToken, _priceDiscovery);
+        actualPrice = bosonPriceDiscovery.handleWrapper{ value: msg.value }(_exchangeToken, _priceDiscovery);
 
         // Verify that token id provided by caller matches the token id that the price discovery contract has sent to buyer
         getAndVerifyTokenId(_tokenId);

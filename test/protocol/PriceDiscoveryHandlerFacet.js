@@ -92,7 +92,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
     weth = await wethFactory.deploy();
     await weth.waitForDeployment();
 
-    // Add PriceDiscoveryBase
+    // Add BosonPriceDiscovery
     const bpdFactory = await getContractFactory("BosonPriceDiscovery");
     bpd = await bpdFactory.deploy(await weth.getAddress());
     await bpd.waitForDeployment();

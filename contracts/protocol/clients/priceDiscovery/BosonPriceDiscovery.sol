@@ -24,6 +24,7 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
 
     bool private voucherExpected;
     uint256 private incomingTokenId;
+    address private incomingTokenAddress;
 
     /**
      * @notice
@@ -80,6 +81,7 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
 
         // Call the price discovery contract
         voucherExpected = true;
+        incomingTokenAddress = address(_bosonVoucher);
         _priceDiscovery.priceDiscoveryContract.functionCallWithValue(
             _priceDiscovery.priceDiscoveryData,
             _priceDiscovery.price
@@ -117,7 +119,6 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
         }
 
         delete incomingTokenId;
-        delete voucherExpected;
 
         // Send the actual price back to the protocol
         // if (actualPrice>0) {
@@ -208,7 +209,6 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
         }
 
         delete incomingTokenId;
-        delete voucherExpected;
     }
 
     /*
@@ -266,7 +266,6 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
         }
 
         delete incomingTokenId;
-        delete voucherExpected;
     }
 
     /**
@@ -290,9 +289,11 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
         uint256 _tokenId,
         bytes calldata
     ) external virtual override returns (bytes4) {
-        if (!voucherExpected) revert UnexpectedERC721Received();
+        if (!voucherExpected || incomingTokenAddress != msg.sender) revert UnexpectedERC721Received();
 
         incomingTokenId = _tokenId;
+        delete voucherExpected;
+        delete incomingTokenAddress;
 
         return this.onERC721Received.selector;
     }

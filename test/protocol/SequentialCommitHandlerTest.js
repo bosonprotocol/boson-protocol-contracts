@@ -76,6 +76,7 @@ describe("IBosonSequentialCommitHandler", function () {
   let tokenId;
   let offerFeeLimit;
   let bosonErrors;
+  let bpd;
 
   before(async function () {
     accountId.next(true);
@@ -87,6 +88,11 @@ describe("IBosonSequentialCommitHandler", function () {
     const wethFactory = await getContractFactory("WETH9");
     weth = await wethFactory.deploy();
     await weth.waitForDeployment();
+
+    // Add BosonPriceDiscovery
+    const bpdFactory = await getContractFactory("BosonPriceDiscovery");
+    bpd = await bpdFactory.deploy(await weth.getAddress());
+    await bpd.waitForDeployment();
 
     // Specify contracts needed for this test
     const contracts = {
@@ -114,7 +120,10 @@ describe("IBosonSequentialCommitHandler", function () {
       },
       protocolConfig: [, , { percentage: protocolFeePercentage }],
       diamondAddress: protocolDiamondAddress,
-    } = await setupTestEnvironment(contracts, { wethAddress: await weth.getAddress() }));
+    } = await setupTestEnvironment(contracts, {
+      wethAddress: await weth.getAddress(),
+      bpdAddress: await bpd.getAddress(),
+    }));
 
     bosonErrors = await getContractAt("BosonErrors", await configHandler.getAddress());
 
@@ -665,7 +674,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(buyer2)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
-              ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_ID_MISMATCH);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.VOUCHER_NOT_RECEIVED);
             });
 
             it("price discovery does not send the voucher to the protocol", async function () {
@@ -961,7 +970,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
             // Seller approves protocol to transfer the voucher
             bosonVoucherClone = await getContractAt("IBosonVoucher", expectedCloneAddress);
-            await bosonVoucherClone.connect(reseller).setApprovalForAll(await exchangeHandler.getAddress(), true);
+            await bosonVoucherClone.connect(reseller).setApprovalForAll(await bpd.getAddress(), true);
 
             mockBuyer(reseller.address); // call only to increment account id counter
             newBuyer = mockBuyer(buyer2.address);
@@ -1260,7 +1269,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
             it("voucher transfer not approved", async function () {
               // revoke approval
-              await bosonVoucherClone.connect(reseller).setApprovalForAll(await exchangeHandler.getAddress(), false);
+              await bosonVoucherClone.connect(reseller).setApprovalForAll(await bpd.getAddress(), false);
 
               // Attempt to sequentially commit to, expecting revert
               await expect(
@@ -1348,7 +1357,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
                 // Seller approves protocol to transfer the voucher
                 bosonVoucherClone = await getContractAt("IBosonVoucher", expectedCloneAddress);
-                await bosonVoucherClone.connect(reseller).setApprovalForAll(await exchangeHandler.getAddress(), true);
+                await bosonVoucherClone.connect(reseller).setApprovalForAll(await bpd.getAddress(), true);
 
                 mockBuyer(buyer.address); // call only to increment account id counter
                 newBuyer = mockBuyer(buyer2.address);
@@ -1656,7 +1665,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
           // Attempt to sequentially commit, expecting revert
           await expect(
-            foreign721["safeTransferFrom(address,address,uint256)"](deployer.address, protocolDiamondAddress, tokenId)
+            foreign721["safeTransferFrom(address,address,uint256)"](deployer.address, await bpd.getAddress(), tokenId)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNEXPECTED_ERC721_RECEIVED);
         });
       });
