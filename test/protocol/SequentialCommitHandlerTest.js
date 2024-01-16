@@ -674,7 +674,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(buyer2)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
-              ).to.revertedWithCustomError(bosonErrors, RevertReasons.VOUCHER_NOT_RECEIVED);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_ID_MISMATCH);
             });
 
             it("price discovery does not send the voucher to the protocol", async function () {

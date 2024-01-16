@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { ZeroHash, ZeroAddress, getContractAt, getContractFactory } = ethers;
+const { ZeroHash, ZeroAddress, getContractAt, getContractFactory, MaxUint256 } = ethers;
 
 const {
   calculateBosonProxyAddress,
@@ -36,11 +36,12 @@ describe("[@skip-on-coverage] seaport integration", function () {
   let assistant, buyer, DR;
   let fixtures;
   let offer, offerDates;
-  let exchangeHandler, priceDiscoveryHandler;
+  let priceDiscoveryHandler, fundsHandler;
   let weth;
   let seller;
   let seaport;
   let snapshotId;
+  let bpd;
 
   before(async function () {
     accountId.next();
@@ -49,7 +50,6 @@ describe("[@skip-on-coverage] seaport integration", function () {
       accountHandler: "IBosonAccountHandler",
       offerHandler: "IBosonOfferHandler",
       fundsHandler: "IBosonFundsHandler",
-      exchangeHandler: "IBosonExchangeHandler",
       priceDiscoveryHandler: "IBosonPriceDiscoveryHandler",
     };
 
@@ -57,13 +57,21 @@ describe("[@skip-on-coverage] seaport integration", function () {
     weth = await wethFactory.deploy();
     await weth.waitForDeployment();
 
-    let accountHandler, offerHandler, fundsHandler;
+    // Add BosonPriceDiscovery
+    const bpdFactory = await getContractFactory("BosonPriceDiscovery");
+    bpd = await bpdFactory.deploy(await weth.getAddress());
+    await bpd.waitForDeployment();
+
+    let accountHandler, offerHandler;
 
     ({
       signers: [, assistant, buyer, DR],
-      contractInstances: { accountHandler, offerHandler, fundsHandler, exchangeHandler, priceDiscoveryHandler },
+      contractInstances: { accountHandler, offerHandler, priceDiscoveryHandler, fundsHandler },
       extraReturnValues: { bosonVoucher },
-    } = await setupTestEnvironment(contracts, { wethAddress: await weth.getAddress() }));
+    } = await setupTestEnvironment(contracts, {
+      wethAddress: await weth.getAddress(),
+      bpdAddress: await bpd.getAddress(),
+    }));
 
     seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
 
@@ -82,10 +90,18 @@ describe("[@skip-on-coverage] seaport integration", function () {
     ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
     offer.quantityAvailable = 10;
     offer.priceType = PriceType.Discovery;
+    const offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
 
     await offerHandler
       .connect(assistant)
-      .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, "0");
+      .createOffer(
+        offer.toStruct(),
+        offerDates.toStruct(),
+        offerDurations.toStruct(),
+        disputeResolverId,
+        "0",
+        offerFeeLimit
+      );
 
     const beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
     const voucherAddress = calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, seller.admin);
@@ -171,15 +187,14 @@ describe("[@skip-on-coverage] seaport integration", function () {
       ZeroAddress,
     ]);
 
-    const priceDiscovery = new PriceDiscovery(value, seaportAddress, priceDiscoveryData, Side.Ask);
+    const priceDiscovery = new PriceDiscovery(value, Side.Ask, seaportAddress, seaportAddress, priceDiscoveryData);
 
-    // Seller needs to deposit weth in order to fill the escrow at the last step
-    await weth.connect(buyer).deposit({ value });
-    await weth.connect(buyer).approve(await exchangeHandler.getAddress(), value);
+    // Seller needs to deposit in order to fill the escrow at the last step
+    await fundsHandler.connect(assistant).depositFunds(seller.id, ZeroAddress, value, { value: value });
 
     const tx = await priceDiscoveryHandler
       .connect(buyer)
-      .commitToPriceDiscoveryOffer(buyer.address, offer.id, priceDiscovery, {
+      .commitToPriceDiscoveryOffer(buyer.address, identifier, priceDiscovery, {
         value,
       });
 

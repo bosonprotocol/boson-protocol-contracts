@@ -118,15 +118,21 @@ contract PriceDiscoveryBase is ProtocolBase {
         );
         // ^^ we could skip 1 transfer if the caller approved bosonPriceDiscovery directly
 
-        return
-            bosonPriceDiscovery.fulfilAskOrder(
-                _tokenId,
-                _exchangeToken,
-                _priceDiscovery,
-                _buyer,
-                _bosonVoucher,
-                payable(msgSender())
-            );
+        actualPrice = bosonPriceDiscovery.fulfilAskOrder(
+            _exchangeToken,
+            _priceDiscovery,
+            _bosonVoucher,
+            payable(msgSender())
+        );
+
+        _tokenId = getAndVerifyTokenId(_tokenId);
+        {
+            // Make sure that the price discovery contract has transferred the voucher to the protocol
+            if (_bosonVoucher.ownerOf(_tokenId) != address(bosonPriceDiscovery)) revert VoucherNotReceived();
+
+            // Transfer voucher to buyer
+            _bosonVoucher.safeTransferFrom(address(bosonPriceDiscovery), _buyer, _tokenId);
+        }
     }
 
     /**
@@ -143,7 +149,6 @@ contract PriceDiscoveryBase is ProtocolBase {
      * - New voucher owner is not buyer wallet
      * - Token id sent to buyer and token id set by the caller don't match
      *
-     * @param _tokenId - the id of the token
      * @param _exchangeToken - the address of the exchange token
      * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
      * @param _seller - the seller's address
@@ -205,16 +210,6 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         // Verify that token id provided by caller matches the token id that the price discovery contract has sent to buyer
         getAndVerifyTokenId(_tokenId);
-    }
-
-    /**
-     * @notice Returns the balance of the protocol for the given token address
-     *
-     * @param _tokenAddress - the address of the token to check the balance for
-     * @return balance - the balance of the protocol for the given token address
-     */
-    function getBalance(address _tokenAddress, address entity) internal view returns (uint256) {
-        return _tokenAddress == address(0) ? entity.balance : IERC20(_tokenAddress).balanceOf(entity);
     }
 
     /*

@@ -52,23 +52,19 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
      * - New voucher owner is not buyer wallet
      * - Token id sent to buyer and token id set by the caller don't match (if caller has provided token id)
      *
-     * @param _tokenId - the id of the token
      * @param _exchangeToken - the address of the exchange contract
      * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
-     * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _bosonVoucher - the boson voucher contract
      * @param _msgSender - the address of the caller, as seen in boson protocol
      * @return actualPrice - the actual price of the order
      */
     function fulfilAskOrder(
-        uint256 _tokenId,
         address _exchangeToken,
         BosonTypes.PriceDiscovery calldata _priceDiscovery,
-        address _buyer,
         IBosonVoucher _bosonVoucher,
         address payable _msgSender
     ) external returns (uint256 actualPrice) {
-        // ToDo: allow only protocol calls
+        // ToDo: allow only protocol calls. ALso change msg.sender with immutable protocol address
 
         // Boson protocol (the caller) is trusted, so it can be assumed that all funds were forwarded to this contract
 
@@ -89,27 +85,14 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
 
         uint256 thisBalanceAfter = getBalance(_exchangeToken);
         if (thisBalanceBefore < thisBalanceAfter) revert NegativePriceNotAllowed();
-        actualPrice = thisBalanceBefore - thisBalanceAfter;
+        unchecked {
+            actualPrice = thisBalanceBefore - thisBalanceAfter;
+        }
 
         // If token is ERC20, reset approval
         if (_exchangeToken != address(0)) {
             IERC20(_exchangeToken).forceApprove(address(_priceDiscovery.conduit), 0);
         }
-
-        // This is true, assuming the price discvery contract used safeTransferFrom
-        // If it used transferFrom, then this contract might own it, even if the incomingTokenId == 0
-        // Currenltly, we don't support transferFrom. Might be added in the future, but it requires additional call to the Boson protocol
-        if (incomingTokenId == 0) revert VoucherNotReceived();
-
-        // Incoming token id must match the expected token id
-        if (_tokenId == 0) {
-            _tokenId = incomingTokenId;
-        } else {
-            if (_tokenId != incomingTokenId) revert TokenIdMismatch();
-        }
-
-        // Transfer voucher to buyer
-        _bosonVoucher.safeTransferFrom(address(this), _buyer, _tokenId);
 
         uint256 overchargedAmount = _priceDiscovery.price - actualPrice;
 
@@ -120,10 +103,10 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
 
         delete incomingTokenId;
 
-        // Send the actual price back to the protocol
-        // if (actualPrice>0) {
-        // FundsLib.transferFundsFromProtocol(_exchangeToken, payable(msg.sender), actualPrice);
-        // }
+        // Send the actual price back to the protocol. Not, since we full pull it from the  funds at the ned
+
+        // sometimes tokenId is unknow, so we approve all. Since protocol is trusted, this is ok.
+        _bosonVoucher.setApprovalForAll(msg.sender, true); // approve protocol
     }
 
     /**
@@ -190,8 +173,9 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
 
         // Calculate actual price
         if (thisBalanceAfter < thisBalanceBefore) revert NegativePriceNotAllowed();
-        actualPrice = thisBalanceAfter - thisBalanceBefore;
-
+        unchecked {
+            actualPrice = thisBalanceAfter - thisBalanceBefore;
+        }
         // Make sure that balance change is at least the expected price
         if (actualPrice < _priceDiscovery.price) revert InsufficientValueReceived();
 
@@ -252,8 +236,9 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
 
         // Verify that actual price is within the expected range
         if (thisBalanceAfter < thisBalanceBefore) revert NegativePriceNotAllowed();
-        actualPrice = thisBalanceAfter - thisBalanceBefore;
-
+        unchecked {
+            actualPrice = thisBalanceAfter - thisBalanceBefore;
+        }
         // when working with wrappers, price is already known, so the caller should set it exactly
         // If protocol receive more than expected, it does not return the surplus to the caller
         if (actualPrice != _priceDiscovery.price) revert PriceTooLow();
