@@ -126,6 +126,8 @@ contract PriceDiscoveryBase is ProtocolBase {
         );
 
         _tokenId = getAndVerifyTokenId(_tokenId);
+        // todo: if tokenid == 0, make sure that correct offer is used
+
         {
             // Make sure that the price discovery contract has transferred the voucher to the protocol
             if (_bosonVoucher.ownerOf(_tokenId) != address(bosonPriceDiscovery)) revert VoucherNotReceived();
@@ -166,6 +168,10 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         address sender = msgSender();
         if (_seller != sender) revert NotVoucherHolder();
+
+        // Transfer seller's voucher to protocol
+        // Don't need to use safe transfer from, since that protocol can handle the voucher
+        _bosonVoucher.transferFrom(_seller, address(bosonPriceDiscovery), _tokenId);
 
         actualPrice = bosonPriceDiscovery.fulfilBidOrder{ value: msg.value }(
             _tokenId,

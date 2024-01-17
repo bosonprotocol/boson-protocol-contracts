@@ -737,7 +737,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
           // Seller approves protocol to transfer the voucher
           bosonVoucherClone = await getContractAt("IBosonVoucher", expectedCloneAddress);
-          await bosonVoucherClone.connect(assistant).setApprovalForAll(await bpd.getAddress(), true);
+          await bosonVoucherClone.connect(assistant).setApprovalForAll(await priceDiscoveryHandler.getAddress(), true);
 
           newBuyer = mockBuyer(buyer.address);
           exchange.buyerId = newBuyer.id;
@@ -985,7 +985,9 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
           it("voucher transfer not approved", async function () {
             // revoke approval
-            await bosonVoucherClone.connect(assistant).setApprovalForAll(await bpd.getAddress(), false);
+            await bosonVoucherClone
+              .connect(assistant)
+              .setApprovalForAll(await priceDiscoveryHandler.getAddress(), false);
 
             // Attempt to commit to, expecting revert
             await expect(

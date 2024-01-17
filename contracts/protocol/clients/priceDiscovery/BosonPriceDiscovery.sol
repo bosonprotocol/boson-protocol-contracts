@@ -69,7 +69,7 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
         // Boson protocol (the caller) is trusted, so it can be assumed that all funds were forwarded to this contract
 
         // If token is ERC20, approve price discovery contract to transfer protocol funds
-        if (_exchangeToken != address(0)) {
+        if (_exchangeToken != address(0) && _priceDiscovery.price > 0) {
             IERC20(_exchangeToken).forceApprove(_priceDiscovery.conduit, _priceDiscovery.price);
         }
 
@@ -90,7 +90,7 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
         }
 
         // If token is ERC20, reset approval
-        if (_exchangeToken != address(0)) {
+        if (_exchangeToken != address(0) && _priceDiscovery.price > 0) {
             IERC20(_exchangeToken).forceApprove(address(_priceDiscovery.conduit), 0);
         }
 
@@ -138,10 +138,6 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
         IBosonVoucher _bosonVoucher
     ) external payable returns (uint256 actualPrice) {
         // ToDo: allow only protocol calls
-
-        // Transfer seller's voucher to protocol
-        // Don't need to use safe transfer from, since that protocol can handle the voucher
-        _bosonVoucher.transferFrom(_seller, address(this), _tokenId);
 
         // Approve conduit to transfer voucher. There is no need to reset approval afterwards, since protocol is not the voucher owner anymore
         _bosonVoucher.approve(_priceDiscovery.conduit, _tokenId);

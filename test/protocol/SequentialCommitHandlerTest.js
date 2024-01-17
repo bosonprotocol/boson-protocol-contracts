@@ -970,7 +970,9 @@ describe("IBosonSequentialCommitHandler", function () {
 
             // Seller approves protocol to transfer the voucher
             bosonVoucherClone = await getContractAt("IBosonVoucher", expectedCloneAddress);
-            await bosonVoucherClone.connect(reseller).setApprovalForAll(await bpd.getAddress(), true);
+            await bosonVoucherClone
+              .connect(reseller)
+              .setApprovalForAll(await sequentialCommitHandler.getAddress(), true);
 
             mockBuyer(reseller.address); // call only to increment account id counter
             newBuyer = mockBuyer(buyer2.address);
@@ -1269,7 +1271,9 @@ describe("IBosonSequentialCommitHandler", function () {
 
             it("voucher transfer not approved", async function () {
               // revoke approval
-              await bosonVoucherClone.connect(reseller).setApprovalForAll(await bpd.getAddress(), false);
+              await bosonVoucherClone
+                .connect(reseller)
+                .setApprovalForAll(await sequentialCommitHandler.getAddress(), false);
 
               // Attempt to sequentially commit to, expecting revert
               await expect(
@@ -1357,7 +1361,9 @@ describe("IBosonSequentialCommitHandler", function () {
 
                 // Seller approves protocol to transfer the voucher
                 bosonVoucherClone = await getContractAt("IBosonVoucher", expectedCloneAddress);
-                await bosonVoucherClone.connect(reseller).setApprovalForAll(await bpd.getAddress(), true);
+                await bosonVoucherClone
+                  .connect(reseller)
+                  .setApprovalForAll(await sequentialCommitHandler.getAddress(), true);
 
                 mockBuyer(buyer.address); // call only to increment account id counter
                 newBuyer = mockBuyer(buyer2.address);
