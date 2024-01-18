@@ -197,14 +197,18 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      *  - Length of _sellerIds, _royaltyPercentages and _offerIds arrays do not match
      *  - Any of the offerIds does not exist
      *
-     * @param _initializationData - data representing uint256[] _sellerIds, uint256[] _royaltyPercentages, uint256[][] _offerIds
+     * @param _initializationData - data representing uint256[] _sellerIds, uint256[] _royaltyPercentages, uint256[][] _offerIds, address _priceDiscovery
      */
     function initV2_4_0(bytes calldata _initializationData) internal {
         // Current version must be 2.3.0
         if (protocolStatus().version != bytes32("2.3.0")) revert WrongCurrentVersion();
 
-        (uint256[] memory _royaltyPercentages, uint256[][] memory _sellerIds, uint256[][] memory _offerIds) = abi
-            .decode(_initializationData, (uint256[], uint256[][], uint256[][]));
+        (
+            uint256[] memory _royaltyPercentages,
+            uint256[][] memory _sellerIds,
+            uint256[][] memory _offerIds,
+            address _priceDiscovery
+        ) = abi.decode(_initializationData, (uint256[], uint256[][], uint256[][], address));
 
         if (_royaltyPercentages.length != _sellerIds.length || _royaltyPercentages.length != _offerIds.length)
             revert ArrayLengthMismatch();
@@ -228,6 +232,12 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
                 royaltyInfo.recipients.push(payable(address(0))); // default recipient
                 royaltyInfo.bps.push(_royaltyPercentages[i]);
             }
+        }
+
+        if (_priceDiscovery != address(0)) {
+            // We allow it to be 0, since it can be set later
+            protocolAddresses().priceDiscovery = _priceDiscovery;
+            emit PriceDiscoveryAddressChanged(_priceDiscovery, msgSender());
         }
     }
 
