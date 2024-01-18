@@ -16,7 +16,7 @@ const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handl
 describe("IBosonConfigHandler", function () {
   // Common vars
   let InterfaceIds, support;
-  let accounts, deployer, rando, token, treasury, beacon;
+  let accounts, deployer, rando, token, treasury, beacon, priceDiscovery;
   let maxOffersPerGroup,
     maxTwinsPerBundle,
     maxOffersPerBundle,
@@ -45,7 +45,7 @@ describe("IBosonConfigHandler", function () {
 
     // Make accounts available
     accounts = await getSigners();
-    [deployer, rando, token, treasury, beacon] = accounts;
+    [deployer, rando, token, treasury, beacon, priceDiscovery] = accounts;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
@@ -103,6 +103,7 @@ describe("IBosonConfigHandler", function () {
             treasury: await treasury.getAddress(),
             voucherBeacon: await beacon.getAddress(),
             beaconProxy: ZeroAddress,
+            priceDiscovery: priceDiscovery.address,
           },
           // Protocol limits
           {
@@ -160,6 +161,10 @@ describe("IBosonConfigHandler", function () {
           .withArgs(proxyAddress, await deployer.getAddress());
 
         await expect(cutTransaction)
+          .to.emit(configHandler, "PriceDiscoveryAddressChanged")
+          .withArgs(priceDiscovery.address, await deployer.getAddress());
+
+        await expect(cutTransaction)
           .to.emit(configHandler, "ProtocolFeePercentageChanged")
           .withArgs(protocolFeePercentage, await deployer.getAddress());
 
@@ -200,6 +205,7 @@ describe("IBosonConfigHandler", function () {
           token: await token.getAddress(),
           voucherBeacon: await beacon.getAddress(),
           beaconProxy: ZeroAddress,
+          priceDiscovery: priceDiscovery.address,
         },
         // Protocol limits
         {
@@ -408,6 +414,47 @@ describe("IBosonConfigHandler", function () {
               bosonErrors,
               RevertReasons.INVALID_ADDRESS
             );
+          });
+        });
+      });
+
+      context("👉 setPriceDiscoveryAddress()", async function () {
+        let priceDiscovery;
+        beforeEach(async function () {
+          // set new value for price discovery address
+          priceDiscovery = accounts[9];
+        });
+
+        it("should emit a PriceDiscoveryAddressChanged event", async function () {
+          // Set new price discovery address, testing for the event
+          await expect(configHandler.connect(deployer).setPriceDiscoveryAddress(await priceDiscovery.getAddress()))
+            .to.emit(configHandler, "PriceDiscoveryAddressChanged")
+            .withArgs(await priceDiscovery.getAddress(), await deployer.getAddress());
+        });
+
+        it("should update state", async function () {
+          // Set new price discovery address
+          await configHandler.connect(deployer).setPriceDiscoveryAddress(await priceDiscovery.getAddress());
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getPriceDiscoveryAddress()).to.equal(
+            await priceDiscovery.getAddress()
+          );
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new price discovery address, expecting revert
+            await expect(
+              configHandler.connect(rando).setPriceDiscoveryAddress(await priceDiscovery.getAddress())
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
+          });
+
+          it("price discovery address is the zero address", async function () {
+            // Attempt to set new price discovery address, expecting revert
+            await expect(
+              configHandler.connect(deployer).setPriceDiscoveryAddress(ZeroAddress)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
           });
         });
       });
@@ -928,6 +975,10 @@ describe("IBosonConfigHandler", function () {
         const proxyAddress = await calculateBosonProxyAddress(await protocolDiamond.getAddress());
         expect(await configHandler.connect(rando).getBeaconProxyAddress()).to.equal(
           proxyAddress,
+          "Invalid voucher proxy address"
+        );
+        expect(await configHandler.connect(rando).getPriceDiscoveryAddress()).to.equal(
+          priceDiscovery.address,
           "Invalid voucher proxy address"
         );
         expect(await configHandler.connect(rando).getProtocolFeePercentage()).to.equal(

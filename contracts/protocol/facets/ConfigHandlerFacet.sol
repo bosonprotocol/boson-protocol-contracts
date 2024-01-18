@@ -177,7 +177,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the Boson Price Discovery contract address.
      *
-     * Emits a PriceDiscoveryChanged event if successful.
+     * Emits a PriceDiscoveryAddressChanged event if successful.
      *
      * Reverts if _priceDiscovery is the zero address
      *
@@ -188,7 +188,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     function setPriceDiscoveryAddress(address _priceDiscovery) public override onlyRole(ADMIN) nonReentrant {
         checkNonZeroAddress(_priceDiscovery);
         protocolAddresses().priceDiscovery = _priceDiscovery;
-        emit PriceDiscoveryChanged(_priceDiscovery, msgSender());
+        emit PriceDiscoveryAddressChanged(_priceDiscovery, msgSender());
     }
 
     /**
