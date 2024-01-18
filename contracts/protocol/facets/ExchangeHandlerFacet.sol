@@ -25,7 +25,6 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
     using Address for address payable;
 
     uint256 private immutable EXCHANGE_ID_2_2_0; // solhint-disable-line
-    address private immutable bosonPriceDiscovery;
 
     /**
      * @notice After v2.2.0, token ids are derived from offerId and exchangeId.
@@ -35,9 +34,8 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
      * @param _firstExchangeId2_2_0 - the first exchange id to use for 2.2.0
      */
     //solhint-disable-next-line
-    constructor(uint256 _firstExchangeId2_2_0, address _bosonPriceDiscovery) {
+    constructor(uint256 _firstExchangeId2_2_0) {
         EXCHANGE_ID_2_2_0 = _firstExchangeId2_2_0;
-        bosonPriceDiscovery = _bosonPriceDiscovery;
     }
 
     /**
@@ -678,7 +676,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
                 // During price discovery, the voucher is firs transferred to the protocol, which should
                 // not resulte in a commit yet. The commit should happen when the voucher is transferred
                 // from the protocol to the buyer.
-                if (_to == bosonPriceDiscovery) {
+                if (_to == protocolAddresses().priceDiscovery) {
                     // Avoid reentrancy
                     if (ps.incomingVoucherId != 0) revert IncomingVoucherAlreadySet();
 

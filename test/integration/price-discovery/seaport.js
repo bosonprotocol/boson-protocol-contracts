@@ -51,27 +51,29 @@ describe("[@skip-on-coverage] seaport integration", function () {
       offerHandler: "IBosonOfferHandler",
       fundsHandler: "IBosonFundsHandler",
       priceDiscoveryHandler: "IBosonPriceDiscoveryHandler",
+      configHandler: "IBosonConfigHandler",
     };
 
     const wethFactory = await getContractFactory("WETH9");
     weth = await wethFactory.deploy();
     await weth.waitForDeployment();
 
-    // Add BosonPriceDiscovery
-    const bpdFactory = await getContractFactory("BosonPriceDiscovery");
-    bpd = await bpdFactory.deploy(await weth.getAddress());
-    await bpd.waitForDeployment();
-
-    let accountHandler, offerHandler;
+    let accountHandler, offerHandler, configHandler;
 
     ({
       signers: [, assistant, buyer, DR],
-      contractInstances: { accountHandler, offerHandler, priceDiscoveryHandler, fundsHandler },
+      contractInstances: { accountHandler, offerHandler, priceDiscoveryHandler, fundsHandler, configHandler },
       extraReturnValues: { bosonVoucher },
     } = await setupTestEnvironment(contracts, {
       wethAddress: await weth.getAddress(),
-      bpdAddress: await bpd.getAddress(),
     }));
+
+    // Add BosonPriceDiscovery
+    const bpdFactory = await getContractFactory("BosonPriceDiscovery");
+    bpd = await bpdFactory.deploy(await weth.getAddress(), await priceDiscoveryHandler.getAddress());
+    await bpd.waitForDeployment();
+
+    await configHandler.setPriceDiscoveryAddress(await bpd.getAddress());
 
     seller = mockSeller(assistant.address, assistant.address, ZeroAddress, assistant.address);
 

@@ -92,11 +92,6 @@ describe("IPriceDiscoveryHandlerFacet", function () {
     weth = await wethFactory.deploy();
     await weth.waitForDeployment();
 
-    // Add BosonPriceDiscovery
-    const bpdFactory = await getContractFactory("BosonPriceDiscovery");
-    bpd = await bpdFactory.deploy(await weth.getAddress());
-    await bpd.waitForDeployment();
-
     // Specify contracts needed for this test
     const contracts = {
       erc165: "ERC165Facet",
@@ -125,10 +120,16 @@ describe("IPriceDiscoveryHandlerFacet", function () {
       diamondAddress: protocolDiamondAddress,
     } = await setupTestEnvironment(contracts, {
       wethAddress: await weth.getAddress(),
-      bpdAddress: await bpd.getAddress(),
     }));
 
     bosonErrors = await getContractAt("BosonErrors", await configHandler.getAddress());
+
+    // Add BosonPriceDiscovery
+    const bpdFactory = await getContractFactory("BosonPriceDiscovery");
+    bpd = await bpdFactory.deploy(await weth.getAddress(), protocolDiamondAddress);
+    await bpd.waitForDeployment();
+
+    await configHandler.setPriceDiscoveryAddress(await bpd.getAddress());
 
     // make all account the same
     assistant = admin;

@@ -4,10 +4,10 @@ pragma solidity 0.8.22;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IWrappedNative } from "../../../interfaces/IWrappedNative.sol";
 import { IBosonVoucher } from "../../../interfaces/clients/IBosonVoucher.sol";
+import { IBosonPriceDiscovery } from "../../../interfaces/clients/IBosonPriceDiscovery.sol";
 import { FundsLib } from "../../libs/FundsLib.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IERC721Receiver } from "../../../interfaces/IERC721Receiver.sol";
 import { BosonTypes } from "../../../domain/BosonTypes.sol";
 import { BosonErrors } from "../../../domain/BosonErrors.sol";
 
@@ -16,7 +16,7 @@ import { BosonErrors } from "../../../domain/BosonErrors.sol";
  *
  * @dev Boson Price Discovery is a external contract that is used to determine the price of an exchange.
  */
-contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
+contract BosonPriceDiscovery is IBosonPriceDiscovery, BosonErrors {
     using Address for address;
     using SafeERC20 for IERC20;
 
@@ -26,6 +26,8 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
     uint256 private incomingTokenId;
     address private incomingTokenAddress;
 
+    address private immutable bosonProtocolAddress;
+
     /**
      * @notice
      * For offers with native exchange token, it is expected the the price discovery contracts will
@@ -34,8 +36,10 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
      * @param _wNative - the address of the wrapped native token
      */
     //solhint-disable-next-line
-    constructor(address _wNative) {
+    constructor(address _wNative, address _bosonProtocolAddress) {
+        if (_wNative == address(0) || _bosonProtocolAddress == address(0)) revert InvalidAddress();
         wNative = IWrappedNative(_wNative);
+        bosonProtocolAddress = _bosonProtocolAddress;
     }
 
     /**
@@ -63,11 +67,8 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
         BosonTypes.PriceDiscovery calldata _priceDiscovery,
         IBosonVoucher _bosonVoucher,
         address payable _msgSender
-    ) external returns (uint256 actualPrice) {
-        // ToDo: allow only protocol calls. ALso change msg.sender with immutable protocol address
-
+    ) external onlyProtocol returns (uint256 actualPrice) {
         // Boson protocol (the caller) is trusted, so it can be assumed that all funds were forwarded to this contract
-
         // If token is ERC20, approve price discovery contract to transfer protocol funds
         if (_exchangeToken != address(0) && _priceDiscovery.price > 0) {
             IERC20(_exchangeToken).forceApprove(_priceDiscovery.conduit, _priceDiscovery.price);
@@ -106,7 +107,8 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
         // Send the actual price back to the protocol. Not, since we full pull it from the  funds at the ned
 
         // sometimes tokenId is unknow, so we approve all. Since protocol is trusted, this is ok.
-        _bosonVoucher.setApprovalForAll(msg.sender, true); // approve protocol
+        // todo ?maybe check if already approved?
+        _bosonVoucher.setApprovalForAll(bosonProtocolAddress, true); // approve protocol
     }
 
     /**
@@ -136,9 +138,7 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
         BosonTypes.PriceDiscovery calldata _priceDiscovery,
         address _seller,
         IBosonVoucher _bosonVoucher
-    ) external payable returns (uint256 actualPrice) {
-        // ToDo: allow only protocol calls
-
+    ) external payable onlyProtocol returns (uint256 actualPrice) {
         // Approve conduit to transfer voucher. There is no need to reset approval afterwards, since protocol is not the voucher owner anymore
         _bosonVoucher.approve(_priceDiscovery.conduit, _tokenId);
         if (_exchangeToken == address(0)) _exchangeToken = address(wNative);
@@ -185,7 +185,7 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
 
         // Send the actual price back to the protocol
         if (actualPrice > 0) {
-            FundsLib.transferFundsFromProtocol(_exchangeToken, payable(msg.sender), actualPrice);
+            FundsLib.transferFundsFromProtocol(_exchangeToken, payable(bosonProtocolAddress), actualPrice);
         }
 
         delete incomingTokenId;
@@ -207,9 +207,7 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
     function handleWrapper(
         address _exchangeToken,
         BosonTypes.PriceDiscovery calldata _priceDiscovery
-    ) external payable returns (uint256 actualPrice) {
-        // ToDo: allow only protocol calls
-
+    ) external payable onlyProtocol returns (uint256 actualPrice) {
         // Check balance before calling wrapper
         bool isNative = _exchangeToken == address(0);
         if (isNative) _exchangeToken = address(wNative);
@@ -243,7 +241,7 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
         // getAndVerifyTokenId(_tokenId);
         // Send the actual price back to the protocol
         if (actualPrice > 0) {
-            FundsLib.transferFundsFromProtocol(_exchangeToken, payable(msg.sender), actualPrice);
+            FundsLib.transferFundsFromProtocol(_exchangeToken, payable(bosonProtocolAddress), actualPrice);
         }
 
         delete incomingTokenId;
@@ -281,5 +279,10 @@ contract BosonPriceDiscovery is IERC721Receiver, BosonErrors {
 
     receive() external payable {
         // This is needed to receive native currency
+    }
+
+    modifier onlyProtocol() {
+        if (msg.sender != bosonProtocolAddress) revert AccessDenied();
+        _;
     }
 }

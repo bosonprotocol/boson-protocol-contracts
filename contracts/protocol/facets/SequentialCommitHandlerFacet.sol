@@ -27,7 +27,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
      * @param _wNative - the address of the wrapped native token
      */
     //solhint-disable-next-line
-    constructor(address _wNative, address _pdc) PriceDiscoveryBase(_wNative, _pdc) {}
+    constructor(address _wNative) PriceDiscoveryBase(_wNative) {}
 
     /**
      * @notice Initializes facet.

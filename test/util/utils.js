@@ -398,7 +398,7 @@ function objectToArray(input) {
   return result;
 }
 
-async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAddress, wethAddress, bpdAddress } = {}) {
+async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAddress, wethAddress } = {}) {
   // Load modules only here to avoid the caching issues in upgrade tests
   const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
   const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
@@ -465,6 +465,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
       token: bosonTokenAddress || (await bosonToken.getAddress()),
       voucherBeacon: await beacon.getAddress(),
       beaconProxy: ZeroAddress,
+      priceDiscovery: await beacon.getAddress(), // dummy address, changed later
     },
     // Protocol limits
     {
@@ -496,10 +497,6 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
   const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
   facetsToDeploy["SequentialCommitHandlerFacet"].constructorArgs[0] = wethAddress || ZeroAddress; // update only weth address
   facetsToDeploy["PriceDiscoveryHandlerFacet"].constructorArgs[0] = wethAddress || ZeroAddress; // update only weth address
-
-  facetsToDeploy["SequentialCommitHandlerFacet"].constructorArgs[1] = bpdAddress || ZeroAddress; // update only weth address
-  facetsToDeploy["PriceDiscoveryHandlerFacet"].constructorArgs[1] = bpdAddress || ZeroAddress; // update only weth address
-  facetsToDeploy["ExchangeHandlerFacet"].constructorArgs[1] = bpdAddress || ZeroAddress; // update only weth address
 
   // Cut the protocol handler facets into the Diamond
   await deployAndCutFacets(await protocolDiamond.getAddress(), facetsToDeploy, maxPriorityFeePerGas);

@@ -6,9 +6,11 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IWrappedNative } from "../../interfaces/IWrappedNative.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
+import { IBosonPriceDiscovery } from "../../interfaces/clients/IBosonPriceDiscovery.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
-import { BosonPriceDiscovery } from "./../clients/priceDiscovery/BosonPriceDiscovery.sol";
+
+// import { BosonPriceDiscovery } from "./../clients/priceDiscovery/BosonPriceDiscovery.sol";
 
 /**
  * @title PriceDiscoveryBase
@@ -17,7 +19,6 @@ import { BosonPriceDiscovery } from "./../clients/priceDiscovery/BosonPriceDisco
  */
 contract PriceDiscoveryBase is ProtocolBase {
     IWrappedNative internal immutable wNative;
-    BosonPriceDiscovery internal immutable bosonPriceDiscovery; // make interface
 
     /**
      * @notice
@@ -27,9 +28,8 @@ contract PriceDiscoveryBase is ProtocolBase {
      * @param _wNative - the address of the wrapped native token
      */
     //solhint-disable-next-line
-    constructor(address _wNative, address _bosonPriceDiscovery) {
+    constructor(address _wNative) {
         wNative = IWrappedNative(_wNative);
-        bosonPriceDiscovery = BosonPriceDiscovery(payable(_bosonPriceDiscovery));
     }
 
     /**
@@ -109,16 +109,15 @@ contract PriceDiscoveryBase is ProtocolBase {
         address _buyer,
         IBosonVoucher _bosonVoucher
     ) internal returns (uint256 actualPrice) {
+        // Cache price discovery contract address
+        address bosonPriceDiscovery = protocolAddresses().priceDiscovery;
+
         // Transfer buyers funds to protocol
         FundsLib.validateIncomingPayment(_exchangeToken, _priceDiscovery.price);
-        FundsLib.transferFundsFromProtocol(
-            _exchangeToken,
-            payable(address(bosonPriceDiscovery)),
-            _priceDiscovery.price
-        );
+        FundsLib.transferFundsFromProtocol(_exchangeToken, payable(bosonPriceDiscovery), _priceDiscovery.price);
         // ^^ we could skip 1 transfer if the caller approved bosonPriceDiscovery directly
 
-        actualPrice = bosonPriceDiscovery.fulfilAskOrder(
+        actualPrice = IBosonPriceDiscovery(bosonPriceDiscovery).fulfilAskOrder(
             _exchangeToken,
             _priceDiscovery,
             _bosonVoucher,
@@ -130,10 +129,10 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         {
             // Make sure that the price discovery contract has transferred the voucher to the protocol
-            if (_bosonVoucher.ownerOf(_tokenId) != address(bosonPriceDiscovery)) revert VoucherNotReceived();
+            if (_bosonVoucher.ownerOf(_tokenId) != bosonPriceDiscovery) revert VoucherNotReceived();
 
             // Transfer voucher to buyer
-            _bosonVoucher.safeTransferFrom(address(bosonPriceDiscovery), _buyer, _tokenId);
+            _bosonVoucher.safeTransferFrom(bosonPriceDiscovery, _buyer, _tokenId);
         }
     }
 
@@ -169,11 +168,14 @@ contract PriceDiscoveryBase is ProtocolBase {
         address sender = msgSender();
         if (_seller != sender) revert NotVoucherHolder();
 
+        // Cache price discovery contract address
+        address bosonPriceDiscovery = protocolAddresses().priceDiscovery;
+
         // Transfer seller's voucher to protocol
         // Don't need to use safe transfer from, since that protocol can handle the voucher
-        _bosonVoucher.transferFrom(_seller, address(bosonPriceDiscovery), _tokenId);
+        _bosonVoucher.transferFrom(_seller, bosonPriceDiscovery, _tokenId);
 
-        actualPrice = bosonPriceDiscovery.fulfilBidOrder{ value: msg.value }(
+        actualPrice = IBosonPriceDiscovery(bosonPriceDiscovery).fulfilBidOrder{ value: msg.value }(
             _tokenId,
             _exchangeToken,
             _priceDiscovery,
@@ -212,7 +214,13 @@ contract PriceDiscoveryBase is ProtocolBase {
         address owner = _bosonVoucher.ownerOf(_tokenId);
         if (owner != _priceDiscovery.priceDiscoveryContract) revert NotVoucherHolder();
 
-        actualPrice = bosonPriceDiscovery.handleWrapper{ value: msg.value }(_exchangeToken, _priceDiscovery);
+        // Cache price discovery contract address
+        address bosonPriceDiscovery = protocolAddresses().priceDiscovery;
+
+        actualPrice = IBosonPriceDiscovery(bosonPriceDiscovery).handleWrapper{ value: msg.value }(
+            _exchangeToken,
+            _priceDiscovery
+        );
 
         // Verify that token id provided by caller matches the token id that the price discovery contract has sent to buyer
         getAndVerifyTokenId(_tokenId);

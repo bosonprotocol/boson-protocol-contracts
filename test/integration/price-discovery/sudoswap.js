@@ -44,6 +44,7 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
       fundsHandler: "IBosonFundsHandler",
       exchangeHandler: "IBosonExchangeHandler",
       priceDiscoveryHandler: "IBosonPriceDiscoveryHandler",
+      configHandler: "IBosonConfigHandler",
     };
 
     const wethFactory = await getContractFactory("WETH9");
@@ -51,18 +52,27 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
     await weth.waitForDeployment();
     wethAddress = await weth.getAddress();
 
-    // Add BosonPriceDiscovery
-    const bpdFactory = await getContractFactory("BosonPriceDiscovery");
-    bpd = await bpdFactory.deploy(await weth.getAddress());
-    await bpd.waitForDeployment();
-
-    let accountHandler, offerHandler, fundsHandler;
+    let accountHandler, offerHandler, fundsHandler, configHandler;
 
     ({
       signers: [deployer, assistant, buyer, DR],
-      contractInstances: { accountHandler, offerHandler, fundsHandler, exchangeHandler, priceDiscoveryHandler },
+      contractInstances: {
+        accountHandler,
+        offerHandler,
+        fundsHandler,
+        exchangeHandler,
+        priceDiscoveryHandler,
+        configHandler,
+      },
       extraReturnValues: { bosonVoucher },
-    } = await setupTestEnvironment(contracts, { wethAddress, bpdAddress: await bpd.getAddress() }));
+    } = await setupTestEnvironment(contracts, { wethAddress }));
+
+    // Add BosonPriceDiscovery
+    const bpdFactory = await getContractFactory("BosonPriceDiscovery");
+    bpd = await bpdFactory.deploy(await weth.getAddress(), await priceDiscoveryHandler.getAddress());
+    await bpd.waitForDeployment();
+
+    await configHandler.setPriceDiscoveryAddress(await bpd.getAddress());
 
     const LSSVMPairEnumerableETH = await getContractFactory("LSSVMPairEnumerableETH", deployer);
     const lssvmPairEnumerableETH = await LSSVMPairEnumerableETH.deploy();

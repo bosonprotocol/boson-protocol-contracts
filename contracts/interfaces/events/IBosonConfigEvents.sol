@@ -13,6 +13,7 @@ interface IBosonConfigEvents {
     event TreasuryAddressChanged(address indexed treasuryAddress, address indexed executedBy);
     event VoucherBeaconAddressChanged(address indexed voucherBeaconAddress, address indexed executedBy);
     event BeaconProxyAddressChanged(address indexed beaconProxyAddress, address indexed executedBy);
+    event PriceDiscoveryChanged(address indexed priceDiscoveryAddress, address indexed executedBy);
     event ProtocolFeePercentageChanged(uint256 feePercentage, address indexed executedBy);
     event ProtocolFeeFlatBosonChanged(uint256 feeFlatBoson, address indexed executedBy);
     event MaxEscalationResponsePeriodChanged(uint256 maxEscalationResponsePeriod, address indexed executedBy);

@@ -10,7 +10,7 @@ import { IBosonConfigEvents } from "../events/IBosonConfigEvents.sol";
  *
  * @notice Handles management of configuration within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x7899c7b9
+ * The ERC-165 identifier for this interface is: 0xe27f0773
  */
 interface IBosonConfigHandler is IBosonConfigEvents, BosonErrors {
     /**
@@ -92,6 +92,26 @@ interface IBosonConfigHandler is IBosonConfigEvents, BosonErrors {
      * @return the beaconProxy address
      */
     function getBeaconProxyAddress() external view returns (address);
+
+    /**
+     * @notice Sets the Boson Price Discovery contract address.
+     *
+     * Emits a BosonPriceDiscoveryAddressChanged event if successful.
+     *
+     * Reverts if _priceDiscovery is the zero address
+     *
+     * @dev Caller must have ADMIN role.
+     *
+     * @param _priceDiscovery - the Boson Price Discovery contract address
+     */
+    function setPriceDiscoveryAddress(address _priceDiscovery) external;
+
+    /**
+     * @notice Gets the Boson Price Discovery contract address.
+     *
+     * @return the Boson Price Discovery contract address
+     */
+    function getPriceDiscoveryAddress() external view returns (address);
 
     /**
      * @notice Sets the protocol fee percentage.
