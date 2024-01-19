@@ -488,6 +488,7 @@ contract SellerHandlerFacet is SellerBase {
         address treasury = seller.treasury;
 
         RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
+        uint256 royaltyRecipientsStorageLength = royaltyRecipients.length + 1;
         for (uint256 i = 0; i < _royaltyRecipients.length; ) {
             // Cache storage pointer to avoid multiple lookups
             mapping(address => uint256) storage royaltyRecipientIndexByRecipient = lookups
@@ -504,7 +505,7 @@ contract SellerHandlerFacet is SellerBase {
                 revert InvalidRoyaltyPercentage();
 
             royaltyRecipients.push(_royaltyRecipients[i]);
-            royaltyRecipientIndexByRecipient[_royaltyRecipients[i].wallet] = royaltyRecipients.length; // can be optimized to use counter instead of array length
+            royaltyRecipientIndexByRecipient[_royaltyRecipients[i].wallet] = royaltyRecipientsStorageLength + i;
 
             unchecked {
                 i++;
@@ -549,11 +550,13 @@ contract SellerHandlerFacet is SellerBase {
             treasury = seller.treasury;
         }
 
-        if (_royaltyRecipientIds.length != _royaltyRecipients.length) revert ArrayLengthMismatch();
+        uint256 royaltyRecipientIdsLength = _royaltyRecipientIds.length;
+        if (royaltyRecipientIdsLength != _royaltyRecipients.length) revert ArrayLengthMismatch();
 
         RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
+
         uint256 royaltyRecipientsLength = royaltyRecipients.length;
-        for (uint256 i = 0; i < _royaltyRecipientIds.length; ) {
+        for (uint256 i = 0; i < royaltyRecipientIdsLength; ) {
             uint256 royaltyRecipientId = _royaltyRecipientIds[i];
 
             if (royaltyRecipientId >= royaltyRecipientsLength) revert InvalidRoyaltyRecipientId();
