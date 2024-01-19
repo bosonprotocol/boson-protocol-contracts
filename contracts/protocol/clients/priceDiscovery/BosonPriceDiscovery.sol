@@ -24,8 +24,6 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
 
     IWrappedNative internal immutable wNative;
 
-    bool private voucherExpected;
-    uint256 private incomingTokenId;
     address private incomingTokenAddress;
 
     address private immutable bosonProtocolAddress;
@@ -73,7 +71,6 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
         uint256 thisBalanceBefore = getBalance(_exchangeToken);
 
         // Call the price discovery contract
-        voucherExpected = true;
         incomingTokenAddress = address(_bosonVoucher);
         _priceDiscovery.priceDiscoveryContract.functionCallWithValue(
             _priceDiscovery.priceDiscoveryData,
@@ -97,8 +94,6 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
             // Return the surplus to caller
             FundsLib.transferFundsFromProtocol(_exchangeToken, _msgSender, overchargedAmount);
         }
-
-        delete incomingTokenId;
 
         // sometimes tokenId is unknow, so we approve all. Since protocol is trusted, this is ok.
         if (!_bosonVoucher.isApprovedForAll(address(this), bosonProtocolAddress)) {
@@ -180,8 +175,6 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
         if (actualPrice > 0) {
             FundsLib.transferFundsFromProtocol(_exchangeToken, payable(bosonProtocolAddress), actualPrice);
         }
-
-        delete incomingTokenId;
     }
 
     /**
@@ -236,8 +229,6 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
         if (actualPrice > 0) {
             FundsLib.transferFundsFromProtocol(_exchangeToken, payable(bosonProtocolAddress), actualPrice);
         }
-
-        delete incomingTokenId;
     }
 
     /**
@@ -255,16 +246,9 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
      *
      * Always returns `IERC721Receiver.onERC721Received.selector`.
      */
-    function onERC721Received(
-        address,
-        address,
-        uint256 _tokenId,
-        bytes calldata
-    ) external virtual override returns (bytes4) {
-        if (!voucherExpected || incomingTokenAddress != msg.sender) revert UnexpectedERC721Received();
+    function onERC721Received(address, address, uint256, bytes calldata) external virtual override returns (bytes4) {
+        if (incomingTokenAddress != msg.sender) revert UnexpectedERC721Received();
 
-        incomingTokenId = _tokenId;
-        delete voucherExpected;
         delete incomingTokenAddress;
 
         return this.onERC721Received.selector;
