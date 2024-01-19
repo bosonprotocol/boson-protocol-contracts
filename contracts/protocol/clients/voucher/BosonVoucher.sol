@@ -634,7 +634,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             !isPreminted
         );
 
-        royaltyAmount = (_salePrice * royaltyPercentage) / 10000;
+        royaltyAmount = (_salePrice * royaltyPercentage) / HUNDRED_PERCENT;
     }
 
     /**

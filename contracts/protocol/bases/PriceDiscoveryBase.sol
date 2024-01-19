@@ -269,7 +269,7 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         // Check the native balance and revert if there is a surplus
         uint256 protocolNativeBalanceAfter = getBalance(address(0), address(this));
-        require(protocolNativeBalanceAfter == protocolNativeBalanceBefore);
+        if (protocolNativeBalanceAfter != protocolNativeBalanceBefore) revert NativeNotAllowed();
 
         // Check balance after the price discovery call
         uint256 protocolBalanceAfter = getBalance(_exchangeToken, address(this));

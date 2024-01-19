@@ -698,7 +698,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
         return
             _exchangeToken == protocolAddresses().token
                 ? protocolFees().flatBoson
-                : (protocolFees().percentage * _price) / 10000;
+                : (protocolFees().percentage * _price) / HUNDRED_PERCENT;
     }
 
     /**

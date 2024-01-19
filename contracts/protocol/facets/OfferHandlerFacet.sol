@@ -186,15 +186,8 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *
      * @param _offerId - the id of the offer to void
      */
-    function voidOffer(uint256 _offerId) public override offersNotPaused nonReentrant {
-        // Get offer. Make sure caller is assistant
-        Offer storage offer = getValidOfferWithSellerCheck(_offerId);
-
-        // Void the offer
-        offer.voided = true;
-
-        // Notify listeners of state change
-        emit OfferVoided(_offerId, offer.sellerId, msgSender());
+    function voidOffer(uint256 _offerId) external override offersNotPaused nonReentrant {
+        voidOfferInternal(_offerId);
     }
 
     /**
@@ -212,9 +205,9 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *
      * @param _offerIds - list of ids of offers to void
      */
-    function voidOfferBatch(uint256[] calldata _offerIds) external override offersNotPaused {
+    function voidOfferBatch(uint256[] calldata _offerIds) external override offersNotPaused nonReentrant {
         for (uint256 i = 0; i < _offerIds.length; ) {
-            voidOffer(_offerIds[i]);
+            voidOfferInternal(_offerIds[i]);
 
             unchecked {
                 i++;
@@ -237,26 +230,8 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *  @param _offerId - the id of the offer to extend
      *  @param _validUntilDate - new valid until date
      */
-    function extendOffer(uint256 _offerId, uint256 _validUntilDate) public override offersNotPaused nonReentrant {
-        // Make sure the caller is the assistant, offer exists and is not voided
-        Offer storage offer = getValidOfferWithSellerCheck(_offerId);
-
-        // Fetch the offer dates
-        OfferDates storage offerDates = fetchOfferDates(_offerId);
-
-        // New valid until date must be greater than existing one
-        if (offerDates.validUntil >= _validUntilDate) revert InvalidOfferPeriod();
-
-        // If voucherRedeemableUntil is set, _validUntilDate must be less or equal than that
-        if (offerDates.voucherRedeemableUntil > 0) {
-            if (_validUntilDate > offerDates.voucherRedeemableUntil) revert InvalidOfferPeriod();
-        }
-
-        // Update the valid until property
-        offerDates.validUntil = _validUntilDate;
-
-        // Notify watchers of state change
-        emit OfferExtended(_offerId, offer.sellerId, _validUntilDate, msgSender());
+    function extendOffer(uint256 _offerId, uint256 _validUntilDate) external override offersNotPaused nonReentrant {
+        extendOfferInternal(_offerId, _validUntilDate);
     }
 
     /**
@@ -275,9 +250,12 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *  @param _offerIds - list of ids of the offers to extend
      *  @param _validUntilDate - new valid until date
      */
-    function extendOfferBatch(uint256[] calldata _offerIds, uint256 _validUntilDate) external override offersNotPaused {
+    function extendOfferBatch(
+        uint256[] calldata _offerIds,
+        uint256 _validUntilDate
+    ) external override offersNotPaused nonReentrant {
         for (uint256 i = 0; i < _offerIds.length; ) {
-            extendOffer(_offerIds[i], _validUntilDate);
+            extendOfferInternal(_offerIds[i], _validUntilDate);
 
             unchecked {
                 i++;
@@ -302,17 +280,8 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     function updateOfferRoyaltyRecipients(
         uint256 _offerId,
         RoyaltyInfo calldata _royaltyInfo
-    ) public override offersNotPaused nonReentrant {
-        // Make sure the caller is the assistant, offer exists and is not voided
-        Offer storage offer = getValidOfferWithSellerCheck(_offerId);
-
-        validateRoyaltyInfo(protocolLookups(), protocolLimits(), offer.sellerId, _royaltyInfo);
-
-        // Add new entry to the royaltyInfo array
-        offer.royaltyInfo.push(_royaltyInfo);
-
-        // Notify watchers of state change
-        emit OfferRoyaltyInfoUpdated(_offerId, offer.sellerId, _royaltyInfo, msgSender());
+    ) external override offersNotPaused nonReentrant {
+        updateOfferRoyaltyRecipientsInternal(_offerId, _royaltyInfo);
     }
 
     /**
@@ -333,14 +302,104 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     function updateOfferRoyaltyRecipientsBatch(
         uint256[] calldata _offerIds,
         BosonTypes.RoyaltyInfo calldata _royaltyInfo
-    ) external override offersNotPaused {
+    ) external override offersNotPaused nonReentrant {
         for (uint256 i = 0; i < _offerIds.length; ) {
-            updateOfferRoyaltyRecipients(_offerIds[i], _royaltyInfo);
+            updateOfferRoyaltyRecipientsInternal(_offerIds[i], _royaltyInfo);
 
             unchecked {
                 i++;
             }
         }
+    }
+
+    /**
+     * @notice Internal function to void a given offer, used by both single and batch void functions.
+     * Existing exchanges are not affected.
+     * No further vouchers can be issued against a voided offer.
+     *
+     * Emits an OfferVoided event if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - Offer id is invalid
+     * - Caller is not the assistant of the offer
+     * - Offer has already been voided
+     *
+     * @param _offerId - the id of the offer to void
+     */
+    function voidOfferInternal(uint256 _offerId) internal {
+        // Get offer. Make sure caller is assistant
+        Offer storage offer = getValidOfferWithSellerCheck(_offerId);
+
+        // Void the offer
+        offer.voided = true;
+
+        // Notify listeners of state change
+        emit OfferVoided(_offerId, offer.sellerId, msgSender());
+    }
+
+    /**
+     * @notice Internal function to set new valid until date, used by both single and batch extend functions.
+     *
+     * Emits an OfferExtended event if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - Offer does not exist
+     * - Caller is not the assistant of the offer
+     * - New valid until date is before existing valid until dates
+     * - Offer has voucherRedeemableUntil set and new valid until date is greater than that
+     *
+     *  @param _offerId - the id of the offer to extend
+     *  @param _validUntilDate - new valid until date
+     */
+    function extendOfferInternal(uint256 _offerId, uint256 _validUntilDate) internal {
+        // Make sure the caller is the assistant, offer exists and is not voided
+        Offer storage offer = getValidOfferWithSellerCheck(_offerId);
+
+        // Fetch the offer dates
+        OfferDates storage offerDates = fetchOfferDates(_offerId);
+
+        // New valid until date must be greater than existing one
+        if (offerDates.validUntil >= _validUntilDate) revert InvalidOfferPeriod();
+
+        // If voucherRedeemableUntil is set, _validUntilDate must be less or equal than that
+        if (offerDates.voucherRedeemableUntil > 0) {
+            if (_validUntilDate > offerDates.voucherRedeemableUntil) revert InvalidOfferPeriod();
+        }
+
+        // Update the valid until property
+        offerDates.validUntil = _validUntilDate;
+
+        // Notify watchers of state change
+        emit OfferExtended(_offerId, offer.sellerId, _validUntilDate, msgSender());
+    }
+
+    /**
+     * @notice Internal function to update the royalty recipients, used by both single and batch update functions.
+     *
+     * Emits an OfferRoyaltyInfoUpdated event if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - Offer does not exist
+     * - Caller is not the assistant of the offer
+     * - New royalty info is invalid
+     *
+     *  @param _offerId - the id of the offer to be updated
+     *  @param _royaltyInfo - new royalty info
+     */
+    function updateOfferRoyaltyRecipientsInternal(uint256 _offerId, RoyaltyInfo calldata _royaltyInfo) internal {
+        // Make sure the caller is the assistant, offer exists and is not voided
+        Offer storage offer = getValidOfferWithSellerCheck(_offerId);
+
+        validateRoyaltyInfo(protocolLookups(), protocolLimits(), offer.sellerId, _royaltyInfo);
+
+        // Add new entry to the royaltyInfo array
+        offer.royaltyInfo.push(_royaltyInfo);
+
+        // Notify watchers of state change
+        emit OfferRoyaltyInfoUpdated(_offerId, offer.sellerId, _royaltyInfo, msgSender());
     }
 
     /**
@@ -385,7 +444,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *
      * @return nextOfferId - the next offer id
      */
-    function getNextOfferId() public view override returns (uint256 nextOfferId) {
+    function getNextOfferId() external view override returns (uint256 nextOfferId) {
         nextOfferId = protocolCounters().nextOfferId;
     }
 
@@ -396,7 +455,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @return exists - the offer was found
      * @return offerVoided - true if voided, false otherwise
      */
-    function isOfferVoided(uint256 _offerId) public view override returns (bool exists, bool offerVoided) {
+    function isOfferVoided(uint256 _offerId) external view override returns (bool exists, bool offerVoided) {
         Offer storage offer;
         (exists, offer) = fetchOffer(_offerId);
         offerVoided = offer.voided;
