@@ -29,6 +29,7 @@ contract PriceDiscoveryBase is ProtocolBase {
      */
     //solhint-disable-next-line
     constructor(address _wNative) {
+        if (_wNative == address(0)) revert InvalidAddress();
         wNative = IWrappedNative(_wNative);
     }
 
