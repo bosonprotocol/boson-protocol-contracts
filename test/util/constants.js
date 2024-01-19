@@ -5,7 +5,6 @@ const oneWeek = oneDay * 7n; // 7 days in seconds
 const oneMonth = oneDay * 31n; // 31 days in seconds
 const VOUCHER_NAME = "Boson Voucher (rNFT)";
 const VOUCHER_SYMBOL = "BOSON_VOUCHER_RNFT";
-const DEFAULT_ROYALTY_RECIPIENT = "Treasury";
 
 const SEAPORT_ADDRESS = "0x00000000000001ad428e4906aE43D8F9852d0dD6"; // 1.4
 const ROYALTY_REGISTRY_ADDRESS = "0xe7c9Cb6D966f76f3B5142167088927Bf34966a1f"; // Polygon address
@@ -24,7 +23,6 @@ exports.oneMonth = oneMonth;
 exports.VOUCHER_NAME = VOUCHER_NAME;
 exports.VOUCHER_SYMBOL = VOUCHER_SYMBOL;
 exports.maxPriorityFeePerGas = maxPriorityFeePerGas;
-exports.DEFAULT_ROYALTY_RECIPIENT = DEFAULT_ROYALTY_RECIPIENT;
 exports.ROYALTY_REGISTRY_ADDRESS = ROYALTY_REGISTRY_ADDRESS;
 exports.ROYALTY_ENGINE_ADDRESS = ROYALTY_ENGINE_ADDRESS;
 exports.SEAPORT_ADDRESS = SEAPORT_ADDRESS;

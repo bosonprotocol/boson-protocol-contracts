@@ -32,7 +32,7 @@ interface IBosonAccountEvents {
     );
     event RoyaltyRecipientsChanged(
         uint256 indexed sellerId,
-        BosonTypes.RoyaltyRecipient[] royaltyRecipients,
+        BosonTypes.RoyaltyRecipientInfo[] royaltyRecipients,
         address indexed executedBy
     );
     event BuyerCreated(uint256 indexed buyerId, BosonTypes.Buyer buyer, address indexed executedBy);

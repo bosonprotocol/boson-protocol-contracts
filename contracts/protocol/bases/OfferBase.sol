@@ -392,7 +392,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
     ) internal view {
         if (_royaltyInfo.recipients.length != _royaltyInfo.bps.length) revert ArrayLengthMismatch();
 
-        RoyaltyRecipient[] storage royaltyRecipients = _lookups.royaltyRecipientsBySeller[_sellerId];
+        RoyaltyRecipientInfo[] storage royaltyRecipients = _lookups.royaltyRecipientsBySeller[_sellerId];
 
         uint256 totalRoyalties;
         for (uint256 i = 0; i < _royaltyInfo.recipients.length; ) {

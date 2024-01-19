@@ -95,10 +95,9 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         // Set treasury as the default royalty recipient
         if (_voucherInitValues.royaltyPercentage > protocolLimits().maxRoyaltyPercentage)
             revert InvalidRoyaltyPercentage();
-        RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[sellerId];
-        RoyaltyRecipient storage defaultRoyaltyRecipient = royaltyRecipients.push();
+        RoyaltyRecipientInfo[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[sellerId];
+        RoyaltyRecipientInfo storage defaultRoyaltyRecipient = royaltyRecipients.push();
         // We don't store the defaultRoyaltyRecipient.wallet, since it's always the trasury
-        // We don't store the defaultRoyaltyRecipient.externalId, since the default recipient is always the treasury
         defaultRoyaltyRecipient.minRoyaltyPercentage = _voucherInitValues.royaltyPercentage;
 
         // Calculate seller salt and check that it is unique
@@ -243,14 +242,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
      */
     function fetchRoyaltyRecipients(
         uint256 _sellerId
-    ) internal view returns (RoyaltyRecipient[] memory royaltyRecipients) {
-        royaltyRecipients = protocolLookups().royaltyRecipientsBySeller[_sellerId];
-
-        // If the seller did not change the default recipient name, return the default name
-        // royaltyRecipients[0] exists because the default recipient is always present
-        if (bytes(royaltyRecipients[0].externalId).length == 0) {
-            royaltyRecipients[0].externalId = DEFAULT_ROYALTY_RECIPIENT;
-        }
-        return royaltyRecipients;
+    ) internal view returns (RoyaltyRecipientInfo[] memory royaltyRecipients) {
+        return protocolLookups().royaltyRecipientsBySeller[_sellerId];
     }
 }

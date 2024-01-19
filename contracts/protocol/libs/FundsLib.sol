@@ -287,7 +287,7 @@ library FundsLib {
         uint256 resellerBuyPrice = _initialPrice; // the price that reseller paid for the voucher
         address msgSender = EIP712Lib.msgSender();
         uint256 len = exchangeCosts.length;
-        for (uint256 i = 0; i < len; ) {
+        for (uint256 i = 0; i < exchangeCosts.length; ) {
             BosonTypes.ExchangeCosts storage secondaryCommit = exchangeCosts[i];
 
             // amount to be released
@@ -303,6 +303,7 @@ library FundsLib {
                     protocolFee += protocolFeeAmount;
                     sellerRoyalties += distributeRoyalties(
                         _offer,
+                        _exchangeId,
                         secondaryCommit.royaltyInfoIndex,
                         price,
                         royaltyAmount,
@@ -552,16 +553,19 @@ library FundsLib {
      */
     function distributeRoyalties(
         BosonTypes.Offer storage _offer,
+        uint256 _exchangeId,
         uint256 _royaltyInfoIndex,
         uint256 _price,
         uint256 _escrowedRoyaltyAmount,
         uint256 _effectivePriceMultiplier
     ) internal returns (uint256 sellerRoyalties) {
+        address sender = EIP712Lib.msgSender();
         address exchangeToken = _offer.exchangeToken;
         BosonTypes.RoyaltyInfo storage _royaltyInfo = _offer.royaltyInfo[_royaltyInfoIndex];
         uint256 len = _royaltyInfo.recipients.length;
         uint256 totalAmount;
         uint256 effectivePrice = (_price * _effectivePriceMultiplier) / HUNDRED_PERCENT;
+        ProtocolLib.ProtocolLookups storage pl = ProtocolLib.protocolLookups();
         for (uint256 i = 0; i < len; ) {
             address payable recipient = _royaltyInfo.recipients[i];
             uint256 amount = (_royaltyInfo.bps[i] * effectivePrice) / HUNDRED_PERCENT;
@@ -570,8 +574,15 @@ library FundsLib {
                 // goes to seller's treasury
                 sellerRoyalties = amount;
             } else {
-                // try to transfer the funds. Or better make it available to withdraw?
-                FundsLib.transferFundsFromProtocol(exchangeToken, recipient, amount);
+                // Make funds available to withdraw
+                increaseAvailableFundsAndEmitEvent(
+                    _exchangeId,
+                    pl.royaltyRecipientIdByWallet[recipient],
+                    exchangeToken,
+                    amount,
+                    sender
+                );
+                // FundsLib.transferFundsFromProtocol(exchangeToken, recipient, amount);
             }
 
             unchecked {

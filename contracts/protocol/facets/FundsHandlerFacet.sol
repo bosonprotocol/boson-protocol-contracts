@@ -96,36 +96,43 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         address[] calldata _tokenList,
         uint256[] calldata _tokenAmounts
     ) external override fundsNotPaused nonReentrant {
-        address payable sender = payable(msgSender());
+        address payable destinationAddress = getDestinationAddress(_entityId);
 
-        // Address that will receive the funds
-        address payable destinationAddress;
+        withdrawFundsInternal(destinationAddress, _entityId, _tokenList, _tokenAmounts);
+    }
+
+    function getDestinationAddress(uint256 _entityId) internal view returns (address payable destinationAddress) {
+        address payable sender = payable(msgSender());
 
         // First check if the caller is a buyer
         (bool exists, uint256 callerId) = getBuyerIdByWallet(sender);
         if (exists && callerId == _entityId) {
             // Caller is a buyer
-            destinationAddress = sender;
-        } else {
-            // Check if the caller is an assistant
-            (exists, callerId) = getSellerIdByAssistant(sender);
-            if (exists && callerId == _entityId) {
-                // Caller is an assistant. In this case funds are transferred to the treasury address
-                (, Seller storage seller, ) = fetchSeller(callerId);
-                destinationAddress = seller.treasury;
-            } else {
-                (exists, callerId) = getAgentIdByWallet(sender);
-                if (exists && callerId == _entityId) {
-                    // Caller is an agent
-                    destinationAddress = sender;
-                } else {
-                    // In this branch, caller is neither buyer, assistant or agent or does not match the _entityId
-                    revert NotAuthorized();
-                }
-            }
+            return sender;
         }
 
-        withdrawFundsInternal(destinationAddress, _entityId, _tokenList, _tokenAmounts);
+        // Check if the caller is an assistant
+        (exists, callerId) = getSellerIdByAssistant(sender);
+        if (exists && callerId == _entityId) {
+            // Caller is an assistant. In this case funds are transferred to the treasury address
+            (, Seller storage seller, ) = fetchSeller(callerId);
+            return seller.treasury;
+        }
+
+        (exists, callerId) = getAgentIdByWallet(sender);
+        if (exists && callerId == _entityId) {
+            // Caller is an agent
+            return sender;
+        }
+
+        callerId = protocolLookups().royaltyRecipientIdByWallet[sender];
+        if (callerId > 0 && callerId == _entityId) {
+            // Caller is a royalty recipient
+            return sender;
+        }
+
+        // In this branch, caller is neither buyer, assistant or agent or does not match the _entityId
+        revert NotAuthorized();
     }
 
     /**

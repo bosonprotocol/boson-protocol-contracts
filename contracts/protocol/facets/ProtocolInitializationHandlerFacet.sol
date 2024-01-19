@@ -217,7 +217,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         for (uint256 i = 0; i < _royaltyPercentages.length; i++) {
             // Populate sellers' Royalty Recipients
             for (uint256 j = 0; j < _sellerIds[i].length; j++) {
-                RoyaltyRecipient storage defaultRoyaltyRecipient = lookups
+                RoyaltyRecipientInfo storage defaultRoyaltyRecipient = lookups
                     .royaltyRecipientsBySeller[_sellerIds[i][j]]
                     .push();
                 defaultRoyaltyRecipient.minRoyaltyPercentage = _royaltyPercentages[i];
