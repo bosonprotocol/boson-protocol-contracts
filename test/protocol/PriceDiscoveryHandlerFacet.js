@@ -136,7 +136,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
     assistantDR = adminDR;
 
     // Deploy PriceDiscovery contract
-    const PriceDiscoveryFactory = await getContractFactory("PriceDiscovery");
+    const PriceDiscoveryFactory = await getContractFactory("PriceDiscoveryMock");
     priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
     await priceDiscoveryContract.waitForDeployment();
 
@@ -1318,7 +1318,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
                   priceDiscoveryHandler
                     .connect(assistant)
                     .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
-                ).to.revertedWithCustomError(bosonErrors, RevertReasons.PRICE_TOO_LOW);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.PRICE_MISMATCH);
               });
 
               it("Negative price", async function () {

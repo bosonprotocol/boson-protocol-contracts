@@ -2,9 +2,11 @@
 pragma solidity 0.8.22;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { ERC165 } from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import { IWrappedNative } from "../../../interfaces/IWrappedNative.sol";
 import { IBosonVoucher } from "../../../interfaces/clients/IBosonVoucher.sol";
 import { IBosonPriceDiscovery } from "../../../interfaces/clients/IBosonPriceDiscovery.sol";
+import { IERC721Receiver } from "../../../interfaces/IERC721Receiver.sol";
 import { FundsLib } from "../../libs/FundsLib.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -16,7 +18,7 @@ import { BosonErrors } from "../../../domain/BosonErrors.sol";
  *
  * @dev Boson Price Discovery is a external contract that is used to determine the price of an exchange.
  */
-contract BosonPriceDiscovery is IBosonPriceDiscovery, BosonErrors {
+contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
     using Address for address;
     using SafeERC20 for IERC20;
 
@@ -81,7 +83,7 @@ contract BosonPriceDiscovery is IBosonPriceDiscovery, BosonErrors {
         incomingTokenAddress = address(_bosonVoucher);
         _priceDiscovery.priceDiscoveryContract.functionCallWithValue(
             _priceDiscovery.priceDiscoveryData,
-            _priceDiscovery.price
+            _exchangeToken == address(0) ? _priceDiscovery.price : 0
         );
 
         uint256 thisBalanceAfter = getBalance(_exchangeToken);
@@ -235,7 +237,7 @@ contract BosonPriceDiscovery is IBosonPriceDiscovery, BosonErrors {
         }
         // when working with wrappers, price is already known, so the caller should set it exactly
         // If protocol receive more than expected, it does not return the surplus to the caller
-        if (actualPrice != _priceDiscovery.price) revert PriceTooLow();
+        if (actualPrice != _priceDiscovery.price) revert PriceMismatch();
 
         // Verify that token id provided by caller matches the token id that the price discovery contract has sent to buyer
         // getAndVerifyTokenId(_tokenId);
@@ -284,5 +286,15 @@ contract BosonPriceDiscovery is IBosonPriceDiscovery, BosonErrors {
     modifier onlyProtocol() {
         if (msg.sender != bosonProtocolAddress) revert AccessDenied();
         _;
+    }
+
+    /**
+     * @notice Implements the {IERC165} interface.
+     *
+     */
+    function supportsInterface(bytes4 _interfaceId) public view override returns (bool) {
+        return (_interfaceId == type(IBosonPriceDiscovery).interfaceId ||
+            _interfaceId == type(IERC721Receiver).interfaceId ||
+            super.supportsInterface(_interfaceId));
     }
 }

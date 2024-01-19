@@ -340,8 +340,8 @@ interface BosonErrors {
     error InteractionNotAllowed();
 
     // Price discovery related
-    // Price discovery returned a price that is too low
-    error PriceTooLow();
+    // Price discovery returned a price that does not match the expected one
+    error PriceMismatch();
     // Token id is mandatory for bid orders and wrappers
     error TokenIdMandatory();
     // Incoming token id does not match the expected one

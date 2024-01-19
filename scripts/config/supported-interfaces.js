@@ -56,6 +56,7 @@ async function getInterfaceIds(useCache = true) {
     "contracts/interfaces/IERC2981.sol:IERC2981",
     "IAccessControl",
     "IBosonSequentialCommitHandler",
+    "IBosonPriceDiscovery",
   ].forEach((iFace) => {
     skipBaseCheck[iFace] = false;
   });

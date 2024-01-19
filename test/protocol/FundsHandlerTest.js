@@ -176,7 +176,7 @@ describe("IBosonFundsHandler", function () {
     [mockToken] = await deployMockTokens(["Foreign20"]);
 
     // Deploy PriceDiscovery contract
-    const PriceDiscoveryFactory = await ethers.getContractFactory("PriceDiscovery");
+    const PriceDiscoveryFactory = await ethers.getContractFactory("PriceDiscoveryMock");
     priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
     await priceDiscoveryContract.waitForDeployment();
 

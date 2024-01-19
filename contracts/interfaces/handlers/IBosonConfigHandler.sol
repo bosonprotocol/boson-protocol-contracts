@@ -96,7 +96,7 @@ interface IBosonConfigHandler is IBosonConfigEvents, BosonErrors {
     /**
      * @notice Sets the Boson Price Discovery contract address.
      *
-     * Emits a BosonPriceDiscoveryAddressChanged event if successful.
+     * Emits a PriceDiscoveryAddressChanged event if successful.
      *
      * Reverts if _priceDiscovery is the zero address
      *

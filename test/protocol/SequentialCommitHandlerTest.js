@@ -135,7 +135,7 @@ describe("IBosonSequentialCommitHandler", function () {
     [deployer] = await getSigners();
 
     // Deploy PriceDiscovery contract
-    const PriceDiscoveryFactory = await getContractFactory("PriceDiscovery");
+    const PriceDiscoveryFactory = await getContractFactory("PriceDiscoveryMock");
     priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
     await priceDiscoveryContract.waitForDeployment();
 
@@ -1537,7 +1537,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
       it("should transfer the voucher during sequential commit", async function () {
         // Deploy PriceDiscovery contract
-        const PriceDiscoveryFactory = await getContractFactory("PriceDiscovery");
+        const PriceDiscoveryFactory = await getContractFactory("PriceDiscoveryMock");
         priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
         await priceDiscoveryContract.waitForDeployment();
 
