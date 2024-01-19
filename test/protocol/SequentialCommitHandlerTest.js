@@ -151,6 +151,17 @@ describe("IBosonSequentialCommitHandler", function () {
     });
   });
 
+  context("📋 Constructor", async function () {
+    it("Deployment fails if wrapped native address is 0", async function () {
+      const sequentialCommitFactory = await getContractFactory("SequentialCommitHandlerFacet");
+
+      await expect(sequentialCommitFactory.deploy(ZeroAddress)).to.revertedWithCustomError(
+        bosonErrors,
+        RevertReasons.INVALID_ADDRESS
+      );
+    });
+  });
+
   // All supported Sequential commit methods
   context("📋 Sequential Commit Methods", async function () {
     beforeEach(async function () {
