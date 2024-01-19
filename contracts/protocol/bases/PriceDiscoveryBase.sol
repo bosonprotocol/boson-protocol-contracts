@@ -128,13 +128,11 @@ contract PriceDiscoveryBase is ProtocolBase {
         // Make sure that the exchange is part of the correct offer
         if (_tokenId >> 128 != _offerId) revert TokenIdMismatch();
 
-        {
-            // Make sure that the price discovery contract has transferred the voucher to the protocol
-            if (_bosonVoucher.ownerOf(_tokenId) != bosonPriceDiscovery) revert VoucherNotReceived();
+        // Make sure that the price discovery contract has transferred the voucher to the protocol
+        if (_bosonVoucher.ownerOf(_tokenId) != bosonPriceDiscovery) revert VoucherNotReceived();
 
-            // Transfer voucher to buyer
-            _bosonVoucher.safeTransferFrom(bosonPriceDiscovery, _buyer, _tokenId);
-        }
+        // Transfer voucher to buyer
+        _bosonVoucher.safeTransferFrom(bosonPriceDiscovery, _buyer, _tokenId);
     }
 
     /**

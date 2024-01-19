@@ -111,12 +111,18 @@ describe("IBosonFundsHandler", function () {
   let beaconProxyAddress;
   let offerFeeLimit;
   let bosonErrors;
+  let bpd;
 
   before(async function () {
     accountId.next(true);
 
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
+
+    // Add WETH
+    const wethFactory = await getContractFactory("WETH9");
+    const weth = await wethFactory.deploy();
+    await weth.waitForDeployment();
 
     // Specify contracts needed for this test
     const contracts = {
@@ -161,7 +167,9 @@ describe("IBosonFundsHandler", function () {
       protocolConfig: [, , { percentage: protocolFeePercentage, buyerEscalationDepositPercentage }],
       diamondAddress: protocolDiamondAddress,
       extraReturnValues: { accessController },
-    } = await setupTestEnvironment(contracts));
+    } = await setupTestEnvironment(contracts, {
+      wethAddress: await weth.getAddress(),
+    }));
 
     bosonErrors = await getContractAt("BosonErrors", protocolDiamondAddress);
 
@@ -174,6 +182,13 @@ describe("IBosonFundsHandler", function () {
 
     // Deploy the mock token
     [mockToken] = await deployMockTokens(["Foreign20"]);
+
+    // Add BosonPriceDiscovery
+    const bpdFactory = await getContractFactory("BosonPriceDiscovery");
+    bpd = await bpdFactory.deploy(await weth.getAddress(), protocolDiamondAddress);
+    await bpd.waitForDeployment();
+
+    await configHandler.setPriceDiscoveryAddress(await bpd.getAddress());
 
     // Deploy PriceDiscovery contract
     const PriceDiscoveryFactory = await ethers.getContractFactory("PriceDiscoveryMock");
@@ -1609,6 +1624,7 @@ describe("IBosonFundsHandler", function () {
       disputeResolverId = mo.disputeResolverId;
 
       agentId = "0"; // agent id is optional while creating an offer
+      offerFeeLimit = MaxUint256;
       // Create both offers
       await Promise.all([
         offerHandler
@@ -4626,7 +4642,7 @@ describe("IBosonFundsHandler", function () {
                 protocolId = 0;
 
                 // Create buyer with protocol address to not mess up ids in tests
-                await accountHandler.createBuyer(mockBuyer(await exchangeHandler.getAddress()));
+                await accountHandler.createBuyer(mockBuyer(await bpd.getAddress()));
 
                 // commit to offer
                 await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
@@ -6420,7 +6436,7 @@ describe("IBosonFundsHandler", function () {
               buyerId = 5;
 
               // Create buyer with protocol address to not mess up ids in tests
-              await accountHandler.createBuyer(mockBuyer(await exchangeHandler.getAddress()));
+              await accountHandler.createBuyer(mockBuyer(await bpd.getAddress()));
 
               // commit to offer
               await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
