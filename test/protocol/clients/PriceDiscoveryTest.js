@@ -733,4 +733,21 @@ describe("IPriceDiscovery", function () {
       });
     });
   });
+
+  context("📋 onERC721Received", async function () {
+    it("Can receive voucher only during price discovery", async function () {
+      const tokenId = 1;
+      await bosonVoucher.connect(protocol).mint(tokenId, 1);
+
+      await expect(
+        bosonVoucher
+          .connect(protocol)
+          ["safeTransferFrom(address,address,uint256)"](
+            protocol.address,
+            await bosonPriceDiscovery.getAddress(),
+            tokenId
+          )
+      ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNEXPECTED_ERC721_RECEIVED);
+    });
+  });
 });

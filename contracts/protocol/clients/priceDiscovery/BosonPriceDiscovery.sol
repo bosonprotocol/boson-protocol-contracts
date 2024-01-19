@@ -48,15 +48,9 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
      * @notice Fulfils an ask order on external contract.
      *
      * Reverts if:
-     * - Offer price is in native token and caller does not send enough
-     * - Offer price is in some ERC20 token and caller also sends native currency
-     * - Calling transferFrom on token fails for some reason (e.g. the Boson Price Discovery Client is not approved to transfer)
      * - Call to price discovery contract fails
-     * - Received amount is greater from price set in price discovery
-     * - Boson Price Discovery Client does not receive the voucher
-     * - Transfer of voucher to the buyer fails for some reason (e.g. buyer is contract that doesn't accept voucher)
-     * - New voucher owner is not buyer wallet
-     * - Token id sent to buyer and token id set by the caller don't match (if caller has provided token id)
+     * - The implied price is negative
+     * - Any external calls to erc20 contract fail
      *
      * @param _exchangeToken - the address of the exchange contract
      * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
@@ -71,7 +65,7 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
         address payable _msgSender
     ) external onlyProtocol returns (uint256 actualPrice) {
         // Boson protocol (the caller) is trusted, so it can be assumed that all funds were forwarded to this contract
-        // If token is ERC20, approve price discovery contract to transfer protocol funds
+        // If token is ERC20, approve price discovery contract to transfer the funds
         if (_exchangeToken != address(0) && _priceDiscovery.price > 0) {
             IERC20(_exchangeToken).forceApprove(_priceDiscovery.conduit, _priceDiscovery.price);
         }
@@ -106,26 +100,25 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
 
         delete incomingTokenId;
 
-        // Send the actual price back to the protocol. Not, since we full pull it from the  funds at the ned
-
         // sometimes tokenId is unknow, so we approve all. Since protocol is trusted, this is ok.
-        // todo ?maybe check if already approved?
-        _bosonVoucher.setApprovalForAll(bosonProtocolAddress, true); // approve protocol
+        if (!_bosonVoucher.isApprovedForAll(address(this), bosonProtocolAddress)) {
+            _bosonVoucher.setApprovalForAll(bosonProtocolAddress, true); // approve protocol
+        }
+
+        // In ask order, the this client does not receive the proceeds of the sale.
+        // Boson protocol handles the encumbering of the proceeds.
     }
 
     /**
      * @notice Fulfils a bid order on external contract.
      *
      * Reverts if:
-     * - Token id not set by the caller
-     * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
-     * - Transfer of voucher to the buyer fails for some reason (e.g. buyer is contract that doesn't accept voucher)
-     * - Received ERC20 token amount differs from the expected value
      * - Call to price discovery contract fails
      * - Protocol balance change after price discovery call is lower than the expected price
-     * - Reseller did not approve protocol to transfer exchange token in escrow
-     * - New voucher owner is not buyer wallet
+     * - This contract is still owner of the voucher
      * - Token id sent to buyer and token id set by the caller don't match
+     * - The implied price is negative
+     * - Any external calls to erc20 contract fail
      *
      * @param _tokenId - the id of the token
      * @param _exchangeToken - the address of the exchange token
@@ -174,13 +167,11 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
         unchecked {
             actualPrice = thisBalanceAfter - thisBalanceBefore;
         }
+
         // Make sure that balance change is at least the expected price
         if (actualPrice < _priceDiscovery.price) revert InsufficientValueReceived();
 
-        // Verify that token id provided by caller matches the token id that the price discovery contract has sent to buyer
-
-        // ? what about that
-        // getAndVerifyTokenId(_tokenId);
+        // Make sure the voucher was transferred
         if (_bosonVoucher.ownerOf(_tokenId) == address(this)) {
             revert VoucherNotTransferred();
         }
@@ -193,14 +184,14 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
         delete incomingTokenId;
     }
 
-    /*
+    /**
      * @notice Call `unwrap` (or equivalent) function on the price discovery contract.
      *
      * Reverts if:
-     * - Token id not set by the caller
      * - Protocol balance doesn't increase by the expected amount.
-     *   Balance change must be equal to the price set by the caller
      * - Token id sent to buyer and token id set by the caller don't match
+     * - The wrapper contract sends back the native currency
+     * - The implied price is negative
      *
      * @param _exchangeToken - the address of the exchange contract
      * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
@@ -279,15 +270,6 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
         return this.onERC721Received.selector;
     }
 
-    receive() external payable {
-        // This is needed to receive native currency
-    }
-
-    modifier onlyProtocol() {
-        if (msg.sender != bosonProtocolAddress) revert AccessDenied();
-        _;
-    }
-
     /**
      * @notice Implements the {IERC165} interface.
      *
@@ -296,5 +278,14 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
         return (_interfaceId == type(IBosonPriceDiscovery).interfaceId ||
             _interfaceId == type(IERC721Receiver).interfaceId ||
             super.supportsInterface(_interfaceId));
+    }
+
+    modifier onlyProtocol() {
+        if (msg.sender != bosonProtocolAddress) revert AccessDenied();
+        _;
+    }
+
+    receive() external payable {
+        // This is needed to receive native currency
     }
 }

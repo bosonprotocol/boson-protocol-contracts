@@ -700,6 +700,41 @@ describe("IPriceDiscoveryHandlerFacet", function () {
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_CONDUIT_ADDRESS);
           });
+
+          it("Transferred voucher is part of a different offer", async function () {
+            // create 2nd offer
+            const newOffer = offer.clone();
+            newOffer.id = "2";
+            await offerHandler
+              .connect(assistant)
+              .createOffer(newOffer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+            await offerHandler
+              .connect(assistant)
+              .reserveRange(newOffer.id, newOffer.quantityAvailable, assistant.address);
+            await bosonVoucher.connect(assistant).preMint(newOffer.id, newOffer.quantityAvailable);
+
+            const newExchangeId = "12";
+            const newTokenId = deriveTokenId(newOffer.id, newExchangeId);
+
+            order.tokenId = newTokenId;
+            const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
+            const priceDiscoveryContractAddress = await priceDiscoveryContract.getAddress();
+
+            priceDiscovery = new PriceDiscovery(
+              price,
+              Side.Ask,
+              priceDiscoveryContractAddress,
+              priceDiscoveryContractAddress,
+              priceDiscoveryData
+            );
+
+            // Attempt to commit, expecting revert
+            await expect(
+              priceDiscoveryHandler
+                .connect(buyer)
+                .commitToPriceDiscoveryOffer(buyer.address, offer.id, priceDiscovery, { value: price })
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_ID_MISMATCH);
+          });
         });
       });
 

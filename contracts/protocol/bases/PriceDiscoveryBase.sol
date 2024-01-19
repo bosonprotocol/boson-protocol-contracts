@@ -71,7 +71,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         protocolStatus().incomingVoucherCloneAddress = address(bosonVoucher);
 
         if (_priceDiscovery.side == Side.Ask) {
-            return fulfilAskOrder(_tokenId, _offer.exchangeToken, _priceDiscovery, _buyer, bosonVoucher);
+            return fulfilAskOrder(_tokenId, _offer.id, _offer.exchangeToken, _priceDiscovery, _buyer, bosonVoucher);
         } else if (_priceDiscovery.side == Side.Bid) {
             return fulfilBidOrder(_tokenId, _offer.exchangeToken, _priceDiscovery, _seller, bosonVoucher);
         } else {
@@ -89,13 +89,12 @@ contract PriceDiscoveryBase is ProtocolBase {
      * - Offer price is in some ERC20 token and caller also sends native currency
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      * - Call to price discovery contract fails
-     * - Received amount is greater from price set in price discovery
-     * - Protocol does not receive the voucher
      * - Transfer of voucher to the buyer fails for some reason (e.g. buyer is contract that doesn't accept voucher)
-     * - New voucher owner is not buyer wallet
-     * - Token id sent to buyer and token id set by the caller don't match (if caller has provided token id)
+     * - Token id sent to buyer and token id set by the caller don't match (if caller has provided the token id)
+     * - Token id sent to buyer and it does not belong to the offer, set by the caller (if caller has not provided the token id)
      *
-     * @param _tokenId - the id of the token
+     * @param _tokenId - the id of the token (can be 0 if unknown)
+     * @param _offerId - the id of the offer
      * @param _exchangeToken - the address of the exchange contract
      * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
@@ -104,6 +103,7 @@ contract PriceDiscoveryBase is ProtocolBase {
      */
     function fulfilAskOrder(
         uint256 _tokenId,
+        uint256 _offerId,
         address _exchangeToken,
         PriceDiscovery calldata _priceDiscovery,
         address _buyer,
@@ -112,10 +112,9 @@ contract PriceDiscoveryBase is ProtocolBase {
         // Cache price discovery contract address
         address bosonPriceDiscovery = protocolAddresses().priceDiscovery;
 
-        // Transfer buyers funds to protocol
+        // Transfer buyers funds to protocol and forward them to price discovery contract
         FundsLib.validateIncomingPayment(_exchangeToken, _priceDiscovery.price);
         FundsLib.transferFundsFromProtocol(_exchangeToken, payable(bosonPriceDiscovery), _priceDiscovery.price);
-        // ^^ we could skip 1 transfer if the caller approved bosonPriceDiscovery directly
 
         actualPrice = IBosonPriceDiscovery(bosonPriceDiscovery).fulfilAskOrder(
             _exchangeToken,
@@ -125,7 +124,9 @@ contract PriceDiscoveryBase is ProtocolBase {
         );
 
         _tokenId = getAndVerifyTokenId(_tokenId);
-        // todo: if tokenid == 0, make sure that correct offer is used
+
+        // Make sure that the exchange is part of the correct offer
+        if (_tokenId >> 128 != _offerId) revert TokenIdMismatch();
 
         {
             // Make sure that the price discovery contract has transferred the voucher to the protocol
@@ -141,13 +142,7 @@ contract PriceDiscoveryBase is ProtocolBase {
      *
      * Reverts if:
      * - Token id not set by the caller
-     * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
-     * - Transfer of voucher to the buyer fails for some reason (e.g. buyer is contract that doesn't accept voucher)
-     * - Received ERC20 token amount differs from the expected value
      * - Call to price discovery contract fails
-     * - Protocol balance change after price discovery call is lower than the expected price
-     * - Reseller did not approve protocol to transfer exchange token in escrow
-     * - New voucher owner is not buyer wallet
      * - Token id sent to buyer and token id set by the caller don't match
      *
      * @param _exchangeToken - the address of the exchange token
@@ -187,13 +182,12 @@ contract PriceDiscoveryBase is ProtocolBase {
         getAndVerifyTokenId(_tokenId);
     }
 
-    /*
+    /**
      * @notice Call `unwrap` (or equivalent) function on the price discovery contract.
      *
      * Reverts if:
      * - Token id not set by the caller
-     * - Protocol balance doesn't increase by the expected amount.
-     *   Balance change must be equal to the price set by the caller
+     * - The wrapper does not own the voucher
      * - Token id sent to buyer and token id set by the caller don't match
      *
      * @param _tokenId - the id of the token
