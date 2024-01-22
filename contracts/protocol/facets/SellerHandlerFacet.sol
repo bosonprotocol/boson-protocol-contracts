@@ -489,6 +489,7 @@ contract SellerHandlerFacet is SellerBase {
 
         RoyaltyRecipientInfo[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
         uint256 maxRoyaltyPercentage = protocolLimits().maxRoyaltyPercentage;
+        uint256 royaltyRecipientsStorageLength = royaltyRecipients.length + 1;
         for (uint256 i = 0; i < _royaltyRecipients.length; ) {
             // Cache storage pointer to avoid multiple lookups
             mapping(address => uint256) storage royaltyRecipientIndexByRecipient = lookups
@@ -503,7 +504,7 @@ contract SellerHandlerFacet is SellerBase {
             if (_royaltyRecipients[i].minRoyaltyPercentage > maxRoyaltyPercentage) revert InvalidRoyaltyPercentage();
 
             royaltyRecipients.push(_royaltyRecipients[i]);
-            royaltyRecipientIndexByRecipient[_royaltyRecipients[i].wallet] = royaltyRecipients.length; // can be optimized to use counter instead of array length
+            royaltyRecipientIndexByRecipient[_royaltyRecipients[i].wallet] = royaltyRecipientsStorageLength + i;
 
             createRoyaltyRecipientAccount(_royaltyRecipients[i].wallet);
 
@@ -567,11 +568,12 @@ contract SellerHandlerFacet is SellerBase {
             treasury = seller.treasury;
         }
 
-        if (_royaltyRecipientIds.length != _royaltyRecipients.length) revert ArrayLengthMismatch();
+        uint256 royaltyRecipientIdsLength = _royaltyRecipientIds.length;
+        if (royaltyRecipientIdsLength != _royaltyRecipients.length) revert ArrayLengthMismatch();
 
         RoyaltyRecipientInfo[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
         uint256 royaltyRecipientsLength = royaltyRecipients.length;
-        for (uint256 i = 0; i < _royaltyRecipientIds.length; ) {
+        for (uint256 i = 0; i < royaltyRecipientIdsLength; ) {
             uint256 royaltyRecipientId = _royaltyRecipientIds[i];
 
             if (royaltyRecipientId >= royaltyRecipientsLength) revert InvalidRoyaltyRecipientId();
