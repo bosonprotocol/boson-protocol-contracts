@@ -22,7 +22,7 @@ const Role = require("../../scripts/domain/Role");
 const { toHexString } = require("../../scripts/util/utils.js");
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
-const { RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
+const { RoyaltyRecipientInfoList } = require("../../scripts/domain/RoyaltyRecipientInfo.js");
 const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo.js");
 
 function getEvent(receipt, factory, eventName) {
@@ -137,7 +137,7 @@ function compareOfferStructs(returnedOffer) {
 }
 
 // ToDo: make a generic predicate for comparing structs
-/** Predicate to compare RoyaltyRecipientList in emitted events
+/** Predicate to compare RoyaltyRecipientInfoList in emitted events
  * Bind Royalty Recipient List to this function and pass it to .withArgs() instead of the expected Royalty recipient list
  * If returned and expected Royalty Recipient Lists are equal, the test will pass, otherwise it raises an error
  * 
@@ -145,13 +145,13 @@ function compareOfferStructs(returnedOffer) {
  * 
  * await expect(tx)
     .to.emit(accountHandler, "RoyaltyRecipientsChanged")
-    .withArgs(seller.id, compareRoyaltyRecipientList.bind(expectedRoyaltyRecipientList.toStruct()), admin.address);
+    .withArgs(seller.id, compareRoyaltyRecipientInfoList.bind(expectedRoyaltyRecipientInfoList.toStruct()), admin.address);
  * 
- * @param {*} returnedRoyaltyRecipientList 
+ * @param {*} returnedRoyaltyRecipientInfoList 
  * @returns 
  */
-function compareRoyaltyRecipientLists(returnedRoyaltyRecipientList) {
-  expect(RoyaltyRecipientList.fromStruct(returnedRoyaltyRecipientList).toStruct()).to.deep.equal(this);
+function compareRoyaltyRecipientInfoLists(returnedRoyaltyRecipientInfoList) {
+  expect(RoyaltyRecipientInfoList.fromStruct(returnedRoyaltyRecipientInfoList).toStruct()).to.deep.equal(this);
   return true;
 }
 
@@ -568,7 +568,7 @@ exports.getMappingStoragePosition = getMappingStoragePosition;
 exports.paddingType = paddingType;
 exports.getFacetsWithArgs = getFacetsWithArgs;
 exports.compareOfferStructs = compareOfferStructs;
-exports.compareRoyaltyRecipientLists = compareRoyaltyRecipientLists;
+exports.compareRoyaltyRecipientInfoLists = compareRoyaltyRecipientInfoLists;
 exports.objectToArray = objectToArray;
 exports.deriveTokenId = deriveTokenId;
 exports.incrementer = incrementer;

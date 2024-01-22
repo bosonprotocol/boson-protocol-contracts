@@ -516,8 +516,9 @@ contract SellerHandlerFacet is SellerBase {
     }
 
     function createRoyaltyRecipientAccount(address payable _royaltyRecipient) internal {
+        mapping(address => uint256) storage royaltyRecipientIdByWallet = protocolLookups().royaltyRecipientIdByWallet;
         // If account exists, do nothing
-        if (protocolLookups().royaltyRecipientIdByWallet[_royaltyRecipient] > 0) {
+        if (royaltyRecipientIdByWallet[_royaltyRecipient] > 0) {
             return;
         }
 
@@ -527,6 +528,8 @@ contract SellerHandlerFacet is SellerBase {
             id: royaltyRecipientId,
             wallet: _royaltyRecipient
         });
+
+        royaltyRecipientIdByWallet[_royaltyRecipient] = royaltyRecipientId;
     }
 
     /**

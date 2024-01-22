@@ -10,7 +10,7 @@ const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTe
 const OfferFees = require("../../scripts/domain/OfferFees");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const Range = require("../../scripts/domain/Range");
-const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
+const { RoyaltyRecipientInfo, RoyaltyRecipientInfoList } = require("../../scripts/domain/RoyaltyRecipientInfo.js");
 const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -655,10 +655,13 @@ describe("IBosonOfferHandler", function () {
 
       it("Should allow creation of an offer with royalty recipients", async function () {
         // Add royalty recipients
-        const royaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(other.address, "100", "other"),
-          new RoyaltyRecipient(other2.address, "200", "other2"),
+        const royaltyRecipientList = new RoyaltyRecipientInfoList([
+          new RoyaltyRecipientInfo(other.address, "100"),
+          new RoyaltyRecipientInfo(other2.address, "200"),
         ]);
+        // royalty recipients increment the account id in the protocol
+        accountId.next();
+        accountId.next();
         await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
 
         // Add royalty info to the offer
@@ -1033,10 +1036,13 @@ describe("IBosonOfferHandler", function () {
         context("With royalty info", async function () {
           beforeEach(async function () {
             // Add royalty recipients
-            const royaltyRecipientList = new RoyaltyRecipientList([
-              new RoyaltyRecipient(other.address, "100", "other"),
-              new RoyaltyRecipient(other2.address, "200", "other2"),
+            const royaltyRecipientList = new RoyaltyRecipientInfoList([
+              new RoyaltyRecipientInfo(other.address, "100"),
+              new RoyaltyRecipientInfo(other2.address, "200"),
             ]);
+            // royalty recipients increment the account id in the protocol
+            accountId.next();
+            accountId.next();
             await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
           });
 
@@ -1558,11 +1564,13 @@ describe("IBosonOfferHandler", function () {
           .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit);
 
         // Register royalty recipients
-        const royaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(other.address, "50", "other"),
-          new RoyaltyRecipient(other2.address, "50", "other2"),
-          new RoyaltyRecipient(rando.address, "50", "other3"),
+        const royaltyRecipientList = new RoyaltyRecipientInfoList([
+          new RoyaltyRecipientInfo(other.address, "50"),
+          new RoyaltyRecipientInfo(other2.address, "50"),
+          new RoyaltyRecipientInfo(rando.address, "50"),
         ]);
+        // royalty recipients increment the account id in the protocol
+        royaltyRecipientList.royaltyRecipientInfos.forEach(() => accountId.next());
         await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
 
         const recipients = [other.address, other2.address, ZeroAddress, rando.address];
@@ -2323,10 +2331,14 @@ describe("IBosonOfferHandler", function () {
       offerFeesStructs[4] = offerFeesList[4].toStruct();
 
       // offer with royalty recipients
-      const royaltyRecipientList = new RoyaltyRecipientList([
-        new RoyaltyRecipient(other.address, "50", "other"),
-        new RoyaltyRecipient(other2.address, "50", "other2"),
+      const royaltyRecipientList = new RoyaltyRecipientInfoList([
+        new RoyaltyRecipientInfo(other.address, "50"),
+        new RoyaltyRecipientInfo(other2.address, "50"),
       ]);
+      // royalty recipients increment the account id in the protocol
+      accountId.next();
+      accountId.next();
+
       await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
       offers[3].royaltyInfo = [new RoyaltyInfo([other.address, ZeroAddress], ["150", "10"])];
       offerStructs[3] = offers[3].toStruct();
@@ -2638,7 +2650,7 @@ describe("IBosonOfferHandler", function () {
 
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-        allowedSellersToAdd = ["3"];
+        allowedSellersToAdd = [seller.id];
         await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd);
 
         // Attempt to Create an offer, expecting revert
@@ -2649,7 +2661,7 @@ describe("IBosonOfferHandler", function () {
         ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_NOT_APPROVED);
 
         // add seller to allow list
-        allowedSellersToAdd = ["1"]; // existing seller is "1", DR is "2", new seller is "3"
+        allowedSellersToAdd = ["1"];
         await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd);
 
         // Create an offer, testing for the event
@@ -3085,7 +3097,7 @@ describe("IBosonOfferHandler", function () {
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-          allowedSellersToAdd = ["3"];
+          allowedSellersToAdd = [seller.id];
           await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd);
 
           // Attempt to Create an offer, expecting revert
@@ -3404,13 +3416,12 @@ describe("IBosonOfferHandler", function () {
       context("When offers have non zero agent ids", async function () {
         beforeEach(async function () {
           nonZeroAgentIds = [];
-          agentId = "3";
           offerFeesList = [];
           offerFeesStructs = [];
 
           // Create an agent: Required constructor params
           agent = mockAgent(await other.getAddress());
-          agent.id = agentId;
+          agentId = agent.id;
           expect(agent.isValid()).is.true;
           // Create a valid agent
           await accountHandler.connect(rando).createAgent(agent);
@@ -3561,11 +3572,7 @@ describe("IBosonOfferHandler", function () {
 
           it("Sum of agent fee amount and protocol fee amount should be <= than the protocol wide offer fee limit", async function () {
             // Create new agent
-            let id = "4"; // argument sent to contract for createAgent will be ignored
-
-            // Create a valid agent, then set fields in tests directly
             agent = mockAgent(await assistant.getAddress());
-            agent.id = id;
             agent.feePercentage = "3000"; // 30%
             expect(agent.isValid()).is.true;
 
@@ -3575,7 +3582,7 @@ describe("IBosonOfferHandler", function () {
             //Change protocol fee after creating agent
             await configHandler.connect(deployer).setProtocolFeePercentage("1100"); //11%
 
-            nonZeroAgentIds[1] = id;
+            nonZeroAgentIds[1] = agent.id;
 
             // Attempt to Create an offer, expecting revert
             await expect(
@@ -3926,7 +3933,9 @@ describe("IBosonOfferHandler", function () {
           .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds, offerFeeLimits);
 
         // Register royalty recipients
-        const royaltyRecipientList = new RoyaltyRecipientList([new RoyaltyRecipient(rando.address, "50", "other3")]);
+        const royaltyRecipientList = new RoyaltyRecipientInfoList([new RoyaltyRecipientInfo(rando.address, "50")]);
+        // royalty recipients increment the account id in the protocol
+        accountId.next();
         await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
 
         offersToUpdate = ["1", "4", "5"];

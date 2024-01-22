@@ -34,7 +34,7 @@ const GatingType = require("../../scripts/domain/GatingType");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo");
-const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
+const { RoyaltyRecipientInfo, RoyaltyRecipientInfoList } = require("../../scripts/domain/RoyaltyRecipientInfo.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
@@ -7935,10 +7935,10 @@ describe("IBosonExchangeHandler", function () {
             let recipients, bps, totalBps;
             beforeEach(async function () {
               // Update the offer, so it has multiple recipients in the protocol
-              const royaltyRecipientList = new RoyaltyRecipientList([
-                new RoyaltyRecipient(rando.address, "50", "other"),
-                new RoyaltyRecipient(newOwner.address, "50", "other2"),
-                new RoyaltyRecipient(treasuryDR.address, "50", "other3"),
+              const royaltyRecipientList = new RoyaltyRecipientInfoList([
+                new RoyaltyRecipientInfo(rando.address, "50"),
+                new RoyaltyRecipientInfo(newOwner.address, "50"),
+                new RoyaltyRecipientInfo(treasuryDR.address, "50"),
               ]);
               await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
 
@@ -8067,10 +8067,10 @@ describe("IBosonExchangeHandler", function () {
 
             beforeEach(async function () {
               // Update the offer, so it has multiple recipients in the protocol
-              const royaltyRecipientList = new RoyaltyRecipientList([
-                new RoyaltyRecipient(rando.address, "50", "other"),
-                new RoyaltyRecipient(newOwner.address, "50", "other2"),
-                new RoyaltyRecipient(treasuryDR.address, "50", "other3"),
+              const royaltyRecipientList = new RoyaltyRecipientInfoList([
+                new RoyaltyRecipientInfo(rando.address, "50"),
+                new RoyaltyRecipientInfo(newOwner.address, "50"),
+                new RoyaltyRecipientInfo(treasuryDR.address, "50"),
               ]);
               await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
 

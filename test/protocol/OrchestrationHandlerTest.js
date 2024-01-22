@@ -18,7 +18,7 @@ const TokenType = require("../../scripts/domain/TokenType");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Range = require("../../scripts/domain/Range");
-const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
+const { RoyaltyRecipientInfo, RoyaltyRecipientInfoList } = require("../../scripts/domain/RoyaltyRecipientInfo.js");
 const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -26,7 +26,7 @@ const {
   getEvent,
   applyPercentage,
   compareOfferStructs,
-  compareRoyaltyRecipientLists,
+  compareRoyaltyRecipientInfoLists,
   calculateCloneAddress,
   calculateBosonProxyAddress,
   setupTestEnvironment,
@@ -644,15 +644,15 @@ describe("IBosonOrchestrationHandler", function () {
             await assistant.getAddress()
           );
 
-        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage),
+        const expectedRoyaltyRecipientInfoList = new RoyaltyRecipientInfoList([
+          new RoyaltyRecipientInfo(ZeroAddress, voucherInitValues.royaltyPercentage),
         ]);
 
         await expect(tx)
           .to.emit(accountHandler, "RoyaltyRecipientsChanged")
           .withArgs(
             seller.id,
-            compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+            compareRoyaltyRecipientInfoLists.bind(expectedRoyaltyRecipientInfoList.toStruct()),
             assistant.address
           );
 
@@ -711,15 +711,15 @@ describe("IBosonOrchestrationHandler", function () {
             await assistant.getAddress()
           );
 
-        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage),
+        const expectedRoyaltyRecipientInfoList = new RoyaltyRecipientInfoList([
+          new RoyaltyRecipientInfo(ZeroAddress, voucherInitValues.royaltyPercentage),
         ]);
 
         await expect(tx)
           .to.emit(accountHandler, "RoyaltyRecipientsChanged")
           .withArgs(
             seller.id,
-            compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+            compareRoyaltyRecipientInfoLists.bind(expectedRoyaltyRecipientInfoList.toStruct()),
             assistant.address
           );
 
@@ -1385,15 +1385,15 @@ describe("IBosonOrchestrationHandler", function () {
               await assistant.getAddress()
             );
 
-          const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-            new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage),
+          const expectedRoyaltyRecipientInfoList = new RoyaltyRecipientInfoList([
+            new RoyaltyRecipientInfo(ZeroAddress, voucherInitValues.royaltyPercentage),
           ]);
 
           await expect(tx)
             .to.emit(accountHandler, "RoyaltyRecipientsChanged")
             .withArgs(
               seller.id,
-              compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+              compareRoyaltyRecipientInfoLists.bind(expectedRoyaltyRecipientInfoList.toStruct()),
               assistant.address
             );
 
@@ -2907,9 +2907,9 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("Should allow creation of an offer with royalty recipients", async function () {
         // Add royalty recipients
-        const royaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(other1.address, "100", "other1"),
-          new RoyaltyRecipient(other2.address, "200", "other2"),
+        const royaltyRecipientList = new RoyaltyRecipientInfoList([
+          new RoyaltyRecipientInfo(other1.address, "100"),
+          new RoyaltyRecipientInfo(other2.address, "200"),
         ]);
         await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
 
@@ -3343,9 +3343,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           beforeEach(async function () {
             // Add royalty recipients
-            const royaltyRecipientList = new RoyaltyRecipientList([
-              new RoyaltyRecipient(other1.address, "100", "other"),
-              new RoyaltyRecipient(other2.address, "200", "other2"),
+            const royaltyRecipientList = new RoyaltyRecipientInfoList([
+              new RoyaltyRecipientInfo(other1.address, "100"),
+              new RoyaltyRecipientInfo(other2.address, "200"),
             ]);
             await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
           });
@@ -3875,9 +3875,9 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("Should allow creation of an offer with royalty recipients", async function () {
         // Add royalty recipients
-        const royaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(other1.address, "100", "other1"),
-          new RoyaltyRecipient(other2.address, "200", "other2"),
+        const royaltyRecipientList = new RoyaltyRecipientInfoList([
+          new RoyaltyRecipientInfo(other1.address, "100"),
+          new RoyaltyRecipientInfo(other2.address, "200"),
         ]);
         await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
 
@@ -4742,9 +4742,9 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("Should allow creation of an offer with royalty recipients", async function () {
         // Add royalty recipients
-        const royaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(other1.address, "100", "other1"),
-          new RoyaltyRecipient(other2.address, "200", "other2"),
+        const royaltyRecipientList = new RoyaltyRecipientInfoList([
+          new RoyaltyRecipientInfo(other1.address, "100"),
+          new RoyaltyRecipientInfo(other2.address, "200"),
         ]);
         await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
 
@@ -5792,9 +5792,9 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("Should allow creation of an offer with royalty recipients", async function () {
         // Add royalty recipients
-        const royaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(other1.address, "100", "other1"),
-          new RoyaltyRecipient(other2.address, "200", "other2"),
+        const royaltyRecipientList = new RoyaltyRecipientInfoList([
+          new RoyaltyRecipientInfo(other1.address, "100"),
+          new RoyaltyRecipientInfo(other2.address, "200"),
         ]);
         await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
 
@@ -6314,15 +6314,15 @@ describe("IBosonOrchestrationHandler", function () {
             await assistant.getAddress()
           );
 
-        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage),
+        const expectedRoyaltyRecipientInfoList = new RoyaltyRecipientInfoList([
+          new RoyaltyRecipientInfo(ZeroAddress, voucherInitValues.royaltyPercentage),
         ]);
 
         await expect(tx)
           .to.emit(accountHandler, "RoyaltyRecipientsChanged")
           .withArgs(
             seller.id,
-            compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+            compareRoyaltyRecipientInfoLists.bind(expectedRoyaltyRecipientInfoList.toStruct()),
             assistant.address
           );
 
@@ -6813,15 +6813,15 @@ describe("IBosonOrchestrationHandler", function () {
               await assistant.getAddress()
             );
 
-          const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-            new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage),
+          const expectedRoyaltyRecipientInfoList = new RoyaltyRecipientInfoList([
+            new RoyaltyRecipientInfo(ZeroAddress, voucherInitValues.royaltyPercentage),
           ]);
 
           await expect(tx)
             .to.emit(accountHandler, "RoyaltyRecipientsChanged")
             .withArgs(
               seller.id,
-              compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+              compareRoyaltyRecipientInfoLists.bind(expectedRoyaltyRecipientInfoList.toStruct()),
               assistant.address
             );
 
@@ -7161,15 +7161,15 @@ describe("IBosonOrchestrationHandler", function () {
             await assistant.getAddress()
           );
 
-        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage),
+        const expectedRoyaltyRecipientInfoList = new RoyaltyRecipientInfoList([
+          new RoyaltyRecipientInfo(ZeroAddress, voucherInitValues.royaltyPercentage),
         ]);
 
         await expect(tx)
           .to.emit(accountHandler, "RoyaltyRecipientsChanged")
           .withArgs(
             seller.id,
-            compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+            compareRoyaltyRecipientInfoLists.bind(expectedRoyaltyRecipientInfoList.toStruct()),
             assistant.address
           );
 
@@ -7732,15 +7732,15 @@ describe("IBosonOrchestrationHandler", function () {
               await assistant.getAddress()
             );
 
-          const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-            new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage),
+          const expectedRoyaltyRecipientInfoList = new RoyaltyRecipientInfoList([
+            new RoyaltyRecipientInfo(ZeroAddress, voucherInitValues.royaltyPercentage),
           ]);
 
           await expect(tx)
             .to.emit(accountHandler, "RoyaltyRecipientsChanged")
             .withArgs(
               seller.id,
-              compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+              compareRoyaltyRecipientInfoLists.bind(expectedRoyaltyRecipientInfoList.toStruct()),
               assistant.address
             );
 
@@ -8152,15 +8152,15 @@ describe("IBosonOrchestrationHandler", function () {
             await assistant.getAddress()
           );
 
-        const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-          new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage),
+        const expectedRoyaltyRecipientInfoList = new RoyaltyRecipientInfoList([
+          new RoyaltyRecipientInfo(ZeroAddress, voucherInitValues.royaltyPercentage),
         ]);
 
         await expect(tx)
           .to.emit(accountHandler, "RoyaltyRecipientsChanged")
           .withArgs(
             seller.id,
-            compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+            compareRoyaltyRecipientInfoLists.bind(expectedRoyaltyRecipientInfoList.toStruct()),
             assistant.address
           );
 
@@ -8651,15 +8651,15 @@ describe("IBosonOrchestrationHandler", function () {
               await assistant.getAddress()
             );
 
-          const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-            new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage),
+          const expectedRoyaltyRecipientInfoList = new RoyaltyRecipientInfoList([
+            new RoyaltyRecipientInfo(ZeroAddress, voucherInitValues.royaltyPercentage),
           ]);
 
           await expect(tx)
             .to.emit(accountHandler, "RoyaltyRecipientsChanged")
             .withArgs(
               seller.id,
-              compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+              compareRoyaltyRecipientInfoLists.bind(expectedRoyaltyRecipientInfoList.toStruct()),
               assistant.address
             );
 
@@ -8793,15 +8793,15 @@ describe("IBosonOrchestrationHandler", function () {
               await assistant.getAddress()
             );
 
-          const expectedRoyaltyRecipientList = new RoyaltyRecipientList([
-            new RoyaltyRecipient(ZeroAddress, voucherInitValues.royaltyPercentage),
+          const expectedRoyaltyRecipientInfoList = new RoyaltyRecipientInfoList([
+            new RoyaltyRecipientInfo(ZeroAddress, voucherInitValues.royaltyPercentage),
           ]);
 
           await expect(tx)
             .to.emit(accountHandler, "RoyaltyRecipientsChanged")
             .withArgs(
               seller.id,
-              compareRoyaltyRecipientLists.bind(expectedRoyaltyRecipientList.toStruct()),
+              compareRoyaltyRecipientInfoLists.bind(expectedRoyaltyRecipientInfoList.toStruct()),
               assistant.address
             );
 
