@@ -10,8 +10,6 @@ import { IBosonPriceDiscovery } from "../../interfaces/clients/IBosonPriceDiscov
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 
-// import { BosonPriceDiscovery } from "./../clients/priceDiscovery/BosonPriceDiscovery.sol";
-
 /**
  * @title PriceDiscoveryBase
  *
@@ -22,7 +20,7 @@ contract PriceDiscoveryBase is ProtocolBase {
 
     /**
      * @notice
-     * For offers with native exchange token, it is expected the the price discovery contracts will
+     * For offers with native exchange token, it is expected that the price discovery contracts will
      * operate with wrapped native token. Set the address of the wrapped native token in the constructor.
      *
      * @param _wNative - the address of the wrapped native token

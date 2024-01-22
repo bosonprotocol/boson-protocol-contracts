@@ -26,7 +26,7 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscoveryBase, BuyerBase {
     /**
      * @notice
-     * For offers with native exchange token, it is expected the the price discovery contracts will
+     * For offers with native exchange token, it is expected that the price discovery contracts will
      * operate with wrapped native token. Set the address of the wrapped native token in the constructor.
      *
      * @param _wNative - the address of the wrapped native token
