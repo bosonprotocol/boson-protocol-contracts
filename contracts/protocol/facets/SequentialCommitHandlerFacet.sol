@@ -88,13 +88,13 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
 
         // Create a memory struct for sequential commit and populate it as we go
         // This is done to avoid stack too deep error, while still keeping the number of SLOADs to a minimum
-        ExchangeCosts memory exchangeCost;
+        ExchangeCosts memory thisExchangeCost;
 
         // Get current buyer address. This is actually the seller in sequential commit. Need to do it before voucher is transferred
         address seller;
-        exchangeCost.resellerId = exchange.buyerId;
+        thisExchangeCost.resellerId = exchange.buyerId;
         {
-            (, Buyer storage currentBuyer) = fetchBuyer(exchangeCost.resellerId);
+            (, Buyer storage currentBuyer) = fetchBuyer(thisExchangeCost.resellerId);
             seller = currentBuyer.wallet;
         }
 
@@ -104,83 +104,86 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
 
         // First call price discovery and get actual price
         // It might be lower than submitted for buy orders and higher for sell orders
-        exchangeCost.price = fulfilOrder(_tokenId, offer, _priceDiscovery, seller, _buyer);
+        thisExchangeCost.price = fulfilOrder(_tokenId, offer, _priceDiscovery, seller, _buyer);
 
         // Get token address
         address exchangeToken = offer.exchangeToken;
 
         // Calculate the amount to be kept in escrow
-        uint256 escrowAmount;
-        uint256 payout;
+        uint256 additionalEscrowAmount;
+        uint256 immediatePayout;
         {
             // Get sequential commits for this exchange
             ExchangeCosts[] storage exchangeCosts = protocolEntities().exchangeCosts[exchangeId];
 
             {
                 // Calculate fees
-                exchangeCost.protocolFeeAmount = getProtocolFee(exchangeToken, exchangeCost.price);
+                thisExchangeCost.protocolFeeAmount = getProtocolFee(exchangeToken, thisExchangeCost.price);
 
                 // Calculate royalties
                 {
                     RoyaltyInfo storage royaltyInfo;
-                    (royaltyInfo, exchangeCost.royaltyInfoIndex, ) = fetchRoyalties(offerId, false);
-                    exchangeCost.royaltyAmount =
-                        (getTotalRoyaltyPercentage(royaltyInfo.bps) * exchangeCost.price) /
+                    (royaltyInfo, thisExchangeCost.royaltyInfoIndex, ) = fetchRoyalties(offerId, false);
+                    thisExchangeCost.royaltyAmount =
+                        (getTotalRoyaltyPercentage(royaltyInfo.bps) * thisExchangeCost.price) /
                         HUNDRED_PERCENT;
                 }
 
                 // Verify that fees and royalties are not higher than the price.
-                if (exchangeCost.protocolFeeAmount + exchangeCost.royaltyAmount > exchangeCost.price) {
+                if (thisExchangeCost.protocolFeeAmount + thisExchangeCost.royaltyAmount > thisExchangeCost.price) {
                     revert FeeAmountTooHigh();
                 }
 
-                uint256 currentPrice;
+                // Get the price, originally paid by the reseller
+                uint256 oldPrice;
                 unchecked {
                     // Get price paid by current buyer
                     uint256 len = exchangeCosts.length;
-                    currentPrice = len == 0 ? offer.price : exchangeCosts[len - 1].price;
+                    oldPrice = len == 0 ? offer.price : exchangeCosts[len - 1].price;
                 }
 
                 // Calculate the minimal amount to be kept in the escrow
-                escrowAmount =
-                    Math.max(
-                        exchangeCost.price,
-                        exchangeCost.protocolFeeAmount + exchangeCost.royaltyAmount + currentPrice
-                    ) -
-                    currentPrice;
+                unchecked {
+                    additionalEscrowAmount =
+                        thisExchangeCost.price -
+                        Math.min(
+                            oldPrice,
+                            thisExchangeCost.price - thisExchangeCost.royaltyAmount - thisExchangeCost.protocolFeeAmount
+                        );
+                }
 
                 // Store the exchange cost, so it can be used in calculations when releasing funds
-                exchangeCosts.push(exchangeCost);
+                exchangeCosts.push(thisExchangeCost);
             }
 
             // Make sure enough get escrowed
             // Escrow amount is guaranteed to be less than or equal to price
             unchecked {
-                payout = exchangeCost.price - escrowAmount;
+                immediatePayout = thisExchangeCost.price - additionalEscrowAmount;
             }
 
             if (_priceDiscovery.side == Side.Ask) {
-                if (escrowAmount > 0) {
+                if (additionalEscrowAmount > 0) {
                     // Price discovery should send funds to the seller
                     // Nothing in escrow, need to pull everything from seller
                     if (exchangeToken == address(0)) {
                         // If exchange is native currency, seller cannot directly approve protocol to transfer funds
                         // They need to approve wrapper contract, so protocol can pull funds from wrapper
-                        FundsLib.transferFundsToProtocol(address(wNative), seller, escrowAmount);
+                        FundsLib.transferFundsToProtocol(address(wNative), seller, additionalEscrowAmount);
                         // But since protocol otherwise normally operates with native currency, needs to unwrap it (i.e. withdraw)
-                        wNative.withdraw(escrowAmount);
+                        wNative.withdraw(additionalEscrowAmount);
                     } else {
-                        FundsLib.transferFundsToProtocol(exchangeToken, seller, escrowAmount);
+                        FundsLib.transferFundsToProtocol(exchangeToken, seller, additionalEscrowAmount);
                     }
                 }
             } else {
                 // when bid side, we have full proceeds in escrow. Keep minimal in, return the difference
-                if (exchangeCost.price > 0 && exchangeToken == address(0)) {
-                    wNative.withdraw(exchangeCost.price);
+                if (thisExchangeCost.price > 0 && exchangeToken == address(0)) {
+                    wNative.withdraw(thisExchangeCost.price);
                 }
 
-                if (payout > 0) {
-                    FundsLib.transferFundsFromProtocol(exchangeToken, payable(seller), payout);
+                if (immediatePayout > 0) {
+                    FundsLib.transferFundsFromProtocol(exchangeToken, payable(seller), immediatePayout);
                 }
             }
         }
@@ -190,10 +193,10 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
         // Since exchange and voucher are passed by reference, they are updated
         uint256 buyerId = exchange.buyerId;
         address sender = msgSender();
-        if (exchangeCost.price > 0) emit FundsEncumbered(buyerId, exchangeToken, exchangeCost.price, sender);
-        if (payout > 0) {
-            emit FundsReleased(exchangeId, exchangeCost.resellerId, exchangeToken, payout, sender);
-            emit FundsWithdrawn(exchangeCost.resellerId, seller, exchangeToken, payout, sender);
+        if (thisExchangeCost.price > 0) emit FundsEncumbered(buyerId, exchangeToken, thisExchangeCost.price, sender);
+        if (immediatePayout > 0) {
+            emit FundsReleased(exchangeId, thisExchangeCost.resellerId, exchangeToken, immediatePayout, sender);
+            emit FundsWithdrawn(thisExchangeCost.resellerId, seller, exchangeToken, immediatePayout, sender);
         }
         emit BuyerCommitted(offerId, buyerId, exchangeId, exchange, voucher, sender);
         // No need to update exchange detail. Most fields stay as they are, and buyerId was updated at the same time voucher is transferred
