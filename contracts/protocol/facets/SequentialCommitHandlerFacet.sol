@@ -137,7 +137,6 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                 // Get the price, originally paid by the reseller
                 uint256 oldPrice;
                 unchecked {
-                    // Get price paid by current buyer
                     uint256 len = exchangeCosts.length;
                     oldPrice = len == 0 ? offer.price : exchangeCosts[len - 1].price;
                 }
