@@ -16,7 +16,7 @@ import { BosonErrors } from "../../../domain/BosonErrors.sol";
 /**
  * @title BosonPriceDiscovery
  *
- * @dev Boson Price Discovery is a external contract that is used to determine the price of an exchange.
+ * @dev Boson Price Discovery is an external contract that is used to determine the price of an exchange.
  */
 contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
     using Address for address;
@@ -30,7 +30,7 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
 
     /**
      * @notice
-     * For offers with native exchange token, it is expected the the price discovery contracts will
+     * For offers with native exchange token, it is expected that the price discovery contracts will
      * operate with wrapped native token. Set the address of the wrapped native token in the constructor.
      *
      * @param _wNative - the address of the wrapped native token

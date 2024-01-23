@@ -4871,7 +4871,7 @@ describe("IBosonFundsHandler", function () {
                   .connect(assistant)
                   .createOffer(offer, offerDates, offerDurations, disputeResolverId, 0, offerFeeLimit);
 
-                // Create buyer with protocol address to not mess up ids in tests
+                // Create buyer with price discovery client address to not mess up ids in tests
                 await accountHandler.createBuyer(mockBuyer(await bpd.getAddress()));
 
                 // ids
@@ -6936,7 +6936,7 @@ describe("IBosonFundsHandler", function () {
               agentId = "3";
               buyerId = 5;
 
-              // Create buyer with protocol address to not mess up ids in tests
+              // Create buyer with price discovery client address to not mess up ids in tests
               await accountHandler.createBuyer(mockBuyer(await bpd.getAddress()));
 
               // commit to offer
