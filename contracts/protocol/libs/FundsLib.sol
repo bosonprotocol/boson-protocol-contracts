@@ -288,30 +288,28 @@ library FundsLib {
         address msgSender = EIP712Lib.msgSender();
         uint256 len = exchangeCosts.length;
         for (uint256 i = 0; i < len; ) {
-            BosonTypes.ExchangeCosts storage secondaryCommit = exchangeCosts[i];
+            // Since all elements of exchangeCosts[i] are used it makes sense to copy them to memory
+            BosonTypes.ExchangeCosts memory secondaryCommit = exchangeCosts[i];
 
             // amount to be released
             uint256 currentResellerAmount;
 
             // inside the scope to avoid stack too deep error
             {
-                uint256 price = secondaryCommit.price;
-                uint256 protocolFeeAmount = secondaryCommit.protocolFeeAmount;
-                uint256 royaltyAmount = secondaryCommit.royaltyAmount;
-
                 if (effectivePriceMultiplier > 0) {
-                    protocolFee += protocolFeeAmount;
+                    protocolFee += secondaryCommit.protocolFeeAmount;
                     sellerRoyalties += distributeRoyalties(
+                        _exchangeId,
                         _offer,
-                        secondaryCommit.royaltyInfoIndex,
-                        price,
-                        royaltyAmount,
+                        secondaryCommit,
                         effectivePriceMultiplier
                     );
                 }
 
                 // secondary price without protocol fee and royalties
-                uint256 reducedSecondaryPrice = price - protocolFeeAmount - royaltyAmount;
+                uint256 reducedSecondaryPrice = secondaryCommit.price -
+                    secondaryCommit.protocolFeeAmount -
+                    secondaryCommit.royaltyAmount;
 
                 // current reseller gets the difference between final payout and the immediate payout they received at the time of secondary sale
                 currentResellerAmount =
@@ -322,7 +320,7 @@ library FundsLib {
                     ) /
                     HUNDRED_PERCENT;
 
-                resellerBuyPrice = price;
+                resellerBuyPrice = secondaryCommit.price;
             }
 
             if (currentResellerAmount > 0) {
@@ -545,33 +543,40 @@ library FundsLib {
      * @notice Distributes the royalties to external recipients and seller's treasury.
      *
      * @param _offer - storage pointer to the offer
-     * @param _royaltyInfoIndex - index of the royalty info (reffers to offer.royaltyInfo array)
-     * @param _price - price in the sequential commit
-     * @param _escrowedRoyaltyAmount - amount of royalties that were escrowed
+     * @param _secondaryCommit - information about the secondary commit (royaltyInfoIndex, price, escrowedRoyaltyAmount)
      * @param _effectivePriceMultiplier - multiplier for the price, depending on the state of the exchange
      */
     function distributeRoyalties(
+        uint256 _exchangeId,
         BosonTypes.Offer storage _offer,
-        uint256 _royaltyInfoIndex,
-        uint256 _price,
-        uint256 _escrowedRoyaltyAmount,
+        BosonTypes.ExchangeCosts memory _secondaryCommit,
         uint256 _effectivePriceMultiplier
     ) internal returns (uint256 sellerRoyalties) {
+        address sender = EIP712Lib.msgSender();
         address exchangeToken = _offer.exchangeToken;
-        BosonTypes.RoyaltyInfo storage _royaltyInfo = _offer.royaltyInfo[_royaltyInfoIndex];
+        BosonTypes.RoyaltyInfo storage _royaltyInfo = _offer.royaltyInfo[_secondaryCommit.royaltyInfoIndex];
         uint256 len = _royaltyInfo.recipients.length;
         uint256 totalAmount;
-        uint256 effectivePrice = (_price * _effectivePriceMultiplier) / HUNDRED_PERCENT;
+        uint256 effectivePrice = (_secondaryCommit.price * _effectivePriceMultiplier) / HUNDRED_PERCENT;
+        ProtocolLib.ProtocolLookups storage pl = ProtocolLib.protocolLookups();
         for (uint256 i = 0; i < len; ) {
             address payable recipient = _royaltyInfo.recipients[i];
             uint256 amount = (_royaltyInfo.bps[i] * effectivePrice) / HUNDRED_PERCENT;
             totalAmount += amount;
             if (recipient == address(0)) {
                 // goes to seller's treasury
-                sellerRoyalties = amount;
+                sellerRoyalties += amount;
             } else {
-                // try to transfer the funds. Or better make it available to withdraw?
-                FundsLib.transferFundsFromProtocol(exchangeToken, recipient, amount);
+                // Make funds available to withdraw
+                if (amount > 0) {
+                    increaseAvailableFundsAndEmitEvent(
+                        _exchangeId,
+                        pl.royaltyRecipientIdByWallet[recipient],
+                        exchangeToken,
+                        amount,
+                        sender
+                    );
+                }
             }
 
             unchecked {
@@ -580,6 +585,6 @@ library FundsLib {
         }
 
         // if there is a remainder due to rounding, it goes to the seller's treasury
-        sellerRoyalties += (_effectivePriceMultiplier * _escrowedRoyaltyAmount) / HUNDRED_PERCENT - totalAmount;
+        sellerRoyalties += (_effectivePriceMultiplier * _secondaryCommit.royaltyAmount) / HUNDRED_PERCENT - totalAmount;
     }
 }

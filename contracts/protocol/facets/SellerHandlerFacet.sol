@@ -160,7 +160,7 @@ contract SellerHandlerFacet is SellerBase {
                 uint256 royaltyRecipientId = royaltyRecipientIndexBySellerAndRecipient[_seller.treasury];
 
                 if (royaltyRecipientId != 0) {
-                    RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_seller.id];
+                    RoyaltyRecipientInfo[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_seller.id];
 
                     // If the new treasury is already a royalty recipient, remove it
                     royaltyRecipientId--; // royaltyRecipientId is 1-based, so we need to decrement it to get the index
@@ -474,11 +474,11 @@ contract SellerHandlerFacet is SellerBase {
      *  - some royalty percentage is above the limit
      *
      * @param _sellerId - seller id
-     * @param _royaltyRecipients - list of royalty recipients to add
+     * @param _royaltyRecipients - list of royalty recipients to add, including minimal royalty percentage
      */
     function addRoyaltyRecipients(
         uint256 _sellerId,
-        RoyaltyRecipient[] calldata _royaltyRecipients
+        RoyaltyRecipientInfo[] calldata _royaltyRecipients
     ) external sellersNotPaused nonReentrant {
         // Cache protocol lookups and sender for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
@@ -487,25 +487,26 @@ contract SellerHandlerFacet is SellerBase {
         (Seller storage seller, address sender) = validateAdminStatus(lookups, _sellerId);
         address treasury = seller.treasury;
 
-        RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
+        RoyaltyRecipientInfo[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
+        uint256 maxRoyaltyPercentage = protocolLimits().maxRoyaltyPercentage;
         uint256 royaltyRecipientsStorageLength = royaltyRecipients.length + 1;
         for (uint256 i = 0; i < _royaltyRecipients.length; ) {
             // Cache storage pointer to avoid multiple lookups
             mapping(address => uint256) storage royaltyRecipientIndexByRecipient = lookups
                 .royaltyRecipientIndexBySellerAndRecipient[_sellerId];
 
-            // No uniqueness check for externalIds since they are not used in the protocol
             if (
                 _royaltyRecipients[i].wallet == treasury ||
                 _royaltyRecipients[i].wallet == address(0) ||
                 royaltyRecipientIndexByRecipient[_royaltyRecipients[i].wallet] != 0
             ) revert RecipientNotUnique();
 
-            if (_royaltyRecipients[i].minRoyaltyPercentage > protocolLimits().maxRoyaltyPercentage)
-                revert InvalidRoyaltyPercentage();
+            if (_royaltyRecipients[i].minRoyaltyPercentage > maxRoyaltyPercentage) revert InvalidRoyaltyPercentage();
 
             royaltyRecipients.push(_royaltyRecipients[i]);
             royaltyRecipientIndexByRecipient[_royaltyRecipients[i].wallet] = royaltyRecipientsStorageLength + i;
+
+            createRoyaltyRecipientAccount(_royaltyRecipients[i].wallet);
 
             unchecked {
                 i++;
@@ -513,6 +514,23 @@ contract SellerHandlerFacet is SellerBase {
         }
 
         emit RoyaltyRecipientsChanged(_sellerId, fetchRoyaltyRecipients(_sellerId), sender);
+    }
+
+    function createRoyaltyRecipientAccount(address payable _royaltyRecipient) internal {
+        mapping(address => uint256) storage royaltyRecipientIdByWallet = protocolLookups().royaltyRecipientIdByWallet;
+        // If account exists, do nothing
+        if (royaltyRecipientIdByWallet[_royaltyRecipient] > 0) {
+            return;
+        }
+
+        uint256 royaltyRecipientId = protocolCounters().nextAccountId++;
+
+        protocolEntities().royaltyRecipients[royaltyRecipientId] = RoyaltyRecipient({
+            id: royaltyRecipientId,
+            wallet: _royaltyRecipient
+        });
+
+        royaltyRecipientIdByWallet[_royaltyRecipient] = royaltyRecipientId;
     }
 
     /**
@@ -538,7 +556,7 @@ contract SellerHandlerFacet is SellerBase {
     function updateRoyaltyRecipients(
         uint256 _sellerId,
         uint256[] calldata _royaltyRecipientIds,
-        RoyaltyRecipient[] calldata _royaltyRecipients
+        RoyaltyRecipientInfo[] calldata _royaltyRecipients
     ) external sellersNotPaused nonReentrant {
         // Cache protocol lookups and sender for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
@@ -553,8 +571,7 @@ contract SellerHandlerFacet is SellerBase {
         uint256 royaltyRecipientIdsLength = _royaltyRecipientIds.length;
         if (royaltyRecipientIdsLength != _royaltyRecipients.length) revert ArrayLengthMismatch();
 
-        RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
-
+        RoyaltyRecipientInfo[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
         uint256 royaltyRecipientsLength = royaltyRecipients.length;
         for (uint256 i = 0; i < royaltyRecipientIdsLength; ) {
             uint256 royaltyRecipientId = _royaltyRecipientIds[i];
@@ -586,6 +603,8 @@ contract SellerHandlerFacet is SellerBase {
                 revert InvalidRoyaltyPercentage();
 
             royaltyRecipients[royaltyRecipientId] = _royaltyRecipients[i];
+
+            createRoyaltyRecipientAccount(_royaltyRecipients[i].wallet);
 
             unchecked {
                 i++;
@@ -622,7 +641,7 @@ contract SellerHandlerFacet is SellerBase {
         // Make sure admin is the caller and get the sender's address
         (, address sender) = validateAdminStatus(lookups, _sellerId);
 
-        RoyaltyRecipient[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
+        RoyaltyRecipientInfo[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[_sellerId];
 
         // We loop from the end of the array to ensure correct ids are removed
         // _royaltyRecipients must be sorted in ascending order
@@ -852,7 +871,7 @@ contract SellerHandlerFacet is SellerBase {
      */
     function getRoyaltyRecipients(
         uint256 _sellerId
-    ) external view returns (RoyaltyRecipient[] memory royaltyRecipients) {
+    ) external view returns (RoyaltyRecipientInfo[] memory royaltyRecipients) {
         return fetchRoyaltyRecipients(_sellerId);
     }
 

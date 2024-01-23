@@ -114,6 +114,11 @@ contract BosonTypes {
         bool active;
     }
 
+    struct RoyaltyRecipient {
+        uint256 id;
+        address payable wallet;
+    }
+
     struct DisputeResolver {
         uint256 id;
         uint256 escalationResponsePeriod;
@@ -330,15 +335,14 @@ contract BosonTypes {
         Wrapper // Side is not relevant from the protocol perspective
     }
 
-    struct RoyaltyRecipient {
-        address wallet;
-        uint256 minRoyaltyPercentage;
-        string externalId;
-    }
-
     struct RoyaltyInfo {
         address payable[] recipients;
         uint256[] bps;
+    }
+
+    struct RoyaltyRecipientInfo {
+        address payable wallet;
+        uint256 minRoyaltyPercentage;
     }
 
     struct PremintParameters {

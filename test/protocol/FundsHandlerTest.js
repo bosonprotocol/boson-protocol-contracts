@@ -8,7 +8,7 @@ const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const PriceDiscovery = require("../../scripts/domain/PriceDiscovery");
 const Side = require("../../scripts/domain/Side");
 const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo");
-const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../scripts/domain/RoyaltyRecipient.js");
+const { RoyaltyRecipientInfo, RoyaltyRecipientInfoList } = require("../../scripts/domain/RoyaltyRecipientInfo.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
@@ -81,11 +81,11 @@ describe("IBosonFundsHandler", function () {
   let sellersAvailableFunds,
     buyerAvailableFunds,
     protocolAvailableFunds,
-    externalRoyaltyRecipientsBalance,
+    royaltyRecipientsAvailableFunds,
     expectedSellerAvailableFunds,
     expectedBuyerAvailableFunds,
     expectedProtocolAvailableFunds,
-    expectedExternalRoyaltyRecipientsBalance;
+    expectedRoyaltyRecipientsAvailableFunds;
   let tokenListSeller, tokenListBuyer, tokenAmountsSeller, tokenAmountsBuyer, tokenList, tokenAmounts;
   let tx, txReceipt, txCost, event;
   let disputeResolverFees, disputeResolver, disputeResolverId;
@@ -542,510 +542,739 @@ describe("IBosonFundsHandler", function () {
       });
 
       context("👉 withdrawFunds()", async function () {
-        beforeEach(async function () {
-          // cancel the voucher, so both seller and buyer have something to withdraw
-          await exchangeHandler.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
-          await exchangeHandler.connect(buyer).cancelVoucher(++exchangeId); // canceling the voucher in the native currency
-
-          // expected payoffs - they are the same for token and native currency
-          // buyer: price - buyerCancelPenalty
-          buyerPayoff = BigInt(offerToken.price) - BigInt(offerToken.buyerCancelPenalty);
-
-          // seller: sellerDeposit + buyerCancelPenalty
-          sellerPayoff = BigInt(offerToken.sellerDeposit) + BigInt(offerToken.buyerCancelPenalty);
-        });
-
-        it("should emit a FundsWithdrawn event", async function () {
-          // Withdraw funds, testing for the event
-          // Withdraw tokens
-          tokenListSeller = [await mockToken.getAddress(), ZeroAddress];
-          tokenListBuyer = [ZeroAddress, await mockToken.getAddress()];
-
-          // Withdraw amounts
-          tokenAmountsSeller = [sellerPayoff, (BigInt(sellerPayoff) / 2n).toString()];
-          tokenAmountsBuyer = [buyerPayoff, (BigInt(buyerPayoff) / 5n).toString()];
-
-          // seller withdrawal
-          const tx = await fundsHandler
-            .connect(assistant)
-            .withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller);
-          await expect(tx)
-            .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(
-              seller.id,
-              await treasury.getAddress(),
-              await mockToken.getAddress(),
-              sellerPayoff,
-              await assistant.getAddress()
-            );
-
-          await expect(tx)
-            .to.emit(fundsHandler, "FundsWithdrawn")
-
-            .withArgs(
-              seller.id,
-              await treasury.getAddress(),
-              0n,
-              BigInt(sellerPayoff) / 2n,
-              await assistant.getAddress()
-            );
-
-          // buyer withdrawal
-          const tx2 = await fundsHandler.connect(buyer).withdrawFunds(buyerId, tokenListBuyer, tokenAmountsBuyer);
-          await expect(tx2)
-            .to.emit(fundsHandler, "FundsWithdrawn", await buyer.getAddress())
-            .withArgs(
-              buyerId,
-              await buyer.getAddress(),
-              await mockToken.getAddress(),
-              BigInt(buyerPayoff) / 5n,
-              await buyer.getAddress()
-            );
-
-          await expect(tx2)
-            .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(buyerId, await buyer.getAddress(), 0n, buyerPayoff, await buyer.getAddress());
-        });
-
-        it("should update state", async function () {
-          // WITHDRAW ONE TOKEN PARTIALLY
-
-          // Read on chain state
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
-          const treasuryBalanceBefore = await provider.getBalance(await treasury.getAddress());
-
-          // Chain state should match the expected available funds before the withdrawal
-          expectedSellerAvailableFunds = new FundsList([
-            new Funds(await mockToken.getAddress(), "Foreign20", sellerPayoff),
-            new Funds(ZeroAddress, "Native currency", sellerPayoff),
-          ]);
-          expect(sellersAvailableFunds).to.eql(
-            expectedSellerAvailableFunds,
-            "Seller available funds mismatch before withdrawal"
-          );
-
-          // withdraw funds
-          const withdrawAmount = BigInt(sellerPayoff) - parseUnits("0.1", "ether");
-          await fundsHandler.connect(assistant).withdrawFunds(seller.id, [ZeroAddress], [withdrawAmount]);
-
-          // Read on chain state
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
-          const treasuryBalanceAfter = await provider.getBalance(await treasury.getAddress());
-
-          // Chain state should match the expected available funds after the withdrawal
-          // Native currency available funds are reduced for the withdrawal amount
-          expectedSellerAvailableFunds.funds[1] = new Funds(
-            ZeroAddress,
-            "Native currency",
-            BigInt(sellerPayoff) - BigInt(withdrawAmount)
-          );
-          expect(sellersAvailableFunds).to.eql(
-            expectedSellerAvailableFunds,
-            "Seller available funds mismatch after withdrawal"
-          );
-
-          // Native currency balance is increased for the withdrawAmount
-          expect(treasuryBalanceAfter).to.eql(
-            treasuryBalanceBefore + withdrawAmount,
-            "Treasury token balance mismatch"
-          );
-
-          // WITHDRAW ONE TOKEN FULLY
-
-          // Read on chain state
-          buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
-          const buyerBalanceBefore = await mockToken.balanceOf(await buyer.getAddress());
-
-          // Chain state should match the expected available funds before the withdrawal
-          expectedBuyerAvailableFunds = new FundsList([
-            new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
-            new Funds(ZeroAddress, "Native currency", buyerPayoff),
-          ]);
-          expect(buyerAvailableFunds).to.eql(
-            expectedBuyerAvailableFunds,
-            "Buyer available funds mismatch before withdrawal"
-          );
-
-          // withdraw funds
-          await fundsHandler.connect(buyer).withdrawFunds(buyerId, [await mockToken.getAddress()], [buyerPayoff]);
-
-          // Read on chain state
-          buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
-          const buyerBalanceAfter = await mockToken.balanceOf(await buyer.getAddress());
-
-          // Chain state should match the expected available funds after the withdrawal
-          // Since all tokens are withdrawn, getAvailableFunds should return 0 for token
-          expectedBuyerAvailableFunds = new FundsList([new Funds(ZeroAddress, "Native currency", buyerPayoff)]);
-
-          expect(buyerAvailableFunds).to.eql(
-            expectedBuyerAvailableFunds,
-            "Buyer available funds mismatch after withdrawal"
-          );
-          // Token balance is increased for the buyer payoff
-          expect(buyerBalanceAfter).to.eql(buyerBalanceBefore + buyerPayoff, "Buyer token balance mismatch");
-        });
-
-        it("should allow to withdraw all funds at once", async function () {
-          // Read on chain state
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
-          const treasuryNativeBalanceBefore = await provider.getBalance(await treasury.getAddress());
-          const treasuryTokenBalanceBefore = await mockToken.balanceOf(await treasury.getAddress());
-
-          // Chain state should match the expected available funds before the withdrawal
-          expectedSellerAvailableFunds = new FundsList([
-            new Funds(await mockToken.getAddress(), "Foreign20", sellerPayoff),
-            new Funds(ZeroAddress, "Native currency", sellerPayoff),
-          ]);
-          expect(sellersAvailableFunds).to.eql(
-            expectedSellerAvailableFunds,
-            "Seller available funds mismatch before withdrawal"
-          );
-
-          // withdraw all funds
-          await fundsHandler.connect(assistant).withdrawFunds(seller.id, [], []);
-
-          // Read on chain state
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
-          const treasuryNativeBalanceAfter = await provider.getBalance(await treasury.getAddress());
-          const treasuryTokenBalanceAfter = await mockToken.balanceOf(await treasury.getAddress());
-
-          // Chain state should match the expected available funds after the withdrawal
-          // Funds available should be zero
-          expectedSellerAvailableFunds = new FundsList([]);
-
-          expect(sellersAvailableFunds).to.eql(
-            expectedSellerAvailableFunds,
-            "Seller available funds mismatch after withdrawal"
-          );
-          // Native currency balance is increased for the withdrawAmount
-          expect(treasuryNativeBalanceAfter).to.eql(
-            treasuryNativeBalanceBefore + sellerPayoff,
-            "Treasury native currency balance mismatch"
-          );
-          expect(treasuryTokenBalanceAfter).to.eql(
-            treasuryTokenBalanceBefore + sellerPayoff,
-            "Treasury token balance mismatch"
-          );
-        });
-
-        it("It's possible to withdraw same toke twice if in total enough available funds", async function () {
-          let reduction = parseUnits("0.1", "ether");
-          // Withdraw token
-          tokenListSeller = [await mockToken.getAddress(), await mockToken.getAddress()];
-          tokenAmountsSeller = [BigInt(sellerPayoff) - BigInt(reduction), reduction];
-
-          // seller withdrawal
-          const tx = await fundsHandler
-            .connect(assistant)
-            .withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller);
-          await expect(tx)
-            .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(
-              seller.id,
-              await treasury.getAddress(),
-              await mockToken.getAddress(),
-              BigInt(sellerPayoff) - BigInt(reduction),
-              await assistant.getAddress()
-            );
-
-          await expect(tx)
-            .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(
-              seller.id,
-              await treasury.getAddress(),
-              await mockToken.getAddress(),
-              reduction,
-              await assistant.getAddress()
-            );
-        });
-
-        context("Agent Withdraws funds", async function () {
+        context("singe exchange", async function () {
           beforeEach(async function () {
-            // Create a valid agent,
-            agentId = "4";
-            agent = mockAgent(await other.getAddress());
-            agent.id = agentId;
-            expect(agent.isValid()).is.true;
+            // cancel the voucher, so both seller and buyer have something to withdraw
+            await exchangeHandler.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
+            await exchangeHandler.connect(buyer).cancelVoucher(++exchangeId); // canceling the voucher in the native currency
 
-            // Create an agent
-            await accountHandler.connect(rando).createAgent(agent);
+            // expected payoffs - they are the same for token and native currency
+            // buyer: price - buyerCancelPenalty
+            buyerPayoff = BigInt(offerToken.price) - BigInt(offerToken.buyerCancelPenalty);
 
-            // Mock offer
-            const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
-            agentOffer = offer.clone();
-            agentOffer.id = "3";
-            exchangeId = "3";
-            agentOffer.exchangeToken = await mockToken.getAddress();
-
-            // Create offer with agent
-            await offerHandler
-              .connect(assistant)
-              .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit);
-
-            // Set used variables
-            price = agentOffer.price;
-            sellerDeposit = agentOffer.sellerDeposit;
-            voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
-
-            // top up seller's and buyer's account
-            await mockToken.mint(await assistant.getAddress(), sellerDeposit);
-            await mockToken.mint(await buyer.getAddress(), price);
-
-            // approve protocol to transfer the tokens
-            await mockToken.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
-            await mockToken.connect(buyer).approve(protocolDiamondAddress, price);
-
-            // deposit to seller's pool
-            await fundsHandler.connect(assistant).depositFunds(seller.id, await mockToken.getAddress(), sellerDeposit);
-
-            // commit to agent offer
-            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
-
-            // Set time forward to the offer's voucherRedeemableFrom
-            await setNextBlockTimestamp(Number(voucherRedeemableFrom));
-
-            // succesfully redeem exchange
-            await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+            // seller: sellerDeposit + buyerCancelPenalty
+            sellerPayoff = BigInt(offerToken.sellerDeposit) + BigInt(offerToken.buyerCancelPenalty);
           });
 
-          it("Withdraw when exchange is completed, it emits a FundsWithdrawn event", async function () {
-            // Complete the exchange
-            await exchangeHandler.connect(buyer).completeExchange(exchangeId);
-
-            agentPayoff = applyPercentage(agentOffer.price, agent.feePercentage);
-
-            // Check the balance BEFORE withdrawFunds()
-            const feeCollectorNativeBalanceBefore = await mockToken.balanceOf(agent.wallet);
-
-            await expect(
-              fundsHandler.connect(other).withdrawFunds(agentId, [await mockToken.getAddress()], [agentPayoff])
-            )
-              .to.emit(fundsHandler, "FundsWithdrawn")
-              .withArgs(agentId, agent.wallet, await mockToken.getAddress(), agentPayoff, agent.wallet);
-
-            // Check the balance AFTER withdrawFunds()
-            const feeCollectorNativeBalanceAfter = await mockToken.balanceOf(agent.wallet);
-
-            // Expected balance
-            const expectedFeeCollectorNativeBalanceAfter =
-              BigInt(feeCollectorNativeBalanceBefore) + BigInt(agentPayoff);
-
-            // Check agent wallet balance and verify the transfer really happened.
-            expect(feeCollectorNativeBalanceAfter).to.eql(
-              expectedFeeCollectorNativeBalanceAfter,
-              "Agent did not receive their fee"
-            );
-          });
-
-          it("Withdraw when dispute is retracted, it emits a FundsWithdrawn event", async function () {
-            // raise the dispute
-            await disputeHandler.connect(buyer).raiseDispute(exchangeId);
-
-            // retract from the dispute
-            await disputeHandler.connect(buyer).retractDispute(exchangeId);
-
-            agentPayoff = ((BigInt(agentOffer.price) * BigInt(agent.feePercentage)) / 10000n).toString();
-
-            // Check the balance BEFORE withdrawFunds()
-            const feeCollectorNativeBalanceBefore = await mockToken.balanceOf(agent.wallet);
-
-            await expect(
-              fundsHandler.connect(other).withdrawFunds(agentId, [await mockToken.getAddress()], [agentPayoff])
-            )
-              .to.emit(fundsHandler, "FundsWithdrawn")
-              .withArgs(agentId, agent.wallet, await mockToken.getAddress(), agentPayoff, agent.wallet);
-
-            // Check the balance AFTER withdrawFunds()
-            const feeCollectorNativeBalanceAfter = await mockToken.balanceOf(agent.wallet);
-
-            // Expected balance
-            const expectedFeeCollectorNativeBalanceAfter =
-              BigInt(feeCollectorNativeBalanceBefore) + BigInt(agentPayoff);
-
-            // Check agent wallet balance and verify the transfer really happened.
-            expect(feeCollectorNativeBalanceAfter).to.eql(
-              expectedFeeCollectorNativeBalanceAfter,
-              "Agent did not receive their fee"
-            );
-          });
-        });
-
-        context("💔 Revert Reasons", async function () {
-          it("The funds region of protocol is paused", async function () {
+          it("should emit a FundsWithdrawn event", async function () {
+            // Withdraw funds, testing for the event
             // Withdraw tokens
+            tokenListSeller = [await mockToken.getAddress(), ZeroAddress];
             tokenListBuyer = [ZeroAddress, await mockToken.getAddress()];
 
             // Withdraw amounts
-            tokenAmountsBuyer = [BigInt(buyerPayoff), BigInt(buyerPayoff) / 5n];
+            tokenAmountsSeller = [sellerPayoff, (BigInt(sellerPayoff) / 2n).toString()];
+            tokenAmountsBuyer = [buyerPayoff, (BigInt(buyerPayoff) / 5n).toString()];
 
-            // Pause the funds region of the protocol
-            await pauseHandler.connect(pauser).pause([PausableRegion.Funds]);
+            // seller withdrawal
+            const tx = await fundsHandler
+              .connect(assistant)
+              .withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller);
+            await expect(tx)
+              .to.emit(fundsHandler, "FundsWithdrawn")
+              .withArgs(
+                seller.id,
+                await treasury.getAddress(),
+                await mockToken.getAddress(),
+                sellerPayoff,
+                await assistant.getAddress()
+              );
 
-            // Attempt to withdraw funds, expecting revert
-            await expect(
-              fundsHandler.connect(buyer).withdrawFunds(buyerId, tokenListBuyer, tokenAmountsBuyer)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+            await expect(tx)
+              .to.emit(fundsHandler, "FundsWithdrawn")
+
+              .withArgs(
+                seller.id,
+                await treasury.getAddress(),
+                0n,
+                BigInt(sellerPayoff) / 2n,
+                await assistant.getAddress()
+              );
+
+            // buyer withdrawal
+            const tx2 = await fundsHandler.connect(buyer).withdrawFunds(buyerId, tokenListBuyer, tokenAmountsBuyer);
+            await expect(tx2)
+              .to.emit(fundsHandler, "FundsWithdrawn", await buyer.getAddress())
+              .withArgs(
+                buyerId,
+                await buyer.getAddress(),
+                await mockToken.getAddress(),
+                BigInt(buyerPayoff) / 5n,
+                await buyer.getAddress()
+              );
+
+            await expect(tx2)
+              .to.emit(fundsHandler, "FundsWithdrawn")
+              .withArgs(buyerId, await buyer.getAddress(), 0n, buyerPayoff, await buyer.getAddress());
           });
 
-          it("Caller is not authorized to withdraw", async function () {
-            // Attempt to withdraw the buyer funds, expecting revert
-            await expect(fundsHandler.connect(rando).withdrawFunds(buyerId, [], [])).to.revertedWithCustomError(
-              bosonErrors,
-              RevertReasons.NOT_AUTHORIZED
+          it("should update state", async function () {
+            // WITHDRAW ONE TOKEN PARTIALLY
+
+            // Read on chain state
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
+            const treasuryBalanceBefore = await provider.getBalance(await treasury.getAddress());
+
+            // Chain state should match the expected available funds before the withdrawal
+            expectedSellerAvailableFunds = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", sellerPayoff),
+              new Funds(ZeroAddress, "Native currency", sellerPayoff),
+            ]);
+            expect(sellersAvailableFunds).to.eql(
+              expectedSellerAvailableFunds,
+              "Seller available funds mismatch before withdrawal"
             );
 
-            // Attempt to withdraw the seller funds, expecting revert
-            await expect(fundsHandler.connect(rando).withdrawFunds(seller.id, [], [])).to.revertedWithCustomError(
-              bosonErrors,
-              RevertReasons.NOT_AUTHORIZED
+            // withdraw funds
+            const withdrawAmount = BigInt(sellerPayoff) - parseUnits("0.1", "ether");
+            await fundsHandler.connect(assistant).withdrawFunds(seller.id, [ZeroAddress], [withdrawAmount]);
+
+            // Read on chain state
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
+            const treasuryBalanceAfter = await provider.getBalance(await treasury.getAddress());
+
+            // Chain state should match the expected available funds after the withdrawal
+            // Native currency available funds are reduced for the withdrawal amount
+            expectedSellerAvailableFunds.funds[1] = new Funds(
+              ZeroAddress,
+              "Native currency",
+              BigInt(sellerPayoff) - BigInt(withdrawAmount)
+            );
+            expect(sellersAvailableFunds).to.eql(
+              expectedSellerAvailableFunds,
+              "Seller available funds mismatch after withdrawal"
             );
 
-            // Attempt to withdraw the seller funds as treasury, expecting revert
-            await expect(fundsHandler.connect(treasury).withdrawFunds(seller.id, [], [])).to.revertedWithCustomError(
-              bosonErrors,
-              RevertReasons.NOT_AUTHORIZED
+            // Native currency balance is increased for the withdrawAmount
+            expect(treasuryBalanceAfter).to.eql(
+              treasuryBalanceBefore + withdrawAmount,
+              "Treasury token balance mismatch"
             );
+
+            // WITHDRAW ONE TOKEN FULLY
+
+            // Read on chain state
+            buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
+            const buyerBalanceBefore = await mockToken.balanceOf(await buyer.getAddress());
+
+            // Chain state should match the expected available funds before the withdrawal
+            expectedBuyerAvailableFunds = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
+              new Funds(ZeroAddress, "Native currency", buyerPayoff),
+            ]);
+            expect(buyerAvailableFunds).to.eql(
+              expectedBuyerAvailableFunds,
+              "Buyer available funds mismatch before withdrawal"
+            );
+
+            // withdraw funds
+            await fundsHandler.connect(buyer).withdrawFunds(buyerId, [await mockToken.getAddress()], [buyerPayoff]);
+
+            // Read on chain state
+            buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
+            const buyerBalanceAfter = await mockToken.balanceOf(await buyer.getAddress());
+
+            // Chain state should match the expected available funds after the withdrawal
+            // Since all tokens are withdrawn, getAvailableFunds should return 0 for token
+            expectedBuyerAvailableFunds = new FundsList([new Funds(ZeroAddress, "Native currency", buyerPayoff)]);
+
+            expect(buyerAvailableFunds).to.eql(
+              expectedBuyerAvailableFunds,
+              "Buyer available funds mismatch after withdrawal"
+            );
+            // Token balance is increased for the buyer payoff
+            expect(buyerBalanceAfter).to.eql(buyerBalanceBefore + buyerPayoff, "Buyer token balance mismatch");
           });
 
-          it("Token list address does not match token amount address", async function () {
-            // Withdraw token
-            tokenList = [await mockToken.getAddress(), ZeroAddress];
-            tokenAmounts = [sellerPayoff];
+          it("should allow to withdraw all funds at once", async function () {
+            // Read on chain state
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
+            const treasuryNativeBalanceBefore = await provider.getBalance(await treasury.getAddress());
+            const treasuryTokenBalanceBefore = await mockToken.balanceOf(await treasury.getAddress());
 
-            // Attempt to withdraw the funds, expecting revert
-            await expect(
-              fundsHandler.connect(assistant).withdrawFunds(seller.id, tokenList, tokenAmounts)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_AMOUNT_MISMATCH);
-          });
+            // Chain state should match the expected available funds before the withdrawal
+            expectedSellerAvailableFunds = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", sellerPayoff),
+              new Funds(ZeroAddress, "Native currency", sellerPayoff),
+            ]);
+            expect(sellersAvailableFunds).to.eql(
+              expectedSellerAvailableFunds,
+              "Seller available funds mismatch before withdrawal"
+            );
 
-          it("Caller tries to withdraw more than they have in the available funds", async function () {
-            // Withdraw token
-            tokenList = [await mockToken.getAddress()];
-            tokenAmounts = [BigInt(sellerPayoff) * 2n];
-
-            // Attempt to withdraw the funds, expecting revert
-            await expect(
-              fundsHandler.connect(assistant).withdrawFunds(seller.id, tokenList, tokenAmounts)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
-          });
-
-          it("Caller tries to withdraw the same token twice", async function () {
-            // Withdraw token
-            tokenList = [await mockToken.getAddress(), await mockToken.getAddress()];
-            tokenAmounts = [sellerPayoff, sellerPayoff];
-
-            // Attempt to withdraw the funds, expecting revert
-            await expect(
-              fundsHandler.connect(assistant).withdrawFunds(seller.id, tokenList, tokenAmounts)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
-          });
-
-          it("Nothing to withdraw", async function () {
-            // Withdraw token
-            tokenList = [await mockToken.getAddress()];
-            tokenAmounts = ["0"];
-
-            await expect(
-              fundsHandler.connect(assistant).withdrawFunds(seller.id, tokenList, tokenAmounts)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOTHING_TO_WITHDRAW);
-
-            // first withdraw everything
+            // withdraw all funds
             await fundsHandler.connect(assistant).withdrawFunds(seller.id, [], []);
 
-            // Attempt to withdraw the funds, expecting revert
-            await expect(fundsHandler.connect(assistant).withdrawFunds(seller.id, [], [])).to.revertedWithCustomError(
-              bosonErrors,
-              RevertReasons.NOTHING_TO_WITHDRAW
+            // Read on chain state
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
+            const treasuryNativeBalanceAfter = await provider.getBalance(await treasury.getAddress());
+            const treasuryTokenBalanceAfter = await mockToken.balanceOf(await treasury.getAddress());
+
+            // Chain state should match the expected available funds after the withdrawal
+            // Funds available should be zero
+            expectedSellerAvailableFunds = new FundsList([]);
+
+            expect(sellersAvailableFunds).to.eql(
+              expectedSellerAvailableFunds,
+              "Seller available funds mismatch after withdrawal"
+            );
+            // Native currency balance is increased for the withdrawAmount
+            expect(treasuryNativeBalanceAfter).to.eql(
+              treasuryNativeBalanceBefore + sellerPayoff,
+              "Treasury native currency balance mismatch"
+            );
+            expect(treasuryTokenBalanceAfter).to.eql(
+              treasuryTokenBalanceBefore + sellerPayoff,
+              "Treasury token balance mismatch"
             );
           });
 
-          it("Transfer of funds failed - revert in fallback", async function () {
-            // deploy a contract that cannot receive funds
-            const [fallbackErrorContract] = await deployMockTokens(["FallbackError"]);
+          it("It's possible to withdraw same token twice if in total enough available funds", async function () {
+            let reduction = parseUnits("0.1", "ether");
+            // Withdraw token
+            tokenListSeller = [await mockToken.getAddress(), await mockToken.getAddress()];
+            tokenAmountsSeller = [BigInt(sellerPayoff) - BigInt(reduction), reduction];
 
-            // commit to offer on behalf of some contract
-            tx = await exchangeHandler
-              .connect(buyer)
-              .commitToOffer(await fallbackErrorContract.getAddress(), offerNative.id, { value: price });
-            txReceipt = await tx.wait();
-            event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
-            exchangeId = event.exchangeId;
-            const fallbackContractBuyerId = event.buyerId;
-
-            // revoke the voucher so the contract gets credited some funds
-            await exchangeHandler.connect(assistant).revokeVoucher(exchangeId);
-
-            // we call a fallbackContract which calls fundsHandler.withdraw, which should revert
-            await expect(
-              fallbackErrorContract.withdrawFunds(
-                await fundsHandler.getAddress(),
-                fallbackContractBuyerId,
-                [ZeroAddress],
-                [offerNative.price]
-              )
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_TRANSFER_FAILED);
-          });
-
-          it("Transfer of funds failed - no payable fallback or receive", async function () {
-            // deploy a contract that cannot receive funds
-            const [fallbackErrorContract] = await deployMockTokens(["WithoutFallbackError"]);
-
-            // commit to offer on behalf of some contract
-            tx = await exchangeHandler
-              .connect(buyer)
-              .commitToOffer(await fallbackErrorContract.getAddress(), offerNative.id, { value: price });
-            txReceipt = await tx.wait();
-            event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
-            exchangeId = event.exchangeId;
-            const fallbackContractBuyerId = event.buyerId;
-
-            // revoke the voucher so the contract gets credited some funds
-            await exchangeHandler.connect(assistant).revokeVoucher(exchangeId);
-
-            // we call a fallbackContract which calls fundsHandler.withdraw, which should revert
-            await expect(
-              fallbackErrorContract.withdrawFunds(
-                await fundsHandler.getAddress(),
-                fallbackContractBuyerId,
-                [ZeroAddress],
-                [offerNative.price]
-              )
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_TRANSFER_FAILED);
-          });
-
-          it("Transfer of funds failed - ERC20 token does not exist anymore", async function () {
-            // destruct mockToken
-            await mockToken.destruct();
-
-            await expect(fundsHandler.connect(assistant).withdrawFunds(seller.id, [], [])).to.revertedWith(
-              RevertReasons.EOA_FUNCTION_CALL_SAFE_ERC20
-            );
-          });
-
-          it("Transfer of funds failed - revert durin ERC20 transfer", async function () {
-            // pause mockToken
-            await mockToken.pause();
-
-            await expect(fundsHandler.connect(assistant).withdrawFunds(seller.id, [], [])).to.revertedWith(
-              RevertReasons.ERC20_PAUSED
-            );
-          });
-
-          it("Transfer of funds failed - ERC20 transfer returns false", async function () {
-            const [foreign20ReturnFalse] = await deployMockTokens(["Foreign20TransferReturnFalse"]);
-
-            await foreign20ReturnFalse.connect(assistant).mint(await assistant.getAddress(), sellerDeposit);
-            await foreign20ReturnFalse.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
-
-            await fundsHandler
+            // seller withdrawal
+            const tx = await fundsHandler
               .connect(assistant)
-              .depositFunds(seller.id, await foreign20ReturnFalse.getAddress(), sellerDeposit);
+              .withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller);
+            await expect(tx)
+              .to.emit(fundsHandler, "FundsWithdrawn")
+              .withArgs(
+                seller.id,
+                await treasury.getAddress(),
+                await mockToken.getAddress(),
+                BigInt(sellerPayoff) - BigInt(reduction),
+                await assistant.getAddress()
+              );
 
+            await expect(tx)
+              .to.emit(fundsHandler, "FundsWithdrawn")
+              .withArgs(
+                seller.id,
+                await treasury.getAddress(),
+                await mockToken.getAddress(),
+                reduction,
+                await assistant.getAddress()
+              );
+          });
+
+          context("Agent Withdraws funds", async function () {
+            beforeEach(async function () {
+              // Create a valid agent,
+              agentId = "4";
+              agent = mockAgent(await other.getAddress());
+              agent.id = agentId;
+              expect(agent.isValid()).is.true;
+
+              // Create an agent
+              await accountHandler.connect(rando).createAgent(agent);
+
+              // Mock offer
+              const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+              agentOffer = offer.clone();
+              agentOffer.id = "3";
+              exchangeId = "3";
+              agentOffer.exchangeToken = await mockToken.getAddress();
+
+              // Create offer with agent
+              await offerHandler
+                .connect(assistant)
+                .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit);
+
+              // Set used variables
+              price = agentOffer.price;
+              sellerDeposit = agentOffer.sellerDeposit;
+              voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+
+              // top up seller's and buyer's account
+              await mockToken.mint(await assistant.getAddress(), sellerDeposit);
+              await mockToken.mint(await buyer.getAddress(), price);
+
+              // approve protocol to transfer the tokens
+              await mockToken.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
+              await mockToken.connect(buyer).approve(protocolDiamondAddress, price);
+
+              // deposit to seller's pool
+              await fundsHandler
+                .connect(assistant)
+                .depositFunds(seller.id, await mockToken.getAddress(), sellerDeposit);
+
+              // commit to agent offer
+              await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+
+              // Set time forward to the offer's voucherRedeemableFrom
+              await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+              // succesfully redeem exchange
+              await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+            });
+
+            it("Withdraw when exchange is completed, it emits a FundsWithdrawn event", async function () {
+              // Complete the exchange
+              await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+
+              agentPayoff = applyPercentage(agentOffer.price, agent.feePercentage);
+
+              // Check the balance BEFORE withdrawFunds()
+              const feeCollectorNativeBalanceBefore = await mockToken.balanceOf(agent.wallet);
+
+              await expect(
+                fundsHandler.connect(other).withdrawFunds(agentId, [await mockToken.getAddress()], [agentPayoff])
+              )
+                .to.emit(fundsHandler, "FundsWithdrawn")
+                .withArgs(agentId, agent.wallet, await mockToken.getAddress(), agentPayoff, agent.wallet);
+
+              // Check the balance AFTER withdrawFunds()
+              const feeCollectorNativeBalanceAfter = await mockToken.balanceOf(agent.wallet);
+
+              // Expected balance
+              const expectedFeeCollectorNativeBalanceAfter =
+                BigInt(feeCollectorNativeBalanceBefore) + BigInt(agentPayoff);
+
+              // Check agent wallet balance and verify the transfer really happened.
+              expect(feeCollectorNativeBalanceAfter).to.eql(
+                expectedFeeCollectorNativeBalanceAfter,
+                "Agent did not receive their fee"
+              );
+            });
+
+            it("Withdraw when dispute is retracted, it emits a FundsWithdrawn event", async function () {
+              // raise the dispute
+              await disputeHandler.connect(buyer).raiseDispute(exchangeId);
+
+              // retract from the dispute
+              await disputeHandler.connect(buyer).retractDispute(exchangeId);
+
+              agentPayoff = ((BigInt(agentOffer.price) * BigInt(agent.feePercentage)) / 10000n).toString();
+
+              // Check the balance BEFORE withdrawFunds()
+              const feeCollectorNativeBalanceBefore = await mockToken.balanceOf(agent.wallet);
+
+              await expect(
+                fundsHandler.connect(other).withdrawFunds(agentId, [await mockToken.getAddress()], [agentPayoff])
+              )
+                .to.emit(fundsHandler, "FundsWithdrawn")
+                .withArgs(agentId, agent.wallet, await mockToken.getAddress(), agentPayoff, agent.wallet);
+
+              // Check the balance AFTER withdrawFunds()
+              const feeCollectorNativeBalanceAfter = await mockToken.balanceOf(agent.wallet);
+
+              // Expected balance
+              const expectedFeeCollectorNativeBalanceAfter =
+                BigInt(feeCollectorNativeBalanceBefore) + BigInt(agentPayoff);
+
+              // Check agent wallet balance and verify the transfer really happened.
+              expect(feeCollectorNativeBalanceAfter).to.eql(
+                expectedFeeCollectorNativeBalanceAfter,
+                "Agent did not receive their fee"
+              );
+            });
+          });
+
+          context("💔 Revert Reasons", async function () {
+            it("The funds region of protocol is paused", async function () {
+              // Withdraw tokens
+              tokenListBuyer = [ZeroAddress, await mockToken.getAddress()];
+
+              // Withdraw amounts
+              tokenAmountsBuyer = [BigInt(buyerPayoff), BigInt(buyerPayoff) / 5n];
+
+              // Pause the funds region of the protocol
+              await pauseHandler.connect(pauser).pause([PausableRegion.Funds]);
+
+              // Attempt to withdraw funds, expecting revert
+              await expect(
+                fundsHandler.connect(buyer).withdrawFunds(buyerId, tokenListBuyer, tokenAmountsBuyer)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+            });
+
+            it("Caller is not authorized to withdraw", async function () {
+              // Attempt to withdraw the buyer funds, expecting revert
+              await expect(fundsHandler.connect(rando).withdrawFunds(buyerId, [], [])).to.revertedWithCustomError(
+                bosonErrors,
+                RevertReasons.NOT_AUTHORIZED
+              );
+
+              // Attempt to withdraw the seller funds, expecting revert
+              await expect(fundsHandler.connect(rando).withdrawFunds(seller.id, [], [])).to.revertedWithCustomError(
+                bosonErrors,
+                RevertReasons.NOT_AUTHORIZED
+              );
+
+              // Attempt to withdraw the seller funds as treasury, expecting revert
+              await expect(fundsHandler.connect(treasury).withdrawFunds(seller.id, [], [])).to.revertedWithCustomError(
+                bosonErrors,
+                RevertReasons.NOT_AUTHORIZED
+              );
+            });
+
+            it("Token list address does not match token amount address", async function () {
+              // Withdraw token
+              tokenList = [await mockToken.getAddress(), ZeroAddress];
+              tokenAmounts = [sellerPayoff];
+
+              // Attempt to withdraw the funds, expecting revert
+              await expect(
+                fundsHandler.connect(assistant).withdrawFunds(seller.id, tokenList, tokenAmounts)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_AMOUNT_MISMATCH);
+            });
+
+            it("Caller tries to withdraw more than they have in the available funds", async function () {
+              // Withdraw token
+              tokenList = [await mockToken.getAddress()];
+              tokenAmounts = [BigInt(sellerPayoff) * 2n];
+
+              // Attempt to withdraw the funds, expecting revert
+              await expect(
+                fundsHandler.connect(assistant).withdrawFunds(seller.id, tokenList, tokenAmounts)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+            });
+
+            it("Caller tries to withdraw the same token twice", async function () {
+              // Withdraw token
+              tokenList = [await mockToken.getAddress(), await mockToken.getAddress()];
+              tokenAmounts = [sellerPayoff, sellerPayoff];
+
+              // Attempt to withdraw the funds, expecting revert
+              await expect(
+                fundsHandler.connect(assistant).withdrawFunds(seller.id, tokenList, tokenAmounts)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+            });
+
+            it("Nothing to withdraw", async function () {
+              // Withdraw token
+              tokenList = [await mockToken.getAddress()];
+              tokenAmounts = ["0"];
+
+              await expect(
+                fundsHandler.connect(assistant).withdrawFunds(seller.id, tokenList, tokenAmounts)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOTHING_TO_WITHDRAW);
+
+              // first withdraw everything
+              await fundsHandler.connect(assistant).withdrawFunds(seller.id, [], []);
+
+              // Attempt to withdraw the funds, expecting revert
+              await expect(fundsHandler.connect(assistant).withdrawFunds(seller.id, [], [])).to.revertedWithCustomError(
+                bosonErrors,
+                RevertReasons.NOTHING_TO_WITHDRAW
+              );
+            });
+
+            it("Transfer of funds failed - revert in fallback", async function () {
+              // deploy a contract that cannot receive funds
+              const [fallbackErrorContract] = await deployMockTokens(["FallbackError"]);
+
+              // commit to offer on behalf of some contract
+              tx = await exchangeHandler
+                .connect(buyer)
+                .commitToOffer(await fallbackErrorContract.getAddress(), offerNative.id, { value: price });
+              txReceipt = await tx.wait();
+              event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
+              exchangeId = event.exchangeId;
+              const fallbackContractBuyerId = event.buyerId;
+
+              // revoke the voucher so the contract gets credited some funds
+              await exchangeHandler.connect(assistant).revokeVoucher(exchangeId);
+
+              // we call a fallbackContract which calls fundsHandler.withdraw, which should revert
+              await expect(
+                fallbackErrorContract.withdrawFunds(
+                  await fundsHandler.getAddress(),
+                  fallbackContractBuyerId,
+                  [ZeroAddress],
+                  [offerNative.price]
+                )
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_TRANSFER_FAILED);
+            });
+
+            it("Transfer of funds failed - no payable fallback or receive", async function () {
+              // deploy a contract that cannot receive funds
+              const [fallbackErrorContract] = await deployMockTokens(["WithoutFallbackError"]);
+
+              // commit to offer on behalf of some contract
+              tx = await exchangeHandler
+                .connect(buyer)
+                .commitToOffer(await fallbackErrorContract.getAddress(), offerNative.id, { value: price });
+              txReceipt = await tx.wait();
+              event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
+              exchangeId = event.exchangeId;
+              const fallbackContractBuyerId = event.buyerId;
+
+              // revoke the voucher so the contract gets credited some funds
+              await exchangeHandler.connect(assistant).revokeVoucher(exchangeId);
+
+              // we call a fallbackContract which calls fundsHandler.withdraw, which should revert
+              await expect(
+                fallbackErrorContract.withdrawFunds(
+                  await fundsHandler.getAddress(),
+                  fallbackContractBuyerId,
+                  [ZeroAddress],
+                  [offerNative.price]
+                )
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_TRANSFER_FAILED);
+            });
+
+            it("Transfer of funds failed - ERC20 token does not exist anymore", async function () {
+              // destruct mockToken
+              await mockToken.destruct();
+
+              await expect(fundsHandler.connect(assistant).withdrawFunds(seller.id, [], [])).to.revertedWith(
+                RevertReasons.EOA_FUNCTION_CALL_SAFE_ERC20
+              );
+            });
+
+            it("Transfer of funds failed - revert durin ERC20 transfer", async function () {
+              // pause mockToken
+              await mockToken.pause();
+
+              await expect(fundsHandler.connect(assistant).withdrawFunds(seller.id, [], [])).to.revertedWith(
+                RevertReasons.ERC20_PAUSED
+              );
+            });
+
+            it("Transfer of funds failed - ERC20 transfer returns false", async function () {
+              const [foreign20ReturnFalse] = await deployMockTokens(["Foreign20TransferReturnFalse"]);
+
+              await foreign20ReturnFalse.connect(assistant).mint(await assistant.getAddress(), sellerDeposit);
+              await foreign20ReturnFalse.connect(assistant).approve(protocolDiamondAddress, sellerDeposit);
+
+              await fundsHandler
+                .connect(assistant)
+                .depositFunds(seller.id, await foreign20ReturnFalse.getAddress(), sellerDeposit);
+
+              await expect(
+                fundsHandler
+                  .connect(assistant)
+                  .withdrawFunds(seller.id, [await foreign20ReturnFalse.getAddress()], [sellerDeposit])
+              ).to.revertedWith(RevertReasons.SAFE_ERC20_OPERATION_FAILED);
+            });
+          });
+        });
+
+        context("sequential commit", async function () {
+          let royaltyRecipientId, royaltyRecipientId2;
+          let tokenListRoyaltyRecipient, tokenListRoyaltyRecipient2;
+          let tokenAmountsRoyaltyRecipient, tokenAmountsRoyaltyRecipient2;
+          beforeEach(async function () {
+            // Add royalty recipients
+            const royaltyRecipientList = new RoyaltyRecipientInfoList([
+              new RoyaltyRecipientInfo(other.address, "0"),
+              new RoyaltyRecipientInfo(other2.address, "0"),
+            ]);
+            // Royalty recipients increase the accountIds by 2 in the protocol
+            royaltyRecipientId = accountId.next().value;
+            royaltyRecipientId2 = accountId.next().value;
+
+            await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+            const royaltySplit = {
+              seller: 5000, // 50%
+              other: 3000, // 30%
+              other2: 2000, // 20%
+            };
+
+            const royalties = 600;
+            let newRoyaltyInfo = new RoyaltyInfo(
+              [ZeroAddress, other.address, other2.address],
+              [
+                applyPercentage(royalties, royaltySplit.seller),
+                applyPercentage(royalties, royaltySplit.other),
+                applyPercentage(royalties, royaltySplit.other2),
+              ]
+            );
+
+            await offerHandler.connect(assistant).updateOfferRoyaltyRecipients(offerToken.id, newRoyaltyInfo);
+
+            price = (BigInt(offerToken.price) * 11n) / 10n;
+            const expectedCloneAddress = calculateCloneAddress(
+              await accountHandler.getAddress(),
+              beaconProxyAddress,
+              admin.address
+            );
+            const bosonVoucherClone = await ethers.getContractAt("BosonVoucher", expectedCloneAddress);
+            const tokenId = deriveTokenId(offerToken.id, exchangeId);
+            let order = {
+              seller: buyer.address,
+              buyer: buyer2.address,
+              voucherContract: expectedCloneAddress,
+              tokenId: tokenId,
+              exchangeToken: offerToken.exchangeToken,
+              price: BigInt(price),
+            };
+
+            const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
+
+            const priceDiscovery = new PriceDiscovery(
+              order.price,
+              Side.Ask,
+              await priceDiscoveryContract.getAddress(),
+              await priceDiscoveryContract.getAddress(),
+              priceDiscoveryData
+            );
+
+            let royaltyRecipientPayoff = applyPercentage(price, applyPercentage(royalties, royaltySplit.other));
+            let royaltyRecipient2Payoff = applyPercentage(price, applyPercentage(royalties, royaltySplit.other2));
+
+            // voucher owner approves protocol to transfer the tokens
+            await mockToken.mint(buyer.address, order.price);
+            await mockToken.connect(buyer).approve(protocolDiamondAddress, order.price);
+
+            // Voucher owner approves PriceDiscovery contract to transfer the tokens
+            await bosonVoucherClone.connect(buyer).setApprovalForAll(await priceDiscoveryContract.getAddress(), true);
+
+            // Buyer approves protocol to transfer the tokens
+            await mockToken.mint(buyer2.address, order.price);
+            await mockToken.connect(buyer2).approve(protocolDiamondAddress, order.price);
+
+            // commit to offer
+            await sequentialCommitHandler
+              .connect(buyer2)
+              .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, {
+                gasPrice: 0,
+              });
+
+            // Finalize the exchange
+            await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+            await exchangeHandler.connect(buyer2).redeemVoucher(exchangeId);
+            await exchangeHandler.connect(buyer2).completeExchange(exchangeId);
+
+            // Withdraw tokens
+            tokenListRoyaltyRecipient = [await mockToken.getAddress()];
+            tokenListRoyaltyRecipient2 = [await mockToken.getAddress()];
+
+            // Withdraw amounts
+            tokenAmountsRoyaltyRecipient = [royaltyRecipientPayoff];
+            tokenAmountsRoyaltyRecipient2 = [royaltyRecipient2Payoff];
+          });
+
+          it("should emit a FundsWithdrawn event", async function () {
+            // Withdraw funds, testing for the event
+            // First royalty recipient withdrawal
             await expect(
               fundsHandler
-                .connect(assistant)
-                .withdrawFunds(seller.id, [await foreign20ReturnFalse.getAddress()], [sellerDeposit])
-            ).to.revertedWith(RevertReasons.SAFE_ERC20_OPERATION_FAILED);
+                .connect(other)
+                .withdrawFunds(royaltyRecipientId, tokenListRoyaltyRecipient, tokenAmountsRoyaltyRecipient)
+            )
+              .to.emit(fundsHandler, "FundsWithdrawn")
+              .withArgs(
+                royaltyRecipientId,
+                other.address,
+                await mockToken.getAddress(),
+                tokenAmountsRoyaltyRecipient[0],
+                other.address
+              );
+
+            // Second royalty recipient withdrawal
+            await expect(
+              fundsHandler
+                .connect(other2)
+                .withdrawFunds(royaltyRecipientId2, tokenListRoyaltyRecipient2, tokenAmountsRoyaltyRecipient2)
+            )
+              .to.emit(fundsHandler, "FundsWithdrawn")
+              .withArgs(
+                royaltyRecipientId2,
+                other2.address,
+                await mockToken.getAddress(),
+                tokenAmountsRoyaltyRecipient2[0],
+                other2.address
+              );
+          });
+
+          it("should update state", async function () {
+            // WITHDRAW ONE TOKEN PARTIALLY
+            let royaltyRecipientPayoff = tokenAmountsRoyaltyRecipient[0];
+
+            // Read on chain state
+            let royaltyRecipientAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAllAvailableFunds(royaltyRecipientId)
+            );
+            const royaltyRecipientBalanceBefore = await mockToken.balanceOf(other.address);
+
+            // Chain state should match the expected available funds before the withdrawal
+            let expectedRoyaltyRecipientAvailableFunds = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", tokenAmountsRoyaltyRecipient[0]),
+            ]);
+            expect(royaltyRecipientAvailableFunds).to.eql(
+              expectedRoyaltyRecipientAvailableFunds,
+              "Royalty recipient available funds mismatch before withdrawal"
+            );
+
+            // withdraw funds
+            const withdrawAmount = BigInt(royaltyRecipientPayoff) / 2n;
+            await fundsHandler
+              .connect(other)
+              .withdrawFunds(royaltyRecipientId, tokenListRoyaltyRecipient, [withdrawAmount]);
+
+            // Read on chain state
+            royaltyRecipientAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAllAvailableFunds(royaltyRecipientId)
+            );
+            const royaltyRecipientBalanceAfter = await mockToken.balanceOf(other.address);
+
+            // Chain state should match the expected available funds after the withdrawal
+            // Token available funds are reduced for the withdrawal amount
+            expectedRoyaltyRecipientAvailableFunds.funds[0] = new Funds(
+              await mockToken.getAddress(),
+              "Foreign20",
+              BigInt(royaltyRecipientPayoff) - BigInt(withdrawAmount)
+            );
+            expect(royaltyRecipientAvailableFunds).to.eql(
+              expectedRoyaltyRecipientAvailableFunds,
+              "Royalty recipient available funds mismatch after withdrawal"
+            );
+
+            // Token balance is increased for the withdrawAmount
+            expect(royaltyRecipientBalanceAfter).to.eql(
+              royaltyRecipientBalanceBefore + withdrawAmount,
+              "Royalty recipient token balance mismatch"
+            );
+
+            // WITHDRAW ONE TOKEN FULLY
+
+            // Read on chain state
+            let royaltyRecipient2Payoff = tokenAmountsRoyaltyRecipient2[0];
+
+            // Read on chain state
+            let royaltyRecipient2AvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAllAvailableFunds(royaltyRecipientId2)
+            );
+            const royaltyRecipient2BalanceBefore = await mockToken.balanceOf(other2.address);
+
+            // Chain state should match the expected available funds before the withdrawal
+            let expectedRoyaltyRecipient2AvailableFunds = new FundsList([
+              new Funds(await mockToken.getAddress(), "Foreign20", tokenAmountsRoyaltyRecipient2[0]),
+            ]);
+            expect(royaltyRecipient2AvailableFunds).to.eql(
+              expectedRoyaltyRecipient2AvailableFunds,
+              "Royalty recipient available funds mismatch before withdrawal"
+            );
+
+            // withdraw funds
+            const withdrawAmount2 = BigInt(royaltyRecipient2Payoff);
+            await fundsHandler
+              .connect(other2)
+              .withdrawFunds(royaltyRecipientId2, tokenListRoyaltyRecipient2, [withdrawAmount2]);
+
+            // Read on chain state
+            royaltyRecipient2AvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAllAvailableFunds(royaltyRecipientId2)
+            );
+            const royaltyRecipient2BalanceAfter = await mockToken.balanceOf(other2.address);
+
+            // Chain state should match the expected available funds after the withdrawal
+            // Fund list should be empty
+            expectedRoyaltyRecipient2AvailableFunds = new FundsList([]);
+            expect(royaltyRecipient2AvailableFunds).to.eql(
+              expectedRoyaltyRecipient2AvailableFunds,
+              "Royalty recipient available funds mismatch after withdrawal"
+            );
+
+            // Token balance is increased for the withdrawAmount
+            expect(royaltyRecipient2BalanceAfter).to.eql(
+              royaltyRecipient2BalanceBefore + withdrawAmount2,
+              "Royalty recipient token balance mismatch"
+            );
           });
         });
       });
@@ -4575,12 +4804,15 @@ describe("IBosonFundsHandler", function () {
         let mockTokenAddress;
 
         context(`Direction: ${direction}`, async function () {
+          const keyToId = { other: 4, other2: 5 };
+
           fees.forEach((fee) => {
             context(`protocol fee: ${fee.protocol / 100}%; royalties: ${fee.royalties / 100}%`, async function () {
               let voucherOwner, previousPrice;
               let payoutInformation;
               let totalRoyalties, totalProtocolFee, totalRoyaltiesSplit;
-              let royaltySplit;
+              let royaltySplit, royaltyRecipientsPayoffs;
+              let royaltiesPerExchange;
 
               beforeEach(async function () {
                 payoutInformation = [];
@@ -4592,11 +4824,15 @@ describe("IBosonFundsHandler", function () {
                 );
                 bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
-                // Add external royalty recipients
-                const royaltyRecipientList = new RoyaltyRecipientList([
-                  new RoyaltyRecipient(other.address, "0", "other"),
-                  new RoyaltyRecipient(other2.address, "0", "other2"),
+                // Add royalty recipients
+                const royaltyRecipientList = new RoyaltyRecipientInfoList([
+                  new RoyaltyRecipientInfo(other.address, "0"),
+                  new RoyaltyRecipientInfo(other2.address, "0"),
                 ]);
+                // Royalty recipients increase the accountIds by 2 in the protocol
+                accountId.next();
+                accountId.next();
+
                 await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
                 royaltySplit = {
                   seller: 5000, // 50%
@@ -4635,14 +4871,14 @@ describe("IBosonFundsHandler", function () {
                   .connect(assistant)
                   .createOffer(offer, offerDates, offerDurations, disputeResolverId, 0, offerFeeLimit);
 
+                // Create buyer with price discovery client address to not mess up ids in tests
+                await accountHandler.createBuyer(mockBuyer(await bpd.getAddress()));
+
                 // ids
                 exchangeId = "1";
                 agentId = "3";
-                buyerId = 5;
+                buyerId = await accountHandler.getNextAccountId();
                 protocolId = 0;
-
-                // Create buyer with protocol address to not mess up ids in tests
-                await accountHandler.createBuyer(mockBuyer(await bpd.getAddress()));
 
                 // commit to offer
                 await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
@@ -4655,6 +4891,7 @@ describe("IBosonFundsHandler", function () {
                   other: 0n,
                   other2: 0n,
                 };
+                royaltiesPerExchange = [];
 
                 for (const trade of buyerChains[direction]) {
                   // Prepare calldata for PriceDiscovery contract
@@ -4714,8 +4951,11 @@ describe("IBosonFundsHandler", function () {
 
                   // Update royalties split
                   for (const [key, value] of Object.entries(totalRoyaltiesSplit)) {
-                    totalRoyaltiesSplit[key] =
-                      value + BigInt(applyPercentage(order.price, applyPercentage(fee.royalties, royaltySplit[key])));
+                    const thisTradeRoyalties = BigInt(
+                      applyPercentage(order.price, applyPercentage(fee.royalties, royaltySplit[key]))
+                    );
+                    totalRoyaltiesSplit[key] = value + thisTradeRoyalties;
+                    royaltiesPerExchange.push({ id: keyToId[key], payoff: thisTradeRoyalties });
                   }
 
                   voucherOwner = trade.buyer; // last buyer is voucherOwner in next iteration
@@ -4758,6 +4998,15 @@ describe("IBosonFundsHandler", function () {
 
                   // protocol: protocolFee
                   protocolPayoff = (totalProtocolFee + BigInt(initialFee)).toString();
+
+                  // royalty recipients: royalties
+                  royaltyRecipientsPayoffs = [
+                    {
+                      id: keyToId["other"],
+                      payoff: totalRoyaltiesSplit.other,
+                    },
+                    { id: keyToId["other2"], payoff: totalRoyaltiesSplit.other2 },
+                  ];
                 });
 
                 it("should emit a FundsReleased event", async function () {
@@ -4786,6 +5035,22 @@ describe("IBosonFundsHandler", function () {
                     }
                   }
 
+                  // royalty recipients
+                  for (const royaltyRecipientPayoff of royaltiesPerExchange) {
+                    if (royaltyRecipientPayoff.payoff != 0n) {
+                      expectedEventCount++;
+                      await expect(tx)
+                        .to.emit(exchangeHandler, "FundsReleased")
+                        .withArgs(
+                          exchangeId,
+                          royaltyRecipientPayoff.id,
+                          offer.exchangeToken,
+                          royaltyRecipientPayoff.payoff,
+                          voucherOwner.address
+                        );
+                    }
+                  }
+
                   // Make sure exact number of FundsReleased events was emitted
                   const eventCount = (await tx.wait()).logs.filter((e) => e.eventName == "FundsReleased").length;
                   expect(eventCount).to.equal(expectedEventCount);
@@ -4809,9 +5074,9 @@ describe("IBosonFundsHandler", function () {
                   resellersAvailableFunds = (
                     await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                   ).map((returnedValue) => FundsList.fromStruct(returnedValue));
-                  externalRoyaltyRecipientsBalance = await Promise.all(
-                    [other, other2].map((r) => mockToken.balanceOf(r.address))
-                  );
+                  royaltyRecipientsAvailableFunds = (
+                    await Promise.all(royaltyRecipientsPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
+                  ).map((returnedValue) => FundsList.fromStruct(returnedValue));
 
                   // Chain state should match the expected available funds
                   expectedSellerAvailableFunds = new FundsList([]);
@@ -4819,13 +5084,15 @@ describe("IBosonFundsHandler", function () {
                   expectedProtocolAvailableFunds = new FundsList([]);
                   expectedAgentAvailableFunds = new FundsList([]);
                   expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
-                  expectedExternalRoyaltyRecipientsBalance = [0n, 0n];
+                  expectedRoyaltyRecipientsAvailableFunds = new Array(royaltyRecipientsPayoffs.length).fill(
+                    new FundsList([])
+                  );
                   expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                   expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                   expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                   expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                   expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
-                  expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
+                  expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
 
                   // Complete the exchange so the funds are released
                   await exchangeHandler.connect(voucherOwner).completeExchange(exchangeId);
@@ -4836,7 +5103,7 @@ describe("IBosonFundsHandler", function () {
                   // resellers: difference between the secondary price and immediate payout
                   // protocol: protocolFee
                   // agent: 0
-                  // external royalty recipients: royalties
+                  // royalty recipients: royalties
                   expectedSellerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", sellerPayoff));
                   if (protocolPayoff != "0") {
                     expectedProtocolAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", protocolPayoff));
@@ -4844,7 +5111,9 @@ describe("IBosonFundsHandler", function () {
                   expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
                     return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
                   });
-                  expectedExternalRoyaltyRecipientsBalance = [totalRoyaltiesSplit.other, totalRoyaltiesSplit.other2];
+                  expectedRoyaltyRecipientsAvailableFunds = royaltyRecipientsPayoffs.map((r) => {
+                    return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
+                  });
 
                   sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
                   buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
@@ -4853,16 +5122,16 @@ describe("IBosonFundsHandler", function () {
                   resellersAvailableFunds = (
                     await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                   ).map((returnedValue) => FundsList.fromStruct(returnedValue));
-                  externalRoyaltyRecipientsBalance = await Promise.all(
-                    [other, other2].map((r) => mockToken.balanceOf(r.address))
-                  );
+                  royaltyRecipientsAvailableFunds = (
+                    await Promise.all(royaltyRecipientsPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
+                  ).map((returnedValue) => FundsList.fromStruct(returnedValue));
 
                   expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                   expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                   expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                   expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                   expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
-                  expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
+                  expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
                 });
               });
 
@@ -4883,6 +5152,15 @@ describe("IBosonFundsHandler", function () {
 
                   // protocol: 0
                   protocolPayoff = 0;
+
+                  // royalty recipients: 0
+                  royaltyRecipientsPayoffs = [
+                    {
+                      id: keyToId["other"],
+                      payoff: 0n,
+                    },
+                    { id: keyToId["other2"], payoff: 0n },
+                  ];
                 });
 
                 it("should emit a FundsReleased event", async function () {
@@ -4928,9 +5206,9 @@ describe("IBosonFundsHandler", function () {
                   resellersAvailableFunds = (
                     await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                   ).map((returnedValue) => FundsList.fromStruct(returnedValue));
-                  externalRoyaltyRecipientsBalance = await Promise.all(
-                    [other, other2].map((r) => mockToken.balanceOf(r.address))
-                  );
+                  royaltyRecipientsAvailableFunds = (
+                    await Promise.all(royaltyRecipientsPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
+                  ).map((returnedValue) => FundsList.fromStruct(returnedValue));
 
                   // Chain state should match the expected available funds
                   expectedSellerAvailableFunds = new FundsList([]);
@@ -4938,13 +5216,15 @@ describe("IBosonFundsHandler", function () {
                   expectedProtocolAvailableFunds = new FundsList([]);
                   expectedAgentAvailableFunds = new FundsList([]);
                   expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
-                  expectedExternalRoyaltyRecipientsBalance = [0n, 0n];
+                  expectedRoyaltyRecipientsAvailableFunds = new Array(royaltyRecipientsPayoffs.length).fill(
+                    new FundsList([])
+                  );
                   expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                   expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                   expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                   expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                   expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
-                  expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
+                  expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
 
                   // Revoke the voucher so the funds are released
                   await exchangeHandler.connect(assistant).revokeVoucher(exchangeId);
@@ -4955,7 +5235,7 @@ describe("IBosonFundsHandler", function () {
                   // resellers: difference between original price and immediate payoff
                   // protocol: 0
                   // agent: 0
-                  // external royalty recipients: 0
+                  // royalty recipients: 0
                   expectedBuyerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", buyerPayoff));
                   expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
                     return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
@@ -4968,16 +5248,16 @@ describe("IBosonFundsHandler", function () {
                   resellersAvailableFunds = (
                     await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                   ).map((returnedValue) => FundsList.fromStruct(returnedValue));
-                  externalRoyaltyRecipientsBalance = await Promise.all(
-                    [other, other2].map((r) => mockToken.balanceOf(r.address))
-                  );
+                  royaltyRecipientsAvailableFunds = (
+                    await Promise.all(royaltyRecipientsPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
+                  ).map((returnedValue) => FundsList.fromStruct(returnedValue));
 
                   expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                   expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                   expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                   expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                   expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
-                  expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
+                  expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
                 });
               });
 
@@ -4998,6 +5278,15 @@ describe("IBosonFundsHandler", function () {
 
                   // protocol: 0
                   protocolPayoff = 0;
+
+                  // royalty recipients: 0
+                  royaltyRecipientsPayoffs = [
+                    {
+                      id: keyToId["other"],
+                      payoff: 0n,
+                    },
+                    { id: keyToId["other2"], payoff: 0n },
+                  ];
                 });
 
                 it("should emit a FundsReleased event", async function () {
@@ -5048,9 +5337,9 @@ describe("IBosonFundsHandler", function () {
                   resellersAvailableFunds = (
                     await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                   ).map((returnedValue) => FundsList.fromStruct(returnedValue));
-                  externalRoyaltyRecipientsBalance = await Promise.all(
-                    [other, other2].map((r) => mockToken.balanceOf(r.address))
-                  );
+                  royaltyRecipientsAvailableFunds = (
+                    await Promise.all(royaltyRecipientsPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
+                  ).map((returnedValue) => FundsList.fromStruct(returnedValue));
 
                   // Chain state should match the expected available funds
                   expectedSellerAvailableFunds = new FundsList([]);
@@ -5058,13 +5347,15 @@ describe("IBosonFundsHandler", function () {
                   expectedProtocolAvailableFunds = new FundsList([]);
                   expectedAgentAvailableFunds = new FundsList([]);
                   expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
-                  expectedExternalRoyaltyRecipientsBalance = [0n, 0n];
+                  expectedRoyaltyRecipientsAvailableFunds = new Array(royaltyRecipientsPayoffs.length).fill(
+                    new FundsList([])
+                  );
                   expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                   expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                   expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                   expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                   expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
-                  expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
+                  expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
 
                   // Cancel the voucher, so the funds are released
                   await exchangeHandler.connect(voucherOwner).cancelVoucher(exchangeId);
@@ -5075,7 +5366,7 @@ describe("IBosonFundsHandler", function () {
                   // resellers: difference between original price and immediate payoff
                   // protocol: 0
                   // agent: 0
-                  // external royalty recipients: 0
+                  // royalty recipients: 0
                   expectedSellerAvailableFunds.funds[0] = new Funds(mockTokenAddress, "Foreign20", sellerPayoff);
                   expectedBuyerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", buyerPayoff));
                   expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
@@ -5089,16 +5380,16 @@ describe("IBosonFundsHandler", function () {
                   resellersAvailableFunds = (
                     await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                   ).map((returnedValue) => FundsList.fromStruct(returnedValue));
-                  externalRoyaltyRecipientsBalance = await Promise.all(
-                    [other, other2].map((r) => mockToken.balanceOf(r.address))
-                  );
+                  royaltyRecipientsAvailableFunds = (
+                    await Promise.all(royaltyRecipientsPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
+                  ).map((returnedValue) => FundsList.fromStruct(returnedValue));
 
                   expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                   expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                   expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                   expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                   expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
-                  expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
+                  expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
                 });
               });
 
@@ -5146,6 +5437,15 @@ describe("IBosonFundsHandler", function () {
 
                     // protocol: protocolFee
                     protocolPayoff = (totalProtocolFee + BigInt(initialFee)).toString();
+
+                    // royalty recipients: royalties
+                    royaltyRecipientsPayoffs = [
+                      {
+                        id: keyToId["other"],
+                        payoff: totalRoyaltiesSplit.other,
+                      },
+                      { id: keyToId["other2"], payoff: totalRoyaltiesSplit.other2 },
+                    ];
                   });
 
                   it("should emit a FundsReleased event", async function () {
@@ -5174,6 +5474,22 @@ describe("IBosonFundsHandler", function () {
                       }
                     }
 
+                    // royalty recipients
+                    for (const royaltyRecipientPayoff of royaltiesPerExchange) {
+                      if (royaltyRecipientPayoff.payoff != 0n) {
+                        expectedEventCount++;
+                        await expect(tx)
+                          .to.emit(exchangeHandler, "FundsReleased")
+                          .withArgs(
+                            exchangeId,
+                            royaltyRecipientPayoff.id,
+                            offer.exchangeToken,
+                            royaltyRecipientPayoff.payoff,
+                            voucherOwner.address
+                          );
+                      }
+                    }
+
                     // Make sure exact number of FundsReleased events was emitted
                     const eventCount = (await tx.wait()).logs.filter((e) => e.eventName == "FundsReleased").length;
                     expect(eventCount).to.equal(expectedEventCount);
@@ -5197,9 +5513,9 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
-                    externalRoyaltyRecipientsBalance = await Promise.all(
-                      [other, other2].map((r) => mockToken.balanceOf(r.address))
-                    );
+                    royaltyRecipientsAvailableFunds = (
+                      await Promise.all(royaltyRecipientsPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
+                    ).map((returnedValue) => FundsList.fromStruct(returnedValue));
 
                     // Chain state should match the expected available funds
                     expectedSellerAvailableFunds = new FundsList([]);
@@ -5207,13 +5523,15 @@ describe("IBosonFundsHandler", function () {
                     expectedProtocolAvailableFunds = new FundsList([]);
                     expectedAgentAvailableFunds = new FundsList([]);
                     expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
-                    expectedExternalRoyaltyRecipientsBalance = [0n, 0n];
+                    expectedRoyaltyRecipientsAvailableFunds = new Array(royaltyRecipientsPayoffs.length).fill(
+                      new FundsList([])
+                    );
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
-                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
+                    expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
 
                     // Retract from the dispute, so the funds are released
                     await disputeHandler.connect(voucherOwner).retractDispute(exchangeId);
@@ -5224,7 +5542,7 @@ describe("IBosonFundsHandler", function () {
                     // resellers: difference between the secondary price and immediate payout
                     // protocol: protocolFee
                     // agent: 0
-                    // external royalty recipients: royalties
+                    // royalty recipients: royalties
                     expectedSellerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", sellerPayoff));
                     if (protocolPayoff != "0") {
                       expectedProtocolAvailableFunds.funds.push(
@@ -5234,7 +5552,9 @@ describe("IBosonFundsHandler", function () {
                     expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
                       return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
                     });
-                    expectedExternalRoyaltyRecipientsBalance = [totalRoyaltiesSplit.other, totalRoyaltiesSplit.other2];
+                    expectedRoyaltyRecipientsAvailableFunds = royaltyRecipientsPayoffs.map((r) => {
+                      return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
+                    });
 
                     sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
                     buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
@@ -5243,16 +5563,16 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
-                    externalRoyaltyRecipientsBalance = await Promise.all(
-                      [other, other2].map((r) => mockToken.balanceOf(r.address))
-                    );
+                    royaltyRecipientsAvailableFunds = (
+                      await Promise.all(royaltyRecipientsPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
+                    ).map((returnedValue) => FundsList.fromStruct(returnedValue));
 
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
-                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
+                    expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
                   });
                 });
 
@@ -5283,6 +5603,15 @@ describe("IBosonFundsHandler", function () {
                     // protocol: protocolFee
                     protocolPayoff = (totalProtocolFee + BigInt(initialFee)).toString();
 
+                    // royalty recipients: royalties
+                    royaltyRecipientsPayoffs = [
+                      {
+                        id: keyToId["other"],
+                        payoff: totalRoyaltiesSplit.other,
+                      },
+                      { id: keyToId["other2"], payoff: totalRoyaltiesSplit.other2 },
+                    ];
+
                     await setNextBlockTimestamp(Number(timeout));
                   });
 
@@ -5312,6 +5641,22 @@ describe("IBosonFundsHandler", function () {
                       }
                     }
 
+                    // royalty recipients
+                    for (const royaltyRecipientPayoff of royaltiesPerExchange) {
+                      if (royaltyRecipientPayoff.payoff != 0n) {
+                        expectedEventCount++;
+                        await expect(tx)
+                          .to.emit(exchangeHandler, "FundsReleased")
+                          .withArgs(
+                            exchangeId,
+                            royaltyRecipientPayoff.id,
+                            offer.exchangeToken,
+                            royaltyRecipientPayoff.payoff,
+                            rando.address
+                          );
+                      }
+                    }
+
                     // Make sure exact number of FundsReleased events was emitted
                     const eventCount = (await tx.wait()).logs.filter((e) => e.eventName == "FundsReleased").length;
                     expect(eventCount).to.equal(expectedEventCount);
@@ -5335,9 +5680,9 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
-                    externalRoyaltyRecipientsBalance = await Promise.all(
-                      [other, other2].map((r) => mockToken.balanceOf(r.address))
-                    );
+                    royaltyRecipientsAvailableFunds = (
+                      await Promise.all(royaltyRecipientsPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
+                    ).map((returnedValue) => FundsList.fromStruct(returnedValue));
 
                     // Chain state should match the expected available funds
                     expectedSellerAvailableFunds = new FundsList([]);
@@ -5345,13 +5690,15 @@ describe("IBosonFundsHandler", function () {
                     expectedProtocolAvailableFunds = new FundsList([]);
                     expectedAgentAvailableFunds = new FundsList([]);
                     expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
-                    expectedExternalRoyaltyRecipientsBalance = [0n, 0n];
+                    expectedRoyaltyRecipientsAvailableFunds = new Array(royaltyRecipientsPayoffs.length).fill(
+                      new FundsList([])
+                    );
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
-                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
+                    expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
 
                     // Expire the dispute, so the funds are released
                     await disputeHandler.connect(rando).expireDispute(exchangeId);
@@ -5362,7 +5709,7 @@ describe("IBosonFundsHandler", function () {
                     // resellers: difference between the secondary price and immediate payout
                     // protocol: protocolFee
                     // agent: 0
-                    // external royalty recipients: royalties
+                    // royalty recipients: royalties
                     expectedSellerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", sellerPayoff));
                     if (protocolPayoff != "0") {
                       expectedProtocolAvailableFunds.funds.push(
@@ -5372,7 +5719,9 @@ describe("IBosonFundsHandler", function () {
                     expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
                       return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
                     });
-                    expectedExternalRoyaltyRecipientsBalance = [totalRoyaltiesSplit.other, totalRoyaltiesSplit.other2];
+                    expectedRoyaltyRecipientsAvailableFunds = royaltyRecipientsPayoffs.map((r) => {
+                      return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
+                    });
 
                     sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
                     buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
@@ -5381,16 +5730,16 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
-                    externalRoyaltyRecipientsBalance = await Promise.all(
-                      [other, other2].map((r) => mockToken.balanceOf(r.address))
-                    );
+                    royaltyRecipientsAvailableFunds = (
+                      await Promise.all(royaltyRecipientsPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
+                    ).map((returnedValue) => FundsList.fromStruct(returnedValue));
 
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
-                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
+                    expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
                   });
                 });
 
@@ -5420,6 +5769,7 @@ describe("IBosonFundsHandler", function () {
                     // recalculate the royalties due to rounding errors
                     totalRoyaltiesSplit = { other: 0n, other2: 0n };
                     totalRoyalties = 0n;
+                    royaltiesPerExchange = [];
                     for (const trade of buyerChains[direction]) {
                       const effectivePrice = applyPercentage(trade.price, sellerPercentBasisPoints);
 
@@ -5427,9 +5777,11 @@ describe("IBosonFundsHandler", function () {
                         totalRoyalties +
                         BigInt(applyPercentage(applyPercentage(trade.price, fee.royalties), sellerPercentBasisPoints));
                       for (const [key, value] of Object.entries(totalRoyaltiesSplit)) {
-                        totalRoyaltiesSplit[key] =
-                          value +
-                          BigInt(applyPercentage(effectivePrice, applyPercentage(fee.royalties, royaltySplit[key])));
+                        const thisTradeRoyalties = BigInt(
+                          applyPercentage(effectivePrice, applyPercentage(fee.royalties, royaltySplit[key]))
+                        );
+                        totalRoyaltiesSplit[key] = value + thisTradeRoyalties;
+                        royaltiesPerExchange.push({ id: keyToId[key], payoff: thisTradeRoyalties });
                       }
                     }
                     totalRoyaltiesSplit.seller =
@@ -5446,6 +5798,15 @@ describe("IBosonFundsHandler", function () {
 
                     // protocol: protocolFee (only secondary market)
                     protocolPayoff = applyPercentage(totalProtocolFee + BigInt(initialFee), sellerPercentBasisPoints);
+
+                    // royalty recipients: royalties
+                    royaltyRecipientsPayoffs = [
+                      {
+                        id: keyToId["other"],
+                        payoff: totalRoyaltiesSplit.other,
+                      },
+                      { id: keyToId["other2"], payoff: totalRoyaltiesSplit.other2 },
+                    ];
 
                     // Set the message Type, needed for signature
                     resolutionType = [
@@ -5505,6 +5866,22 @@ describe("IBosonFundsHandler", function () {
                       }
                     }
 
+                    // royalty recipients
+                    for (const royaltyRecipientPayoff of royaltiesPerExchange) {
+                      if (royaltyRecipientPayoff.payoff != 0n) {
+                        expectedEventCount++;
+                        await expect(tx)
+                          .to.emit(exchangeHandler, "FundsReleased")
+                          .withArgs(
+                            exchangeId,
+                            royaltyRecipientPayoff.id,
+                            offer.exchangeToken,
+                            royaltyRecipientPayoff.payoff,
+                            assistant.address
+                          );
+                      }
+                    }
+
                     // Make sure exact number of FundsReleased events was emitted
                     const eventCount = (await tx.wait()).logs.filter((e) => e.eventName == "FundsReleased").length;
                     expect(eventCount).to.equal(expectedEventCount);
@@ -5528,9 +5905,9 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
-                    externalRoyaltyRecipientsBalance = await Promise.all(
-                      [other, other2].map((r) => mockToken.balanceOf(r.address))
-                    );
+                    royaltyRecipientsAvailableFunds = (
+                      await Promise.all(royaltyRecipientsPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
+                    ).map((returnedValue) => FundsList.fromStruct(returnedValue));
 
                     // Chain state should match the expected available funds
                     expectedSellerAvailableFunds = new FundsList([]);
@@ -5538,13 +5915,15 @@ describe("IBosonFundsHandler", function () {
                     expectedProtocolAvailableFunds = new FundsList([]);
                     expectedAgentAvailableFunds = new FundsList([]);
                     expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
-                    expectedExternalRoyaltyRecipientsBalance = [0n, 0n];
+                    expectedRoyaltyRecipientsAvailableFunds = new Array(royaltyRecipientsPayoffs.length).fill(
+                      new FundsList([])
+                    );
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
-                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
+                    expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
 
                     // Resolve the dispute, so the funds are released
                     await disputeHandler
@@ -5557,7 +5936,7 @@ describe("IBosonFundsHandler", function () {
                     // resellers: (difference between the secondary price and immediate payout)*(1-buyerPercentage)
                     // protocol: protocolFee (secondary market only)
                     // agent: 0
-                    // external royalty recipients: royalties*(1-buyerPercentage)
+                    // royalty recipients: royalties*(1-buyerPercentage)
                     expectedSellerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", sellerPayoff));
                     expectedBuyerAvailableFunds = new FundsList([
                       new Funds(mockTokenAddress, "Foreign20", buyerPayoff),
@@ -5570,7 +5949,9 @@ describe("IBosonFundsHandler", function () {
                     expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
                       return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
                     });
-                    expectedExternalRoyaltyRecipientsBalance = [totalRoyaltiesSplit.other, totalRoyaltiesSplit.other2];
+                    expectedRoyaltyRecipientsAvailableFunds = royaltyRecipientsPayoffs.map((r) => {
+                      return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
+                    });
 
                     sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
                     buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
@@ -5579,16 +5960,16 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
-                    externalRoyaltyRecipientsBalance = await Promise.all(
-                      [other, other2].map((r) => mockToken.balanceOf(r.address))
-                    );
+                    royaltyRecipientsAvailableFunds = (
+                      await Promise.all(royaltyRecipientsPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
+                    ).map((returnedValue) => FundsList.fromStruct(returnedValue));
 
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
-                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
+                    expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
                   });
                 });
 
@@ -5618,6 +5999,15 @@ describe("IBosonFundsHandler", function () {
 
                     // protocol: protocolFee
                     protocolPayoff = (totalProtocolFee + BigInt(initialFee)).toString();
+
+                    // royalty recipients: royalties
+                    royaltyRecipientsPayoffs = [
+                      {
+                        id: keyToId["other"],
+                        payoff: totalRoyaltiesSplit.other,
+                      },
+                      { id: keyToId["other2"], payoff: totalRoyaltiesSplit.other2 },
+                    ];
 
                     // Escalate the dispute
                     await disputeHandler.connect(voucherOwner).escalateDispute(exchangeId);
@@ -5649,6 +6039,22 @@ describe("IBosonFundsHandler", function () {
                       }
                     }
 
+                    // royalty recipients
+                    for (const royaltyRecipientPayoff of royaltiesPerExchange) {
+                      if (royaltyRecipientPayoff.payoff != 0n) {
+                        expectedEventCount++;
+                        await expect(tx)
+                          .to.emit(exchangeHandler, "FundsReleased")
+                          .withArgs(
+                            exchangeId,
+                            royaltyRecipientPayoff.id,
+                            offer.exchangeToken,
+                            royaltyRecipientPayoff.payoff,
+                            voucherOwner.address
+                          );
+                      }
+                    }
+
                     // Make sure exact number of FundsReleased events was emitted
                     const eventCount = (await tx.wait()).logs.filter((e) => e.eventName == "FundsReleased").length;
                     expect(eventCount).to.equal(expectedEventCount);
@@ -5672,9 +6078,9 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
-                    externalRoyaltyRecipientsBalance = await Promise.all(
-                      [other, other2].map((r) => mockToken.balanceOf(r.address))
-                    );
+                    royaltyRecipientsAvailableFunds = (
+                      await Promise.all(royaltyRecipientsPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
+                    ).map((returnedValue) => FundsList.fromStruct(returnedValue));
 
                     // Chain state should match the expected available funds
                     expectedSellerAvailableFunds = new FundsList([]);
@@ -5682,13 +6088,15 @@ describe("IBosonFundsHandler", function () {
                     expectedProtocolAvailableFunds = new FundsList([]);
                     expectedAgentAvailableFunds = new FundsList([]);
                     expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
-                    expectedExternalRoyaltyRecipientsBalance = [0n, 0n];
+                    expectedRoyaltyRecipientsAvailableFunds = new Array(royaltyRecipientsPayoffs.length).fill(
+                      new FundsList([])
+                    );
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
-                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
+                    expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
 
                     // Retract from the dispute, so the funds are released
                     await disputeHandler.connect(voucherOwner).retractDispute(exchangeId);
@@ -5699,7 +6107,7 @@ describe("IBosonFundsHandler", function () {
                     // resellers: difference between the secondary price and immediate payout
                     // protocol: protocolFee
                     // agent: 0
-                    // external royalty recipients: royalties
+                    // royalty recipients: royalties
                     expectedSellerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", sellerPayoff));
                     if (protocolPayoff != "0") {
                       expectedProtocolAvailableFunds.funds.push(
@@ -5709,7 +6117,9 @@ describe("IBosonFundsHandler", function () {
                     expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
                       return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
                     });
-                    expectedExternalRoyaltyRecipientsBalance = [totalRoyaltiesSplit.other, totalRoyaltiesSplit.other2];
+                    expectedRoyaltyRecipientsAvailableFunds = royaltyRecipientsPayoffs.map((r) => {
+                      return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
+                    });
 
                     sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
                     buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
@@ -5718,16 +6128,16 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
-                    externalRoyaltyRecipientsBalance = await Promise.all(
-                      [other, other2].map((r) => mockToken.balanceOf(r.address))
-                    );
+                    royaltyRecipientsAvailableFunds = (
+                      await Promise.all(royaltyRecipientsPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
+                    ).map((returnedValue) => FundsList.fromStruct(returnedValue));
 
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
-                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
+                    expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
                   });
                 });
 
@@ -5757,6 +6167,7 @@ describe("IBosonFundsHandler", function () {
                     // recalculate the royalties due to rounding errors
                     totalRoyaltiesSplit = { other: 0n, other2: 0n };
                     totalRoyalties = 0n;
+                    royaltiesPerExchange = [];
                     for (const trade of buyerChains[direction]) {
                       const effectivePrice = applyPercentage(trade.price, sellerPercentBasisPoints);
 
@@ -5764,9 +6175,12 @@ describe("IBosonFundsHandler", function () {
                         totalRoyalties +
                         BigInt(applyPercentage(applyPercentage(trade.price, fee.royalties), sellerPercentBasisPoints));
                       for (const [key, value] of Object.entries(totalRoyaltiesSplit)) {
-                        totalRoyaltiesSplit[key] =
-                          value +
-                          BigInt(applyPercentage(effectivePrice, applyPercentage(fee.royalties, royaltySplit[key])));
+                        const thisTradeRoyalties = BigInt(
+                          applyPercentage(effectivePrice, applyPercentage(fee.royalties, royaltySplit[key]))
+                        );
+
+                        totalRoyaltiesSplit[key] = value + thisTradeRoyalties;
+                        royaltiesPerExchange.push({ id: keyToId[key], payoff: thisTradeRoyalties });
                       }
                     }
                     totalRoyaltiesSplit.seller =
@@ -5783,6 +6197,15 @@ describe("IBosonFundsHandler", function () {
 
                     // protocol: protocolFee *(1-buyerPercentage)
                     protocolPayoff = applyPercentage(totalProtocolFee + BigInt(initialFee), sellerPercentBasisPoints);
+
+                    // royalty recipients: royalties
+                    royaltyRecipientsPayoffs = [
+                      {
+                        id: keyToId["other"],
+                        payoff: totalRoyaltiesSplit.other,
+                      },
+                      { id: keyToId["other2"], payoff: totalRoyaltiesSplit.other2 },
+                    ];
 
                     // Set the message Type, needed for signature
                     resolutionType = [
@@ -5845,6 +6268,22 @@ describe("IBosonFundsHandler", function () {
                       }
                     }
 
+                    // royalty recipients
+                    for (const royaltyRecipientPayoff of royaltiesPerExchange) {
+                      if (royaltyRecipientPayoff.payoff != 0n) {
+                        expectedEventCount++;
+                        await expect(tx)
+                          .to.emit(exchangeHandler, "FundsReleased")
+                          .withArgs(
+                            exchangeId,
+                            royaltyRecipientPayoff.id,
+                            offer.exchangeToken,
+                            royaltyRecipientPayoff.payoff,
+                            assistant.address
+                          );
+                      }
+                    }
+
                     // Make sure exact number of FundsReleased events was emitted
                     const eventCount = (await tx.wait()).logs.filter((e) => e.eventName == "FundsReleased").length;
                     expect(eventCount).to.equal(expectedEventCount);
@@ -5868,9 +6307,9 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
-                    externalRoyaltyRecipientsBalance = await Promise.all(
-                      [other, other2].map((r) => mockToken.balanceOf(r.address))
-                    );
+                    royaltyRecipientsAvailableFunds = (
+                      await Promise.all(royaltyRecipientsPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
+                    ).map((returnedValue) => FundsList.fromStruct(returnedValue));
 
                     // Chain state should match the expected available funds
                     expectedSellerAvailableFunds = new FundsList([]);
@@ -5878,13 +6317,15 @@ describe("IBosonFundsHandler", function () {
                     expectedProtocolAvailableFunds = new FundsList([]);
                     expectedAgentAvailableFunds = new FundsList([]);
                     expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
-                    expectedExternalRoyaltyRecipientsBalance = [0n, 0n];
+                    expectedRoyaltyRecipientsAvailableFunds = new Array(royaltyRecipientsPayoffs.length).fill(
+                      new FundsList([])
+                    );
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
-                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
+                    expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
 
                     // Resolve the dispute, so the funds are released
                     await disputeHandler
@@ -5897,7 +6338,7 @@ describe("IBosonFundsHandler", function () {
                     // resellers: (difference between the secondary price and immediate payout)*(1-buyerPercentage)
                     // protocol: protocolFee*(1-buyerPercentage)
                     // agent: 0
-                    // external royalty recipients: royalties*(1-buyerPercentage)
+                    // royalty recipients: royalties*(1-buyerPercentage)
                     expectedSellerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", sellerPayoff));
                     expectedBuyerAvailableFunds = new FundsList([
                       new Funds(mockTokenAddress, "Foreign20", buyerPayoff),
@@ -5910,7 +6351,9 @@ describe("IBosonFundsHandler", function () {
                     expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
                       return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
                     });
-                    expectedExternalRoyaltyRecipientsBalance = [totalRoyaltiesSplit.other, totalRoyaltiesSplit.other2];
+                    expectedRoyaltyRecipientsAvailableFunds = royaltyRecipientsPayoffs.map((r) => {
+                      return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
+                    });
 
                     sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
                     buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
@@ -5919,16 +6362,16 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
-                    externalRoyaltyRecipientsBalance = await Promise.all(
-                      [other, other2].map((r) => mockToken.balanceOf(r.address))
-                    );
+                    royaltyRecipientsAvailableFunds = (
+                      await Promise.all(royaltyRecipientsPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
+                    ).map((returnedValue) => FundsList.fromStruct(returnedValue));
 
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
-                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
+                    expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
                   });
                 });
 
@@ -5958,6 +6401,8 @@ describe("IBosonFundsHandler", function () {
                     // recalculate the royalties due to rounding errors
                     totalRoyaltiesSplit = { other: 0n, other2: 0n };
                     totalRoyalties = 0n;
+                    royaltiesPerExchange = [];
+
                     for (const trade of buyerChains[direction]) {
                       const effectivePrice = applyPercentage(trade.price, sellerPercentBasisPoints);
 
@@ -5965,9 +6410,11 @@ describe("IBosonFundsHandler", function () {
                         totalRoyalties +
                         BigInt(applyPercentage(applyPercentage(trade.price, fee.royalties), sellerPercentBasisPoints));
                       for (const [key, value] of Object.entries(totalRoyaltiesSplit)) {
-                        totalRoyaltiesSplit[key] =
-                          value +
-                          BigInt(applyPercentage(effectivePrice, applyPercentage(fee.royalties, royaltySplit[key])));
+                        const thisTradeRoyalties = BigInt(
+                          applyPercentage(effectivePrice, applyPercentage(fee.royalties, royaltySplit[key]))
+                        );
+                        totalRoyaltiesSplit[key] = value + thisTradeRoyalties;
+                        royaltiesPerExchange.push({ id: keyToId[key], payoff: thisTradeRoyalties });
                       }
                     }
                     totalRoyaltiesSplit.seller =
@@ -5984,6 +6431,15 @@ describe("IBosonFundsHandler", function () {
 
                     // protocol: protocolFee*(1-buyerPercentage)
                     protocolPayoff = applyPercentage(totalProtocolFee + BigInt(initialFee), sellerPercentBasisPoints);
+
+                    // royalty recipients: royalties
+                    royaltyRecipientsPayoffs = [
+                      {
+                        id: keyToId["other"],
+                        payoff: totalRoyaltiesSplit.other,
+                      },
+                      { id: keyToId["other2"], payoff: totalRoyaltiesSplit.other2 },
+                    ];
 
                     // Escalate the dispute
                     await disputeHandler.connect(voucherOwner).escalateDispute(exchangeId);
@@ -6022,6 +6478,22 @@ describe("IBosonFundsHandler", function () {
                       }
                     }
 
+                    // royalty recipients
+                    for (const royaltyRecipientPayoff of royaltiesPerExchange) {
+                      if (royaltyRecipientPayoff.payoff != 0n) {
+                        expectedEventCount++;
+                        await expect(tx)
+                          .to.emit(exchangeHandler, "FundsReleased")
+                          .withArgs(
+                            exchangeId,
+                            royaltyRecipientPayoff.id,
+                            offer.exchangeToken,
+                            royaltyRecipientPayoff.payoff,
+                            assistantDR.address
+                          );
+                      }
+                    }
+
                     // Make sure exact number of FundsReleased events was emitted
                     const eventCount = (await tx.wait()).logs.filter((e) => e.eventName == "FundsReleased").length;
                     expect(eventCount).to.equal(expectedEventCount);
@@ -6045,9 +6517,9 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
-                    externalRoyaltyRecipientsBalance = await Promise.all(
-                      [other, other2].map((r) => mockToken.balanceOf(r.address))
-                    );
+                    royaltyRecipientsAvailableFunds = (
+                      await Promise.all(royaltyRecipientsPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
+                    ).map((returnedValue) => FundsList.fromStruct(returnedValue));
 
                     // Chain state should match the expected available funds
                     expectedSellerAvailableFunds = new FundsList([]);
@@ -6055,13 +6527,15 @@ describe("IBosonFundsHandler", function () {
                     expectedProtocolAvailableFunds = new FundsList([]);
                     expectedAgentAvailableFunds = new FundsList([]);
                     expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
-                    expectedExternalRoyaltyRecipientsBalance = [0n, 0n];
+                    expectedRoyaltyRecipientsAvailableFunds = new Array(royaltyRecipientsPayoffs.length).fill(
+                      new FundsList([])
+                    );
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
-                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
+                    expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
 
                     // Decide the dispute, so the funds are released
                     await disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints);
@@ -6072,7 +6546,7 @@ describe("IBosonFundsHandler", function () {
                     // resellers: (difference between the secondary price and immediate payout)*(1-buyerPercentage)
                     // protocol: protocolFee*(1-buyerPercentage)
                     // agent: 0
-                    // external royalty recipients: royalties*(1-buyerPercentage)
+                    // royalty recipients: royalties*(1-buyerPercentage)
                     expectedSellerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", sellerPayoff));
                     expectedBuyerAvailableFunds = new FundsList([
                       new Funds(mockTokenAddress, "Foreign20", buyerPayoff),
@@ -6085,7 +6559,9 @@ describe("IBosonFundsHandler", function () {
                     expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
                       return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
                     });
-                    expectedExternalRoyaltyRecipientsBalance = [totalRoyaltiesSplit.other, totalRoyaltiesSplit.other2];
+                    expectedRoyaltyRecipientsAvailableFunds = royaltyRecipientsPayoffs.map((r) => {
+                      return new FundsList(r.payoff != "0" ? [new Funds(mockTokenAddress, "Foreign20", r.payoff)] : []);
+                    });
 
                     sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
                     buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
@@ -6094,16 +6570,16 @@ describe("IBosonFundsHandler", function () {
                     resellersAvailableFunds = (
                       await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                     ).map((returnedValue) => FundsList.fromStruct(returnedValue));
-                    externalRoyaltyRecipientsBalance = await Promise.all(
-                      [other, other2].map((r) => mockToken.balanceOf(r.address))
-                    );
+                    royaltyRecipientsAvailableFunds = (
+                      await Promise.all(royaltyRecipientsPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
+                    ).map((returnedValue) => FundsList.fromStruct(returnedValue));
 
                     expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                     expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                     expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
-                    expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
+                    expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
                   });
                 });
 
@@ -6126,6 +6602,15 @@ describe("IBosonFundsHandler", function () {
 
                       // protocol: 0
                       protocolPayoff = 0;
+
+                      // royalty recipients: 0
+                      royaltyRecipientsPayoffs = [
+                        {
+                          id: keyToId["other"],
+                          payoff: 0n,
+                        },
+                        { id: keyToId["other2"], payoff: 0n },
+                      ];
 
                       // Escalate the dispute
                       tx = await disputeHandler.connect(voucherOwner).escalateDispute(exchangeId);
@@ -6190,9 +6675,9 @@ describe("IBosonFundsHandler", function () {
                       resellersAvailableFunds = (
                         await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                       ).map((returnedValue) => FundsList.fromStruct(returnedValue));
-                      externalRoyaltyRecipientsBalance = await Promise.all(
-                        [other, other2].map((r) => mockToken.balanceOf(r.address))
-                      );
+                      royaltyRecipientsAvailableFunds = (
+                        await Promise.all(royaltyRecipientsPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
+                      ).map((returnedValue) => FundsList.fromStruct(returnedValue));
 
                       // Chain state should match the expected available funds
                       expectedSellerAvailableFunds = new FundsList([]);
@@ -6200,13 +6685,15 @@ describe("IBosonFundsHandler", function () {
                       expectedProtocolAvailableFunds = new FundsList([]);
                       expectedAgentAvailableFunds = new FundsList([]);
                       expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
-                      expectedExternalRoyaltyRecipientsBalance = [0n, 0n];
+                      expectedRoyaltyRecipientsAvailableFunds = new Array(royaltyRecipientsPayoffs.length).fill(
+                        new FundsList([])
+                      );
                       expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                       expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                       expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                       expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                       expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
-                      expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
+                      expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
 
                       // Expire the escalated dispute, so the funds are released
                       await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);
@@ -6217,7 +6704,7 @@ describe("IBosonFundsHandler", function () {
                       // resellers: difference between the secondary price and immediate payout
                       // protocol: 0
                       // agent: 0
-                      // external royalty recipients: 0
+                      // royalty recipients: 0
                       expectedBuyerAvailableFunds.funds[0] = new Funds(mockTokenAddress, "Foreign20", buyerPayoff);
                       expectedSellerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", sellerPayoff));
                       expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
@@ -6235,16 +6722,16 @@ describe("IBosonFundsHandler", function () {
                       resellersAvailableFunds = (
                         await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                       ).map((returnedValue) => FundsList.fromStruct(returnedValue));
-                      externalRoyaltyRecipientsBalance = await Promise.all(
-                        [other, other2].map((r) => mockToken.balanceOf(r.address))
-                      );
+                      royaltyRecipientsAvailableFunds = (
+                        await Promise.all(royaltyRecipientsPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
+                      ).map((returnedValue) => FundsList.fromStruct(returnedValue));
 
                       expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                       expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                       expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                       expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                       expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
-                      expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
+                      expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
                     });
                   }
                 );
@@ -6268,6 +6755,15 @@ describe("IBosonFundsHandler", function () {
 
                       // protocol: 0
                       protocolPayoff = 0;
+
+                      // royalty recipients: 0
+                      royaltyRecipientsPayoffs = [
+                        {
+                          id: keyToId["other"],
+                          payoff: 0n,
+                        },
+                        { id: keyToId["other2"], payoff: 0n },
+                      ];
 
                       // Escalate the dispute
                       await disputeHandler.connect(voucherOwner).escalateDispute(exchangeId);
@@ -6323,9 +6819,9 @@ describe("IBosonFundsHandler", function () {
                       resellersAvailableFunds = (
                         await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                       ).map((returnedValue) => FundsList.fromStruct(returnedValue));
-                      externalRoyaltyRecipientsBalance = await Promise.all(
-                        [other, other2].map((r) => mockToken.balanceOf(r.address))
-                      );
+                      royaltyRecipientsAvailableFunds = (
+                        await Promise.all(royaltyRecipientsPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
+                      ).map((returnedValue) => FundsList.fromStruct(returnedValue));
 
                       // Chain state should match the expected available funds
                       expectedSellerAvailableFunds = new FundsList([]);
@@ -6333,13 +6829,15 @@ describe("IBosonFundsHandler", function () {
                       expectedProtocolAvailableFunds = new FundsList([]);
                       expectedAgentAvailableFunds = new FundsList([]);
                       expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
-                      expectedExternalRoyaltyRecipientsBalance = [0n, 0n];
+                      expectedRoyaltyRecipientsAvailableFunds = new Array(royaltyRecipientsPayoffs.length).fill(
+                        new FundsList([])
+                      );
                       expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                       expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                       expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                       expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                       expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
-                      expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
+                      expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
 
                       // Refuse the escalated dispute, so the funds are released
                       await disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId);
@@ -6350,7 +6848,7 @@ describe("IBosonFundsHandler", function () {
                       // resellers: difference between the secondary price and immediate payout
                       // protocol: 0
                       // agent: 0
-                      // external royalty recipients: 0
+                      // royalty recipients: 0
                       expectedBuyerAvailableFunds.funds[0] = new Funds(mockTokenAddress, "Foreign20", buyerPayoff);
                       expectedSellerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", sellerPayoff));
                       expectedResellersAvailableFunds = resellerPayoffs.map((r) => {
@@ -6368,13 +6866,16 @@ describe("IBosonFundsHandler", function () {
                       resellersAvailableFunds = (
                         await Promise.all(resellerPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
                       ).map((returnedValue) => FundsList.fromStruct(returnedValue));
+                      royaltyRecipientsAvailableFunds = (
+                        await Promise.all(royaltyRecipientsPayoffs.map((r) => fundsHandler.getAllAvailableFunds(r.id)))
+                      ).map((returnedValue) => FundsList.fromStruct(returnedValue));
 
                       expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
                       expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
                       expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
                       expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                       expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
-                      expect(externalRoyaltyRecipientsBalance).to.eql(expectedExternalRoyaltyRecipientsBalance);
+                      expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
                     });
                   }
                 );
@@ -6435,7 +6936,7 @@ describe("IBosonFundsHandler", function () {
               agentId = "3";
               buyerId = 5;
 
-              // Create buyer with protocol address to not mess up ids in tests
+              // Create buyer with price discovery client address to not mess up ids in tests
               await accountHandler.createBuyer(mockBuyer(await bpd.getAddress()));
 
               // commit to offer

@@ -116,10 +116,12 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.Bundle) bundles;
         // twin id => twin
         mapping(uint256 => BosonTypes.Twin) twins;
-        //entity id => auth token
+        // entity id => auth token
         mapping(uint256 => BosonTypes.AuthToken) authTokens;
         // exchange id => sequential commit info
         mapping(uint256 => BosonTypes.ExchangeCosts[]) exchangeCosts;
+        // entity id => royalty recipient account
+        mapping(uint256 => BosonTypes.RoyaltyRecipient) royaltyRecipients;
     }
 
     // Protocol lookups storage
@@ -201,10 +203,12 @@ library ProtocolLib {
         mapping(uint256 => bytes32) sellerSalt;
         // seller salt => is used
         mapping(bytes32 => bool) isUsedSellerSalt;
-        // seller id => royalty recipients
-        mapping(uint256 => BosonTypes.RoyaltyRecipient[]) royaltyRecipientsBySeller;
+        // seller id => royalty recipients info
+        mapping(uint256 => BosonTypes.RoyaltyRecipientInfo[]) royaltyRecipientsBySeller;
         // seller id => royalty recipient => index of royalty recipient in royaltyRecipientsBySeller
         mapping(uint256 => mapping(address => uint256)) royaltyRecipientIndexBySellerAndRecipient;
+        // royalty recipient wallet address => agentId
+        mapping(address => uint256) royaltyRecipientIdByWallet;
     }
 
     // Incrementing id counters

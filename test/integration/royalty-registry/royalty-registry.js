@@ -22,7 +22,7 @@ const {
 const { assert } = require("chai");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee.js");
 const { RoyaltyInfo } = require("../../../scripts/domain/RoyaltyInfo.js");
-const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../../scripts/domain/RoyaltyRecipient.js");
+const { RoyaltyRecipientInfo, RoyaltyRecipientInfoList } = require("../../../scripts/domain/RoyaltyRecipientInfo.js");
 
 // Requirements to run this test:
 // - Royalty registry is a submodule. If you didn't clone repository recursively, run `git submodule update --init --recursive` to get it.
@@ -67,9 +67,9 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
     await accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues);
 
     // Add royalty recipients
-    const royaltyRecipientList = new RoyaltyRecipientList([
-      new RoyaltyRecipient(other1.address, "100", "other1"),
-      new RoyaltyRecipient(other2.address, "200", "other2"),
+    const royaltyRecipientList = new RoyaltyRecipientInfoList([
+      new RoyaltyRecipientInfo(other1.address, "100"),
+      new RoyaltyRecipientInfo(other2.address, "200"),
     ]);
     await accountHandler.connect(assistant).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
 

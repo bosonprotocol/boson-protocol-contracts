@@ -75,7 +75,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
     }
 
     /**
-     * @notice Withdraws the specified funds. Can be called for seller, buyer or agent.
+     * @notice Withdraws the specified funds. Can be called for seller, buyer, agent or royalty recipient.
      *
      * Emits FundsWithdrawn event if successful.
      *
@@ -96,34 +96,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         address[] calldata _tokenList,
         uint256[] calldata _tokenAmounts
     ) external override fundsNotPaused nonReentrant {
-        address payable sender = payable(msgSender());
-
-        // Address that will receive the funds
-        address payable destinationAddress;
-
-        // First check if the caller is a buyer
-        (bool exists, uint256 callerId) = getBuyerIdByWallet(sender);
-        if (exists && callerId == _entityId) {
-            // Caller is a buyer
-            destinationAddress = sender;
-        } else {
-            // Check if the caller is an assistant
-            (exists, callerId) = getSellerIdByAssistant(sender);
-            if (exists && callerId == _entityId) {
-                // Caller is an assistant. In this case funds are transferred to the treasury address
-                (, Seller storage seller, ) = fetchSeller(callerId);
-                destinationAddress = seller.treasury;
-            } else {
-                (exists, callerId) = getAgentIdByWallet(sender);
-                if (exists && callerId == _entityId) {
-                    // Caller is an agent
-                    destinationAddress = sender;
-                } else {
-                    // In this branch, caller is neither buyer, assistant or agent or does not match the _entityId
-                    revert NotAuthorized();
-                }
-            }
-        }
+        address payable destinationAddress = getDestinationAddress(_entityId);
 
         withdrawFundsInternal(destinationAddress, _entityId, _tokenList, _tokenAmounts);
     }
@@ -323,5 +296,48 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
                 }
             }
         }
+    }
+
+    /**
+     * @notice For a given entity id, it returns the address, where the funds are withdrawn.
+     *
+     * Reverts if:
+     * - Caller is not associated with the entity id
+     *
+     * @param _entityId - id of entity for which funds should be withdrawn
+     * @return destinationAddress - address where the funds are withdrawn
+     */
+    function getDestinationAddress(uint256 _entityId) internal view returns (address payable destinationAddress) {
+        address payable sender = payable(msgSender());
+
+        // First check if the caller is a buyer
+        (bool exists, uint256 callerId) = getBuyerIdByWallet(sender);
+        if (exists && callerId == _entityId) {
+            // Caller is a buyer
+            return sender;
+        }
+
+        // Check if the caller is an assistant
+        (exists, callerId) = getSellerIdByAssistant(sender);
+        if (exists && callerId == _entityId) {
+            // Caller is an assistant. In this case funds are transferred to the treasury address
+            (, Seller storage seller, ) = fetchSeller(callerId);
+            return seller.treasury;
+        }
+
+        (exists, callerId) = getAgentIdByWallet(sender);
+        if (exists && callerId == _entityId) {
+            // Caller is an agent
+            return sender;
+        }
+
+        callerId = protocolLookups().royaltyRecipientIdByWallet[sender];
+        if (callerId > 0 && callerId == _entityId) {
+            // Caller is a royalty recipient
+            return sender;
+        }
+
+        // In this branch, caller is neither buyer, assistant or agent or does not match the _entityId
+        revert NotAuthorized();
     }
 }

@@ -7,7 +7,7 @@ const Role = require("../../../scripts/domain/Role");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const Range = require("../../../scripts/domain/Range");
 const { RoyaltyInfo } = require("../../../scripts/domain/RoyaltyInfo");
-const { RoyaltyRecipient, RoyaltyRecipientList } = require("../../../scripts/domain/RoyaltyRecipient.js");
+const { RoyaltyRecipientInfo, RoyaltyRecipientInfoList } = require("../../../scripts/domain/RoyaltyRecipientInfo.js");
 const { Funds, FundsList } = require("../../../scripts/domain/Funds");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
 const {
@@ -1789,11 +1789,11 @@ describe("IBosonVoucher", function () {
           await configHandler.connect(deployer).setMaxRoyaltyPercentage("10000");
 
           // Add multiple royalty recipients
-          const royaltyRecipientList = new RoyaltyRecipientList([
-            new RoyaltyRecipient(rando.address, "100", "other1"),
-            new RoyaltyRecipient(rando2.address, "200", "other2"),
+          const royaltyRecipientInfoList = new RoyaltyRecipientInfoList([
+            new RoyaltyRecipientInfo(rando.address, "100"),
+            new RoyaltyRecipientInfo(rando2.address, "200"),
           ]);
-          await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientList.toStruct());
+          await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientInfoList.toStruct());
 
           // Create an offer with multiple recipients
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();

@@ -36,7 +36,7 @@ const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-cl
 const TokenType = require("../../scripts/domain/TokenType");
 const { getStorageAt, setStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo.js");
-const { RoyaltyRecipientList, RoyaltyRecipient } = require("../../scripts/domain/RoyaltyRecipient.js");
+const { RoyaltyRecipientInfoList, RoyaltyRecipientInfo } = require("../../scripts/domain/RoyaltyRecipientInfo.js");
 
 describe("ProtocolInitializationHandler", async function () {
   // Common vars
@@ -1001,7 +1001,7 @@ describe("ProtocolInitializationHandler", async function () {
 
     context("Data backfilling", async function () {
       let accountHandler, offerHandler;
-      let expectedRoyaltyRecipientLists, expectedRoyaltyInfo;
+      let expectedRoyaltyRecipientInfoLists, expectedRoyaltyInfo;
 
       beforeEach(async function () {
         const protocolAddress = await diamondCutFacet.getAddress();
@@ -1075,10 +1075,10 @@ describe("ProtocolInitializationHandler", async function () {
           [royaltyPercentages, sellerIds, offerIds, ZeroAddress]
         );
 
-        expectedRoyaltyRecipientLists = [
-          new RoyaltyRecipientList([new RoyaltyRecipient(ZeroAddress, "0", "Treasury")]),
-          new RoyaltyRecipientList([new RoyaltyRecipient(ZeroAddress, "1400", "Treasury")]),
-          new RoyaltyRecipientList([new RoyaltyRecipient(ZeroAddress, "1400", "Treasury")]),
+        expectedRoyaltyRecipientInfoLists = [
+          new RoyaltyRecipientInfoList([new RoyaltyRecipientInfo(ZeroAddress, "0")]),
+          new RoyaltyRecipientInfoList([new RoyaltyRecipientInfo(ZeroAddress, "1400")]),
+          new RoyaltyRecipientInfoList([new RoyaltyRecipientInfo(ZeroAddress, "1400")]),
         ];
 
         expectedRoyaltyInfo = [
@@ -1111,10 +1111,10 @@ describe("ProtocolInitializationHandler", async function () {
 
         // Validate that the royalty recipients are set correctly
         for (let sellerId = 1; sellerId <= 3; sellerId++) {
-          const returnedRoyaltyRecipientStruct = RoyaltyRecipientList.fromStruct(
+          const returnedRoyaltyRecipientInfoStruct = RoyaltyRecipientInfoList.fromStruct(
             await accountHandler.getRoyaltyRecipients(sellerId)
           );
-          expect(returnedRoyaltyRecipientStruct).to.deep.equal(expectedRoyaltyRecipientLists[sellerId - 1]);
+          expect(returnedRoyaltyRecipientInfoStruct).to.deep.equal(expectedRoyaltyRecipientInfoLists[sellerId - 1]);
         }
 
         // Validate that the royalty info is set correctly
@@ -1143,10 +1143,10 @@ describe("ProtocolInitializationHandler", async function () {
 
         // Validate that the royalty recipients are set correctly
         for (let sellerId = 1; sellerId <= 3; sellerId++) {
-          const returnedRoyaltyRecipientStruct = RoyaltyRecipientList.fromStruct(
+          const returnedRoyaltyRecipientInfoStruct = RoyaltyRecipientInfoList.fromStruct(
             await accountHandler.getRoyaltyRecipients(sellerId)
           );
-          expect(returnedRoyaltyRecipientStruct).to.deep.equal(expectedRoyaltyRecipientLists[sellerId - 1]);
+          expect(returnedRoyaltyRecipientInfoStruct).to.deep.equal(expectedRoyaltyRecipientInfoLists[sellerId - 1]);
         }
 
         // Validate that the royalty info is set correctly
