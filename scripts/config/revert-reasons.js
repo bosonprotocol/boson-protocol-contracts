@@ -220,10 +220,11 @@ exports.RevertReasons = {
   INIT_ADDRESS_WITH_NO_CODE: "LibDiamondCut: _init address has no code",
 
   // Price discovery related
-  PRICE_TOO_LOW: "PriceTooLow",
+  PRICE_MISMATCH: "PriceMismatch",
   TOKEN_ID_MISMATCH: "TokenIdMismatch",
   VOUCHER_TRANSFER_NOT_ALLOWED: "VoucherTransferNotAllowed",
   VOUCHER_NOT_RECEIVED: "VoucherNotReceived",
+  VOUCHER_NOT_TRANSFERRED: "VoucherNotTransferred",
   UNEXPECTED_ERC721_RECEIVED: "UnexpectedERC721Received",
   FEE_AMOUNT_TOO_HIGH: "FeeAmountTooHigh",
   INVALID_PRICE_DISCOVERY: "InvalidPriceDiscovery",

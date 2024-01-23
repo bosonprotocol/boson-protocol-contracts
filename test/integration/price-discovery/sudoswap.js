@@ -32,6 +32,7 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
   let exchangeHandler, priceDiscoveryHandler;
   let weth, wethAddress;
   let seller;
+  let bpd;
 
   before(async function () {
     accountId.next();
@@ -43,6 +44,7 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
       fundsHandler: "IBosonFundsHandler",
       exchangeHandler: "IBosonExchangeHandler",
       priceDiscoveryHandler: "IBosonPriceDiscoveryHandler",
+      configHandler: "IBosonConfigHandler",
     };
 
     const wethFactory = await getContractFactory("WETH9");
@@ -50,13 +52,27 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
     await weth.waitForDeployment();
     wethAddress = await weth.getAddress();
 
-    let accountHandler, offerHandler, fundsHandler;
+    let accountHandler, offerHandler, fundsHandler, configHandler;
 
     ({
       signers: [deployer, assistant, buyer, DR],
-      contractInstances: { accountHandler, offerHandler, fundsHandler, exchangeHandler, priceDiscoveryHandler },
+      contractInstances: {
+        accountHandler,
+        offerHandler,
+        fundsHandler,
+        exchangeHandler,
+        priceDiscoveryHandler,
+        configHandler,
+      },
       extraReturnValues: { bosonVoucher },
     } = await setupTestEnvironment(contracts, { wethAddress }));
+
+    // Add BosonPriceDiscovery
+    const bpdFactory = await getContractFactory("BosonPriceDiscovery");
+    bpd = await bpdFactory.deploy(await weth.getAddress(), await priceDiscoveryHandler.getAddress());
+    await bpd.waitForDeployment();
+
+    await configHandler.setPriceDiscoveryAddress(await bpd.getAddress());
 
     const LSSVMPairEnumerableETH = await getContractFactory("LSSVMPairEnumerableETH", deployer);
     const lssvmPairEnumerableETH = await LSSVMPairEnumerableETH.deploy();
@@ -110,10 +126,18 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
     offer.exchangeToken = wethAddress;
     offer.quantityAvailable = 10;
     offer.priceType = PriceType.Discovery;
+    const offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
 
     await offerHandler
       .connect(assistant)
-      .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, "0");
+      .createOffer(
+        offer.toStruct(),
+        offerDates.toStruct(),
+        offerDurations.toStruct(),
+        disputeResolverId,
+        "0",
+        offerFeeLimit
+      );
 
     const pool = BigInt(offer.sellerDeposit) * BigInt(offer.quantityAvailable);
 
@@ -158,7 +182,8 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
       await bosonVoucher.getAddress(),
       await lssvmPairFactory.getAddress(),
       await exchangeHandler.getAddress(),
-      wethAddress
+      wethAddress,
+      await bpd.getAddress()
     );
     const wrappedBosonVoucherAddress = await wrappedBosonVoucher.getAddress();
 
@@ -205,7 +230,13 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
 
     const calldata = wrappedBosonVoucher.interface.encodeFunctionData("unwrap", [tokenId]);
 
-    const priceDiscovery = new PriceDiscovery(inputAmount, wrappedBosonVoucherAddress, calldata, Side.Ask);
+    const priceDiscovery = new PriceDiscovery(
+      inputAmount,
+      Side.Wrapper,
+      wrappedBosonVoucherAddress,
+      wrappedBosonVoucherAddress,
+      calldata
+    );
 
     const protocolBalanceBefore = await weth.balanceOf(await exchangeHandler.getAddress());
 

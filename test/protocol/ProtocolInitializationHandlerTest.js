@@ -25,7 +25,12 @@ const { maxPriorityFeePerGas, oneWeek, oneMonth } = require("../util/constants")
 const { getFees } = require("../../scripts/util/utils");
 const { getFacetAddCut, getFacetReplaceCut } = require("../../scripts/util/diamond-utils");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const { getFacetsWithArgs, getMappingStoragePosition, paddingType } = require("../util/utils.js");
+const {
+  getFacetsWithArgs,
+  getMappingStoragePosition,
+  paddingType,
+  compareProtocolVersions,
+} = require("../util/utils.js");
 const { getV2_2_0DeployConfig } = require("../upgrade/00_config.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const TokenType = require("../../scripts/domain/TokenType");
@@ -60,7 +65,7 @@ describe("ProtocolInitializationHandler", async function () {
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, await deployer.getAddress());
 
-    // Temporarily grant UPGRADER role to deployer 1ccount
+    // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, await deployer.getAddress());
 
     // Cast Diamond to IERC165
@@ -96,7 +101,9 @@ describe("ProtocolInitializationHandler", async function () {
           maxPriorityFeePerGas
         );
 
-        expect(cutTransaction).to.emit(protocolInitializationFacet, "ProtocolInitialized").withArgs(version);
+        await expect(cutTransaction)
+          .to.emit(protocolInitializationFacet, "ProtocolInitialized")
+          .withArgs(compareProtocolVersions.bind(version));
       });
 
       context("💔 Revert Reasons", async function () {
@@ -608,7 +615,9 @@ describe("ProtocolInitializationHandler", async function () {
         calldataProtocolInitialization,
         await getFees(maxPriorityFeePerGas)
       );
-      expect(tx).to.emit(deployedProtocolInitializationHandlerFacet, "ProtocolInitialized");
+      await expect(tx)
+        .to.emit(protocolInitializationFacet, "ProtocolInitialized")
+        .withArgs(compareProtocolVersions.bind(version));
     });
 
     context("💔 Revert Reasons", async function () {
@@ -908,6 +917,7 @@ describe("ProtocolInitializationHandler", async function () {
     let deployedProtocolInitializationHandlerFacet;
     let facetCut;
     let calldataProtocolInitialization;
+    let priceDiscoveryAddress;
 
     beforeEach(async function () {
       version = "2.3.0";
@@ -945,7 +955,11 @@ describe("ProtocolInitializationHandler", async function () {
         deployedProtocolInitializationHandlerFacet.interface.fragments.find((f) => f.name == "initialize").selector,
       ]);
 
-      initializationData = abiCoder.encode(["uint256[]", "uint256[][]", "uint256[][]"], [[], [], []]);
+      priceDiscoveryAddress = rando.address;
+      initializationData = abiCoder.encode(
+        ["uint256[]", "uint256[][]", "uint256[][]", "address"],
+        [[], [], [], priceDiscoveryAddress]
+      );
 
       // Prepare calldata
       calldataProtocolInitialization = deployedProtocolInitializationHandlerFacet.interface.encodeFunctionData(
@@ -954,7 +968,7 @@ describe("ProtocolInitializationHandler", async function () {
       );
     });
 
-    it("Should initialize version 2.4.0 and emit ProtocolInitialized", async function () {
+    it("Should initialize version 2.4.0 and emit ProtocolInitialized and PriceDiscoveryAddressChanged", async function () {
       // Make the cut, check the event
       const tx = await diamondCutFacet.diamondCut(
         [facetCut],
@@ -962,7 +976,27 @@ describe("ProtocolInitializationHandler", async function () {
         calldataProtocolInitialization,
         await getFees(maxPriorityFeePerGas)
       );
-      expect(tx).to.emit(deployedProtocolInitializationHandlerFacet, "ProtocolInitialized");
+
+      await expect(tx)
+        .to.emit(protocolInitializationFacet, "ProtocolInitialized")
+        .withArgs(compareProtocolVersions.bind(version));
+
+      await expect(tx)
+        .to.emit(protocolInitializationFacet, "PriceDiscoveryAddressChanged")
+        .withArgs(priceDiscoveryAddress, deployer.address);
+    });
+
+    it("Should set the correct Price Discovery address", async function () {
+      // Make the cut
+      await diamondCutFacet.diamondCut(
+        [facetCut],
+        await deployedProtocolInitializationHandlerFacet.getAddress(),
+        calldataProtocolInitialization,
+        await getFees(maxPriorityFeePerGas)
+      );
+
+      const configHandler = await getContractAt("IBosonConfigHandler", await protocolDiamond.getAddress());
+      expect(await configHandler.connect(rando).getPriceDiscoveryAddress()).to.equal(priceDiscoveryAddress);
     });
 
     context("Data backfilling", async function () {
@@ -1037,8 +1071,8 @@ describe("ProtocolInitializationHandler", async function () {
         ];
 
         initializationData = abiCoder.encode(
-          ["uint256[]", "uint256[][]", "uint256[][]"],
-          [royaltyPercentages, sellerIds, offerIds]
+          ["uint256[]", "uint256[][]", "uint256[][]", "address"],
+          [royaltyPercentages, sellerIds, offerIds, ZeroAddress]
         );
 
         expectedRoyaltyRecipientLists = [

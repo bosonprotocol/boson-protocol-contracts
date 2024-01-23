@@ -13,7 +13,7 @@ import { IERC721Receiver } from "../interfaces/IERC721Receiver.sol";
  * This contract simulates external price discovery mechanism.
  * When user commits to an offer, protocol talks to this contract to validate the exchange.
  */
-contract PriceDiscovery {
+contract PriceDiscoveryMock {
     struct Order {
         address seller;
         address buyer;
@@ -100,6 +100,57 @@ contract PriceDiscovery {
         // return half of the sent value back to the caller
         payable(msg.sender).transfer(msg.value / 2);
     }
+
+    event MockFulfilCalled();
+
+    function mockFulfil(uint256 _percentReturn) public payable virtual {
+        if (orderType == OrderType.Ask) {
+            // received value must be equal to the price (or greater for ETH)
+            if (order.exchangeToken == address(0)) {
+                require(msg.value >= order.price, "ETH value mismatch");
+                if (_percentReturn > 0) {
+                    payable(msg.sender).transfer((msg.value * _percentReturn) / 100);
+                }
+            } else {
+                IERC20(order.exchangeToken).transferFrom(msg.sender, address(this), order.price);
+                if (_percentReturn > 0) {
+                    IERC20(order.exchangeToken).transfer(msg.sender, (order.price * _percentReturn) / 100);
+                }
+            }
+        } else {
+            // handling bid and wrapper is the same for test purposes
+            if (order.exchangeToken == address(0)) {
+                if (_percentReturn > 0) {
+                    payable(msg.sender).transfer((order.price * _percentReturn) / 100);
+                }
+            } else {
+                if (_percentReturn > 0) {
+                    IERC20(order.exchangeToken).transfer(msg.sender, (order.price * _percentReturn) / 100);
+                }
+            }
+
+            if (orderType == OrderType.Bid) {
+                IERC721(order.voucherContract).transferFrom(msg.sender, order.buyer, order.tokenId);
+            }
+        }
+
+        emit MockFulfilCalled();
+    }
+
+    Order public order;
+    OrderType public orderType;
+    enum OrderType {
+        Ask,
+        Bid,
+        Weapper
+    }
+
+    function setExpectedValues(Order calldata _order, OrderType _orderType) public payable virtual {
+        order = _order;
+        orderType = _orderType;
+    }
+
+    receive() external payable {}
 }
 
 /**
@@ -107,7 +158,7 @@ contract PriceDiscovery {
  *
  * This contract modifies the token id, simulates bad/malicious contract
  */
-contract PriceDiscoveryModifyTokenId is PriceDiscovery {
+contract PriceDiscoveryModifyTokenId is PriceDiscoveryMock {
     /**
      * @dev simple fulfillOrder that does not perform any checks
      * Bump token id by 1
@@ -123,7 +174,7 @@ contract PriceDiscoveryModifyTokenId is PriceDiscovery {
  *
  * This contract modifies the erc721 token, simulates bad/malicious contract
  */
-contract PriceDiscoveryModifyVoucherContract is PriceDiscovery {
+contract PriceDiscoveryModifyVoucherContract is PriceDiscoveryMock {
     Foreign721 private erc721;
 
     constructor(address _erc721) {
@@ -149,7 +200,7 @@ contract PriceDiscoveryModifyVoucherContract is PriceDiscovery {
  *
  * This contract simply does not transfer the voucher to the caller
  */
-contract PriceDiscoveryNoTransfer is PriceDiscovery {
+contract PriceDiscoveryNoTransfer is PriceDiscoveryMock {
     /**
      * @dev do nothing
      */
@@ -161,7 +212,7 @@ contract PriceDiscoveryNoTransfer is PriceDiscovery {
  *
  * This contract transfers the voucher to itself instead of the origina msg.sender
  */
-contract PriceDiscoveryTransferElsewhere is PriceDiscovery, IERC721Receiver {
+contract PriceDiscoveryTransferElsewhere is PriceDiscoveryMock, IERC721Receiver {
     /**
      * @dev invoke fulfilBuyOrder on itself, making it the msg.sender
      */

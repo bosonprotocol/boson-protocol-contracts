@@ -76,6 +76,7 @@ describe("IBosonSequentialCommitHandler", function () {
   let tokenId;
   let offerFeeLimit;
   let bosonErrors;
+  let bpd;
 
   before(async function () {
     accountId.next(true);
@@ -114,9 +115,18 @@ describe("IBosonSequentialCommitHandler", function () {
       },
       protocolConfig: [, , { percentage: protocolFeePercentage }],
       diamondAddress: protocolDiamondAddress,
-    } = await setupTestEnvironment(contracts, { wethAddress: await weth.getAddress() }));
+    } = await setupTestEnvironment(contracts, {
+      wethAddress: await weth.getAddress(),
+    }));
 
     bosonErrors = await getContractAt("BosonErrors", await configHandler.getAddress());
+
+    // Add BosonPriceDiscovery
+    const bpdFactory = await getContractFactory("BosonPriceDiscovery");
+    bpd = await bpdFactory.deploy(await weth.getAddress(), protocolDiamondAddress);
+    await bpd.waitForDeployment();
+
+    await configHandler.setPriceDiscoveryAddress(await bpd.getAddress());
 
     // make all account the same
     assistant = admin;
@@ -125,7 +135,7 @@ describe("IBosonSequentialCommitHandler", function () {
     [deployer] = await getSigners();
 
     // Deploy PriceDiscovery contract
-    const PriceDiscoveryFactory = await getContractFactory("PriceDiscovery");
+    const PriceDiscoveryFactory = await getContractFactory("PriceDiscoveryMock");
     priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
     await priceDiscoveryContract.waitForDeployment();
 
@@ -972,7 +982,9 @@ describe("IBosonSequentialCommitHandler", function () {
 
             // Seller approves protocol to transfer the voucher
             bosonVoucherClone = await getContractAt("IBosonVoucher", expectedCloneAddress);
-            await bosonVoucherClone.connect(reseller).setApprovalForAll(await exchangeHandler.getAddress(), true);
+            await bosonVoucherClone
+              .connect(reseller)
+              .setApprovalForAll(await sequentialCommitHandler.getAddress(), true);
 
             mockBuyer(reseller.address); // call only to increment account id counter
             newBuyer = mockBuyer(buyer2.address);
@@ -1271,7 +1283,9 @@ describe("IBosonSequentialCommitHandler", function () {
 
             it("voucher transfer not approved", async function () {
               // revoke approval
-              await bosonVoucherClone.connect(reseller).setApprovalForAll(await exchangeHandler.getAddress(), false);
+              await bosonVoucherClone
+                .connect(reseller)
+                .setApprovalForAll(await sequentialCommitHandler.getAddress(), false);
 
               // Attempt to sequentially commit to, expecting revert
               await expect(
@@ -1359,7 +1373,9 @@ describe("IBosonSequentialCommitHandler", function () {
 
                 // Seller approves protocol to transfer the voucher
                 bosonVoucherClone = await getContractAt("IBosonVoucher", expectedCloneAddress);
-                await bosonVoucherClone.connect(reseller).setApprovalForAll(await exchangeHandler.getAddress(), true);
+                await bosonVoucherClone
+                  .connect(reseller)
+                  .setApprovalForAll(await sequentialCommitHandler.getAddress(), true);
 
                 mockBuyer(buyer.address); // call only to increment account id counter
                 newBuyer = mockBuyer(buyer2.address);
@@ -1532,7 +1548,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
       it("should transfer the voucher during sequential commit", async function () {
         // Deploy PriceDiscovery contract
-        const PriceDiscoveryFactory = await getContractFactory("PriceDiscovery");
+        const PriceDiscoveryFactory = await getContractFactory("PriceDiscoveryMock");
         priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
         await priceDiscoveryContract.waitForDeployment();
 
@@ -1667,7 +1683,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
           // Attempt to sequentially commit, expecting revert
           await expect(
-            foreign721["safeTransferFrom(address,address,uint256)"](deployer.address, protocolDiamondAddress, tokenId)
+            foreign721["safeTransferFrom(address,address,uint256)"](deployer.address, await bpd.getAddress(), tokenId)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNEXPECTED_ERC721_RECEIVED);
         });
       });

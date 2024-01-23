@@ -60,6 +60,7 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
     address private poolAddress;
     address private immutable factoryAddress;
     address private immutable protocolAddress;
+    address private immutable unwrapperAddress;
     address private immutable wethAddress;
 
     // Mapping from token ID to price. If pendingTokenId == tokenId, this is not the final price.
@@ -80,12 +81,14 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
         address _voucherAddress,
         address _factoryAddress,
         address _protocolAddress,
-        address _wethAddress
+        address _wethAddress,
+        address _unwrapperAddress
     ) ERC721(getVoucherName(_voucherAddress), getVoucherSymbol(_voucherAddress)) {
         voucherAddress = _voucherAddress;
         factoryAddress = _factoryAddress;
         protocolAddress = _protocolAddress;
         wethAddress = _wethAddress;
+        unwrapperAddress = _unwrapperAddress;
 
         // Approve pool to transfer wrapped vouchers
         _setApprovalForAll(address(this), _factoryAddress, true);
@@ -137,7 +140,7 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
         // Either contract owner or protocol can unwrap
         // If contract owner is unwrapping, this is equivalent to removing the voucher from the pool
         require(
-            msg.sender == protocolAddress || wrappedVoucherOwner == msg.sender,
+            msg.sender == unwrapperAddress || wrappedVoucherOwner == msg.sender,
             "SudoswapWrapper: Only owner or protocol can unwrap"
         );
 
@@ -152,7 +155,7 @@ contract SudoswapWrapper is BosonTypes, Ownable, ERC721 {
         // Transfer token to protocol
         if (priceToPay > 0) {
             // This example only supports WETH
-            IERC20(cachedExchangeToken[_tokenId]).safeTransfer(protocolAddress, priceToPay);
+            IERC20(cachedExchangeToken[_tokenId]).safeTransfer(unwrapperAddress, priceToPay);
         }
 
         delete cachedExchangeToken[_tokenId]; // gas refund

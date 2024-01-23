@@ -79,6 +79,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
   let bosonVoucher;
   let offerFeeLimit;
   let bosonErrors;
+  let bpd;
 
   before(async function () {
     accountId.next(true);
@@ -117,16 +118,25 @@ describe("IPriceDiscoveryHandlerFacet", function () {
       },
       protocolConfig: [, , { percentage: protocolFeePercentage }],
       diamondAddress: protocolDiamondAddress,
-    } = await setupTestEnvironment(contracts, { wethAddress: await weth.getAddress() }));
+    } = await setupTestEnvironment(contracts, {
+      wethAddress: await weth.getAddress(),
+    }));
 
     bosonErrors = await getContractAt("BosonErrors", await configHandler.getAddress());
+
+    // Add BosonPriceDiscovery
+    const bpdFactory = await getContractFactory("BosonPriceDiscovery");
+    bpd = await bpdFactory.deploy(await weth.getAddress(), protocolDiamondAddress);
+    await bpd.waitForDeployment();
+
+    await configHandler.setPriceDiscoveryAddress(await bpd.getAddress());
 
     // make all account the same
     assistant = admin;
     assistantDR = adminDR;
 
     // Deploy PriceDiscovery contract
-    const PriceDiscoveryFactory = await getContractFactory("PriceDiscovery");
+    const PriceDiscoveryFactory = await getContractFactory("PriceDiscoveryMock");
     priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
     await priceDiscoveryContract.waitForDeployment();
 
@@ -701,6 +711,41 @@ describe("IPriceDiscoveryHandlerFacet", function () {
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_CONDUIT_ADDRESS);
           });
+
+          it("Transferred voucher is part of a different offer", async function () {
+            // create 2nd offer
+            const newOffer = offer.clone();
+            newOffer.id = "2";
+            await offerHandler
+              .connect(assistant)
+              .createOffer(newOffer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+            await offerHandler
+              .connect(assistant)
+              .reserveRange(newOffer.id, newOffer.quantityAvailable, assistant.address);
+            await bosonVoucher.connect(assistant).preMint(newOffer.id, newOffer.quantityAvailable);
+
+            const newExchangeId = "12";
+            const newTokenId = deriveTokenId(newOffer.id, newExchangeId);
+
+            order.tokenId = newTokenId;
+            const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
+            const priceDiscoveryContractAddress = await priceDiscoveryContract.getAddress();
+
+            priceDiscovery = new PriceDiscovery(
+              price,
+              Side.Ask,
+              priceDiscoveryContractAddress,
+              priceDiscoveryContractAddress,
+              priceDiscoveryData
+            );
+
+            // Attempt to commit, expecting revert
+            await expect(
+              priceDiscoveryHandler
+                .connect(buyer)
+                .commitToPriceDiscoveryOffer(buyer.address, offer.id, priceDiscovery, { value: price })
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_ID_MISMATCH);
+          });
         });
       });
 
@@ -987,7 +1032,9 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
           it("voucher transfer not approved", async function () {
             // revoke approval
-            await bosonVoucherClone.connect(assistant).setApprovalForAll(await exchangeHandler.getAddress(), false);
+            await bosonVoucherClone
+              .connect(assistant)
+              .setApprovalForAll(await priceDiscoveryHandler.getAddress(), false);
 
             // Attempt to commit to, expecting revert
             await expect(
@@ -1114,7 +1161,8 @@ describe("IPriceDiscoveryHandlerFacet", function () {
                   await bosonVoucher.getAddress(),
                   await mockAuction.getAddress(),
                   await exchangeHandler.getAddress(),
-                  await weth.getAddress()
+                  await weth.getAddress(),
+                  await bpd.getAddress()
                 );
 
               // 3. Wrap voucher
@@ -1235,7 +1283,8 @@ describe("IPriceDiscoveryHandlerFacet", function () {
                   await bosonVoucher.getAddress(),
                   await mockAuction.getAddress(),
                   await exchangeHandler.getAddress(),
-                  await weth.getAddress()
+                  await weth.getAddress(),
+                  await bpd.getAddress()
                 );
 
               // Price discovery data
@@ -1315,15 +1364,14 @@ describe("IPriceDiscoveryHandlerFacet", function () {
                   priceDiscoveryHandler
                     .connect(assistant)
                     .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
-                ).to.revertedWithCustomError(bosonErrors, RevertReasons.PRICE_TOO_LOW);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.PRICE_MISMATCH);
               });
 
               it("Negative price", async function () {
                 // Deposit some weth to the protocol
                 const wethAddress = await weth.getAddress();
                 await weth.connect(assistant).deposit({ value: parseUnits("1", "ether") });
-                await weth.connect(assistant).approve(await fundsHandler.getAddress(), parseUnits("1", "ether"));
-                await fundsHandler.connect(assistant).depositFunds(seller.id, wethAddress, parseUnits("1", "ether"));
+                await weth.connect(assistant).transfer(await bpd.getAddress(), parseUnits("1", "ether"));
 
                 const calldata = weth.interface.encodeFunctionData("transfer", [
                   rando.address,

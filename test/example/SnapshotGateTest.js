@@ -69,6 +69,8 @@ describe("SnapshotGate", function () {
     // Reset the accountId iterator
     accountId.next(true);
 
+    let priceDiscovery;
+
     // Make accounts available
     [
       deployer,
@@ -86,6 +88,7 @@ describe("SnapshotGate", function () {
       holder3,
       holder4,
       holder5,
+      priceDiscovery,
     ] = await getSigners();
 
     // make all account the same
@@ -123,6 +126,7 @@ describe("SnapshotGate", function () {
         token: await bosonToken.getAddress(),
         voucherBeacon: await beacon.getAddress(),
         beaconProxy: ZeroAddress,
+        priceDiscovery: priceDiscovery.address, // dummy address
       },
       // Protocol limits
       {

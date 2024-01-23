@@ -340,8 +340,8 @@ interface BosonErrors {
     error InteractionNotAllowed();
 
     // Price discovery related
-    // Price discovery returned a price that is too low
-    error PriceTooLow();
+    // Price discovery returned a price that does not match the expected one
+    error PriceMismatch();
     // Token id is mandatory for bid orders and wrappers
     error TokenIdMandatory();
     // Incoming token id does not match the expected one
@@ -362,6 +362,8 @@ interface BosonErrors {
     error NegativePriceNotAllowed();
     // Price discovery did not send the voucher to the protocol
     error VoucherNotReceived();
+    // Price discovery did not send the voucher from the protocol
+    error VoucherNotTransferred();
     // Either token with wrong id received or wrong voucher contract made the transfer
     error UnexpectedERC721Received();
     // Royalty fee exceeds the price

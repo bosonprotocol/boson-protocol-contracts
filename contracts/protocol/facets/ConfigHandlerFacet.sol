@@ -37,6 +37,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setTokenAddress(_addresses.token);
         setTreasuryAddress(_addresses.treasury);
         setVoucherBeaconAddress(_addresses.voucherBeacon);
+        setPriceDiscoveryAddress(_addresses.priceDiscovery);
         setProtocolFeePercentage(_fees.percentage);
         setProtocolFeeFlatBoson(_fees.flatBoson);
         setMaxEscalationResponsePeriod(_limits.maxEscalationResponsePeriod);
@@ -171,6 +172,32 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function getBeaconProxyAddress() external view override returns (address) {
         return protocolAddresses().beaconProxy;
+    }
+
+    /**
+     * @notice Sets the Boson Price Discovery contract address.
+     *
+     * Emits a PriceDiscoveryAddressChanged event if successful.
+     *
+     * Reverts if _priceDiscovery is the zero address
+     *
+     * @dev Caller must have ADMIN role.
+     *
+     * @param _priceDiscovery - the Boson Price Discovery contract address
+     */
+    function setPriceDiscoveryAddress(address _priceDiscovery) public override onlyRole(ADMIN) nonReentrant {
+        checkNonZeroAddress(_priceDiscovery);
+        protocolAddresses().priceDiscovery = _priceDiscovery;
+        emit PriceDiscoveryAddressChanged(_priceDiscovery, msgSender());
+    }
+
+    /**
+     * @notice Gets the Boson Price Discovery contract address.
+     *
+     * @return the Boson Price Discovery contract address
+     */
+    function getPriceDiscoveryAddress() external view override returns (address) {
+        return protocolAddresses().priceDiscovery;
     }
 
     /**

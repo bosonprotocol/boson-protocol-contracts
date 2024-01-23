@@ -14,6 +14,7 @@ function getConfigHandlerInitArgs() {
       treasury: protocolConfig.TREASURY[network],
       voucherBeacon: protocolConfig.BEACON[network],
       beaconProxy: protocolConfig.BEACON_PROXY[network],
+      priceDiscovery: protocolConfig.PRICE_DISCOVERY[network],
     },
     protocolConfig.limits,
     protocolConfig.fees,

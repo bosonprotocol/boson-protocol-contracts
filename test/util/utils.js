@@ -167,6 +167,20 @@ function compareRoyaltyInfo(returnedRoyaltyInfo) {
   return true;
 }
 
+/** Predicate to compare protocol version in emitted events
+ * Bind expected protocol version to this function and pass it to .withArgs() instead of the expected protocol version
+ * If trimmed returned and expected versions are equal, the test will pass, otherwise it raises an error
+ *
+ * @param {*} returnedRoyaltyInfo
+ * @returns equality of expected and returned protocol versions
+ */
+function compareProtocolVersions(returnedVersion) {
+  // trim returned version
+  const trimmedReturnedVersion = returnedVersion.replace(/\0/g, "");
+
+  return trimmedReturnedVersion == this;
+}
+
 async function setNextBlockTimestamp(timestamp, mine = false) {
   if (typeof timestamp == "string" && timestamp.startsWith("0x0") && timestamp.length > 3)
     timestamp = "0x" + timestamp.substring(3);
@@ -465,6 +479,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
       token: bosonTokenAddress || (await bosonToken.getAddress()),
       voucherBeacon: await beacon.getAddress(),
       beaconProxy: ZeroAddress,
+      priceDiscovery: await beacon.getAddress(), // dummy address, changed later
     },
     // Protocol limits
     {
@@ -563,3 +578,4 @@ exports.getSnapshot = getSnapshot;
 exports.revertToSnapshot = revertToSnapshot;
 exports.getSellerSalt = getSellerSalt;
 exports.compareRoyaltyInfo = compareRoyaltyInfo;
+exports.compareProtocolVersions = compareProtocolVersions;

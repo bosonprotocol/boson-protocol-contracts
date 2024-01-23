@@ -28,6 +28,8 @@ library ProtocolLib {
         address voucherBeacon;
         // Address of the Boson Beacon proxy implementation
         address beaconProxy;
+        // Address of the Boson Price Discovery
+        address priceDiscovery;
     }
 
     // Protocol limits storage
