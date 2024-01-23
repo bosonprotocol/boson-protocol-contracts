@@ -1725,7 +1725,7 @@ describe("IBosonVoucher", function () {
           royaltyPercentage = "0"; //0%
           await offerHandler
             .connect(assistant)
-            .updateOfferRoyaltyRecipientInfos(offerId, new RoyaltyInfo([ZeroAddress], [royaltyPercentage]));
+            .updateOfferRoyaltyRecipients(offerId, new RoyaltyInfo([ZeroAddress], [royaltyPercentage]));
 
           let receiver, royaltyAmount;
           [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offerPrice);
@@ -1741,7 +1741,7 @@ describe("IBosonVoucher", function () {
           royaltyPercentage = "1000"; //10%
           await offerHandler
             .connect(assistant)
-            .updateOfferRoyaltyRecipientInfos(offerId, new RoyaltyInfo([ZeroAddress], [royaltyPercentage]));
+            .updateOfferRoyaltyRecipients(offerId, new RoyaltyInfo([ZeroAddress], [royaltyPercentage]));
 
           [receiver, royaltyAmount] = await bosonVoucher.connect(assistant).royaltyInfo(tokenId, offerPrice);
 
@@ -1757,7 +1757,7 @@ describe("IBosonVoucher", function () {
           royaltyPercentage = "800"; //8%
           await offerHandler
             .connect(assistant)
-            .updateOfferRoyaltyRecipientInfos(offerId, new RoyaltyInfo([ZeroAddress], [royaltyPercentage]));
+            .updateOfferRoyaltyRecipients(offerId, new RoyaltyInfo([ZeroAddress], [royaltyPercentage]));
 
           [receiver, royaltyAmount] = await bosonVoucher.connect(rando).royaltyInfo(tokenId, offerPrice);
 
@@ -1774,7 +1774,7 @@ describe("IBosonVoucher", function () {
           royaltyPercentage = "1000"; //10%
           await offerHandler
             .connect(assistant)
-            .updateOfferRoyaltyRecipientInfos(offerId, new RoyaltyInfo([ZeroAddress], [royaltyPercentage]));
+            .updateOfferRoyaltyRecipients(offerId, new RoyaltyInfo([ZeroAddress], [royaltyPercentage]));
 
           // Set inexistent exchangeId
           exchangeId = "100000";

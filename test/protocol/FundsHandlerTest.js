@@ -4812,7 +4812,7 @@ describe("IBosonFundsHandler", function () {
               let payoutInformation;
               let totalRoyalties, totalProtocolFee, totalRoyaltiesSplit;
               let royaltySplit, royaltyRecipientsPayoffs;
-              let royaltiesPerExchange = [];
+              let royaltiesPerExchange;
 
               beforeEach(async function () {
                 payoutInformation = [];
@@ -4891,6 +4891,7 @@ describe("IBosonFundsHandler", function () {
                   other: 0n,
                   other2: 0n,
                 };
+                royaltiesPerExchange = [];
 
                 for (const trade of buyerChains[direction]) {
                   // Prepare calldata for PriceDiscovery contract
