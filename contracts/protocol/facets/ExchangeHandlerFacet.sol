@@ -1391,26 +1391,6 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
         }
     }
 
-    // /**
-    //  * @dev See {IERC721Receiver-onERC721Received}.
-    //  *
-    //  * Always returns `IERC721Receiver.onERC721Received.selector`.
-    //  */
-    // function onERC721Received(
-    //     address,
-    //     address,
-    //     uint256 _tokenId,
-    //     bytes calldata
-    // ) public virtual override returns (bytes4) {
-    //     ProtocolLib.ProtocolStatus storage ps = protocolStatus();
-
-    //     if (ps.incomingVoucherId != _tokenId || ps.incomingVoucherCloneAddress != msg.sender) {
-    //         revert UnexpectedERC721Received();
-    //     }
-
-    //     return this.onERC721Received.selector;
-    // }
-
     /**
      * @notice Updates NFT ranges, so it's possible to reuse the tokens in other twins and to make
      * creation of new ranges viable
