@@ -39,7 +39,7 @@ const {
   mockTwin,
 } = require("./mock");
 const { setNextBlockTimestamp, paddingType, getMappingStoragePosition } = require("./utils.js");
-const { oneMonth, oneDay } = require("./constants");
+const { oneMonth, oneDay, oneWeek } = require("./constants");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { readContracts } = require("../../scripts/util/utils");
@@ -60,6 +60,7 @@ let Condition = require("../../scripts/domain/Condition");
 // Common vars
 const versionsWithActivateDRFunction = ["v2.0.0", "v2.1.0"];
 const versionsBelowV2_3 = ["v2.0.0", "v2.1.0", "v2.2.0", "v2.2.1"]; // have clerk role, don't have collections, different way to get available funds
+const versionsBelowV2_4 = [...versionsBelowV2_3, "v2.3.0"]; // different offer struct, different createOffer function
 let rando;
 let preUpgradeInterfaceIds, preUpgradeVersions;
 let facets, versionTags;
@@ -118,6 +119,12 @@ async function deploySuite(deployer, newVersion) {
 
   if (!deployConfig) {
     throw new Error(`No deploy config found for tag ${tag}`);
+  }
+
+  // versions up to v2.3. have typo in the deploy config, so we need to mimic it here
+  if (isOldOZVersion || tag.startsWith("v2.3")) {
+    deployConfig["ConfigHandlerFacet"].init[1]["maxRoyaltyPecentage"] =
+      deployConfig["ConfigHandlerFacet"].init[1]["maxRoyaltyPercentage"];
   }
 
   await hre.run("compile");
@@ -505,7 +512,11 @@ async function populateProtocolContract(
   for (let i = 0; i < sellers.length; i++) {
     for (let j = i; j >= 0; j--) {
       // Mock offer, offerDates and offerDurations
-      const { offer, offerDates, offerDurations } = await mockOffer();
+      const offerStructV2_3 = versionsBelowV2_4.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion);
+      const { offer, offerDates, offerDurations } = await mockOffer({
+        refreshModule: true,
+        legacyOffer: offerStructV2_3,
+      });
 
       // Set unique offer properties based on offer id
       offer.id = `${offerId}`;
@@ -528,7 +539,7 @@ async function populateProtocolContract(
       // Set unique offerDurations based on offer id
       offerDurations.disputePeriod = `${(offerId + 1) * Number(oneMonth)}`;
       offerDurations.voucherValid = `${(offerId + 1) * Number(oneMonth)}`;
-      offerDurations.resolutionPeriod = `${(offerId + 1) * Number(oneDay)}`;
+      offerDurations.resolutionPeriod = `${(offerId + 1) * Number(oneDay) + Number(oneWeek)}`;
 
       // choose one DR and agent
       const disputeResolverId = DRs[offerId % 3].disputeResolver.id;
@@ -536,9 +547,15 @@ async function populateProtocolContract(
       const offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
 
       // create an offer
-      await offerHandler
-        .connect(sellers[j].wallet)
-        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+      if (offerStructV2_3) {
+        await offerHandler
+          .connect(sellers[j].wallet)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+      } else {
+        await offerHandler
+          .connect(sellers[j].wallet)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+      }
 
       offers.push({ offer, offerDates, offerDurations, disputeResolverId, agentId });
       sellers[j].offerIds.push(offerId);
@@ -996,6 +1013,7 @@ async function getBundleContractState(bundleHandler, bundles) {
 
 async function getConfigContractState(configHandler, isBefore = false) {
   const isBefore2_3_0 = versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion);
+  const isBefore2_4_0 = versionsBelowV2_4.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion);
   const configHandlerRando = configHandler.connect(rando);
   const [
     tokenAddress,
@@ -1049,7 +1067,7 @@ async function getConfigContractState(configHandler, isBefore = false) {
     configHandlerRando.getAuthTokenContract(AuthTokenType.Lens),
     configHandlerRando.getAuthTokenContract(AuthTokenType.ENS),
     isBefore2_3_0 ? configHandlerRando.getMaxExchangesPerBatch() : Promise.resolve(0n),
-    configHandlerRando.getMaxRoyaltyPercentage(),
+    isBefore2_4_0 ? configHandlerRando.getMaxRoyaltyPecentage() : configHandlerRando.getMaxRoyaltyPercentage(),
     configHandlerRando.getMaxResolutionPeriod(),
     configHandlerRando.getMinDisputePeriod(),
     configHandlerRando.getAccessControllerAddress(),
@@ -1886,7 +1904,11 @@ async function populateVoucherContract(
   for (let i = 0; i < sellers.length; i++) {
     for (let j = i; j >= 0; j--) {
       // Mock offer, offerDates and offerDurations
-      const { offer, offerDates, offerDurations } = await mockOffer();
+      const offerStructV2_3 = versionsBelowV2_4.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion);
+      const { offer, offerDates, offerDurations } = await mockOffer({
+        refreshModule: true,
+        legacyOffer: offerStructV2_3,
+      });
 
       // Set unique offer properties based on offer id
       offer.id = `${offerId}`;
@@ -1909,7 +1931,7 @@ async function populateVoucherContract(
       // Set unique offerDurations based on offer id
       offerDurations.disputePeriod = `${(offerId + 1) * Number(oneMonth)}`;
       offerDurations.voucherValid = `${(offerId + 1) * Number(oneMonth)}`;
-      offerDurations.resolutionPeriod = `${(offerId + 1) * Number(oneDay)}`;
+      offerDurations.resolutionPeriod = `${(offerId + 1) * Number(oneDay) + Number(oneWeek)}`;
 
       // choose one DR and agent
       const disputeResolverId = DRs[0].disputeResolver.id;
@@ -1917,9 +1939,15 @@ async function populateVoucherContract(
       const offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
 
       // create an offer
-      await offerHandler
-        .connect(sellers[j].wallet)
-        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+      if (offerStructV2_3) {
+        await offerHandler
+          .connect(sellers[j].wallet)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+      } else {
+        await offerHandler
+          .connect(sellers[j].wallet)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+      }
 
       offers.push({ offer, offerDates, offerDurations, disputeResolverId, agentId });
       sellers[j].offerIds.push(offerId);

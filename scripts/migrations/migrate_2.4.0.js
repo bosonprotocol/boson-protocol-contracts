@@ -48,7 +48,6 @@ const config = {
   facetsToInit: {
     ExchangeHandlerFacet: { init: [], constructorArgs: [EXCHANGE_ID_2_2_0[network]] }, // must match nextExchangeId at the time of the upgrade
     AccountHandlerFacet: { init: [] },
-    MetaTransactionsHandlerFacet: { init: [[]] },
     DisputeResolverHandlerFacet: { init: [] },
     OfferHandlerFacet: { init: [] },
     OrchestrationHandlerFacet1: { init: [] },
@@ -64,15 +63,15 @@ const config = {
 async function migrate(env) {
   console.log(`Migration ${tag} started`);
   try {
-    // if (env != "upgrade-test") {
-    //   console.log("Removing any local changes before upgrading");
-    //   shell.exec(`git reset @{u}`);
-    //   const statusOutput = shell.exec("git status -s -uno scripts package.json");
+    if (env != "upgrade-test") {
+      console.log("Removing any local changes before upgrading");
+      shell.exec(`git reset @{u}`);
+      const statusOutput = shell.exec("git status -s -uno scripts package.json");
 
-    //   if (statusOutput.stdout) {
-    //     throw new Error("Local changes found. Please stash them before upgrading");
-    //   }
-    // }
+      if (statusOutput.stdout) {
+        throw new Error("Local changes found. Please stash them before upgrading");
+      }
+    }
 
     const { chainId } = await ethers.provider.getNetwork();
     const contractsFile = readContracts(chainId, network, env);
@@ -136,6 +135,9 @@ async function migrate(env) {
 
     const oldSelectors = await getFunctionHashesClosure();
 
+    // Get the data for back-filling
+    const { sellerIds, royaltyPercentages, offerIds } = await prepareInitializationData(protocolAddress);
+
     console.log(`Checking out contracts on version ${tag}`);
     shell.exec(`rm -rf contracts/*`);
     shell.exec(`git checkout ${tag} contracts package.json package-lock.json`);
@@ -160,9 +162,6 @@ async function migrate(env) {
     await bosonPriceDiscovery.waitForDeployment();
 
     // Prepare initialization data
-    let sellerIds = [];
-    let royaltyPercentages = [];
-    let offerIds = [];
     let priceDiscoveryClientAddress = await bosonPriceDiscovery.getAddress();
     config.initializationData = abiCoder.encode(
       ["uint256[]", "uint256[][]", "uint256[][]", "address"],
@@ -226,6 +225,62 @@ async function migrate(env) {
     shell.exec(`git reset HEAD`);
     throw `Migration failed with: ${e}`;
   }
+}
+
+async function prepareInitializationData(protocolAddress) {
+  const sellerHandler = await getContractAt("IBosonSellerHandler", protocolAddress);
+  const nextSellerId = await sellerHandler.getNextSellerId();
+
+  const collections = [];
+  const royaltyPercentageToSellersAndOffers = {};
+  for (let i = 1n; i < nextSellerId; i++) {
+    const [defaultVoucherAddress, additionalCollections] = await sellerHandler.getSellersCollections(i);
+    const allCollections = [defaultVoucherAddress, ...additionalCollections];
+    const bosonVouchers = await Promise.all(
+      allCollections.map((collectionAddress) => getContractAt("IBosonVoucher", collectionAddress))
+    );
+    const royaltyPercentages = await Promise.all(bosonVouchers.map((voucher) => voucher.getRoyaltyPercentage()));
+    collections.push(royaltyPercentages);
+
+    for (const rp of royaltyPercentages) {
+      if (!royaltyPercentageToSellersAndOffers[rp]) {
+        royaltyPercentageToSellersAndOffers[rp] = { sellers: [], offers: [] };
+      }
+    }
+
+    // Find the minimum royalty percentage
+    const minRoyaltyPercentage = royaltyPercentages.reduce((a, b) => Math.min(a, b));
+    royaltyPercentageToSellersAndOffers[minRoyaltyPercentage].sellers.push(i);
+  }
+
+  const offerHandler = await getContractAt("IBosonOfferHandler", protocolAddress);
+  const nextOfferId = await offerHandler.getNextOfferId();
+
+  for (let i = 1n; i < nextOfferId; i++) {
+    const [, offer, offerDates] = await offerHandler.getOffer(i);
+
+    // if voided or expired, skip
+    // const currentTime = BigInt(Math.floor(Date.now() / 1000));
+    const currentTime = 0n;
+    if (offer.voided || offerDates.validUntil < currentTime) {
+      continue;
+    }
+
+    const collectionIndex = offer.collectionIndex;
+    const sellerId = offer.sellerId;
+    const offerId = i;
+
+    const offerRoyaltyPercentage = royaltyPercentages[sellerId - 1n][collectionIndex];
+
+    // Guaranteed to exist
+    royaltyPercentageToSellersAndOffers[offerRoyaltyPercentage].offers.push(offerId);
+  }
+
+  const royaltyPercentages = Object.keys(royaltyPercentageToSellersAndOffers);
+  const sellersAndOffers = Object.values(royaltyPercentageToSellersAndOffers);
+  const sellerIds = sellersAndOffers.map((sellerAndOffer) => sellerAndOffer.sellers);
+  const offerIds = sellersAndOffers.map((sellerAndOffer) => sellerAndOffer.offers);
+  return { royaltyPercentages, sellerIds, offerIds };
 }
 
 exports.migrate = migrate;
