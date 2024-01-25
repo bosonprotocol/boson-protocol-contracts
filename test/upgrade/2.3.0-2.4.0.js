@@ -58,6 +58,7 @@ const { getGenericContext } = require("./01_generic");
 const { getGenericContext: getGenericContextVoucher } = require("./clients/01_generic");
 const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
 const GatingType = require("../../scripts/domain/GatingType.js");
+const PriceType = require("../../scripts/domain/PriceType.js");
 
 const version = "2.4.0";
 const { migrate } = require(`../../scripts/migrations/migrate_${version}.js`);
@@ -148,9 +149,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         true
       );
 
+      const { offers } = preUpgradeEntities;
       for (let offerState of protocolContractStateBefore.offerContractState.offersState) {
-        offerState[1]["priceType"] = 0;
-        offerState[1]["royaltyInfo"] = [];
+        offerState[1]["priceType"] = PriceType.Static;
+        offerState[1]["royaltyInfo"] = offers[Number(offerState[1].id) - 1].royaltyInfo;
       }
 
       const voucherContractState = await getVoucherContractState(preUpgradeEntitiesVoucher);

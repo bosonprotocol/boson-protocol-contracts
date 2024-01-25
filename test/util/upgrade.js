@@ -546,18 +546,26 @@ async function populateProtocolContract(
       const agentId = agents[offerId % 2].agent.id;
       const offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
 
+      const royaltyInfo = [
+        {
+          bps: [`${sellers[j].voucherInitValues.royaltyPercentage}`],
+          recipients: [ZeroAddress],
+        },
+      ];
+
       // create an offer
       if (offerStructV2_3) {
         await offerHandler
           .connect(sellers[j].wallet)
           .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
       } else {
+        offer.royaltyInfo = royaltyInfo;
         await offerHandler
           .connect(sellers[j].wallet)
           .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
       }
 
-      offers.push({ offer, offerDates, offerDurations, disputeResolverId, agentId });
+      offers.push({ offer, offerDates, offerDurations, disputeResolverId, agentId, royaltyInfo });
       sellers[j].offerIds.push(offerId);
 
       // Deposit seller funds so the commit will succeed
@@ -1938,18 +1946,26 @@ async function populateVoucherContract(
       const agentId = "0";
       const offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
 
+      const royaltyInfo = [
+        {
+          bps: [`${sellers[j].voucherInitValues.royaltyPercentage}`],
+          recipients: [ZeroAddress],
+        },
+      ];
+
       // create an offer
       if (offerStructV2_3) {
         await offerHandler
           .connect(sellers[j].wallet)
           .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
       } else {
+        offer.royaltyInfo = royaltyInfo;
         await offerHandler
           .connect(sellers[j].wallet)
           .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
       }
 
-      offers.push({ offer, offerDates, offerDurations, disputeResolverId, agentId });
+      offers.push({ offer, offerDates, offerDurations, disputeResolverId, agentId, royaltyInfo });
       sellers[j].offerIds.push(offerId);
 
       // Deposit seller funds so the commit will succeed
