@@ -165,7 +165,7 @@ async function migrate(env) {
     let priceDiscoveryClientAddress = await bosonPriceDiscovery.getAddress();
     config.initializationData = abiCoder.encode(
       ["uint256[]", "uint256[][]", "uint256[][]", "address"],
-      [sellerIds, royaltyPercentages, offerIds, priceDiscoveryClientAddress]
+      [royaltyPercentages, sellerIds, offerIds, priceDiscoveryClientAddress]
     );
 
     console.log("Executing upgrade facets script");
@@ -228,19 +228,23 @@ async function migrate(env) {
 }
 
 async function prepareInitializationData(protocolAddress) {
-  const sellerHandler = await getContractAt("IBosonSellerHandler", protocolAddress);
-  const nextSellerId = await sellerHandler.getNextSellerId();
+  const sellerHandler = await getContractAt("IBosonAccountHandler", protocolAddress);
+  const nextSellerId = await sellerHandler.getNextAccountId();
 
-  const collections = [];
+  const collections = {};
   const royaltyPercentageToSellersAndOffers = {};
   for (let i = 1n; i < nextSellerId; i++) {
+    const [exists] = await sellerHandler.getSeller(i);
+    if (!exists) {
+      continue;
+    }
     const [defaultVoucherAddress, additionalCollections] = await sellerHandler.getSellersCollections(i);
     const allCollections = [defaultVoucherAddress, ...additionalCollections];
     const bosonVouchers = await Promise.all(
       allCollections.map((collectionAddress) => getContractAt("IBosonVoucher", collectionAddress))
     );
     const royaltyPercentages = await Promise.all(bosonVouchers.map((voucher) => voucher.getRoyaltyPercentage()));
-    collections.push(royaltyPercentages);
+    collections[i] = royaltyPercentages;
 
     for (const rp of royaltyPercentages) {
       if (!royaltyPercentageToSellersAndOffers[rp]) {
@@ -270,7 +274,7 @@ async function prepareInitializationData(protocolAddress) {
     const sellerId = offer.sellerId;
     const offerId = i;
 
-    const offerRoyaltyPercentage = royaltyPercentages[sellerId - 1n][collectionIndex];
+    const offerRoyaltyPercentage = collections[sellerId][collectionIndex];
 
     // Guaranteed to exist
     royaltyPercentageToSellersAndOffers[offerRoyaltyPercentage].offers.push(offerId);
