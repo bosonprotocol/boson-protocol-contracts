@@ -38,7 +38,7 @@ const {
   mockCondition,
   mockTwin,
 } = require("./mock");
-const { setNextBlockTimestamp, paddingType, getMappingStoragePosition } = require("./utils.js");
+const { setNextBlockTimestamp, paddingType, getMappingStoragePosition, deriveTokenId } = require("./utils.js");
 const { oneMonth, oneDay, oneWeek } = require("./constants");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
@@ -725,7 +725,7 @@ async function populateProtocolContract(
           .commitToOffer(await buyerWallet.getAddress(), offer.id, { value: msgValue });
       }
 
-      exchanges.push({ exchangeId: exchangeId, offerId: offer.id, buyerIndex: j });
+      exchanges.push({ exchangeId: exchangeId, offerId: offer.id, buyerIndex: j, sellerId: offer.sellerId });
       exchangeId++;
     }
   }
@@ -803,7 +803,7 @@ async function getProtocolContractState(
   },
   { mockToken, mockTwinTokens },
   { DRs, sellers, buyers, agents, offers, exchanges, bundles, groups, twins },
-  isBefore = false
+  { isBefore, skipInterfaceIds } = { isBefore: false, skipInterfaceIds: [] }
 ) {
   rando = (await getSigners())[10]; // random account making the calls
 
@@ -833,7 +833,7 @@ async function getProtocolContractState(
     getTwinContractState(twinHandler, twins),
     getMetaTxContractState(),
     getMetaTxPrivateContractState(protocolDiamondAddress),
-    getProtocolStatusPrivateContractState(protocolDiamondAddress),
+    getProtocolStatusPrivateContractState(protocolDiamondAddress, skipInterfaceIds),
     getProtocolLookupsPrivateContractState(
       protocolDiamondAddress,
       { mockToken, mockTwinTokens },
@@ -1273,7 +1273,7 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
   return { inTransactionInfo, domainSeparator, cachedChainId, inputTypesState, hashInfoState, isAllowlistedState };
 }
 
-async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
+async function getProtocolStatusPrivateContractState(protocolDiamondAddress, ignoreInterfaceIds = []) {
   /*
           ProtocolStatus storage layout
       
@@ -1298,7 +1298,11 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress) {
   // initializedInterfaces
   if (!preUpgradeInterfaceIds) {
     // Only interfaces registered before upgrade are relevant for tests, so we load them only once
-    preUpgradeInterfaceIds = await getInterfaceIds();
+    preUpgradeInterfaceIds = await getInterfaceIds(false);
+
+    ignoreInterfaceIds.forEach((id) => {
+      delete preUpgradeInterfaceIds[id];
+    });
   }
 
   const initializedInterfacesState = [];
@@ -1719,12 +1723,13 @@ async function getStorageLayout(contractName) {
   return storage;
 }
 
-function compareStorageLayouts(storageBefore, storageAfter, equalCustomTypes) {
+function compareStorageLayouts(storageBefore, storageAfter, equalCustomTypes, renamedVariables) {
   // All old variables must be present in new layout in the same slots
   // New variables can be added if they don't affect the layout
   let storageOk = true;
   for (const stateVariableBefore of storageBefore) {
-    const { label } = stateVariableBefore;
+    let { label } = stateVariableBefore;
+    label = renamedVariables[label] || label;
     if (label == "__gap") {
       // __gap is special variable that does not store any data and can potentially be modified
       // TODO: if changed, validate against new variables
@@ -2018,7 +2023,7 @@ async function populateVoucherContract(
           .commitToOffer(await buyerWallet.getAddress(), offer.id, { value: msgValue });
       }
 
-      exchanges.push({ exchangeId: exchangeId, offerId: offer.id, buyerIndex: j });
+      exchanges.push({ exchangeId: exchangeId, offerId: offer.id, buyerIndex: j, sellerId: offer.sellerId });
       exchangeId++;
     }
   }
@@ -2039,17 +2044,20 @@ async function getVoucherContractState({ bosonVouchers, exchanges, sellers, buye
     );
 
     // no arg getters
-    const [sellerId, contractURI, getRoyaltyPercentage, owner, name, symbol] = await Promise.all([
+    const [sellerId, contractURI, owner, name, symbol] = await Promise.all([
       bosonVoucher.getSellerId(),
       bosonVoucher.contractURI(),
-      bosonVoucher.getRoyaltyPercentage(),
       bosonVoucher.owner(),
       bosonVoucher.name(),
       bosonVoucher.symbol(),
     ]);
 
     // tokenId related
-    const tokenIds = exchanges.map((exchange) => exchange.exchangeId); // tokenId and exchangeId are interchangeable
+    const bosonVoucherAddress = await bosonVoucher.getAddress();
+    const { id } = sellers.find((s) => s.voucherContractAddress.toLowerCase() == bosonVoucherAddress.toLowerCase());
+    const tokenIds = exchanges
+      .filter((exchange) => exchange.sellerId == id)
+      .map((exchange) => deriveTokenId(exchange.offerId, exchange.exchangeId));
     const ownerOf = await Promise.all(
       tokenIds.map((tokenId) => bosonVoucher.ownerOf(tokenId).catch(() => "invalid token"))
     );
@@ -2077,7 +2085,6 @@ async function getVoucherContractState({ bosonVouchers, exchanges, sellers, buye
       supportstInterface,
       sellerId,
       contractURI,
-      getRoyaltyPercentage,
       owner,
       name,
       symbol,

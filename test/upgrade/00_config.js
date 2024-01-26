@@ -222,7 +222,7 @@ const tagsByVersion = {
   },
   "2.4.0": {
     oldVersion: "v2.3.0",
-    newVersion: "v2.4.0-rc.2",
+    newVersion: "HEAD",
     updateDomain: ["Offer"],
   },
 };

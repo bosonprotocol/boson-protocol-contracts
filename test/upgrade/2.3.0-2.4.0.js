@@ -146,7 +146,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         contractsBefore,
         mockContracts,
         preUpgradeEntities,
-        true
+        { isBefore: true, skipInterfaceIds: ["IBosonPriceDiscoveryHandler", "IBosonSequentialCommitHandler"] }
       );
 
       const { offers } = preUpgradeEntities;
@@ -316,7 +316,12 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       );
 
       const equalCustomTypes = {
-        // "t_struct(Range)12648_storage": "t_struct(Range)14254_storage",
+        "t_struct(Range)14256_storage": "t_struct(Range)15848_storage",
+      };
+
+      const renamedVariables = {
+        _isCommitable: "_isCommittable",
+        _royaltyPercentage: "_royaltyPercentageUnused",
       };
 
       context(
@@ -330,7 +335,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           preUpgradeEntitiesVoucher,
           preUpgradeStorageLayout,
           snapshot,
-          equalCustomTypes
+          { equalCustomTypes, renamedVariables }
         )
       );
     } catch (err) {
