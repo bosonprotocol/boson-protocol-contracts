@@ -5116,8 +5116,9 @@ describe("IBosonFundsHandler", function () {
                 },
                 REVOKED: async function () {
                   // expected payoffs
-                  // last buyer: sellerDeposit + price // <--THIS IS WRONG
-                  buyerPayoff = (BigInt(offer.sellerDeposit) + BigInt(offer.price)).toString();
+                  // last buyer: sellerDeposit + last price
+                  const lastPrice = exchangeInformation[exchangeInformation.length - 1].price;
+                  buyerPayoff = (BigInt(lastPrice) + BigInt(offer.price)).toString();
 
                   // resellers: difference between original price and immediate payoff
                   previousPrice = BigInt(offer.price);
@@ -5154,8 +5155,9 @@ describe("IBosonFundsHandler", function () {
                 },
                 CANCELED: async function () {
                   // expected payoffs
-                  // last buyer: price - buyerCancelPenalty // <--THIS IS WRONG
-                  buyerPayoff = (BigInt(offer.price) - BigInt(offer.buyerCancelPenalty)).toString();
+                  // last buyer: last price - buyerCancelPenalty
+                  const lastPrice = exchangeInformation[exchangeInformation.length - 1].price;
+                  buyerPayoff = (BigInt(lastPrice) - BigInt(offer.buyerCancelPenalty)).toString();
 
                   // resellers: difference between original price and immediate payoff
                   previousPrice = BigInt(offer.price);
@@ -5200,9 +5202,10 @@ describe("IBosonFundsHandler", function () {
                 },
                 "DISPUTED-RESOLVED": async function () {
                   // expected payoffs
-                  // last buyer: (price + sellerDeposit)*buyerPercentage // <-- THIS IS WRONG
+                  // last buyer: (last price + sellerDeposit)*buyerPercentage
+                  const lastPrice = exchangeInformation[exchangeInformation.length - 1].price;
                   buyerPayoff = applyPercentage(
-                    BigInt(offer.price) + BigInt(offer.sellerDeposit),
+                    BigInt(lastPrice) + BigInt(offer.sellerDeposit),
                     buyerPercentBasisPoints
                   );
 
@@ -5280,8 +5283,9 @@ describe("IBosonFundsHandler", function () {
                 },
                 "DISPUTED-ESCALATED-EXPIRED": async function () {
                   // expected payoffs
-                  // last buyer: price + buyerEscalationDeposit // <-- THIS IS WRONG
-                  buyerPayoff = (BigInt(offer.price) + BigInt(buyerEscalationDeposit)).toString();
+                  // last buyer: last price + buyerEscalationDeposit
+                  const lastPrice = exchangeInformation[exchangeInformation.length - 1].price;
+                  buyerPayoff = (BigInt(lastPrice) + BigInt(buyerEscalationDeposit)).toString();
 
                   // resellers: difference between original price and immediate payoff
                   previousPrice = BigInt(offer.price);
@@ -5558,6 +5562,16 @@ describe("IBosonFundsHandler", function () {
                     expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
                     expect(resellersAvailableFunds).to.eql(expectedResellersAvailableFunds);
                     expect(royaltyRecipientsAvailableFunds).to.eql(expectedRoyaltyRecipientsAvailableFunds);
+
+                    const protocolBalance = await mockToken.balanceOf(protocolDiamondAddress);
+                    const totalPayoff =
+                      BigInt(sellerPayoff) +
+                      BigInt(buyerPayoff) +
+                      BigInt(protocolPayoff) +
+                      BigInt(resellerPayoffs.reduce((acc, r) => acc + BigInt(r.payoff), 0n)) +
+                      BigInt(royaltyRecipientsPayoffs.reduce((acc, r) => acc + BigInt(r.payoff), 0n));
+                    // Since protocol had no funds before and nothing was withdrawn, the balance should match the total payoff
+                    expect(protocolBalance).to.equal(totalPayoff);
                   });
                 });
               });
