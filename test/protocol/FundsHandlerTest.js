@@ -7284,7 +7284,7 @@ describe("IBosonFundsHandler", function () {
 
               });
 
-              const finalState = ["COMPLETED"];
+              const finalState = ["COMPLETED", "REVOKED", "CANCELED"];
 
               const finalStateSetup = {
                 COMPLETED: async function () {
@@ -7293,13 +7293,15 @@ describe("IBosonFundsHandler", function () {
 
                   // succesfully redeem exchange
                   await exchangeHandler.connect(voucherOwner).redeemVoucher(exchangeId);
-                }
+                },
+                REVOKED: async function () { },
+                CANCELED: async function () { }
               }
 
               let resellerPayoffs;
               const finalStatePayouts = {
                 COMPLETED: async function () {
-                  buyerPayoff = 0;
+                  buyerPayoff = "0";
 
                   protocolFee = BigInt(applyPercentage(offer.price, fee.protocol));
                   previousPrice = BigInt(offer.price);
@@ -7350,9 +7352,75 @@ describe("IBosonFundsHandler", function () {
                     },
                     { id: keyToId["other2"], payoff: totalRoyaltiesSplit.other2 },
                   ];
+                },
+                REVOKED: async function () {
+                  // expected payoffs
+                  // last buyer: sellerDeposit + price // <--THIS IS WRONG
+                  buyerPayoff = (BigInt(offer.sellerDeposit) + BigInt(offer.price)).toString();
+
+                  // resellers: difference between original price and immediate payoff
+                  previousPrice = BigInt(offer.price);
+                  for (const exchange of exchangeInformation) {
+                    const exchangeProtocolFee = applyPercentage(exchange.price, fee.protocol);
+                    const exchangeRoyalties = applyPercentage(exchange.price, fee.royalties);
+
+                    // Reseller payoff
+                    const reducedSecondaryPrice = exchange.price - BigInt(exchangeRoyalties) - BigInt(exchangeProtocolFee);
+                    const priceDiff = previousPrice - reducedSecondaryPrice;
+
+                    resellerPayoffs.push({ id: exchange.resellerId, payoff: priceDiff > 0n ? priceDiff.toString() : "0" });
+                    previousPrice = exchange.price;
+                  }
+
+                  // seller: 0
+                  sellerPayoff = "0";
+
+                  // protocol: 0
+                  protocolPayoff = "0";
+
+                  // royalty recipients: 0
+                  royaltyRecipientsPayoffs = [
+                    {
+                      id: keyToId["other"],
+                      payoff: 0n,
+                    },
+                    { id: keyToId["other2"], payoff: 0n },
+                  ];
+                },
+                CANCELED: async function () {
+                  // expected payoffs
+                  // last buyer: price - buyerCancelPenalty // <--THIS IS WRONG
+                  buyerPayoff = (BigInt(offer.price) - BigInt(offer.buyerCancelPenalty)).toString();
+
+                  // resellers: difference between original price and immediate payoff
+                  previousPrice = BigInt(offer.price);
+                  for (const exchange of exchangeInformation) {
+                    const exchangeProtocolFee = applyPercentage(exchange.price, fee.protocol);
+                    const exchangeRoyalties = applyPercentage(exchange.price, fee.royalties);
+
+                    // Reseller payoff
+                    const reducedSecondaryPrice = exchange.price - BigInt(exchangeRoyalties) - BigInt(exchangeProtocolFee);
+                    const priceDiff = previousPrice - reducedSecondaryPrice;
+
+                    resellerPayoffs.push({ id: exchange.resellerId, payoff: priceDiff > 0n ? priceDiff.toString() : "0" });
+                    previousPrice = exchange.price;
+                  }
+
+                  // seller: sellerDeposit + buyerCancelPenalty
+                  sellerPayoff = (BigInt(offer.sellerDeposit) + BigInt(offer.buyerCancelPenalty)).toString();
+
+                  // protocol: 0
+                  protocolPayoff = 0;
+
+                  // royalty recipients: 0
+                  royaltyRecipientsPayoffs = [
+                    {
+                      id: keyToId["other"],
+                      payoff: 0n,
+                    },
+                    { id: keyToId["other2"], payoff: 0n },
+                  ];
                 }
-
-
               }
 
               const finalStateFinalization = {
@@ -7360,6 +7428,20 @@ describe("IBosonFundsHandler", function () {
                   return {
                     wallet: voucherOwner,
                     method: "completeExchange",
+                    args: [exchangeId]
+                  }
+                },
+                REVOKED: async () => {
+                  return {
+                    wallet: assistant,
+                    method: "revokeVoucher",
+                    args: [exchangeId]
+                  }
+                },
+                CANCELED: async () => {
+                  return {
+                    wallet: voucherOwner,
+                    method: "cancelVoucher",
                     args: [exchangeId]
                   }
                 }
@@ -7384,15 +7466,25 @@ describe("IBosonFundsHandler", function () {
                     // Finalize the exchange, expecting event
                     const action = await finalStateFinalization[state]()
                     const tx = await exchangeHandler.connect(action.wallet)[action.method](...action.args);
-                    // const tx = await exchangeHandler.connect(voucherOwner).completeExchange(exchangeId);
 
+                    let expectedEventCount = 0;
                     // seller
-                    await expect(tx)
-                      .to.emit(exchangeHandler, "FundsReleased")
-                      .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, voucherOwner.address);
+                    if (sellerPayoff != "0") {
+                      expectedEventCount++;
+                      await expect(tx)
+                        .to.emit(exchangeHandler, "FundsReleased")
+                        .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, action.wallet.address);
+                    }
+
+                    // Buyer
+                    if (buyerPayoff != "0") {
+                      expectedEventCount++;
+                      await expect(tx)
+                        .to.emit(exchangeHandler, "FundsReleased")
+                        .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, action.wallet.address);
+                    }
 
                     // resellers
-                    let expectedEventCount = 1; // 1 for seller
                     for (const resellerPayoff of resellerPayoffs) {
                       if (resellerPayoff.payoff != "0") {
                         expectedEventCount++;
@@ -7403,7 +7495,7 @@ describe("IBosonFundsHandler", function () {
                             resellerPayoff.id,
                             offer.exchangeToken,
                             resellerPayoff.payoff,
-                            voucherOwner.address
+                            action.wallet.address
                           );
                       }
                     }
@@ -7419,7 +7511,7 @@ describe("IBosonFundsHandler", function () {
                             royaltyRecipientPayoff.id,
                             offer.exchangeToken,
                             royaltyRecipientPayoff.payoff,
-                            voucherOwner.address
+                            action.wallet.address
                           );
                       }
                     }
@@ -7432,13 +7524,13 @@ describe("IBosonFundsHandler", function () {
                     if (protocolPayoff != "0") {
                       await expect(tx)
                         .to.emit(exchangeHandler, "ProtocolFeeCollected")
-                        .withArgs(exchangeId, offer.exchangeToken, protocolPayoff, voucherOwner.address);
+                        .withArgs(exchangeId, offer.exchangeToken, protocolPayoff, action.wallet.address);
                     } else {
                       await expect(tx).to.not.emit(exchangeHandler, "ProtocolFeeCollected");
                     }
                   });
 
-                  it.only("should update state", async function () {
+                  it("should update state", async function () {
                     // Read on chain state
                     sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
                     buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
@@ -7471,14 +7563,13 @@ describe("IBosonFundsHandler", function () {
                     const action = await finalStateFinalization[state]()
                     await exchangeHandler.connect(action.wallet)[action.method](...action.args);
 
-                    // Available funds should be increased for
-                    // buyer: 0
-                    // seller: sellerDeposit + price - protocolFee - agentFee + royalties
-                    // resellers: difference between the secondary price and immediate payout
-                    // protocol: protocolFee
-                    // agent: 0
-                    // royalty recipients: royalties
-                    expectedSellerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", sellerPayoff));
+                    // Change in available funds
+                    if (sellerPayoff != "0") {
+                      expectedSellerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", sellerPayoff));
+                    }
+                    if (buyerPayoff != "0") {
+                      expectedBuyerAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", buyerPayoff));
+                    }
                     if (protocolPayoff != "0") {
                       expectedProtocolAvailableFunds.funds.push(new Funds(mockTokenAddress, "Foreign20", protocolPayoff));
                     }
