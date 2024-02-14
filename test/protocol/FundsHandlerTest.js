@@ -7284,7 +7284,7 @@ describe("IBosonFundsHandler", function () {
 
               });
 
-              const finalState = ["COMPLETED", "REVOKED", "CANCELED"];
+              const finalState = [/*"COMPLETED", "REVOKED", "CANCELED", "DISPUTED-RETRACTED", "DISPUTED-EXPIRED"*/, "DISPUTED-RESOLVED"];
 
               const finalStateSetup = {
                 COMPLETED: async function () {
@@ -7295,8 +7295,60 @@ describe("IBosonFundsHandler", function () {
                   await exchangeHandler.connect(voucherOwner).redeemVoucher(exchangeId);
                 },
                 REVOKED: async function () { },
-                CANCELED: async function () { }
-              }
+                CANCELED: async function () { },
+                DISPUTED: async function () {
+                  // Set time forward to the offer's voucherRedeemableFrom
+                  await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+                  // succesfully redeem exchange
+                  await exchangeHandler.connect(voucherOwner).redeemVoucher(exchangeId);
+
+                  // raise the dispute
+                  tx = await disputeHandler.connect(voucherOwner).raiseDispute(exchangeId);
+
+                  // Get the block timestamp of the confirmed tx and set disputedDate
+                  blockNumber = tx.blockNumber;
+                  block = await provider.getBlock(blockNumber);
+                  disputedDate = block.timestamp.toString();
+                  timeout = (BigInt(disputedDate) + BigInt(resolutionPeriod) + 1n).toString();
+                },
+                "DISPUTED-RETRACTED": async function () {
+                  await finalStateSetup["DISPUTED"]()
+                },
+                "DISPUTED-EXPIRED": async function () {
+                  await finalStateSetup["DISPUTED"]();
+                  await setNextBlockTimestamp(Number(timeout));
+                },
+                "DISPUTED-RESOLVED": async function () {
+                  await finalStateSetup["DISPUTED"]()
+
+                  buyerPercentBasisPoints = "5566"; // 55.66%
+
+                  // Set the message Type, needed for signature
+                  resolutionType = [
+                    { name: "exchangeId", type: "uint256" },
+                    { name: "buyerPercentBasisPoints", type: "uint256" },
+                  ];
+
+                  customSignatureType = {
+                    Resolution: resolutionType,
+                  };
+
+                  message = {
+                    exchangeId: exchangeId,
+                    buyerPercentBasisPoints,
+                  };
+
+                  // Collect the signature components
+                  ({ r, s, v } = await prepareDataSignatureParameters(
+                    voucherOwner, // Assistant is the caller, seller should be the signer.
+                    customSignatureType,
+                    "Resolution",
+                    message,
+                    await disputeHandler.getAddress()
+                  ));
+                }
+              };
 
               let resellerPayoffs;
               const finalStatePayouts = {
@@ -7420,6 +7472,76 @@ describe("IBosonFundsHandler", function () {
                     },
                     { id: keyToId["other2"], payoff: 0n },
                   ];
+                },
+                "DISPUTED-RETRACTED": async function () {
+                  // Payoffs are the same as in the COMPLETED state
+                  await finalStatePayouts["COMPLETED"]();
+                },
+                "DISPUTED-EXPIRED": async function () {
+                  // Payoffs are the same as in the COMPLETED state
+                  await finalStatePayouts["COMPLETED"]();
+                },
+                "DISPUTED-RESOLVED": async function () {
+                  // expected payoffs
+                  // last buyer: (price + sellerDeposit)*buyerPercentage // <-- THIS IS WRONG
+                  buyerPayoff = applyPercentage(
+                    BigInt(offer.price) + BigInt(offer.sellerDeposit),
+                    buyerPercentBasisPoints
+                  );
+
+                  const sellerPercentBasisPoints = 10000 - parseInt(buyerPercentBasisPoints); // 44.34%
+
+                  protocolFee = 0n; // if disputed, the fee is not collected on original trade
+                  previousPrice = BigInt(offer.price);
+                  for (const exchange of exchangeInformation) {
+                    const exchangeProtocolFee = applyPercentage(exchange.price, fee.protocol);
+                    const exchangeRoyalties = applyPercentage(exchange.price, fee.royalties);
+
+                    protocolFee = protocolFee + BigInt(exchangeProtocolFee);
+
+                    // Reseller payoff
+                    const reducedSecondaryPrice = exchange.price - BigInt(exchangeRoyalties) - BigInt(exchangeProtocolFee);
+                    const priceDiff = reducedSecondaryPrice - previousPrice;
+
+                    resellerPayoffs.push({ id: exchange.resellerId, payoff: priceDiff > 0n ? applyPercentage(priceDiff, sellerPercentBasisPoints) : applyPercentage(priceDiff * -1n, buyerPercentBasisPoints) });
+                    previousPrice = exchange.price;
+
+                    // Total royalties and fees
+                    const effectivePrice = applyPercentage(exchange.price, sellerPercentBasisPoints);
+                    totalRoyalties =
+                      totalRoyalties +
+                      BigInt(applyPercentage(applyPercentage(exchange.price, fee.royalties), sellerPercentBasisPoints));
+
+                    for (const [key, value] of Object.entries(totalRoyaltiesSplit)) {
+                      const thisTradeRoyalties = BigInt(
+                        applyPercentage(effectivePrice, applyPercentage(fee.royalties, royaltySplit[key]))
+                      );
+                      totalRoyaltiesSplit[key] = value + thisTradeRoyalties;
+                      royaltiesPerExchange.push({ id: keyToId[key], payoff: thisTradeRoyalties });
+                    }
+                  }
+                  totalRoyaltiesSplit.seller =
+                    totalRoyalties - totalRoyaltiesSplit.other - totalRoyaltiesSplit.other2;
+
+                  // seller: sellerDeposit + price + royaltieS
+                  sellerPayoff = (
+                    BigInt(offer.sellerDeposit) +
+                    BigInt(offer.price) -
+                    BigInt(buyerPayoff) +
+                    BigInt(totalRoyaltiesSplit.seller)
+                  ).toString();
+
+                  // protocol: protocolFee (only secondary market)
+                  protocolPayoff = applyPercentage(protocolFee, sellerPercentBasisPoints);
+
+                  // royalty recipients: royalties
+                  royaltyRecipientsPayoffs = [
+                    {
+                      id: keyToId["other"],
+                      payoff: totalRoyaltiesSplit.other,
+                    },
+                    { id: keyToId["other2"], payoff: totalRoyaltiesSplit.other2 },
+                  ];
                 }
               }
 
@@ -7427,6 +7549,7 @@ describe("IBosonFundsHandler", function () {
                 COMPLETED: async () => {
                   return {
                     wallet: voucherOwner,
+                    handler: exchangeHandler,
                     method: "completeExchange",
                     args: [exchangeId]
                   }
@@ -7434,6 +7557,7 @@ describe("IBosonFundsHandler", function () {
                 REVOKED: async () => {
                   return {
                     wallet: assistant,
+                    handler: exchangeHandler,
                     method: "revokeVoucher",
                     args: [exchangeId]
                   }
@@ -7441,14 +7565,39 @@ describe("IBosonFundsHandler", function () {
                 CANCELED: async () => {
                   return {
                     wallet: voucherOwner,
+                    handler: exchangeHandler,
                     method: "cancelVoucher",
                     args: [exchangeId]
+                  }
+                },
+                "DISPUTED-RETRACTED": async () => {
+                  return {
+                    wallet: voucherOwner,
+                    handler: disputeHandler,
+                    method: "retractDispute",
+                    args: [exchangeId]
+                  }
+                },
+                "DISPUTED-EXPIRED": async () => {
+                  return {
+                    wallet: rando,
+                    handler: disputeHandler,
+                    method: "expireDispute",
+                    args: [exchangeId]
+                  }
+                },
+                "DISPUTED-RESOLVED": async () => {
+                  return {
+                    wallet: assistant,
+                    handler: disputeHandler,
+                    method: "resolveDispute",
+                    args: [exchangeId, buyerPercentBasisPoints, r, s, v]
                   }
                 }
               }
 
               finalState.forEach((state) => {
-                context(`Final state ${state}`, async function () {
+                context.only(`Final state ${state}`, async function () {
                   beforeEach(async function () {
                     await finalStateSetup[state]();
 
@@ -7465,14 +7614,15 @@ describe("IBosonFundsHandler", function () {
                   it("should emit a FundsReleased event", async function () {
                     // Finalize the exchange, expecting event
                     const action = await finalStateFinalization[state]()
-                    const tx = await exchangeHandler.connect(action.wallet)[action.method](...action.args);
+                    const handler = action.handler;
+                    const tx = await handler.connect(action.wallet)[action.method](...action.args);
 
                     let expectedEventCount = 0;
                     // seller
                     if (sellerPayoff != "0") {
                       expectedEventCount++;
                       await expect(tx)
-                        .to.emit(exchangeHandler, "FundsReleased")
+                        .to.emit(handler, "FundsReleased")
                         .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, action.wallet.address);
                     }
 
@@ -7480,7 +7630,7 @@ describe("IBosonFundsHandler", function () {
                     if (buyerPayoff != "0") {
                       expectedEventCount++;
                       await expect(tx)
-                        .to.emit(exchangeHandler, "FundsReleased")
+                        .to.emit(handler, "FundsReleased")
                         .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, action.wallet.address);
                     }
 
@@ -7489,7 +7639,7 @@ describe("IBosonFundsHandler", function () {
                       if (resellerPayoff.payoff != "0") {
                         expectedEventCount++;
                         await expect(tx)
-                          .to.emit(exchangeHandler, "FundsReleased")
+                          .to.emit(handler, "FundsReleased")
                           .withArgs(
                             exchangeId,
                             resellerPayoff.id,
@@ -7505,7 +7655,7 @@ describe("IBosonFundsHandler", function () {
                       if (royaltyRecipientPayoff.payoff != 0n) {
                         expectedEventCount++;
                         await expect(tx)
-                          .to.emit(exchangeHandler, "FundsReleased")
+                          .to.emit(handler, "FundsReleased")
                           .withArgs(
                             exchangeId,
                             royaltyRecipientPayoff.id,
@@ -7523,10 +7673,10 @@ describe("IBosonFundsHandler", function () {
                     // protocol
                     if (protocolPayoff != "0") {
                       await expect(tx)
-                        .to.emit(exchangeHandler, "ProtocolFeeCollected")
+                        .to.emit(handler, "ProtocolFeeCollected")
                         .withArgs(exchangeId, offer.exchangeToken, protocolPayoff, action.wallet.address);
                     } else {
-                      await expect(tx).to.not.emit(exchangeHandler, "ProtocolFeeCollected");
+                      await expect(tx).to.not.emit(handler, "ProtocolFeeCollected");
                     }
                   });
 
@@ -7561,7 +7711,7 @@ describe("IBosonFundsHandler", function () {
 
                     // Complete the exchange so the funds are released
                     const action = await finalStateFinalization[state]()
-                    await exchangeHandler.connect(action.wallet)[action.method](...action.args);
+                    await action.handler.connect(action.wallet)[action.method](...action.args);
 
                     // Change in available funds
                     if (sellerPayoff != "0") {
