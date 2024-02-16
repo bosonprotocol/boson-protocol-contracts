@@ -6,6 +6,7 @@ const Seller = require("../../scripts/domain/Seller");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
+const PriceType = require("../../scripts/domain/PriceType.js");
 const Group = require("../../scripts/domain/Group");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
@@ -2069,6 +2070,28 @@ describe("IBosonOrchestrationHandler", function () {
                 offerFeeLimit
               )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_QUANTITY_AVAILABLE);
+        });
+
+        it("Offer type is discovery and the price is not set to zero", async function () {
+          // Set offer type to discovery
+          offer.priceType = PriceType.Discovery;
+
+          // Attempt to create a seller and an offer, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(assistant)
+              .createSellerAndOffer(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolver.id,
+                emptyAuthToken,
+                voucherInitValues,
+                agentId,
+                offerFeeLimit
+              )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_PRICE_DISCOVERY_PRICE);
         });
 
         it("Dispute resolver wallet is not registered", async function () {
