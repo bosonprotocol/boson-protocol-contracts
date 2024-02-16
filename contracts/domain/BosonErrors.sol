@@ -174,6 +174,8 @@ interface BosonErrors {
     error InvalidRoyaltyInfo();
     // Trying to change the default recipient address (treasury)
     error WrongDefaultRecipient();
+    // Price discovery offer has non zero price
+    error InvalidPriceDiscoveryPrice();
 
     // Group related
     // Group does not exist
