@@ -9,6 +9,7 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IBosonFundsLibEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
  * @title FundsLib
@@ -122,14 +123,14 @@ library FundsLib {
 
         // Get offer from storage to get the details about sellerDeposit, price, sellerId, exchangeToken and buyerCancelPenalty
         BosonTypes.Offer storage offer = pe.offers[exchange.offerId];
+
         // calculate the payoffs depending on state exchange is in
-        uint256 sellerPayoff;
-        uint256 buyerPayoff;
-        uint256 protocolFee;
-        uint256 agentFee;
+        BosonTypes.Payoff memory payoff;
 
         BosonTypes.OfferFees storage offerFee = pe.offerFees[exchange.offerId];
-        uint256 price = offer.price;
+        uint256 offerPrice = offer.price;
+        BosonTypes.ExchangeCosts[] storage exchangeCosts = pe.exchangeCosts[_exchangeId];
+        uint256 lastPrice = exchangeCosts.length == 0 ? offerPrice : exchangeCosts[exchangeCosts.length - 1].price;
         {
             // scope to avoid stack too deep errors
             BosonTypes.ExchangeState exchangeState = exchange.state;
@@ -137,19 +138,19 @@ library FundsLib {
 
             if (exchangeState == BosonTypes.ExchangeState.Completed) {
                 // COMPLETED
-                protocolFee = offerFee.protocolFee;
+                payoff.protocol = offerFee.protocolFee;
                 // buyerPayoff is 0
-                agentFee = offerFee.agentFee;
-                sellerPayoff = price + sellerDeposit - protocolFee - agentFee;
+                payoff.agent = offerFee.agentFee;
+                payoff.seller = offerPrice + sellerDeposit - payoff.protocol - payoff.agent;
             } else if (exchangeState == BosonTypes.ExchangeState.Revoked) {
                 // REVOKED
                 // sellerPayoff is 0
-                buyerPayoff = price + sellerDeposit;
+                payoff.buyer = lastPrice + sellerDeposit;
             } else if (exchangeState == BosonTypes.ExchangeState.Canceled) {
                 // CANCELED
                 uint256 buyerCancelPenalty = offer.buyerCancelPenalty;
-                sellerPayoff = sellerDeposit + buyerCancelPenalty;
-                buyerPayoff = price - buyerCancelPenalty;
+                payoff.seller = sellerDeposit + buyerCancelPenalty;
+                payoff.buyer = lastPrice - buyerCancelPenalty;
             } else if (exchangeState == BosonTypes.ExchangeState.Disputed) {
                 // DISPUTED
                 // determine if buyerEscalationDeposit was encumbered or not
@@ -164,19 +165,27 @@ library FundsLib {
 
                 if (disputeState == BosonTypes.DisputeState.Retracted) {
                     // RETRACTED - same as "COMPLETED"
-                    protocolFee = offerFee.protocolFee;
-                    agentFee = offerFee.agentFee;
+                    payoff.protocol = offerFee.protocolFee;
+                    payoff.agent = offerFee.agentFee;
                     // buyerPayoff is 0
-                    sellerPayoff = price + sellerDeposit - protocolFee - agentFee + buyerEscalationDeposit;
+                    payoff.seller =
+                        offerPrice +
+                        sellerDeposit -
+                        payoff.protocol -
+                        payoff.agent +
+                        buyerEscalationDeposit;
                 } else if (disputeState == BosonTypes.DisputeState.Refused) {
                     // REFUSED
-                    sellerPayoff = sellerDeposit;
-                    buyerPayoff = price + buyerEscalationDeposit;
+                    payoff.seller = sellerDeposit;
+                    payoff.buyer = lastPrice + buyerEscalationDeposit;
                 } else {
                     // RESOLVED or DECIDED
-                    uint256 pot = price + sellerDeposit + buyerEscalationDeposit;
-                    buyerPayoff = (pot * dispute.buyerPercent) / HUNDRED_PERCENT;
-                    sellerPayoff = pot - buyerPayoff;
+                    uint256 commonPot = sellerDeposit + buyerEscalationDeposit;
+                    payoff.buyer = applyPercent(commonPot, dispute.buyerPercent);
+                    payoff.seller = commonPot - payoff.buyer;
+
+                    payoff.buyer = payoff.buyer + applyPercent(lastPrice, dispute.buyerPercent);
+                    payoff.seller = payoff.seller + offerPrice - applyPercent(offerPrice, dispute.buyerPercent);
                 }
             }
         }
@@ -190,31 +199,31 @@ library FundsLib {
             (uint256 sequentialProtocolFee, uint256 sequentialRoyalties) = releaseFundsToIntermediateSellers(
                 _exchangeId,
                 exchange.state,
-                price,
+                offerPrice,
                 exchangeToken,
                 offer
             );
-            sellerPayoff += sequentialRoyalties;
-            protocolFee += sequentialProtocolFee;
+            payoff.seller += sequentialRoyalties;
+            payoff.protocol += sequentialProtocolFee;
         }
 
         // Store payoffs to availablefunds and notify the external observers
         address sender = EIP712Lib.msgSender();
-        if (sellerPayoff > 0) {
-            increaseAvailableFundsAndEmitEvent(_exchangeId, offer.sellerId, exchangeToken, sellerPayoff, sender);
+        if (payoff.seller > 0) {
+            increaseAvailableFundsAndEmitEvent(_exchangeId, offer.sellerId, exchangeToken, payoff.seller, sender);
         }
-        if (buyerPayoff > 0) {
-            increaseAvailableFundsAndEmitEvent(_exchangeId, exchange.buyerId, exchangeToken, buyerPayoff, sender);
+        if (payoff.buyer > 0) {
+            increaseAvailableFundsAndEmitEvent(_exchangeId, exchange.buyerId, exchangeToken, payoff.buyer, sender);
         }
 
-        if (protocolFee > 0) {
-            increaseAvailableFunds(0, exchangeToken, protocolFee);
-            emit IBosonFundsLibEvents.ProtocolFeeCollected(_exchangeId, exchangeToken, protocolFee, sender);
+        if (payoff.protocol > 0) {
+            increaseAvailableFunds(0, exchangeToken, payoff.protocol);
+            emit IBosonFundsLibEvents.ProtocolFeeCollected(_exchangeId, exchangeToken, payoff.protocol, sender);
         }
-        if (agentFee > 0) {
+        if (payoff.agent > 0) {
             // Get the agent for offer
             uint256 agentId = ProtocolLib.protocolLookups().agentIdByOffer[exchange.offerId];
-            increaseAvailableFundsAndEmitEvent(_exchangeId, agentId, exchangeToken, agentFee, sender);
+            increaseAvailableFundsAndEmitEvent(_exchangeId, agentId, exchangeToken, payoff.agent, sender);
         }
     }
 
@@ -297,7 +306,9 @@ library FundsLib {
             // inside the scope to avoid stack too deep error
             {
                 if (effectivePriceMultiplier > 0) {
-                    protocolFee += secondaryCommit.protocolFeeAmount;
+                    protocolFee =
+                        protocolFee +
+                        applyPercent(secondaryCommit.protocolFeeAmount, effectivePriceMultiplier);
                     sellerRoyalties += distributeRoyalties(
                         _exchangeId,
                         _offer,
@@ -311,14 +322,17 @@ library FundsLib {
                     secondaryCommit.protocolFeeAmount -
                     secondaryCommit.royaltyAmount;
 
-                // current reseller gets the difference between final payout and the immediate payout they received at the time of secondary sale
+                // Calculate amount to be released to the reseller:
+                // + part of the price that they paid (relevant for unhappy paths)
+                // + price of the voucher that they sold reduced for part that goes to next reseller, royalties and protocol fee
+                // - immediate payout that was released already during the sequential commit
                 currentResellerAmount =
-                    (
-                        reducedSecondaryPrice > resellerBuyPrice
-                            ? effectivePriceMultiplier * (reducedSecondaryPrice - resellerBuyPrice)
-                            : (HUNDRED_PERCENT - effectivePriceMultiplier) * (resellerBuyPrice - reducedSecondaryPrice)
-                    ) /
-                    HUNDRED_PERCENT;
+                    applyPercent(resellerBuyPrice, (HUNDRED_PERCENT - effectivePriceMultiplier)) +
+                    secondaryCommit.price -
+                    applyPercent(secondaryCommit.price, (HUNDRED_PERCENT - effectivePriceMultiplier)) -
+                    applyPercent(secondaryCommit.protocolFeeAmount, effectivePriceMultiplier) -
+                    applyPercent(secondaryCommit.royaltyAmount, effectivePriceMultiplier) -
+                    Math.min(resellerBuyPrice, reducedSecondaryPrice);
 
                 resellerBuyPrice = secondaryCommit.price;
             }
@@ -337,9 +351,6 @@ library FundsLib {
                 i++;
             }
         }
-
-        // protocolFee and sellerRoyalties can be multiplied by effectivePriceMultiplier just at the end
-        protocolFee = (protocolFee * effectivePriceMultiplier) / HUNDRED_PERCENT;
     }
 
     /**
@@ -557,11 +568,11 @@ library FundsLib {
         BosonTypes.RoyaltyInfo storage _royaltyInfo = _offer.royaltyInfo[_secondaryCommit.royaltyInfoIndex];
         uint256 len = _royaltyInfo.recipients.length;
         uint256 totalAmount;
-        uint256 effectivePrice = (_secondaryCommit.price * _effectivePriceMultiplier) / HUNDRED_PERCENT;
+        uint256 effectivePrice = applyPercent(_secondaryCommit.price, _effectivePriceMultiplier);
         ProtocolLib.ProtocolLookups storage pl = ProtocolLib.protocolLookups();
         for (uint256 i = 0; i < len; ) {
             address payable recipient = _royaltyInfo.recipients[i];
-            uint256 amount = (_royaltyInfo.bps[i] * effectivePrice) / HUNDRED_PERCENT;
+            uint256 amount = applyPercent(_royaltyInfo.bps[i], effectivePrice);
             totalAmount += amount;
             if (recipient == address(0)) {
                 // goes to seller's treasury
@@ -585,6 +596,22 @@ library FundsLib {
         }
 
         // if there is a remainder due to rounding, it goes to the seller's treasury
-        sellerRoyalties += (_effectivePriceMultiplier * _secondaryCommit.royaltyAmount) / HUNDRED_PERCENT - totalAmount;
+        sellerRoyalties =
+            sellerRoyalties +
+            applyPercent(_secondaryCommit.royaltyAmount, _effectivePriceMultiplier) -
+            totalAmount;
+    }
+
+    /**
+     * @notice Calulates the percentage of the amount.
+     *
+     * @param _amount - amount to be used for the calculation
+     * @param _percent - percentage to be calculated, in basis points (1% = 100, 100% = 10000)
+     */
+    function applyPercent(uint256 _amount, uint256 _percent) internal pure returns (uint256) {
+        if (_percent == HUNDRED_PERCENT) return _amount;
+        if (_percent == 0) return 0;
+
+        return (_amount * _percent) / HUNDRED_PERCENT;
     }
 }
