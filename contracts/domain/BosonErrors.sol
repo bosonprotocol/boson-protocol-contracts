@@ -368,4 +368,6 @@ interface BosonErrors {
     error UnexpectedERC721Received();
     // Royalty fee exceeds the price
     error FeeAmountTooHigh();
+    // Price does not cover the cancellation penalty
+    error PriceDoesNotCoverPenalty();
 }
