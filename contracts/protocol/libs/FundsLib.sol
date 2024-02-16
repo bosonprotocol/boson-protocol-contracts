@@ -262,7 +262,7 @@ library FundsLib {
                     _exchangeState == BosonTypes.ExchangeState.Revoked ||
                     _exchangeState == BosonTypes.ExchangeState.Canceled
                 ) {
-                    // REVOKED or CANCELED, buyer pays nothing (buyerCancelationPenalty is not considered payment)
+                    // REVOKED or CANCELED, buyer pays nothing (buyerCancelPenalty is not considered payment)
                     effectivePriceMultiplier = 0;
                 } else if (_exchangeState == BosonTypes.ExchangeState.Disputed) {
                     // DISPUTED

@@ -645,7 +645,7 @@ describe("IBosonSequentialCommitHandler", function () {
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_AMOUNT_TOO_HIGH);
             });
 
-            it("price cannot cover the cancelation fee", async function () {
+            it("price cannot cover the cancellation fee", async function () {
               price2 = BigInt(offer.buyerCancelPenalty) - 1n;
               priceDiscovery.price = price2;
 
@@ -1306,7 +1306,7 @@ describe("IBosonSequentialCommitHandler", function () {
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_AMOUNT_TOO_HIGH);
             });
 
-            it("price cannot cover the cancelation fee", async function () {
+            it("price cannot cover the cancellation fee", async function () {
               price2 = BigInt(offer.buyerCancelPenalty) - 1n;
               priceDiscovery.price = price2;
 

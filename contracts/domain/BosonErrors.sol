@@ -120,7 +120,7 @@ interface BosonErrors {
     error NoSuchOffer();
     // Offer finishes in the past or it starts after it finishes
     error InvalidOfferPeriod();
-    // Buyer cancelation penalty is higher than the item price
+    // Buyer cancellation penalty is higher than the item price
     error InvalidOfferPenalty();
     // New offer must be actiove
     error OfferMustBeActive();
