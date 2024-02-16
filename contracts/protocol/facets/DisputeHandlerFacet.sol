@@ -4,7 +4,6 @@ pragma solidity 0.8.22;
 import "../../domain/BosonConstants.sol";
 import { IBosonDisputeHandler } from "../../interfaces/handlers/IBosonDisputeHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
-import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";

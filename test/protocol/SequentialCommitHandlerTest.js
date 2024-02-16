@@ -677,6 +677,31 @@ describe("IBosonSequentialCommitHandler", function () {
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_AMOUNT_TOO_HIGH);
             });
 
+            it("price cannot cover the cancellation fee", async function () {
+              price2 = BigInt(offer.buyerCancelPenalty) - 1n;
+              priceDiscovery.price = price2;
+
+              // Prepare calldata for PriceDiscovery contract
+              const order = {
+                seller: buyer.address,
+                buyer: buyer2.address,
+                voucherContract: expectedCloneAddress,
+                tokenId: tokenId,
+                exchangeToken: offer.exchangeToken,
+                price: price2,
+              };
+
+              const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
+              priceDiscovery.priceDiscoveryData = priceDiscoveryData;
+
+              // Attempt to sequentially commit, expecting revert
+              await expect(
+                sequentialCommitHandler
+                  .connect(buyer2)
+                  .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.PRICE_DOES_NOT_COVER_PENALTY);
+            });
+
             it("insufficient values sent", async function () {
               // Attempt to sequentially commit, expecting revert
               await expect(
@@ -1343,6 +1368,33 @@ describe("IBosonSequentialCommitHandler", function () {
                   .connect(reseller)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_AMOUNT_TOO_HIGH);
+            });
+
+            it("price cannot cover the cancellation fee", async function () {
+              price2 = BigInt(offer.buyerCancelPenalty) - 1n;
+              priceDiscovery.price = price2;
+
+              // Prepare calldata for PriceDiscovery contract
+              const order = {
+                seller: await exchangeHandler.getAddress(), // since protocol owns the voucher, it acts as seller from price discovery mechanism
+                buyer: buyer2.address,
+                voucherContract: expectedCloneAddress,
+                tokenId: tokenId,
+                exchangeToken: await weth.getAddress(), // buyer pays in ETH, but they cannot approve ETH, so we use WETH
+                price: price2.toString(),
+              };
+
+              const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilSellOrder", [
+                order,
+              ]);
+              priceDiscovery.priceDiscoveryData = priceDiscoveryData;
+
+              // Attempt to sequentially commit, expecting revert
+              await expect(
+                sequentialCommitHandler
+                  .connect(reseller)
+                  .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.PRICE_DOES_NOT_COVER_PENALTY);
             });
 
             it("voucher transfer not approved", async function () {

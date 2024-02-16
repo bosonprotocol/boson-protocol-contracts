@@ -37,6 +37,7 @@ const {
   accountId,
 } = require("../util/mock");
 const { encodeBytes32String } = require("ethers");
+const PriceType = require("../../scripts/domain/PriceType.js");
 
 /**
  *  Test the Boson Offer Handler interface
@@ -867,6 +868,18 @@ describe("IBosonOfferHandler", function () {
               .connect(assistant)
               .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_QUANTITY_AVAILABLE);
+        });
+
+        it("Offer type is discovery and the price is not set to zero", async function () {
+          // Set offer type to discovery
+          offer.priceType = PriceType.Discovery;
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler
+              .connect(assistant)
+              .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_PRICE_DISCOVERY_PRICE);
         });
 
         it("Dispute resolver wallet is not registered", async function () {
@@ -2949,6 +2962,25 @@ describe("IBosonOfferHandler", function () {
                 offerFeeLimits
               )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_QUANTITY_AVAILABLE);
+        });
+
+        it("For some offer, offer type is discovery and the price is not set to zero", async function () {
+          // Set offer type to discovery
+          offers[2].priceType = PriceType.Discovery;
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler
+              .connect(assistant)
+              .createOfferBatch(
+                offers,
+                offerDatesList,
+                offerDurationsList,
+                disputeResolverIds,
+                agentIds,
+                offerFeeLimits
+              )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_PRICE_DISCOVERY_PRICE);
         });
 
         it("For some offer, dispute resolver wallet is not registered", async function () {
