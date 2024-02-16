@@ -351,4 +351,11 @@ contract BosonTypes {
         uint256 reservedRangeLength;
         address to;
     }
+
+    struct Payoff {
+        uint256 seller;
+        uint256 buyer;
+        uint256 protocol;
+        uint256 agent;
+    }
 }
