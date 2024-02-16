@@ -797,6 +797,26 @@ describe("IBosonExchangeHandler", function () {
         expect(await additionalCollection.ownerOf(tokenId)).to.equal(buyer.address, "Wrong buyer address");
       });
 
+      it("It is possible to commit to fixed offer if price discovery region is paused", async function () {
+        // Pause the price discovery region of the protocol
+        await pauseHandler.connect(pauser).pause([PausableRegion.PriceDiscovery]);
+
+        // Commit to offer, retrieving the event
+        await expect(
+          exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })
+        ).to.emit(exchangeHandler, "BuyerCommitted");
+      });
+
+      it("It is possible to commit to fixed offer if sequential commit region is paused", async function () {
+        // Pause the sequential commit region of the protocol
+        await pauseHandler.connect(pauser).pause([PausableRegion.SequentialCommit]);
+
+        // Commit to offer, retrieving the event
+        await expect(
+          exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })
+        ).to.emit(exchangeHandler, "BuyerCommitted");
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The exchanges region of protocol is paused", async function () {
           // Pause the exchanges region of the protocol

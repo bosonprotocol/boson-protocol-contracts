@@ -482,6 +482,18 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             .withArgs(offerId, newBuyer.id, exchangeId, exchange.toStruct(), voucher.toStruct(), expectedCloneAddress);
         });
 
+        it("It is possible to commit to price discovery offer if sequential commit region is paused", async function () {
+          // Pause the sequential commit region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.SequentialCommit]);
+
+          // Commit to offer
+          await expect(
+            priceDiscoveryHandler
+              .connect(buyer)
+              .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+          ).to.emit(priceDiscoveryHandler, "BuyerCommitted");
+        });
+
         context("💔 Revert Reasons", async function () {
           it("The exchanges region of protocol is paused", async function () {
             // Pause the exchanges region of the protocol
@@ -915,6 +927,16 @@ describe("IPriceDiscoveryHandlerFacet", function () {
           const [, { quantityAvailable: quantityAvailableAfter }] = await offerHandler.connect(rando).getOffer(offerId);
 
           expect(quantityAvailableAfter).to.equal(quantityAvailableBefore, "Quantity available should be the same");
+        });
+
+        it("It is possible to commit to price discovery offer if sequential commit region is paused", async function () {
+          // Pause the sequential commit region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.SequentialCommit]);
+
+          // Commit to offer
+          await expect(
+            priceDiscoveryHandler.connect(assistant).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
+          ).to.emit(priceDiscoveryHandler, "BuyerCommitted");
         });
 
         context("💔 Revert Reasons", async function () {
