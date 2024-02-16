@@ -3,7 +3,6 @@ pragma solidity 0.8.22;
 
 import "../../domain/BosonConstants.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IWrappedNative } from "../../interfaces/IWrappedNative.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { IBosonPriceDiscovery } from "../../interfaces/clients/IBosonPriceDiscovery.sol";

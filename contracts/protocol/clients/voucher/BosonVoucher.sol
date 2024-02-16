@@ -19,9 +19,6 @@ import { IBosonVoucher } from "../../../interfaces/clients/IBosonVoucher.sol";
 import { BeaconClientBase } from "../../bases/BeaconClientBase.sol";
 import { BeaconClientLib } from "../../libs/BeaconClientLib.sol";
 import { IClientExternalAddresses } from "../../../interfaces/clients/IClientExternalAddresses.sol";
-import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHandler.sol";
-import { IBosonExchangeHandler } from "../../../interfaces/handlers/IBosonExchangeHandler.sol";
-import { DAIAliases as DAI } from "../../../interfaces/DAIAliases.sol";
 import { IBosonFundsHandler } from "../../../interfaces/handlers/IBosonFundsHandler.sol";
 
 /**

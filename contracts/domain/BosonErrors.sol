@@ -120,7 +120,7 @@ interface BosonErrors {
     error NoSuchOffer();
     // Offer finishes in the past or it starts after it finishes
     error InvalidOfferPeriod();
-    // Buyer cancelation penalty is higher than the item price
+    // Buyer cancellation penalty is higher than the item price
     error InvalidOfferPenalty();
     // New offer must be actiove
     error OfferMustBeActive();
@@ -368,4 +368,6 @@ interface BosonErrors {
     error UnexpectedERC721Received();
     // Royalty fee exceeds the price
     error FeeAmountTooHigh();
+    // Price does not cover the cancellation penalty
+    error PriceDoesNotCoverPenalty();
 }
