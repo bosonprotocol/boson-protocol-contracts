@@ -5118,7 +5118,7 @@ describe("IBosonFundsHandler", function () {
                   // expected payoffs
                   // last buyer: sellerDeposit + last price
                   const lastPrice = exchangeInformation[exchangeInformation.length - 1].price;
-                  buyerPayoff = (BigInt(lastPrice) + BigInt(offer.price)).toString();
+                  buyerPayoff = (BigInt(lastPrice) + BigInt(offer.sellerDeposit)).toString();
 
                   // resellers: difference between original price and immediate payoff
                   previousPrice = BigInt(offer.price);
@@ -5204,12 +5204,12 @@ describe("IBosonFundsHandler", function () {
                   // expected payoffs
                   // last buyer: (last price + sellerDeposit)*buyerPercentage
                   const lastPrice = exchangeInformation[exchangeInformation.length - 1].price;
-                  buyerPayoff = applyPercentage(
-                    BigInt(lastPrice) + BigInt(offer.sellerDeposit),
-                    buyerPercentBasisPoints
-                  );
+                  const sellerDepositSplitBuyer = BigInt(applyPercentage(offer.sellerDeposit, buyerPercentBasisPoints));
+                  buyerPayoff = (
+                    BigInt(applyPercentage(BigInt(lastPrice), buyerPercentBasisPoints)) + sellerDepositSplitBuyer
+                  ).toString();
 
-                  const sellerPercentBasisPoints = 10000 - parseInt(buyerPercentBasisPoints); // 44.34%
+                  const sellerPercentBasisPoints = 10000 - parseInt(buyerPercentBasisPoints);
 
                   protocolFee = 0n; // if disputed, the fee is not collected on original trade
                   previousPrice = BigInt(offer.price);
@@ -5217,19 +5217,21 @@ describe("IBosonFundsHandler", function () {
                     const exchangeProtocolFee = applyPercentage(exchange.price, fee.protocol);
                     const exchangeRoyalties = applyPercentage(exchange.price, fee.royalties);
 
-                    protocolFee = protocolFee + BigInt(exchangeProtocolFee);
+                    protocolFee = protocolFee + BigInt(applyPercentage(exchangeProtocolFee, sellerPercentBasisPoints));
 
                     // Reseller payoff
                     const reducedSecondaryPrice =
                       exchange.price - BigInt(exchangeRoyalties) - BigInt(exchangeProtocolFee);
-                    const priceDiff = reducedSecondaryPrice - previousPrice;
+                    const resellerPayoff =
+                      BigInt(applyPercentage(previousPrice, buyerPercentBasisPoints)) +
+                      (exchange.price - BigInt(applyPercentage(exchange.price, buyerPercentBasisPoints))) -
+                      BigInt(applyPercentage(exchangeRoyalties, sellerPercentBasisPoints)) -
+                      BigInt(applyPercentage(exchangeProtocolFee, sellerPercentBasisPoints)) -
+                      (reducedSecondaryPrice < previousPrice ? reducedSecondaryPrice : previousPrice);
 
                     resellerPayoffs.push({
                       id: exchange.resellerId,
-                      payoff:
-                        priceDiff > 0n
-                          ? applyPercentage(priceDiff, sellerPercentBasisPoints)
-                          : applyPercentage(priceDiff * -1n, buyerPercentBasisPoints),
+                      payoff: resellerPayoff.toString(),
                     });
                     previousPrice = exchange.price;
 
@@ -5249,16 +5251,17 @@ describe("IBosonFundsHandler", function () {
                   }
                   totalRoyaltiesSplit.seller = totalRoyalties - totalRoyaltiesSplit.other - totalRoyaltiesSplit.other2;
 
-                  // seller: sellerDeposit + price + royaltieS
+                  // seller: sellerDeposit + price + royalties
+                  // (last price + sellerDeposit)*buyerPercentage
                   sellerPayoff = (
-                    BigInt(offer.sellerDeposit) +
                     BigInt(offer.price) -
-                    BigInt(buyerPayoff) +
+                    BigInt(applyPercentage(offer.price, buyerPercentBasisPoints)) +
+                    (BigInt(offer.sellerDeposit) - sellerDepositSplitBuyer) +
                     BigInt(totalRoyaltiesSplit.seller)
                   ).toString();
 
                   // protocol: protocolFee (only secondary market)
-                  protocolPayoff = applyPercentage(protocolFee, sellerPercentBasisPoints);
+                  protocolPayoff = protocolFee.toString();
 
                   // royalty recipients: royalties
                   royaltyRecipientsPayoffs = [
@@ -5570,6 +5573,7 @@ describe("IBosonFundsHandler", function () {
                       BigInt(protocolPayoff) +
                       BigInt(resellerPayoffs.reduce((acc, r) => acc + BigInt(r.payoff), 0n)) +
                       BigInt(royaltyRecipientsPayoffs.reduce((acc, r) => acc + BigInt(r.payoff), 0n));
+
                     // Since protocol had no funds before and nothing was withdrawn, the balance should match the total payoff
                     expect(protocolBalance).to.equal(totalPayoff);
                   });
