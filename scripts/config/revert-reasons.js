@@ -52,6 +52,7 @@ exports.RevertReasons = {
   NO_SUCH_COLLECTION: "NoSuchCollection",
   INVALID_ROYALTY_RECIPIENT: "InvalidRoyaltyRecipient",
   INVALID_ROYALTY_PERCENTAGE: "InvalidRoyaltyPercentage",
+  INVALID_PRICE_DISCOVERY_PRICE: "InvalidPriceDiscoveryPrice",
 
   // Group related
   NO_SUCH_GROUP: "NoSuchGroup",

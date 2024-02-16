@@ -91,6 +91,7 @@ interface IBosonOrchestrationHandler is
      *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
+     *   - Offer type is discovery and the price is not set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Seller is not on dispute resolver's seller allow list
@@ -170,6 +171,7 @@ interface IBosonOrchestrationHandler is
      *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
+     *   - Offer type is discovery and the price is not set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Seller is not on dispute resolver's seller allow list
@@ -232,6 +234,7 @@ interface IBosonOrchestrationHandler is
      *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
+     *   - Offer type is discovery and the price is not set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Seller is not on dispute resolver's seller allow list
@@ -290,6 +293,7 @@ interface IBosonOrchestrationHandler is
      *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
+     *   - Offer type is discovery and the price is not set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Seller is not on dispute resolver's seller allow list
@@ -349,6 +353,7 @@ interface IBosonOrchestrationHandler is
      *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
+     *   - Offer type is discovery and the price is not set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Seller is not on dispute resolver's seller allow list
@@ -409,6 +414,7 @@ interface IBosonOrchestrationHandler is
      *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
+     *   - Offer type is discovery and the price is not set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Seller is not on dispute resolver's seller allow list
@@ -471,6 +477,7 @@ interface IBosonOrchestrationHandler is
      *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
+     *   - Offer type is discovery and the price is not set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Seller is not on dispute resolver's seller allow list
@@ -537,6 +544,7 @@ interface IBosonOrchestrationHandler is
      *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
+     *   - Offer type is discovery and the price is not set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Seller is not on dispute resolver's seller allow list
@@ -606,6 +614,7 @@ interface IBosonOrchestrationHandler is
      *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
+     *   - Offer type is discovery and the price is not set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Seller is not on dispute resolver's seller allow list
@@ -677,6 +686,7 @@ interface IBosonOrchestrationHandler is
      *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
+     *   - Offer type is discovery and the price is not set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Seller is not on dispute resolver's seller allow list
@@ -767,6 +777,7 @@ interface IBosonOrchestrationHandler is
      *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
+     *   - Offer type is discovery and the price is not set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Seller is not on dispute resolver's seller allow list
@@ -852,6 +863,7 @@ interface IBosonOrchestrationHandler is
      *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
+     *   - Offer type is discovery and the price is not set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Seller is not on dispute resolver's seller allow list
@@ -939,6 +951,7 @@ interface IBosonOrchestrationHandler is
      *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
+     *   - Offer type is discovery and the price is not set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Seller is not on dispute resolver's seller allow list
@@ -1032,6 +1045,7 @@ interface IBosonOrchestrationHandler is
      *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
+     *   - Offer type is discovery and the price is not set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Seller is not on dispute resolver's seller allow list
@@ -1127,6 +1141,7 @@ interface IBosonOrchestrationHandler is
      *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
+     *   - Offer type is discovery and the price is not set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Seller is not on dispute resolver's seller allow list
@@ -1225,6 +1240,7 @@ interface IBosonOrchestrationHandler is
      *   - Resolution period is not between the minimum and the maximum resolution period
      *   - Voided is set to true
      *   - Available quantity is set to zero
+     *   - Offer type is discovery and the price is not set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Seller is not on dispute resolver's seller allow list
