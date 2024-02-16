@@ -74,7 +74,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
         address payable _buyer,
         uint256 _tokenId,
         PriceDiscovery calldata _priceDiscovery
-    ) external payable exchangesNotPaused buyersNotPaused nonReentrant {
+    ) external payable exchangesNotPaused buyersNotPaused sequentialCommitNotPaused nonReentrant {
         // Make sure buyer address is not zero address
         if (_buyer == address(0)) revert InvalidAddress();
 
