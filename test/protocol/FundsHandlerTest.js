@@ -339,7 +339,9 @@ describe("IBosonFundsHandler", function () {
           // Attempt to deposit funds, expecting revert
           await expect(
             fundsHandler.connect(assistant).depositFunds(seller.id, await mockToken.getAddress(), depositAmount)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Funds);
         });
 
         it("Amount to deposit is zero", async function () {
@@ -885,9 +887,9 @@ describe("IBosonFundsHandler", function () {
               await pauseHandler.connect(pauser).pause([PausableRegion.Funds]);
 
               // Attempt to withdraw funds, expecting revert
-              await expect(
-                fundsHandler.connect(buyer).withdrawFunds(buyerId, tokenListBuyer, tokenAmountsBuyer)
-              ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+              await expect(fundsHandler.connect(buyer).withdrawFunds(buyerId, tokenListBuyer, tokenAmountsBuyer))
+                .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+                .withArgs(PausableRegion.Funds);
             });
 
             it("Caller is not authorized to withdraw", async function () {
@@ -1481,9 +1483,9 @@ describe("IBosonFundsHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Funds]);
 
             // Attempt to withdraw funds, expecting revert
-            await expect(
-              fundsHandler.connect(feeCollector).withdrawProtocolFees(tokenList, tokenAmounts)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+            await expect(fundsHandler.connect(feeCollector).withdrawProtocolFees(tokenList, tokenAmounts))
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Funds);
           });
 
           it("Caller is not authorized to withdraw", async function () {

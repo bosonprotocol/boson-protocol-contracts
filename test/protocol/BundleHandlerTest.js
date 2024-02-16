@@ -357,10 +357,9 @@ describe("IBosonBundleHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Bundles]);
 
           // Attempt to create a bundle, expecting revert
-          await expect(bundleHandler.connect(assistant).createBundle(bundle)).to.revertedWithCustomError(
-            bosonErrors,
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(bundleHandler.connect(assistant).createBundle(bundle))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Bundles);
         });
 
         it("Caller not assistant of any seller", async function () {

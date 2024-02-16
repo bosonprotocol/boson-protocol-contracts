@@ -492,7 +492,9 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(buyer)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+            )
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Exchanges);
           });
 
           it("The buyers region of protocol is paused", async function () {
@@ -504,7 +506,9 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(buyer)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+            )
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Buyers);
           });
 
           it("The price discovery region of protocol is paused", async function () {
@@ -923,7 +927,9 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(assistant)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+            )
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Exchanges);
           });
 
           it("The buyers region of protocol is paused", async function () {
@@ -935,7 +941,9 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(assistant)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+            )
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Buyers);
           });
 
           it("The price discovery region of protocol is paused", async function () {

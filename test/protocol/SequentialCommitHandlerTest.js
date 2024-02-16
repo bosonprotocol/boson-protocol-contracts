@@ -580,7 +580,9 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(buyer2)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
-              ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+              )
+                .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+                .withArgs(PausableRegion.Exchanges);
             });
 
             it("The buyers region of protocol is paused", async function () {
@@ -592,7 +594,9 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(buyer2)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
-              ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+              )
+                .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+                .withArgs(PausableRegion.Buyers);
             });
 
             it("The sequential region of protocol is paused", async function () {
@@ -1244,7 +1248,9 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(reseller)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
-              ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+              )
+                .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+                .withArgs(PausableRegion.Exchanges);
             });
 
             it("The buyers region of protocol is paused", async function () {
@@ -1256,7 +1262,9 @@ describe("IBosonSequentialCommitHandler", function () {
                 sequentialCommitHandler
                   .connect(reseller)
                   .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
-              ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+              )
+                .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+                .withArgs(PausableRegion.Buyers);
             });
 
             it("The sequential region of protocol is paused", async function () {

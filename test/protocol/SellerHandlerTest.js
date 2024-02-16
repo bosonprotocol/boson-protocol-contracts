@@ -728,9 +728,9 @@ describe("SellerHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
 
           // Attempt to create a seller expecting revert
-          await expect(
-            accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          await expect(accountHandler.connect(assistant).createSeller(seller, emptyAuthToken, voucherInitValues))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Sellers);
         });
 
         it("active is false", async function () {
@@ -2302,10 +2302,9 @@ describe("SellerHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
 
           // Attempt to update a seller expecting revert
-          await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken)).to.revertedWithCustomError(
-            bosonErrors,
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Sellers);
         });
 
         it("Seller does not exist", async function () {
@@ -2980,10 +2979,9 @@ describe("SellerHandler", function () {
           // Pause the sellers region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
 
-          await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, [])).to.revertedWithCustomError(
-            bosonErrors,
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(accountHandler.connect(rando).optInToSellerUpdate(seller.id, []))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Sellers);
         });
 
         it("Admin is not unique to this seller", async function () {
@@ -3265,9 +3263,9 @@ describe("SellerHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
 
           // Attempt to create a new collection expecting revert
-          await expect(
-            accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          await expect(accountHandler.connect(assistant).createNewCollection(externalId, voucherInitValues))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Sellers);
         });
 
         it("Caller is not anyone's assistant", async function () {
@@ -3600,9 +3598,9 @@ describe("SellerHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
 
           // Attempt to update the salt, expecting revert
-          await expect(
-            accountHandler.connect(admin).updateSellerSalt(seller.id, newSellerSalt)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          await expect(accountHandler.connect(admin).updateSellerSalt(seller.id, newSellerSalt))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Sellers);
         });
 
         it("Caller is not anyone's admin", async function () {
@@ -3988,9 +3986,9 @@ describe("SellerHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
 
             // Attempt to add royalty recipients expecting revert
-            await expect(
-              accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientInfoListStruct)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+            await expect(accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientInfoListStruct))
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Sellers);
           });
 
           it("seller does not exist", async function () {
@@ -4135,7 +4133,9 @@ describe("SellerHandler", function () {
               accountHandler
                 .connect(admin)
                 .updateRoyaltyRecipients(seller.id, royaltyRecipientInfoIds, royaltyRecipientInfoListUpdates.toStruct())
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+            )
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Sellers);
           });
 
           it("seller does not exist", async function () {
@@ -4334,9 +4334,9 @@ describe("SellerHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
 
             // Attempt to remove royalty recipients expecting revert
-            await expect(
-              accountHandler.connect(admin).removeRoyaltyRecipients(seller.id, royaltyRecipientInfoIds)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+            await expect(accountHandler.connect(admin).removeRoyaltyRecipients(seller.id, royaltyRecipientInfoIds))
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Sellers);
           });
 
           it("seller does not exist", async function () {
