@@ -68,29 +68,14 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
             IERC20(_exchangeToken).forceApprove(_priceDiscovery.conduit, _priceDiscovery.price);
         }
 
-        // Track native balance just in case if the price discovery sends some native currency
-        // This is the balance that protocol had, before commit to offer was called
-        uint256 thisNativeBalanceBefore = getBalance(address(0));
-
-        // Get protocol balance before calling price discovery contract
-        uint256 thisBalanceBefore = getBalance(_exchangeToken);
-
-        // Call the price discovery contract
         incomingTokenAddress = address(_bosonVoucher);
-        _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, 0);
+        (uint256 thisBalanceBefore, uint256 thisBalanceAfter) = callPriceDiscoveryAndTrackBalances(
+            _priceDiscovery,
+            _exchangeToken,
+            _msgSender,
+            0
+        );
 
-        // Check the native balance and return the surplus to seller
-        uint256 thisNativeBalanceAfter = getBalance(address(0));
-        if (thisNativeBalanceAfter > thisNativeBalanceBefore) {
-            // Return the surplus to seller
-            FundsLib.transferFundsFromProtocol(
-                address(0),
-                payable(_msgSender),
-                thisNativeBalanceAfter - thisNativeBalanceBefore
-            );
-        }
-
-        uint256 thisBalanceAfter = getBalance(_exchangeToken);
         if (thisBalanceBefore < thisBalanceAfter) revert NegativePriceNotAllowed();
         unchecked {
             actualPrice = thisBalanceBefore - thisBalanceAfter;
@@ -146,29 +131,12 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
         _bosonVoucher.approve(_priceDiscovery.conduit, _tokenId);
         if (_exchangeToken == address(0)) _exchangeToken = address(wNative);
 
-        // Track native balance just in case if seller sends some native currency or price discovery contract does
-        // This is the balance that protocol had, before commit to offer was called
-        uint256 thisNativeBalanceBefore = getBalance(address(0)) - msg.value;
-
-        // Get protocol balance before calling price discovery contract
-        uint256 thisBalanceBefore = getBalance(_exchangeToken);
-
-        // Call the price discovery contract
-        _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
-
-        // Get protocol balance after calling price discovery contract
-        uint256 thisBalanceAfter = getBalance(_exchangeToken);
-
-        // Check the native balance and return the surplus to seller
-        uint256 thisNativeBalanceAfter = getBalance(address(0));
-        if (thisNativeBalanceAfter > thisNativeBalanceBefore) {
-            // Return the surplus to seller
-            FundsLib.transferFundsFromProtocol(
-                address(0),
-                payable(_seller),
-                thisNativeBalanceAfter - thisNativeBalanceBefore
-            );
-        }
+        (uint256 thisBalanceBefore, uint256 thisBalanceAfter) = callPriceDiscoveryAndTrackBalances(
+            _priceDiscovery,
+            _exchangeToken,
+            _seller,
+            msg.value
+        );
 
         // Calculate actual price
         if (thisBalanceAfter < thisBalanceBefore) revert NegativePriceNotAllowed();
@@ -210,22 +178,13 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
         // Check balance before calling wrapper
         bool isNative = _exchangeToken == address(0);
         if (isNative) _exchangeToken = address(wNative);
-        uint256 thisBalanceBefore = getBalance(_exchangeToken);
 
-        // Track native balance just in case if seller sends some native currency.
-        // All native currency is forwarded to the wrapper, which should not return any back.
-        // If it does, we revert later in the code.
-        uint256 thisNativeBalanceBefore = getBalance(address(0)) - msg.value;
-
-        // Call the price discovery contract
-        _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
-
-        // Check the native balance and revert if there is a surplus
-        uint256 thisNativeBalanceAfter = getBalance(address(0));
-        if (thisNativeBalanceAfter != thisNativeBalanceBefore) revert NativeNotAllowed();
-
-        // Check balance after the price discovery call
-        uint256 thisBalanceAfter = getBalance(_exchangeToken);
+        (uint256 thisBalanceBefore, uint256 thisBalanceAfter) = callPriceDiscoveryAndTrackBalances(
+            _priceDiscovery,
+            _exchangeToken,
+            address(0),
+            msg.value
+        );
 
         // Verify that actual price is within the expected range
         if (thisBalanceAfter < thisBalanceBefore) revert NegativePriceNotAllowed();
@@ -241,6 +200,51 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
         // Send the actual price back to the protocol
         if (actualPrice > 0) {
             FundsLib.transferFundsFromProtocol(_exchangeToken, payable(bosonProtocolAddress), actualPrice);
+        }
+    }
+
+    /**
+     * @notice Call price discovery method and track balances
+     *
+     * Reverts if:
+     * - Call to price discovery reverts
+     *
+     * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
+     * @param _exchangeToken - the address of the exchange contract
+     * @param _msgSender - the address of the caller, as seen in boson protocol
+     * @param _msgValue - the value sent with the call
+     */
+    function callPriceDiscoveryAndTrackBalances(
+        BosonTypes.PriceDiscovery calldata _priceDiscovery,
+        address _exchangeToken,
+        address _msgSender,
+        uint256 _msgValue
+    ) internal returns (uint256 thisBalanceBefore, uint256 thisBalanceAfter) {
+        // Track native balance just in case if the sender sends some native currency or price discovery contract does
+        // This is the balance that protocol had, before commit to offer was called
+        uint256 thisNativeBalanceBefore = getBalance(address(0)) - _msgValue;
+
+        // Get protocol balance before calling price discovery contract
+        thisBalanceBefore = getBalance(_exchangeToken);
+
+        // Call the price discovery contract
+        _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, _msgValue);
+
+        // Get protocol balance after calling price discovery contract
+        thisBalanceAfter = getBalance(_exchangeToken);
+
+        // Check the native balance and return the surplus to the sender
+        uint256 thisNativeBalanceAfter = getBalance(address(0));
+        if (thisNativeBalanceAfter > thisNativeBalanceBefore) {
+            // _msgSender==address(0) represents the wrapper, where it's not allowed to return the surplus
+            if (_msgSender == address(0)) revert NativeNotAllowed();
+
+            // Return the surplus to the sender
+            FundsLib.transferFundsFromProtocol(
+                address(0),
+                payable(_msgSender),
+                thisNativeBalanceAfter - thisNativeBalanceBefore
+            );
         }
     }
 
