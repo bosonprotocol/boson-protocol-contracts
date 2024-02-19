@@ -698,7 +698,9 @@ describe("IBosonOfferHandler", function () {
             offerHandler
               .connect(assistant)
               .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Offers);
         });
 
         it("Caller not assistant of any seller", async function () {
@@ -1309,10 +1311,9 @@ describe("IBosonOfferHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to void an offer expecting revert
-          await expect(offerHandler.connect(assistant).voidOffer(id)).to.revertedWithCustomError(
-            bosonErrors,
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(offerHandler.connect(assistant).voidOffer(id))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Offers);
         });
 
         it("Offer does not exist", async function () {
@@ -1422,9 +1423,9 @@ describe("IBosonOfferHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
             // Attempt to extend an offer expecting revert
-            await expect(
-              offerHandler.connect(assistant).extendOffer(offer.id, offerDates.validUntil)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+            await expect(offerHandler.connect(assistant).extendOffer(offer.id, offerDates.validUntil))
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Offers);
           });
 
           it("Offer does not exist", async function () {
@@ -1628,9 +1629,9 @@ describe("IBosonOfferHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to update the offer expecting revert
-          await expect(
-            offerHandler.connect(assistant).updateOfferRoyaltyRecipients(offer.id, newRoyaltyInfo)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          await expect(offerHandler.connect(assistant).updateOfferRoyaltyRecipients(offer.id, newRoyaltyInfo))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Offers);
         });
 
         it("Offer does not exist", async function () {
@@ -1911,9 +1912,9 @@ describe("IBosonOfferHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to reserve a range, expecting revert
-          await expect(
-            offerHandler.connect(assistant).reserveRange(id, length, await assistant.getAddress())
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          await expect(offerHandler.connect(assistant).reserveRange(id, length, await assistant.getAddress()))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Offers);
         });
 
         it("The exchanges region of protocol is paused", async function () {
@@ -1921,9 +1922,9 @@ describe("IBosonOfferHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to reserve a range, expecting revert
-          await expect(
-            offerHandler.connect(assistant).reserveRange(id, length, await assistant.getAddress())
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          await expect(offerHandler.connect(assistant).reserveRange(id, length, await assistant.getAddress()))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Exchanges);
         });
 
         it("Offer does not exist", async function () {
@@ -2702,7 +2703,9 @@ describe("IBosonOfferHandler", function () {
                 agentIds,
                 offerFeeLimits
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Offers);
         });
 
         it("Caller not assistant of any seller", async function () {
@@ -3716,10 +3719,9 @@ describe("IBosonOfferHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to void offer batch, expecting revert
-          await expect(offerHandler.connect(assistant).voidOfferBatch(offersToVoid)).to.revertedWithCustomError(
-            bosonErrors,
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(offerHandler.connect(assistant).voidOfferBatch(offersToVoid))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Offers);
         });
 
         it("Offer does not exist", async function () {
@@ -3849,9 +3851,9 @@ describe("IBosonOfferHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to extend offer batch, expecting revert
-          await expect(
-            offerHandler.connect(assistant).extendOfferBatch(offersToExtend, newValidUntilDate)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          await expect(offerHandler.connect(assistant).extendOfferBatch(offersToExtend, newValidUntilDate))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Offers);
         });
 
         it("Offer does not exist", async function () {
@@ -4023,7 +4025,9 @@ describe("IBosonOfferHandler", function () {
           // Attempt to update offer batch, expecting revert
           await expect(
             offerHandler.connect(assistant).updateOfferRoyaltyRecipientsBatch(offersToUpdate, newRoyaltyInfo)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Offers);
         });
 
         it("Offer does not exist", async function () {

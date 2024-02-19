@@ -169,6 +169,30 @@ contract PausableBase is BosonTypes {
     }
 
     /**
+     * @notice Modifier that checks the PriceDiscovery region is not paused
+     *
+     * Reverts if region is paused
+     *
+     * See: {BosonTypes.PausableRegion}
+     */
+    modifier priceDiscoveryNotPaused() {
+        revertIfPaused(PausableRegion.PriceDiscovery);
+        _;
+    }
+
+    /**
+     * @notice Modifier that checks the SequentialCommit region is not paused
+     *
+     * Reverts if region is paused
+     *
+     * See: {BosonTypes.PausableRegion}
+     */
+    modifier sequentialCommitNotPaused() {
+        revertIfPaused(PausableRegion.SequentialCommit);
+        _;
+    }
+
+    /**
      * @notice Checks if a region of the protocol is paused.
      *
      * Reverts if region is paused
@@ -178,6 +202,7 @@ contract PausableBase is BosonTypes {
     function revertIfPaused(PausableRegion _region) internal view {
         // Region enum value must be used as the exponent in a power of 2
         uint256 powerOfTwo = 1 << uint256(_region);
-        if ((ProtocolLib.protocolStatus().pauseScenario & powerOfTwo) == powerOfTwo) revert BosonErrors.RegionPaused();
+        if ((ProtocolLib.protocolStatus().pauseScenario & powerOfTwo) == powerOfTwo)
+            revert BosonErrors.RegionPaused(_region);
     }
 }

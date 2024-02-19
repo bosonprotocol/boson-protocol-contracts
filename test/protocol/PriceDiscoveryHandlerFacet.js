@@ -482,6 +482,18 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             .withArgs(offerId, newBuyer.id, exchangeId, exchange.toStruct(), voucher.toStruct(), expectedCloneAddress);
         });
 
+        it("It is possible to commit to price discovery offer if sequential commit region is paused", async function () {
+          // Pause the sequential commit region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.SequentialCommit]);
+
+          // Commit to offer
+          await expect(
+            priceDiscoveryHandler
+              .connect(buyer)
+              .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+          ).to.emit(priceDiscoveryHandler, "BuyerCommitted");
+        });
+
         context("💔 Revert Reasons", async function () {
           it("The exchanges region of protocol is paused", async function () {
             // Pause the exchanges region of the protocol
@@ -492,7 +504,9 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(buyer)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+            )
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Exchanges);
           });
 
           it("The buyers region of protocol is paused", async function () {
@@ -504,7 +518,23 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(buyer)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+            )
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Buyers);
+          });
+
+          it("The price discovery region of protocol is paused", async function () {
+            // Pause the price discovery region of the protocol
+            await pauseHandler.connect(pauser).pause([PausableRegion.PriceDiscovery]);
+
+            // Attempt to sequentially commit, expecting revert
+            await expect(
+              priceDiscoveryHandler
+                .connect(buyer)
+                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+            )
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.PriceDiscovery);
           });
 
           it("buyer address is the zero address", async function () {
@@ -899,6 +929,16 @@ describe("IPriceDiscoveryHandlerFacet", function () {
           expect(quantityAvailableAfter).to.equal(quantityAvailableBefore, "Quantity available should be the same");
         });
 
+        it("It is possible to commit to price discovery offer if sequential commit region is paused", async function () {
+          // Pause the sequential commit region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.SequentialCommit]);
+
+          // Commit to offer
+          await expect(
+            priceDiscoveryHandler.connect(assistant).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
+          ).to.emit(priceDiscoveryHandler, "BuyerCommitted");
+        });
+
         context("💔 Revert Reasons", async function () {
           it("The exchanges region of protocol is paused", async function () {
             // Pause the exchanges region of the protocol
@@ -909,7 +949,9 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(assistant)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+            )
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Exchanges);
           });
 
           it("The buyers region of protocol is paused", async function () {
@@ -921,7 +963,23 @@ describe("IPriceDiscoveryHandlerFacet", function () {
               priceDiscoveryHandler
                 .connect(assistant)
                 .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+            )
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Buyers);
+          });
+
+          it("The price discovery region of protocol is paused", async function () {
+            // Pause the price discovery region of the protocol
+            await pauseHandler.connect(pauser).pause([PausableRegion.PriceDiscovery]);
+
+            // Attempt to sequentially commit, expecting revert
+            await expect(
+              priceDiscoveryHandler
+                .connect(assistant)
+                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
+            )
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.PriceDiscovery);
           });
 
           it("buyer address is the zero address", async function () {

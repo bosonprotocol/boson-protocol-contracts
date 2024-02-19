@@ -51,7 +51,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         PriceDiscovery calldata _priceDiscovery,
         address _seller,
         address _buyer
-    ) internal returns (uint256 actualPrice) {
+    ) internal priceDiscoveryNotPaused returns (uint256 actualPrice) {
         // Make sure caller provided price discovery data
         if (_priceDiscovery.priceDiscoveryContract == address(0) || _priceDiscovery.priceDiscoveryData.length == 0) {
             revert InvalidPriceDiscovery();

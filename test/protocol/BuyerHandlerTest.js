@@ -139,10 +139,9 @@ describe("BuyerHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Buyers]);
 
           // Attempt to create a buyer, expecting revert
-          await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWithCustomError(
-            bosonErrors,
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(accountHandler.connect(rando).createBuyer(buyer))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Buyers);
         });
 
         it("active is false", async function () {
@@ -444,10 +443,9 @@ describe("BuyerHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Buyers]);
 
           // Attempt to update a buyer, expecting revert
-          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWithCustomError(
-            bosonErrors,
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(accountHandler.connect(other1).updateBuyer(buyer))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Buyers);
         });
 
         it("Buyer does not exist", async function () {

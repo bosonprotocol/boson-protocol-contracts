@@ -811,7 +811,9 @@ describe("IBosonMetaTransactionsHandler", function () {
                   s,
                   v
                 )
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+            )
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.MetaTransaction);
           });
 
           it("Should fail when function name is not allowlisted", async function () {
