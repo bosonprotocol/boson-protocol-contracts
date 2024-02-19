@@ -496,9 +496,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
           // Commit to offer
           await expect(
-            priceDiscoveryHandler
-              .connect(buyer)
-              .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+            priceDiscoveryHandler.connect(buyer).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
           ).to.emit(priceDiscoveryHandler, "BuyerCommitted");
         });
 

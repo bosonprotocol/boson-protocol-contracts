@@ -1,6 +1,6 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
-const { ZeroAddress, getSigners, getContractAt, getContractFactory, provider, parseUnits } = ethers;
+const { ZeroAddress, getSigners, getContractAt, getContractFactory, parseUnits } = ethers;
 
 const PriceDiscovery = require("../../../scripts/domain/PriceDiscovery");
 const Side = require("../../../scripts/domain/Side");
@@ -97,7 +97,7 @@ describe("IPriceDiscovery", function () {
     context("👉 fulfilAskOrder()", async function () {
       let orderType = 0;
 
-      context("Native token", async function () {
+      context("Wrapped Native token", async function () {
         let order, price, priceDiscovery, exchangeToken;
 
         beforeEach(async function () {
@@ -108,12 +108,13 @@ describe("IPriceDiscovery", function () {
             buyer: buyer.address,
             voucherContract: await bosonVoucher.getAddress(),
             tokenId: 0,
-            exchangeToken: ZeroAddress,
+            exchangeToken: await weth.getAddress(),
             price: price,
           };
 
           await externalPriceDiscovery.setExpectedValues(order, orderType);
-          await protocol.sendTransaction({ to: await bosonPriceDiscovery.getAddress(), value: price });
+          await weth.connect(protocol).deposit({ value: price });
+          await weth.connect(protocol).transfer(await bosonPriceDiscovery.getAddress(), price);
 
           const calldata = externalPriceDiscovery.interface.encodeFunctionData("mockFulfil", [0]);
 
@@ -125,7 +126,7 @@ describe("IPriceDiscovery", function () {
             calldata
           );
 
-          exchangeToken = ZeroAddress;
+          exchangeToken = await weth.getAddress();
         });
 
         it("forwards call to priceDiscovery", async function () {
@@ -136,17 +137,17 @@ describe("IPriceDiscovery", function () {
           ).to.emit(externalPriceDiscovery, "MockFulfilCalled");
         });
 
-        it("if priceDiscovery returns some funds, it forwards then to the buyer", async function () {
+        it("if priceDiscovery returns some funds, it forwards them to the buyer", async function () {
           const calldata = externalPriceDiscovery.interface.encodeFunctionData("mockFulfil", [10]);
           priceDiscovery.priceDiscoveryData = calldata;
 
-          const buyerBalanceBefore = await provider.getBalance(buyer.address);
+          const buyerBalanceBefore = await weth.balanceOf(buyer.address);
 
           await bosonPriceDiscovery
             .connect(protocol)
             .fulfilAskOrder(exchangeToken, priceDiscovery, await bosonVoucher.getAddress(), buyer.address);
 
-          const buyerBalanceAfter = await provider.getBalance(buyer.address);
+          const buyerBalanceAfter = await weth.balanceOf(buyer.address);
           expect(buyerBalanceAfter - buyerBalanceBefore).to.eq(price / 10n);
         });
 
@@ -167,11 +168,12 @@ describe("IPriceDiscovery", function () {
               bosonPriceDiscovery
                 .connect(protocol)
                 .fulfilAskOrder(order.exchangeToken, priceDiscovery, await bosonVoucher.getAddress(), buyer.address)
-            ).to.revertedWith("ETH value mismatch");
+            ).to.revertedWith("Address: low-level call with value failed");
           });
 
           it("Negative price not allowed", async function () {
-            await protocol.sendTransaction({ to: await externalPriceDiscovery.getAddress(), value: 1000 });
+            await weth.connect(protocol).deposit({ value: 1000n });
+            await weth.connect(protocol).transfer(await externalPriceDiscovery.getAddress(), 1000n);
 
             const calldata = externalPriceDiscovery.interface.encodeFunctionData("mockFulfil", [110]);
             priceDiscovery.priceDiscoveryData = calldata;
