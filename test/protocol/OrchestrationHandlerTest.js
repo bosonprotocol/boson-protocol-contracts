@@ -514,7 +514,9 @@ describe("IBosonOrchestrationHandler", function () {
             orchestrationHandler
               .connect(buyer)
               .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative })
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Orchestration);
         });
 
         it("The disputes region of protocol is paused", async function () {
@@ -526,7 +528,9 @@ describe("IBosonOrchestrationHandler", function () {
             orchestrationHandler
               .connect(buyer)
               .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative })
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Disputes);
         });
 
         it("Caller is not the buyer for the given exchange id", async function () {
@@ -1530,7 +1534,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Orchestration);
         });
 
         it("The sellers region of protocol is paused", async function () {
@@ -1552,7 +1558,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Sellers);
         });
 
         it("The offers region of protocol is paused", async function () {
@@ -1574,7 +1582,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Offers);
         });
 
         it("The exchanges region of protocol is paused [preminted offers]", async function () {
@@ -1599,7 +1609,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Exchanges);
         });
 
         it("active is false", async function () {
@@ -3213,7 +3225,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Orchestration);
         });
 
         it("The offers region of protocol is paused", async function () {
@@ -3233,7 +3247,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Offers);
         });
 
         it("The exchanges region of protocol is paused [preminted offers]", async function () {
@@ -3261,7 +3277,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Exchanges);
         });
 
         it("The groups region of protocol is paused", async function () {
@@ -3281,7 +3299,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Offers);
         });
 
         it("Caller not assistant of any seller", async function () {
@@ -4173,7 +4193,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Orchestration);
         });
 
         it("The offers region of protocol is paused", async function () {
@@ -4193,7 +4215,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Offers);
         });
 
         it("The exchanges region of protocol is paused [preminted offers]", async function () {
@@ -4216,7 +4240,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Exchanges);
         });
 
         it("The groups region of protocol is paused", async function () {
@@ -4236,7 +4262,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Groups);
         });
 
         it("Group does not exist", async function () {
@@ -5058,7 +5086,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Orchestration);
         });
 
         it("The offers region of protocol is paused", async function () {
@@ -5078,7 +5108,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Offers);
         });
 
         it("The bundles region of protocol is paused", async function () {
@@ -5098,7 +5130,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Bundles);
         });
 
         it("The twins region of protocol is paused", async function () {
@@ -5118,7 +5152,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Twins);
         });
 
         it("The exchanges region of protocol is paused [preminted offers]", async function () {
@@ -5146,7 +5182,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Exchanges);
         });
 
         it("should revert if protocol is not approved to transfer the ERC20 token", async function () {
@@ -6157,7 +6195,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Orchestration);
         });
 
         it("The offers region of protocol is paused", async function () {
@@ -6178,7 +6218,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Offers);
         });
 
         it("The groups region of protocol is paused", async function () {
@@ -6199,7 +6241,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Groups);
         });
 
         it("The bundles region of protocol is paused", async function () {
@@ -6220,7 +6264,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Bundles);
         });
 
         it("The twins region of protocol is paused", async function () {
@@ -6241,7 +6287,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Twins);
         });
 
         it("The exchanges region of protocol is paused [preminted offers]", async function () {
@@ -6265,7 +6313,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Exchanges);
         });
       });
     });
@@ -7011,7 +7061,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Orchestration);
         });
 
         it("The sellers region of protocol is paused", async function () {
@@ -7034,7 +7086,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Sellers);
         });
 
         it("The offers region of protocol is paused", async function () {
@@ -7057,7 +7111,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Offers);
         });
 
         it("The groups region of protocol is paused", async function () {
@@ -7080,7 +7136,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Groups);
         });
 
         it("The exchanges region of protocol is paused [preminted offers]", async function () {
@@ -7106,7 +7164,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Exchanges);
         });
       });
     });
@@ -7956,7 +8016,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Orchestration);
         });
 
         it("The sellers region of protocol is paused", async function () {
@@ -7979,7 +8041,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Sellers);
         });
 
         it("The offers region of protocol is paused", async function () {
@@ -8002,7 +8066,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Offers);
         });
 
         it("The bundles region of protocol is paused", async function () {
@@ -8025,7 +8091,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Bundles);
         });
 
         it("The twins region of protocol is paused", async function () {
@@ -8048,7 +8116,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Twins);
         });
 
         it("The exchanges region of protocol is paused [preminted offers]", async function () {
@@ -8077,7 +8147,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Exchanges);
         });
       });
     });
@@ -9038,7 +9110,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Orchestration);
         });
 
         it("The sellers region of protocol is paused", async function () {
@@ -9062,7 +9136,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Sellers);
         });
 
         it("The offers region of protocol is paused", async function () {
@@ -9086,7 +9162,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Offers);
         });
 
         it("The groups region of protocol is paused", async function () {
@@ -9110,7 +9188,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Groups);
         });
 
         it("The twins region of protocol is paused", async function () {
@@ -9134,7 +9214,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Twins);
         });
 
         it("The bundles region of protocol is paused", async function () {
@@ -9158,7 +9240,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Bundles);
         });
 
         it("The exchanges region of protocol is paused [preminted offers]", async function () {
@@ -9188,7 +9272,9 @@ describe("IBosonOrchestrationHandler", function () {
                 agentId,
                 offerFeeLimit
               )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Exchanges);
         });
       });
     });

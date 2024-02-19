@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.22;
 
+import { BosonTypes } from "./BosonTypes.sol";
+
 interface BosonErrors {
     // Pause related
     // Trying to unpause a protocol when it's not paused
     error NotPaused();
     // Whenever a region is paused, and a method from that region is called
-    error RegionPaused(); //ToDo consider adding the region to the error message
+    error RegionPaused(BosonTypes.PausableRegion region);
 
     // General
     // Input parameter of type address is zero address

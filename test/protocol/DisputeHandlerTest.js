@@ -297,10 +297,9 @@ describe("IBosonDisputeHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to raise a dispute, expecting revert
-            await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId)).to.revertedWithCustomError(
-              bosonErrors,
-              RevertReasons.REGION_PAUSED
-            );
+            await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId))
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Disputes);
           });
 
           it("Caller does not hold a voucher for the given exchange id", async function () {
@@ -453,10 +452,9 @@ describe("IBosonDisputeHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to retract a dispute, expecting revert
-            await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.revertedWithCustomError(
-              bosonErrors,
-              RevertReasons.REGION_PAUSED
-            );
+            await expect(disputeHandler.connect(buyer).retractDispute(exchangeId))
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Disputes);
           });
 
           it("Exchange does not exist", async function () {
@@ -595,9 +593,9 @@ describe("IBosonDisputeHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to extend a dispute timeout, expecting revert
-            await expect(
-              disputeHandler.connect(assistant).extendDisputeTimeout(exchangeId, newDisputeTimeout)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+            await expect(disputeHandler.connect(assistant).extendDisputeTimeout(exchangeId, newDisputeTimeout))
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Disputes);
           });
 
           it("Exchange does not exist", async function () {
@@ -738,10 +736,9 @@ describe("IBosonDisputeHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to expire a dispute, expecting revert
-            await expect(disputeHandler.connect(rando).expireDispute(exchangeId)).to.revertedWithCustomError(
-              bosonErrors,
-              RevertReasons.REGION_PAUSED
-            );
+            await expect(disputeHandler.connect(rando).expireDispute(exchangeId))
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Disputes);
           });
 
           it("Exchange does not exist", async function () {
@@ -1091,9 +1088,9 @@ describe("IBosonDisputeHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to resolve a dispute, expecting revert
-            await expect(
-              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+            await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Disputes);
           });
 
           it("Specified buyer percent exceeds 100%", async function () {
@@ -1378,7 +1375,9 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to escalate a dispute, expecting revert
             await expect(
               disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative })
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+            )
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Disputes);
           });
 
           it("Exchange does not exist", async function () {
@@ -1626,9 +1625,9 @@ describe("IBosonDisputeHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to decide a dispute, expecting revert
-            await expect(
-              disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+            await expect(disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints))
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Disputes);
           });
 
           it("Specified buyer percent exceeds 100%", async function () {
@@ -1786,10 +1785,9 @@ describe("IBosonDisputeHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to expire an escalated dispute, expecting revert
-            await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId)).to.revertedWithCustomError(
-              bosonErrors,
-              RevertReasons.REGION_PAUSED
-            );
+            await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId))
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Disputes);
           });
 
           it("Exchange does not exist", async function () {
@@ -1932,9 +1930,9 @@ describe("IBosonDisputeHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to refuse an escalated dispute, expecting revert
-            await expect(
-              disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+            await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId))
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Disputes);
           });
 
           it("Exchange does not exist", async function () {
@@ -2525,10 +2523,9 @@ describe("IBosonDisputeHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to expire a dispute batch, expecting revert
-            await expect(disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire)).to.revertedWithCustomError(
-              bosonErrors,
-              RevertReasons.REGION_PAUSED
-            );
+            await expect(disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire))
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Disputes);
           });
 
           it("Exchange does not exist", async function () {

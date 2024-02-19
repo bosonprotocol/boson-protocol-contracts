@@ -302,10 +302,9 @@ describe("IBosonGroupHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
 
           // Attempt to create a group expecting revert
-          await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
-            bosonErrors,
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(groupHandler.connect(assistant).createGroup(group, condition))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Groups);
         });
 
         it("Caller not assistant of any seller", async function () {
@@ -689,9 +688,9 @@ describe("IBosonGroupHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
 
           // Attempt to add offers to a group, expecting revert
-          await expect(
-            groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          await expect(groupHandler.connect(assistant).addOffersToGroup(group.id, offerIdsToAdd))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Groups);
         });
 
         it("Group does not exist", async function () {
@@ -885,9 +884,9 @@ describe("IBosonGroupHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
 
           // Attempt to remove offers to a group, expecting revert
-          await expect(
-            groupHandler.connect(assistant).removeOffersFromGroup(group.id, offerIdsToRemove)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          await expect(groupHandler.connect(assistant).removeOffersFromGroup(group.id, offerIdsToRemove))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Groups);
         });
 
         it("Group does not exist", async function () {
@@ -1004,9 +1003,9 @@ describe("IBosonGroupHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
 
           // Attempt to set group condition, expecting revert
-          await expect(
-            groupHandler.connect(assistant).setGroupCondition(group.id, condition)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          await expect(groupHandler.connect(assistant).setGroupCondition(group.id, condition))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Groups);
         });
 
         it("Group does not exist", async function () {

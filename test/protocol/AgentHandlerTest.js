@@ -164,10 +164,9 @@ describe("AgentHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Agents]);
 
           // Attempt to create an agent, expecting revert
-          await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWithCustomError(
-            bosonErrors,
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(accountHandler.connect(rando).createAgent(agent))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Agents);
         });
 
         it("active is false", async function () {
@@ -455,10 +454,9 @@ describe("AgentHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Agents]);
 
           // Attempt to update an agent, expecting revert
-          await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWithCustomError(
-            bosonErrors,
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(accountHandler.connect(other1).updateAgent(agent))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Agents);
         });
 
         it("Agent does not exist", async function () {

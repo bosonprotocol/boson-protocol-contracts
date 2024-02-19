@@ -21,7 +21,9 @@ contract BosonTypes {
         Disputes,
         Funds,
         Orchestration,
-        MetaTransaction
+        MetaTransaction,
+        PriceDiscovery,
+        SequentialCommit
     }
 
     enum EvaluationMethod {
