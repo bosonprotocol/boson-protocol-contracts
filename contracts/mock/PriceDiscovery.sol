@@ -217,6 +217,9 @@ contract PriceDiscoveryTransferElsewhere is PriceDiscoveryMock, IERC721Receiver 
      * @dev invoke fulfilBuyOrder on itself, making it the msg.sender
      */
     function fulfilBuyOrderElsewhere(Order memory _order) public payable {
+        if (_order.exchangeToken != address(0)) {
+            IERC20(_order.exchangeToken).transferFrom(msg.sender, address(this), _order.price);
+        }
         this.fulfilBuyOrder(_order);
     }
 

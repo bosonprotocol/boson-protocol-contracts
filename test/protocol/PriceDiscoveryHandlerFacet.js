@@ -246,12 +246,11 @@ describe("IPriceDiscoveryHandlerFacet", function () {
       await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
       bosonVoucher = await getContractAt("BosonVoucher", expectedCloneAddress);
       await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
-      await bosonVoucher.connect(assistant).setApprovalForAll(await priceDiscoveryContract.getAddress(), true);
 
       // Set used variables
       voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
       voucherValid = offerDurations.voucherValid;
-      sellerPool = parseUnits("15", "ether").toString();
+      sellerPool = offer.sellerDeposit;
 
       // Required voucher constructor params
       voucher = mockVoucher();
@@ -287,7 +286,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             buyer: buyer.address,
             voucherContract: expectedCloneAddress,
             tokenId: tokenId,
-            exchangeToken: offer.exchangeToken,
+            exchangeToken: await weth.getAddress(), // when offer is in native, we need to use wrapped native
             price: price,
           };
 
@@ -303,10 +302,16 @@ describe("IPriceDiscoveryHandlerFacet", function () {
           );
 
           // Approve transfers
-          // Buyer does not approve, since its in ETH.
+          // Buyer needs to approve the protocol to transfer the ETH
+          await weth.connect(buyer).deposit({ value: price });
+          await weth.connect(buyer).approve(await priceDiscoveryHandler.getAddress(), price);
+
           // Seller approves price discovery to transfer the voucher
           bosonVoucherClone = await getContractAt("IBosonVoucher", expectedCloneAddress);
-          await bosonVoucherClone.connect(buyer).setApprovalForAll(await priceDiscoveryContract.getAddress(), true);
+          await bosonVoucher.connect(assistant).setApprovalForAll(await priceDiscoveryContract.getAddress(), true);
+
+          // Seller also approves the protocol to encumber the paid price
+          await weth.connect(assistant).approve(await priceDiscoveryHandler.getAddress(), price);
 
           newBuyer = mockBuyer(buyer.address);
           exchange.buyerId = newBuyer.id;
@@ -316,7 +321,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
           // Commit to offer
           tx = await priceDiscoveryHandler
             .connect(buyer)
-            .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price });
+            .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery);
 
           // Get the block timestamp of the confirmed tx
           block = await provider.getBlock(tx.blockNumber);
@@ -331,10 +336,10 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             .to.emit(priceDiscoveryHandler, "FundsEncumbered")
             .withArgs(seller.id, ZeroAddress, offer.sellerDeposit, expectedCloneAddress);
 
-          // Buyers funds - in ask order, they are taken from the seller deposit
+          // Buyers funds
           await expect(tx)
             .to.emit(priceDiscoveryHandler, "FundsEncumbered")
-            .withArgs(seller.id, ZeroAddress, price, buyer.address);
+            .withArgs(newBuyer.id, ZeroAddress, price, buyer.address);
 
           await expect(tx)
             .to.emit(priceDiscoveryHandler, "BuyerCommitted")
@@ -344,7 +349,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
         it("should update state", async function () {
           // Escrow amount before
           const escrowBefore = await provider.getBalance(await priceDiscoveryHandler.getAddress());
-          const buyerBefore = await provider.getBalance(buyer.address);
+          const buyerBefore = await weth.balanceOf(buyer.address);
           const { funds: sellerAvailableFundsBefore } = FundsList.fromStruct(
             await fundsHandler.getAvailableFunds(seller.id, [ZeroAddress])
           );
@@ -352,7 +357,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
           // Commit to offer
           await priceDiscoveryHandler
             .connect(buyer)
-            .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price, gasPrice: 0 });
+            .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { gasPrice: 0 });
 
           // Get the exchange as a struct
           const [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchangeId);
@@ -361,20 +366,20 @@ describe("IPriceDiscoveryHandlerFacet", function () {
           let returnedExchange = Exchange.fromStruct(exchangeStruct);
           expect(returnedExchange.buyerId).to.equal(newBuyer.id);
 
-          // Contract's balance should stay the same (funds are only moved from the pool to the escrow)
+          // Contract's balance should increase for the amount of the price
           const escrowAfter = await provider.getBalance(await priceDiscoveryHandler.getAddress());
-          expect(escrowAfter).to.equal(escrowBefore);
+          expect(escrowAfter).to.equal(escrowBefore + price);
 
           // Buyer's balance should decrease
-          const buyerAfter = await provider.getBalance(buyer.address);
+          const buyerAfter = await weth.balanceOf(buyer.address);
           expect(buyerAfter).to.equal(buyerBefore - price);
 
-          // Seller's available funds should decrease for the amount of the seller deposit and the price
+          // Seller's available funds should decrease for the amount of the seller deposit
           const { funds: sellerAvailableFundsAfter } = FundsList.fromStruct(
             await fundsHandler.getAvailableFunds(seller.id, [ZeroAddress])
           );
           expect(BigInt(sellerAvailableFundsAfter[0].availableAmount)).to.equal(
-            BigInt(sellerAvailableFundsBefore[0].availableAmount) - BigInt(offer.sellerDeposit) - price
+            BigInt(sellerAvailableFundsBefore[0].availableAmount) - BigInt(offer.sellerDeposit)
           );
         });
 
@@ -385,7 +390,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
           // Commit to offer
           await priceDiscoveryHandler
             .connect(buyer)
-            .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price });
+            .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery);
 
           // buyer is owner of voucher
           expect(await bosonVoucherClone.ownerOf(tokenId)).to.equal(buyer.address);
@@ -397,7 +402,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
           // Commit to offer, creating a new exchange
           await priceDiscoveryHandler
             .connect(buyer)
-            .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price });
+            .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery);
 
           // Get the next exchange id and ensure it was no incremented
           const nextExchangeIdAfter = await exchangeHandler.getNextExchangeId();
@@ -413,7 +418,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
           // Commit to offer, creating a new exchange
           await priceDiscoveryHandler
             .connect(buyer)
-            .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price });
+            .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery);
 
           // Get quantityAvailable after
           const [, { quantityAvailable: quantityAvailableAfter }] = await offerHandler.connect(rando).getOffer(offerId);
@@ -422,13 +427,16 @@ describe("IPriceDiscoveryHandlerFacet", function () {
         });
 
         it("It is possible to commit on someone else's behalf", async function () {
-          const buyerBefore = await provider.getBalance(buyer.address);
-          const callerBefore = await provider.getBalance(rando.address);
+          await weth.connect(rando).deposit({ value: price });
+          await weth.connect(rando).approve(await priceDiscoveryHandler.getAddress(), price);
+
+          const buyerBefore = await weth.balanceOf(buyer.address);
+          const callerBefore = await weth.balanceOf(rando.address);
 
           // Commit to offer
           tx = await priceDiscoveryHandler
             .connect(rando)
-            .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price, gasPrice: 0 });
+            .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { gasPrice: 0 });
 
           // Get the block timestamp of the confirmed tx
           block = await provider.getBlock(tx.blockNumber);
@@ -445,11 +453,11 @@ describe("IPriceDiscoveryHandlerFacet", function () {
           expect(await bosonVoucherClone.ownerOf(tokenId)).to.equal(buyer.address);
 
           // Buyer's balance should not change
-          const buyerAfter = await provider.getBalance(buyer.address);
+          const buyerAfter = await weth.balanceOf(buyer.address);
           expect(buyerAfter).to.equal(buyerBefore);
 
           // Caller's balance should decrease
-          const callerAfter = await provider.getBalance(rando.address);
+          const callerAfter = await weth.balanceOf(rando.address);
           expect(callerAfter).to.equal(callerBefore - price);
         });
 
@@ -457,7 +465,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
           // Commit to offer
           tx = await priceDiscoveryHandler
             .connect(buyer)
-            .commitToPriceDiscoveryOffer(buyer.address, offer.id, priceDiscovery, { value: price });
+            .commitToPriceDiscoveryOffer(buyer.address, offer.id, priceDiscovery);
 
           // Get the block timestamp of the confirmed tx
           block = await provider.getBlock(tx.blockNumber);
@@ -475,7 +483,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
           // Buyers funds - in ask order, they are taken from the seller deposit
           await expect(tx)
             .to.emit(priceDiscoveryHandler, "FundsEncumbered")
-            .withArgs(seller.id, ZeroAddress, price, buyer.address);
+            .withArgs(newBuyer.id, ZeroAddress, price, buyer.address);
 
           await expect(tx)
             .to.emit(priceDiscoveryHandler, "BuyerCommitted")
@@ -488,9 +496,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
           // Commit to offer
           await expect(
-            priceDiscoveryHandler
-              .connect(buyer)
-              .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+            priceDiscoveryHandler.connect(buyer).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
           ).to.emit(priceDiscoveryHandler, "BuyerCommitted");
         });
 
@@ -501,9 +507,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
             // Attempt to commit, expecting revert
             await expect(
-              priceDiscoveryHandler
-                .connect(buyer)
-                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+              priceDiscoveryHandler.connect(buyer).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
             )
               .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
               .withArgs(PausableRegion.Exchanges);
@@ -515,9 +519,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
             // Attempt to commit, expecting revert
             await expect(
-              priceDiscoveryHandler
-                .connect(buyer)
-                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+              priceDiscoveryHandler.connect(buyer).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
             )
               .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
               .withArgs(PausableRegion.Buyers);
@@ -529,9 +531,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
             // Attempt to sequentially commit, expecting revert
             await expect(
-              priceDiscoveryHandler
-                .connect(buyer)
-                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+              priceDiscoveryHandler.connect(buyer).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
             )
               .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
               .withArgs(PausableRegion.PriceDiscovery);
@@ -540,9 +540,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
           it("buyer address is the zero address", async function () {
             // Attempt to commit, expecting revert
             await expect(
-              priceDiscoveryHandler
-                .connect(buyer)
-                .commitToPriceDiscoveryOffer(ZeroAddress, tokenId, priceDiscovery, { value: price })
+              priceDiscoveryHandler.connect(buyer).commitToPriceDiscoveryOffer(ZeroAddress, tokenId, priceDiscovery)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
           });
 
@@ -556,9 +554,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
             // Attempt to commit, expecting revert
             await expect(
-              priceDiscoveryHandler
-                .connect(buyer)
-                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+              priceDiscoveryHandler.connect(buyer).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
             ).to.revertedWith(RevertReasons.ERC721_INVALID_TOKEN_ID);
           });
 
@@ -568,9 +564,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
             // Attempt to commit to the voided offer, expecting revert
             await expect(
-              priceDiscoveryHandler
-                .connect(buyer)
-                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+              priceDiscoveryHandler.connect(buyer).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
           });
 
@@ -597,9 +591,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
             priceDiscovery.priceDiscoveryData = priceDiscoveryData;
             await expect(
-              priceDiscoveryHandler
-                .connect(buyer)
-                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+              priceDiscoveryHandler.connect(buyer).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_NOT_AVAILABLE);
           });
 
@@ -609,9 +601,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
             // Attempt to commit to the expired offer, expecting revert
             await expect(
-              priceDiscoveryHandler
-                .connect(buyer)
-                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+              priceDiscoveryHandler.connect(buyer).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_EXPIRED);
           });
 
@@ -619,7 +609,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             // maybe for offers without explicit token id
           });
 
-          it("protocol fees to high", async function () {
+          it("protocol fees too high", async function () {
             // Set protocol fees to 95%
             await configHandler.setProtocolFeePercentage(9500);
             // Set royalty fees to 6%
@@ -629,20 +619,18 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
             // Attempt to commit, expecting revert
             await expect(
-              priceDiscoveryHandler
-                .connect(buyer)
-                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+              priceDiscoveryHandler.connect(buyer).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_AMOUNT_TOO_HIGH);
           });
 
           it("insufficient values sent", async function () {
             price = price - 1n;
+            await weth.connect(buyer).approve(await priceDiscoveryHandler.getAddress(), price);
+
             // Attempt to commit, expecting revert
             await expect(
-              priceDiscoveryHandler
-                .connect(buyer)
-                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+              priceDiscoveryHandler.connect(buyer).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
+            ).to.revertedWith(RevertReasons.SAFE_ERC20_LOW_LEVEL_CALL);
           });
 
           it("price discovery does not send the voucher anywhere", async function () {
@@ -667,9 +655,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
             // Attempt to commit, expecting revert
             await expect(
-              priceDiscoveryHandler
-                .connect(buyer)
-                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+              priceDiscoveryHandler.connect(buyer).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_ID_MISMATCH);
           });
 
@@ -700,9 +686,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
             // Attempt to commit, expecting revert
             await expect(
-              priceDiscoveryHandler
-                .connect(buyer)
-                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+              priceDiscoveryHandler.connect(buyer).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.VOUCHER_NOT_RECEIVED);
           });
 
@@ -712,9 +696,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
             // Attempt to commit, expecting revert
             await expect(
-              priceDiscoveryHandler
-                .connect(buyer)
-                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+              priceDiscoveryHandler.connect(buyer).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_PRICE_DISCOVERY);
           });
 
@@ -724,9 +706,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
             // Attempt to commit, expecting revert
             await expect(
-              priceDiscoveryHandler
-                .connect(buyer)
-                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+              priceDiscoveryHandler.connect(buyer).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_PRICE_DISCOVERY);
           });
 
@@ -736,9 +716,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
             // Attempt to commit, expecting revert
             await expect(
-              priceDiscoveryHandler
-                .connect(buyer)
-                .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+              priceDiscoveryHandler.connect(buyer).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_CONDUIT_ADDRESS);
           });
 
@@ -771,9 +749,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
             // Attempt to commit, expecting revert
             await expect(
-              priceDiscoveryHandler
-                .connect(buyer)
-                .commitToPriceDiscoveryOffer(buyer.address, offer.id, priceDiscovery, { value: price })
+              priceDiscoveryHandler.connect(buyer).commitToPriceDiscoveryOffer(buyer.address, offer.id, priceDiscovery)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_ID_MISMATCH);
           });
         });
@@ -1480,12 +1456,16 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             buyer: buyer.address,
             voucherContract: expectedCloneAddress,
             tokenId: tokenId,
-            exchangeToken: offer.exchangeToken,
+            exchangeToken: await weth.getAddress(),
             price: price,
           };
 
           const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
           const priceDiscoveryContractAddress = await priceDiscoveryContract.getAddress();
+
+          // Buyer needs to approve price discovery to transfer the ETH
+          await weth.connect(buyer).deposit({ value: price });
+          await weth.connect(buyer).approve(await priceDiscoveryHandler.getAddress(), price);
 
           // Seller approves price discovery to transfer the voucher
           await bosonVoucherClone.connect(assistant).setApprovalForAll(await priceDiscoveryContract.getAddress(), true);
@@ -1500,9 +1480,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
           // Attempt to commit, expecting revert
           await expect(
-            priceDiscoveryHandler
-              .connect(buyer)
-              .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+            priceDiscoveryHandler.connect(buyer).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_ID_MISMATCH);
         });
 
@@ -1522,12 +1500,16 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             buyer: buyer.address,
             voucherContract: expectedCloneAddress,
             tokenId: tokenId,
-            exchangeToken: offer.exchangeToken,
+            exchangeToken: await weth.getAddress(),
             price: price,
           };
 
           const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
           const priceDiscoveryContractAddress = await priceDiscoveryContract.getAddress();
+
+          // Buyer needs to approve price discovery to transfer the ETH
+          await weth.connect(buyer).deposit({ value: price });
+          await weth.connect(buyer).approve(await priceDiscoveryHandler.getAddress(), price);
 
           // Seller approves price discovery to transfer the voucher
           await bosonVoucherClone.connect(assistant).setApprovalForAll(await priceDiscoveryContract.getAddress(), true);
@@ -1542,9 +1524,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
           // Attempt to commit, expecting revert
           await expect(
-            priceDiscoveryHandler
-              .connect(buyer)
-              .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery, { value: price })
+            priceDiscoveryHandler.connect(buyer).commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNEXPECTED_ERC721_RECEIVED);
         });
       });
