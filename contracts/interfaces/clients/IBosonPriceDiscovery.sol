@@ -32,7 +32,7 @@ interface IBosonPriceDiscovery is IERC721Receiver {
         BosonTypes.PriceDiscovery calldata _priceDiscovery,
         IBosonVoucher _bosonVoucher,
         address payable _msgSender
-    ) external payable returns (uint256 actualPrice);
+    ) external returns (uint256 actualPrice);
 
     /**
      * @notice Fulfils a bid order on external contract.

@@ -244,7 +244,7 @@ describe("IBosonSequentialCommitHandler", function () {
       price = BigInt(offer.price);
       voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
       voucherValid = offerDurations.voucherValid;
-      sellerPool = parseUnits("15", "ether").toString();
+      sellerPool = BigInt(offer.sellerDeposit) * BigInt(offer.quantityAvailable);
 
       // Required voucher constructor params
       voucher = mockVoucher();
@@ -302,7 +302,7 @@ describe("IBosonSequentialCommitHandler", function () {
               buyer: buyer2.address,
               voucherContract: expectedCloneAddress,
               tokenId: tokenId,
-              exchangeToken: offer.exchangeToken,
+              exchangeToken: await weth.getAddress(), // if offer is in ETH, exchangeToken is WETH
               price: price2,
             };
 
@@ -317,13 +317,14 @@ describe("IBosonSequentialCommitHandler", function () {
               priceDiscoveryData
             );
 
-            // Seller needs to deposit weth in order to fill the escrow at the last step
-            // Price2 is theoretically the highest amount needed, in practice it will be less (around price2-price)
-            await weth.connect(buyer).deposit({ value: price2 });
+            // Seller needs to approve the protocol to fill the escrow at the last step
             await weth.connect(buyer).approve(protocolDiamondAddress, price2);
 
             // Approve transfers
-            // Buyer does not approve, since its in ETH.
+            // Buyer needs to approve price protocol to transfer the ETH
+            await weth.connect(buyer2).deposit({ value: price2 });
+            await weth.connect(buyer2).approve(await sequentialCommitHandler.getAddress(), price2);
+
             // Seller approves price discovery to transfer the voucher
             bosonVoucherClone = await getContractAt("IBosonVoucher", expectedCloneAddress);
             await bosonVoucherClone.connect(buyer).setApprovalForAll(await priceDiscoveryContract.getAddress(), true);
@@ -337,7 +338,7 @@ describe("IBosonSequentialCommitHandler", function () {
             // Sequential commit to offer, retrieving the event
             const tx = sequentialCommitHandler
               .connect(buyer2)
-              .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 });
+              .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery);
 
             await expect(tx)
               .to.emit(sequentialCommitHandler, "FundsEncumbered")
@@ -364,7 +365,7 @@ describe("IBosonSequentialCommitHandler", function () {
             // Sequential commit to offer
             await sequentialCommitHandler
               .connect(buyer2)
-              .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 });
+              .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery);
 
             // buyer2 is exchange.buyerId
             // Get the exchange as a struct
@@ -387,7 +388,7 @@ describe("IBosonSequentialCommitHandler", function () {
             // Sequential commit to offer
             await sequentialCommitHandler
               .connect(buyer2)
-              .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 });
+              .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery);
 
             // buyer2 is owner of voucher
             expect(await bosonVoucherClone.connect(buyer2).ownerOf(tokenId)).to.equal(buyer2.address);
@@ -402,7 +403,7 @@ describe("IBosonSequentialCommitHandler", function () {
             // Sequential commit to offer, creating a new exchange
             await sequentialCommitHandler
               .connect(buyer2)
-              .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 });
+              .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery);
 
             // Voucher after
             [, , voucherStruct] = await exchangeHandler.connect(rando).getExchange(exchangeId);
@@ -414,7 +415,7 @@ describe("IBosonSequentialCommitHandler", function () {
             // Sequential commit to offer, creating a new exchange
             await sequentialCommitHandler
               .connect(buyer2)
-              .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 });
+              .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery);
 
             // Old buyer cannot redeem
             await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId)).to.be.revertedWithCustomError(
@@ -433,7 +434,7 @@ describe("IBosonSequentialCommitHandler", function () {
             // Sequential commit to offer, creating a new exchange
             await sequentialCommitHandler
               .connect(buyer2)
-              .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 });
+              .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery);
 
             // Old buyer cannot redeem
             await expect(exchangeHandler.connect(buyer).cancelVoucher(exchangeId)).to.be.revertedWithCustomError(
@@ -454,7 +455,7 @@ describe("IBosonSequentialCommitHandler", function () {
             // Sequential commit to offer, creating a new exchange
             await sequentialCommitHandler
               .connect(buyer2)
-              .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 });
+              .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery);
 
             // Get the next exchange id and ensure it was incremented
             const nextExchangeIdAfter = await exchangeHandler.connect(rando).getNextExchangeId();
@@ -470,7 +471,7 @@ describe("IBosonSequentialCommitHandler", function () {
             // Sequential commit to offer, creating a new exchange
             await sequentialCommitHandler
               .connect(buyer2)
-              .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 });
+              .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery);
 
             // Get quantityAvailable after
             const [, { quantityAvailable: quantityAvailableAfter }] = await offerHandler
@@ -481,11 +482,13 @@ describe("IBosonSequentialCommitHandler", function () {
           });
 
           it("It is possible to commit on someone else's behalf", async function () {
+            // Buyer needs to approve the protocol to transfer the ETH
+            await weth.connect(rando).deposit({ value: price2 });
+            await weth.connect(rando).approve(await sequentialCommitHandler.getAddress(), price2);
+
             // Sequential commit to offer, retrieving the event
             await expect(
-              sequentialCommitHandler
-                .connect(rando)
-                .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
+              sequentialCommitHandler.connect(rando).sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
             )
               .to.emit(sequentialCommitHandler, "BuyerCommitted")
               .withArgs(offerId, newBuyer.id, exchangeId, exchange.toStruct(), voucher.toStruct(), rando.address);
@@ -505,9 +508,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
             // Sequential commit to offer, retrieving the event
             await expect(
-              sequentialCommitHandler
-                .connect(buyer2)
-                .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
+              sequentialCommitHandler.connect(buyer2).sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
             )
               .to.emit(sequentialCommitHandler, "BuyerCommitted")
               .withArgs(offerId, newBuyer.id, exchangeId, exchange.toStruct(), voucher.toStruct(), buyer2.address);
@@ -522,9 +523,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
             // Sequential commit to offer, retrieving the event
             await expect(
-              sequentialCommitHandler
-                .connect(buyer2)
-                .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
+              sequentialCommitHandler.connect(buyer2).sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
             )
               .to.emit(sequentialCommitHandler, "BuyerCommitted")
               .withArgs(offerId, newBuyer.id, exchangeId, exchange.toStruct(), voucher.toStruct(), buyer2.address);
@@ -541,9 +540,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
             // Sequential commit to offer, retrieving the event
             await expect(
-              sequentialCommitHandler
-                .connect(buyer2)
-                .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
+              sequentialCommitHandler.connect(buyer2).sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
             )
               .to.emit(sequentialCommitHandler, "BuyerCommitted")
               .withArgs(offerId, newBuyer.id, exchangeId, exchange.toStruct(), voucher.toStruct(), buyer2.address);
@@ -562,9 +559,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
             // Sequential commit to offer, retrieving the event
             await expect(
-              sequentialCommitHandler
-                .connect(buyer2)
-                .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
+              sequentialCommitHandler.connect(buyer2).sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
             )
               .to.emit(sequentialCommitHandler, "BuyerCommitted")
               .withArgs(offerId, newBuyer.id, exchangeId, exchange.toStruct(), voucher.toStruct(), buyer2.address);
@@ -577,9 +572,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
               // Attempt to sequentially commit, expecting revert
               await expect(
-                sequentialCommitHandler
-                  .connect(buyer2)
-                  .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
+                sequentialCommitHandler.connect(buyer2).sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
             });
 
@@ -589,18 +582,14 @@ describe("IBosonSequentialCommitHandler", function () {
 
               // Attempt to sequentially commit, expecting revert
               await expect(
-                sequentialCommitHandler
-                  .connect(buyer2)
-                  .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
+                sequentialCommitHandler.connect(buyer2).sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
             });
 
             it("buyer address is the zero address", async function () {
               // Attempt to sequentially commit, expecting revert
               await expect(
-                sequentialCommitHandler
-                  .connect(buyer2)
-                  .sequentialCommitToOffer(ZeroAddress, exchangeId, priceDiscovery, { value: price2 })
+                sequentialCommitHandler.connect(buyer2).sequentialCommitToOffer(ZeroAddress, exchangeId, priceDiscovery)
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
             });
 
@@ -611,9 +600,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
               // Attempt to sequentially commit, expecting revert
               await expect(
-                sequentialCommitHandler
-                  .connect(buyer2)
-                  .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
+                sequentialCommitHandler.connect(buyer2).sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
             });
 
@@ -623,9 +610,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
               // Attempt to sequentially commit to the expired voucher, expecting revert
               await expect(
-                sequentialCommitHandler
-                  .connect(buyer2)
-                  .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
+                sequentialCommitHandler.connect(buyer2).sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.VOUCHER_HAS_EXPIRED);
             });
 
@@ -639,9 +624,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
               // Attempt to sequentially commit, expecting revert
               await expect(
-                sequentialCommitHandler
-                  .connect(buyer2)
-                  .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
+                sequentialCommitHandler.connect(buyer2).sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_AMOUNT_TOO_HIGH);
             });
 
@@ -655,7 +638,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 buyer: buyer2.address,
                 voucherContract: expectedCloneAddress,
                 tokenId: tokenId,
-                exchangeToken: offer.exchangeToken,
+                exchangeToken: await weth.getAddress(),
                 price: price2,
               };
 
@@ -664,19 +647,17 @@ describe("IBosonSequentialCommitHandler", function () {
 
               // Attempt to sequentially commit, expecting revert
               await expect(
-                sequentialCommitHandler
-                  .connect(buyer2)
-                  .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
+                sequentialCommitHandler.connect(buyer2).sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.PRICE_DOES_NOT_COVER_PENALTY);
             });
 
             it("insufficient values sent", async function () {
+              await weth.connect(buyer2).approve(await sequentialCommitHandler.getAddress(), price);
+
               // Attempt to sequentially commit, expecting revert
               await expect(
-                sequentialCommitHandler
-                  .connect(buyer2)
-                  .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price })
-              ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+                sequentialCommitHandler.connect(buyer2).sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
+              ).to.revertedWith(RevertReasons.SAFE_ERC20_LOW_LEVEL_CALL);
             });
 
             it("price discovery does not send the voucher anywhere", async function () {
@@ -708,9 +689,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
               // Attempt to sequentially commit, expecting revert
               await expect(
-                sequentialCommitHandler
-                  .connect(buyer2)
-                  .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
+                sequentialCommitHandler.connect(buyer2).sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_ID_MISMATCH);
             });
 
@@ -728,7 +707,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 buyer: buyer2.address,
                 voucherContract: expectedCloneAddress,
                 tokenId: tokenId,
-                exchangeToken: offer.exchangeToken,
+                exchangeToken: await weth.getAddress(),
                 price: price2,
               };
 
@@ -747,13 +726,16 @@ describe("IBosonSequentialCommitHandler", function () {
 
               // Attempt to sequentially commit, expecting revert
               await expect(
-                sequentialCommitHandler
-                  .connect(buyer2)
-                  .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
+                sequentialCommitHandler.connect(buyer2).sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.VOUCHER_NOT_RECEIVED);
             });
 
             context("Buyer rejects the voucher", async function () {
+              beforeEach(async function () {
+                await weth.connect(rando).deposit({ value: price2 });
+                await weth.connect(rando).approve(await sequentialCommitHandler.getAddress(), price2);
+              });
+
               it("Buyer contract does not implement the receiver", async function () {
                 const [buyerContract] = await deployMockTokens(["Foreign20"]);
 
@@ -761,9 +743,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 await expect(
                   sequentialCommitHandler
                     .connect(rando)
-                    .sequentialCommitToOffer(await buyerContract.getAddress(), tokenId, priceDiscovery, {
-                      value: price2,
-                    })
+                    .sequentialCommitToOffer(await buyerContract.getAddress(), tokenId, priceDiscovery)
                 ).to.revertedWith(RevertReasons.ERC721_NON_RECEIVER);
               });
 
@@ -778,9 +758,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 await expect(
                   sequentialCommitHandler
                     .connect(rando)
-                    .sequentialCommitToOffer(await buyerContract.getAddress(), tokenId, priceDiscovery, {
-                      value: price2,
-                    })
+                    .sequentialCommitToOffer(await buyerContract.getAddress(), tokenId, priceDiscovery)
                 ).to.revertedWith(RevertReasons.BUYER_CONTRACT_REVERT);
               });
 
@@ -795,9 +773,7 @@ describe("IBosonSequentialCommitHandler", function () {
                 await expect(
                   sequentialCommitHandler
                     .connect(rando)
-                    .sequentialCommitToOffer(await buyerContract.getAddress(), tokenId, priceDiscovery, {
-                      value: price2,
-                    })
+                    .sequentialCommitToOffer(await buyerContract.getAddress(), tokenId, priceDiscovery)
                 ).to.revertedWith(RevertReasons.ERC721_NON_RECEIVER);
               });
             });
@@ -816,7 +792,7 @@ describe("IBosonSequentialCommitHandler", function () {
               provider.getBalance(await exchangeHandler.getAddress()),
               provider.getBalance(buyer.address),
               weth.balanceOf(buyer.address),
-              provider.getBalance(buyer2.address),
+              weth.balanceOf(buyer2.address),
               provider.getBalance(treasury.address),
             ]);
 
@@ -836,7 +812,7 @@ describe("IBosonSequentialCommitHandler", function () {
                   buyer: buyer2.address,
                   voucherContract: expectedCloneAddress,
                   tokenId: tokenId,
-                  exchangeToken: offer.exchangeToken,
+                  exchangeToken: await weth.getAddress(),
                   price: price2.toString(),
                 };
 
@@ -852,13 +828,14 @@ describe("IBosonSequentialCommitHandler", function () {
                   priceDiscoveryData
                 );
 
-                // Seller needs to deposit weth in order to fill the escrow at the last step
-                // Price2 is theoretically the highest amount needed, in practice it will be less (around price2-price)
-                await weth.connect(buyer).deposit({ value: price2 }); // you don't need to approve whole amount, just what goes in escrow
+                // Approve transfers
+                // Seller needs to approve the protocol to fill the escrow at the last step
                 await weth.connect(buyer).approve(protocolDiamondAddress, price2);
 
-                // Approve transfers
-                // Buyer does not approve, since its in ETH.
+                // Buyer needs to approve price protocol to transfer the ETH
+                await weth.connect(buyer2).deposit({ value: price2 });
+                await weth.connect(buyer2).approve(await sequentialCommitHandler.getAddress(), price2);
+
                 // Seller approves price discovery to transfer the voucher
                 bosonVoucherClone = await getContractAt("IBosonVoucher", expectedCloneAddress);
                 await bosonVoucherClone
@@ -906,7 +883,6 @@ describe("IBosonSequentialCommitHandler", function () {
                   await sequentialCommitHandler
                     .connect(buyer2)
                     .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, {
-                      value: price2,
                       gasPrice: 0,
                     });
 
@@ -937,15 +913,16 @@ describe("IBosonSequentialCommitHandler", function () {
                     .connect(assistant)
                     .updateOfferRoyaltyRecipients(offer.id, new RoyaltyInfo([ZeroAddress], [fee.royalties]));
 
-                  const balancesBefore = await getBalances();
-
                   // Sequential commit to offer. Buyer pays more than needed
                   priceDiscovery.price = price2 * 3n;
+                  await weth.connect(buyer2).deposit({ value: price2 * 2n });
+                  await weth.connect(buyer2).approve(await sequentialCommitHandler.getAddress(), priceDiscovery.price);
+
+                  const balancesBefore = await getBalances();
 
                   await sequentialCommitHandler
                     .connect(buyer2)
                     .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, {
-                      value: priceDiscovery.price,
                       gasPrice: 0,
                     });
 
@@ -1587,13 +1564,14 @@ describe("IBosonSequentialCommitHandler", function () {
         // Price on secondary market
         price2 = (price * 11n) / 10n; // 10% above the original price
 
-        // Seller needs to deposit weth in order to fill the escrow at the last step
-        // Price2 is theoretically the highest amount needed, in practice it will be less (around price2-price)
-        await weth.connect(buyer).deposit({ value: price2 });
+        // Approve transfers
+        // Seller needs to approve the protocol to fill the escrow at the last step
         await weth.connect(buyer).approve(protocolDiamondAddress, price2);
 
-        // Approve transfers
-        // Buyer does not approve, since its in ETH.
+        // Buyer needs to approve price protocol to transfer the ETH
+        await weth.connect(buyer2).deposit({ value: price2 });
+        await weth.connect(buyer2).approve(await sequentialCommitHandler.getAddress(), price2);
+
         // Seller approves price discovery to transfer the voucher
         bosonVoucherClone = await getContractAt("IBosonVoucher", expectedCloneAddress);
       });
@@ -1611,7 +1589,7 @@ describe("IBosonSequentialCommitHandler", function () {
           buyer: buyer2.address,
           voucherContract: expectedCloneAddress,
           tokenId: tokenId,
-          exchangeToken: offer.exchangeToken,
+          exchangeToken: await weth.getAddress(),
           price: price2,
         };
 
@@ -1633,9 +1611,7 @@ describe("IBosonSequentialCommitHandler", function () {
         expect(await bosonVoucherClone.connect(buyer).ownerOf(tokenId)).to.equal(buyer.address);
 
         // Sequential commit to offer
-        await sequentialCommitHandler
-          .connect(buyer2)
-          .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 });
+        await sequentialCommitHandler.connect(buyer2).sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery);
 
         // buyer2 is owner of voucher
         expect(await bosonVoucherClone.connect(buyer2).ownerOf(tokenId)).to.equal(buyer2.address);
@@ -1658,7 +1634,7 @@ describe("IBosonSequentialCommitHandler", function () {
             buyer: buyer2.address,
             voucherContract: expectedCloneAddress,
             tokenId: tokenId,
-            exchangeToken: offer.exchangeToken,
+            exchangeToken: await weth.getAddress(),
             price: price2,
           };
 
@@ -1678,9 +1654,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
           // Attempt to sequentially commit, expecting revert
           await expect(
-            sequentialCommitHandler
-              .connect(buyer2)
-              .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
+            sequentialCommitHandler.connect(buyer2).sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_ID_MISMATCH);
         });
 
@@ -1700,7 +1674,7 @@ describe("IBosonSequentialCommitHandler", function () {
             buyer: buyer2.address,
             voucherContract: expectedCloneAddress,
             tokenId: tokenId,
-            exchangeToken: offer.exchangeToken,
+            exchangeToken: await weth.getAddress(),
             price: price2,
           };
 
@@ -1720,9 +1694,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
           // Attempt to sequentially commit, expecting revert
           await expect(
-            sequentialCommitHandler
-              .connect(buyer2)
-              .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery, { value: price2 })
+            sequentialCommitHandler.connect(buyer2).sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNEXPECTED_ERC721_RECEIVED);
         });
 

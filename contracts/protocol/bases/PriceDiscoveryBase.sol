@@ -126,7 +126,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         FundsLib.validateIncomingPayment(_exchangeToken, _priceDiscovery.price);
         FundsLib.transferFundsFromProtocol(_exchangeToken, payable(bosonPriceDiscovery), _priceDiscovery.price);
 
-        actualPrice = IBosonPriceDiscovery(bosonPriceDiscovery).fulfilAskOrder{ value: msg.value }(
+        actualPrice = IBosonPriceDiscovery(bosonPriceDiscovery).fulfilAskOrder(
             _exchangeToken,
             _priceDiscovery,
             _bosonVoucher,
