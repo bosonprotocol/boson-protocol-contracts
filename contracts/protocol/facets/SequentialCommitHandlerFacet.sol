@@ -163,29 +163,13 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                 immediatePayout = thisExchangeCost.price - additionalEscrowAmount;
             }
 
-            if (_priceDiscovery.side == Side.Ask) {
-                if (additionalEscrowAmount > 0) {
-                    // Price discovery should send funds to the seller
-                    // Nothing in escrow, need to pull everything from seller
-                    if (exchangeToken == address(0)) {
-                        // If exchange is native currency, seller cannot directly approve protocol to transfer funds
-                        // They need to approve wrapper contract, so protocol can pull funds from wrapper
-                        FundsLib.transferFundsToProtocol(address(wNative), seller, additionalEscrowAmount);
-                        // But since protocol otherwise normally operates with native currency, needs to unwrap it (i.e. withdraw)
-                        wNative.withdraw(additionalEscrowAmount);
-                    } else {
-                        FundsLib.transferFundsToProtocol(exchangeToken, seller, additionalEscrowAmount);
-                    }
-                }
-            } else {
-                // when bid side, we have full proceeds in escrow. Keep minimal in, return the difference
-                if (thisExchangeCost.price > 0 && exchangeToken == address(0)) {
-                    wNative.withdraw(thisExchangeCost.price);
-                }
+            // we have full proceeds in escrow. Keep minimal in, return the difference
+            if (thisExchangeCost.price > 0 && exchangeToken == address(0)) {
+                wNative.withdraw(thisExchangeCost.price);
+            }
 
-                if (immediatePayout > 0) {
-                    FundsLib.transferFundsFromProtocol(exchangeToken, payable(seller), immediatePayout);
-                }
+            if (immediatePayout > 0) {
+                FundsLib.transferFundsFromProtocol(exchangeToken, payable(seller), immediatePayout);
             }
         }
 

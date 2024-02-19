@@ -143,21 +143,12 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
 
         (, uint256 buyerId) = getBuyerIdByWallet(_buyer);
         if (actualPrice > 0) {
-            if (_priceDiscovery.side == Side.Ask) {
-                // Price discovery should send funds to the seller
-                // Nothing in escrow, take it from the seller's pool
-                FundsLib.decreaseAvailableFunds(sellerId, exchangeToken, actualPrice);
-
-                emit FundsEncumbered(sellerId, exchangeToken, actualPrice, msgSender());
-            } else {
-                // when bid side or wrapper, we have full proceeds in escrow.
-                // If exchange token is 0, we need to unwrap it
-                if (exchangeToken == address(0)) {
-                    wNative.withdraw(actualPrice);
-                }
-                emit FundsEncumbered(buyerId, exchangeToken, actualPrice, msgSender());
+            // If exchange token is 0, we need to unwrap it
+            if (exchangeToken == address(0)) {
+                wNative.withdraw(actualPrice);
             }
 
+            emit FundsEncumbered(buyerId, exchangeToken, actualPrice, msgSender());
             // Not emitting BuyerCommitted since it's emitted in commitToOfferInternal
         }
     }

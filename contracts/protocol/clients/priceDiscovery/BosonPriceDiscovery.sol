@@ -61,21 +61,34 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
         BosonTypes.PriceDiscovery calldata _priceDiscovery,
         IBosonVoucher _bosonVoucher,
         address payable _msgSender
-    ) external onlyProtocol returns (uint256 actualPrice) {
+    ) external payable onlyProtocol returns (uint256 actualPrice) {
         // Boson protocol (the caller) is trusted, so it can be assumed that all funds were forwarded to this contract
         // If token is ERC20, approve price discovery contract to transfer the funds
         if (_exchangeToken != address(0) && _priceDiscovery.price > 0) {
             IERC20(_exchangeToken).forceApprove(_priceDiscovery.conduit, _priceDiscovery.price);
         }
 
+        // Track native balance just in case if the buyer sends some native currency or price discovery contract does
+        // This is the balance that protocol had, before commit to offer was called
+        uint256 thisNativeBalanceBefore = getBalance(address(0)) - msg.value;
+
+        // Get protocol balance before calling price discovery contract
         uint256 thisBalanceBefore = getBalance(_exchangeToken);
 
         // Call the price discovery contract
         incomingTokenAddress = address(_bosonVoucher);
-        _priceDiscovery.priceDiscoveryContract.functionCallWithValue(
-            _priceDiscovery.priceDiscoveryData,
-            _exchangeToken == address(0) ? _priceDiscovery.price : 0
-        );
+        _priceDiscovery.priceDiscoveryContract.functionCallWithValue(_priceDiscovery.priceDiscoveryData, msg.value);
+
+        // Check the native balance and return the surplus to seller
+        uint256 thisNativeBalanceAfter = getBalance(address(0));
+        if (thisNativeBalanceAfter > thisNativeBalanceBefore) {
+            // Return the surplus to seller
+            FundsLib.transferFundsFromProtocol(
+                address(0),
+                payable(_msgSender),
+                thisNativeBalanceAfter - thisNativeBalanceBefore
+            );
+        }
 
         uint256 thisBalanceAfter = getBalance(_exchangeToken);
         if (thisBalanceBefore < thisBalanceAfter) revert NegativePriceNotAllowed();
