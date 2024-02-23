@@ -3,20 +3,11 @@ pragma solidity 0.8.22;
 
 import { BuyerBase } from "../bases/BuyerBase.sol";
 import { IBosonPriceDiscoveryHandler } from "../../interfaces/handlers/IBosonPriceDiscoveryHandler.sol";
-import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
-import { ITwinToken } from "../../interfaces/ITwinToken.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BuyerBase } from "../bases/BuyerBase.sol";
-import { DisputeBase } from "../bases/DisputeBase.sol";
-import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import "../../domain/BosonConstants.sol";
-import { IERC1155 } from "../../interfaces/IERC1155.sol";
-import { IERC721 } from "../../interfaces/IERC721.sol";
-import { IERC20 } from "../../interfaces/IERC20.sol";
-import { IERC721Receiver } from "../../interfaces/IERC721Receiver.sol";
 import { PriceDiscoveryBase } from "../bases/PriceDiscoveryBase.sol";
-import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @title PriceDiscoveryHandlerFacet
@@ -143,21 +134,12 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
 
         (, uint256 buyerId) = getBuyerIdByWallet(_buyer);
         if (actualPrice > 0) {
-            if (_priceDiscovery.side == Side.Ask) {
-                // Price discovery should send funds to the seller
-                // Nothing in escrow, take it from the seller's pool
-                FundsLib.decreaseAvailableFunds(sellerId, exchangeToken, actualPrice);
-
-                emit FundsEncumbered(sellerId, exchangeToken, actualPrice, msgSender());
-            } else {
-                // when bid side or wrapper, we have full proceeds in escrow.
-                // If exchange token is 0, we need to unwrap it
-                if (exchangeToken == address(0)) {
-                    wNative.withdraw(actualPrice);
-                }
-                emit FundsEncumbered(buyerId, exchangeToken, actualPrice, msgSender());
+            // If exchange token is 0, we need to unwrap it
+            if (exchangeToken == address(0)) {
+                wNative.withdraw(actualPrice);
             }
 
+            emit FundsEncumbered(buyerId, exchangeToken, actualPrice, msgSender());
             // Not emitting BuyerCommitted since it's emitted in commitToOfferInternal
         }
     }

@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.22;
 
+import { BosonTypes } from "./BosonTypes.sol";
+
 interface BosonErrors {
     // Pause related
     // Trying to unpause a protocol when it's not paused
     error NotPaused();
     // Whenever a region is paused, and a method from that region is called
-    error RegionPaused(); //ToDo consider adding the region to the error message
+    error RegionPaused(BosonTypes.PausableRegion region);
 
     // General
     // Input parameter of type address is zero address
@@ -120,7 +122,7 @@ interface BosonErrors {
     error NoSuchOffer();
     // Offer finishes in the past or it starts after it finishes
     error InvalidOfferPeriod();
-    // Buyer cancelation penalty is higher than the item price
+    // Buyer cancellation penalty is higher than the item price
     error InvalidOfferPenalty();
     // New offer must be actiove
     error OfferMustBeActive();
@@ -174,6 +176,8 @@ interface BosonErrors {
     error InvalidRoyaltyInfo();
     // Trying to change the default recipient address (treasury)
     error WrongDefaultRecipient();
+    // Price discovery offer has non zero price
+    error InvalidPriceDiscoveryPrice();
 
     // Group related
     // Group does not exist
@@ -368,4 +372,6 @@ interface BosonErrors {
     error UnexpectedERC721Received();
     // Royalty fee exceeds the price
     error FeeAmountTooHigh();
+    // Price does not cover the cancellation penalty
+    error PriceDoesNotCoverPenalty();
 }

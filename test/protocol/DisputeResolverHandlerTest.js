@@ -469,7 +469,9 @@ describe("DisputeResolverHandler", function () {
           // Attempt to create a dispute resolver, expecting revert
           await expect(
             accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.DisputeResolvers);
         });
 
         it("Any address is the zero address", async function () {
@@ -1213,10 +1215,9 @@ describe("DisputeResolverHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.DisputeResolvers]);
 
           // Attempt to update a dispute resolver, expecting revert
-          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWithCustomError(
-            bosonErrors,
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.DisputeResolvers);
         });
 
         it("Dispute resolver does not exist", async function () {
@@ -1469,7 +1470,9 @@ describe("DisputeResolverHandler", function () {
           // Attempt to add dispute resolver fees, expecting revert
           await expect(
             accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFeesToAdd)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.DisputeResolvers);
         });
 
         it("Dispute resolver does not exist", async function () {
@@ -1714,7 +1717,9 @@ describe("DisputeResolverHandler", function () {
           // Attempt to remove dispute resolver fees, expecting revert
           await expect(
             accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.DisputeResolvers);
         });
 
         it("Dispute resolver does not exist", async function () {
@@ -1843,9 +1848,9 @@ describe("DisputeResolverHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.DisputeResolvers]);
 
           // Attempt to add sellers to a dispute resolver allow list, expecting revert
-          await expect(
-            accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          await expect(accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.DisputeResolvers);
         });
 
         it("Dispute resolver does not exist", async function () {
@@ -2050,7 +2055,9 @@ describe("DisputeResolverHandler", function () {
           // Attempt to remove sellers from a dispute resolver allow list, expecting revert
           await expect(
             accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.DisputeResolvers);
         });
 
         it("Dispute resolver does not exist", async function () {
@@ -2325,9 +2332,9 @@ describe("DisputeResolverHandler", function () {
           // Pause the disputeResolvers region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.DisputeResolvers]);
 
-          await expect(
-            accountHandler.connect(rando).optInToDisputeResolverUpdate(disputeResolver.id, [])
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          await expect(accountHandler.connect(rando).optInToDisputeResolverUpdate(disputeResolver.id, []))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.DisputeResolvers);
         });
 
         it("Admin is not unique to this disputeResolver", async function () {

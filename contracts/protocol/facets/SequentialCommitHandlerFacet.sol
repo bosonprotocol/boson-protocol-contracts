@@ -2,10 +2,8 @@
 pragma solidity 0.8.22;
 
 import { IBosonSequentialCommitHandler } from "../../interfaces/handlers/IBosonSequentialCommitHandler.sol";
-import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { PriceDiscoveryBase } from "../bases/PriceDiscoveryBase.sol";
-import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import "../../domain/BosonConstants.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
@@ -64,6 +62,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
      *   - Reseller did not approve protocol to transfer exchange token in escrow
      * - Call to price discovery contract fails
      * - Protocol fee and royalties combined exceed the secondary price
+     * - The secondary price cannot cover the buyer's cancellation penalty
      * - Transfer of exchange token fails
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
@@ -74,7 +73,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
         address payable _buyer,
         uint256 _tokenId,
         PriceDiscovery calldata _priceDiscovery
-    ) external payable exchangesNotPaused buyersNotPaused nonReentrant {
+    ) external payable exchangesNotPaused buyersNotPaused sequentialCommitNotPaused nonReentrant {
         // Make sure buyer address is not zero address
         if (_buyer == address(0)) revert InvalidAddress();
 
@@ -105,6 +104,9 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
         // First call price discovery and get actual price
         // It might be lower than submitted for buy orders and higher for sell orders
         thisExchangeCost.price = fulfilOrder(_tokenId, offer, _priceDiscovery, seller, _buyer);
+
+        // Price must be high enough to cover cancellation penalty in case of buyer's cancellation
+        if (thisExchangeCost.price < offer.buyerCancelPenalty) revert PriceDoesNotCoverPenalty();
 
         // Get token address
         address exchangeToken = offer.exchangeToken;
@@ -161,29 +163,13 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
                 immediatePayout = thisExchangeCost.price - additionalEscrowAmount;
             }
 
-            if (_priceDiscovery.side == Side.Ask) {
-                if (additionalEscrowAmount > 0) {
-                    // Price discovery should send funds to the seller
-                    // Nothing in escrow, need to pull everything from seller
-                    if (exchangeToken == address(0)) {
-                        // If exchange is native currency, seller cannot directly approve protocol to transfer funds
-                        // They need to approve wrapper contract, so protocol can pull funds from wrapper
-                        FundsLib.transferFundsToProtocol(address(wNative), seller, additionalEscrowAmount);
-                        // But since protocol otherwise normally operates with native currency, needs to unwrap it (i.e. withdraw)
-                        wNative.withdraw(additionalEscrowAmount);
-                    } else {
-                        FundsLib.transferFundsToProtocol(exchangeToken, seller, additionalEscrowAmount);
-                    }
-                }
-            } else {
-                // when bid side, we have full proceeds in escrow. Keep minimal in, return the difference
-                if (thisExchangeCost.price > 0 && exchangeToken == address(0)) {
-                    wNative.withdraw(thisExchangeCost.price);
-                }
+            // we have full proceeds in escrow. Keep minimal in, return the difference
+            if (thisExchangeCost.price > 0 && exchangeToken == address(0)) {
+                wNative.withdraw(thisExchangeCost.price);
+            }
 
-                if (immediatePayout > 0) {
-                    FundsLib.transferFundsFromProtocol(exchangeToken, payable(seller), immediatePayout);
-                }
+            if (immediatePayout > 0) {
+                FundsLib.transferFundsFromProtocol(exchangeToken, payable(seller), immediatePayout);
             }
         }
 

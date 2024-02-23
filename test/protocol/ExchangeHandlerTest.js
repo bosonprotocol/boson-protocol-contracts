@@ -797,6 +797,26 @@ describe("IBosonExchangeHandler", function () {
         expect(await additionalCollection.ownerOf(tokenId)).to.equal(buyer.address, "Wrong buyer address");
       });
 
+      it("It is possible to commit to fixed offer if price discovery region is paused", async function () {
+        // Pause the price discovery region of the protocol
+        await pauseHandler.connect(pauser).pause([PausableRegion.PriceDiscovery]);
+
+        // Commit to offer, retrieving the event
+        await expect(
+          exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })
+        ).to.emit(exchangeHandler, "BuyerCommitted");
+      });
+
+      it("It is possible to commit to fixed offer if sequential commit region is paused", async function () {
+        // Pause the sequential commit region of the protocol
+        await pauseHandler.connect(pauser).pause([PausableRegion.SequentialCommit]);
+
+        // Commit to offer, retrieving the event
+        await expect(
+          exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })
+        ).to.emit(exchangeHandler, "BuyerCommitted");
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The exchanges region of protocol is paused", async function () {
           // Pause the exchanges region of the protocol
@@ -805,7 +825,9 @@ describe("IBosonExchangeHandler", function () {
           // Attempt to create an exchange, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Exchanges);
         });
 
         it("The buyers region of protocol is paused", async function () {
@@ -815,7 +837,9 @@ describe("IBosonExchangeHandler", function () {
           // Attempt to create a buyer, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Buyers);
         });
 
         it("buyer.address is the zero address", async function () {
@@ -1620,7 +1644,9 @@ describe("IBosonExchangeHandler", function () {
             exchangeHandler
               .connect(buyer)
               .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Exchanges);
         });
 
         it("The buyers region of protocol is paused", async function () {
@@ -1632,7 +1658,9 @@ describe("IBosonExchangeHandler", function () {
             exchangeHandler
               .connect(buyer)
               .commitToConditionalOffer(await buyer.getAddress(), offerId, tokenId, { value: price })
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Buyers);
         });
 
         it("await buyer.getAddress() is the zero address", async function () {
@@ -1865,10 +1893,9 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(assistant).completeExchange(exchangeId)).to.revertedWithCustomError(
-            bosonErrors,
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(exchangeHandler.connect(assistant).completeExchange(exchangeId))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Exchanges);
         });
 
         it("exchange id is invalid", async function () {
@@ -2077,9 +2104,9 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(
-            exchangeHandler.connect(buyer).completeExchangeBatch(exchangesToComplete)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          await expect(exchangeHandler.connect(buyer).completeExchangeBatch(exchangesToComplete))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Exchanges);
         });
 
         it("exchange id is invalid", async function () {
@@ -2211,10 +2238,9 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(assistant).revokeVoucher(exchange.id)).to.revertedWithCustomError(
-            bosonErrors,
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(exchangeHandler.connect(assistant).revokeVoucher(exchange.id))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Exchanges);
         });
 
         it("exchange id is invalid", async function () {
@@ -2330,10 +2356,9 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(buyer).cancelVoucher(exchange.id)).to.revertedWithCustomError(
-            bosonErrors,
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(exchangeHandler.connect(buyer).cancelVoucher(exchange.id))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Exchanges);
         });
 
         it("exchange id is invalid", async function () {
@@ -2454,10 +2479,9 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(buyer).expireVoucher(exchangeId)).to.revertedWithCustomError(
-            bosonErrors,
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(exchangeHandler.connect(buyer).expireVoucher(exchangeId))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Exchanges);
         });
 
         it("exchange id is invalid", async function () {
@@ -2611,10 +2635,9 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId)).to.revertedWithCustomError(
-            bosonErrors,
-            RevertReasons.REGION_PAUSED
-          );
+          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Exchanges);
         });
 
         it("exchange id is invalid", async function () {
@@ -5054,9 +5077,9 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(
-            exchangeHandler.connect(assistant).extendVoucher(exchange.id, validUntilDate)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          await expect(exchangeHandler.connect(assistant).extendVoucher(exchange.id, validUntilDate))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Exchanges);
         });
 
         it("exchange id is invalid", async function () {
@@ -5265,7 +5288,9 @@ describe("IBosonExchangeHandler", function () {
             bosonVoucherClone
               .connect(buyer)
               .transferFrom(await buyer.getAddress(), await newOwner.getAddress(), tokenId)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Buyers);
         });
 
         it("Caller is not a clone address", async function () {
@@ -5798,7 +5823,9 @@ describe("IBosonExchangeHandler", function () {
             bosonVoucher
               .connect(assistant)
               .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Exchanges);
         });
 
         it("The buyers region of protocol is paused", async function () {
@@ -5810,7 +5837,9 @@ describe("IBosonExchangeHandler", function () {
             bosonVoucher
               .connect(assistant)
               .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED);
+          )
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Buyers);
         });
 
         it("Caller is not the voucher contract, owned by the seller", async function () {

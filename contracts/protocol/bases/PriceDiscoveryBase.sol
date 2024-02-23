@@ -3,7 +3,6 @@ pragma solidity 0.8.22;
 
 import "../../domain/BosonConstants.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IWrappedNative } from "../../interfaces/IWrappedNative.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { IBosonPriceDiscovery } from "../../interfaces/clients/IBosonPriceDiscovery.sol";
@@ -52,7 +51,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         PriceDiscovery calldata _priceDiscovery,
         address _seller,
         address _buyer
-    ) internal returns (uint256 actualPrice) {
+    ) internal priceDiscoveryNotPaused returns (uint256 actualPrice) {
         // Make sure caller provided price discovery data
         if (_priceDiscovery.priceDiscoveryContract == address(0) || _priceDiscovery.priceDiscoveryData.length == 0) {
             revert InvalidPriceDiscovery();
@@ -70,7 +69,16 @@ contract PriceDiscoveryBase is ProtocolBase {
         protocolStatus().incomingVoucherCloneAddress = address(bosonVoucher);
 
         if (_priceDiscovery.side == Side.Ask) {
-            return fulfilAskOrder(_tokenId, _offer.id, _offer.exchangeToken, _priceDiscovery, _buyer, bosonVoucher);
+            return
+                fulfilAskOrder(
+                    _tokenId,
+                    _offer.id,
+                    _offer.exchangeToken,
+                    _priceDiscovery,
+                    _seller,
+                    _buyer,
+                    bosonVoucher
+                );
         } else if (_priceDiscovery.side == Side.Bid) {
             return fulfilBidOrder(_tokenId, _offer.exchangeToken, _priceDiscovery, _seller, bosonVoucher);
         } else {
@@ -96,6 +104,7 @@ contract PriceDiscoveryBase is ProtocolBase {
      * @param _offerId - the id of the offer
      * @param _exchangeToken - the address of the exchange contract
      * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct
+     * @param _seller - the seller's address
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _bosonVoucher - the boson voucher contract
      * @return actualPrice - the actual price of the order
@@ -105,6 +114,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         uint256 _offerId,
         address _exchangeToken,
         PriceDiscovery calldata _priceDiscovery,
+        address _seller,
         address _buyer,
         IBosonVoucher _bosonVoucher
     ) internal returns (uint256 actualPrice) {
@@ -112,6 +122,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         address bosonPriceDiscovery = protocolAddresses().priceDiscovery;
 
         // Transfer buyers funds to protocol and forward them to price discovery contract
+        if (_exchangeToken == address(0)) _exchangeToken = address(wNative);
         FundsLib.validateIncomingPayment(_exchangeToken, _priceDiscovery.price);
         FundsLib.transferFundsFromProtocol(_exchangeToken, payable(bosonPriceDiscovery), _priceDiscovery.price);
 
@@ -132,6 +143,10 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         // Transfer voucher to buyer
         _bosonVoucher.safeTransferFrom(bosonPriceDiscovery, _buyer, _tokenId);
+
+        // Price discovery should send funds to the seller.
+        // The seller must approve the protocol to transfer the funds before the order is fulfilled.
+        FundsLib.transferFundsToProtocol(_exchangeToken, _seller, actualPrice);
     }
 
     /**
