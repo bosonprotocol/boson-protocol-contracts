@@ -1,12 +1,14 @@
 const shell = require("shelljs");
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { ZeroAddress, encodeBytes32String, id } = ethers;
+const { ZeroAddress, encodeBytes32String, id, MaxUint256, getContractFactory, getContractAt, provider } = ethers;
 const { assert, expect } = require("chai");
 
 const { Collection, CollectionList } = require("../../scripts/domain/Collection");
 const { RoyaltyRecipientInfo, RoyaltyRecipientInfoList } = require("../../scripts/domain/RoyaltyRecipientInfo.js");
 const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo");
+const PriceDiscovery = require("../../scripts/domain/PriceDiscovery");
+const Side = require("../../scripts/domain/Side");
 
 // const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const {
@@ -16,7 +18,9 @@ const {
   calculateCloneAddress,
   deriveTokenId,
   compareRoyaltyInfo,
+  calculateVoucherExpiry,
 } = require("../util/utils");
+const { mockOffer, mockExchange, mockVoucher, mockBuyer } = require("../util/mock");
 
 const {
   deploySuite,
@@ -38,14 +42,15 @@ const { migrate } = require(`../../scripts/migrations/migrate_${version}.js`);
  *  Upgrade test case - After upgrade from 2.3.0 to 2.4.0 everything is still operational
  */
 describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
-  this.timeout(1000000);
+  this.timeout(10000000);
   // Common vars
-  let deployer, rando, other1, other2, other3, other4, other5, other6;
-  let accountHandler, configHandler, exchangeHandler, twinHandler, offerHandler;
+  let deployer, rando, buyer, other1, other2, other3, other4, other5, other6;
+  let accountHandler, configHandler, exchangeHandler, twinHandler, offerHandler, fundsHandler, priceDiscoveryHandler;
   let snapshot;
   let protocolDiamondAddress, mockContracts;
   let contractsAfter;
   let protocolContractStateBefore, protocolContractStateAfter;
+  let weth;
   // let removedFunctionHashes, addedFunctionHashes;
 
   // reference protocol state
@@ -63,7 +68,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
     try {
       // Make accounts available
-      [deployer, rando, other1, other2, other3, other4, other5, other6] = await ethers.getSigners();
+      [deployer, rando, buyer, other1, other2, other3, other4, other5, other6] = await ethers.getSigners();
 
       let contractsBefore;
 
@@ -177,7 +182,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // await accountHandler.connect(wallet).updateDisputeResolver(disputeResolver);
 
       shell.exec(`git checkout HEAD scripts`);
-      await migrate("upgrade-test");
+
+      // Add WETH
+      const wethFactory = await getContractFactory("WETH9");
+      weth = await wethFactory.deploy();
+      await weth.waitForDeployment();
+
+      await migrate("upgrade-test", { WrappedNative: await weth.getAddress() });
 
       // Cast to updated interface
       let newHandlers = {
@@ -189,6 +200,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         orchestrationHandler: "IBosonOrchestrationHandler",
         fundsHandler: "IBosonFundsHandler",
         exchangeHandler: "IBosonExchangeHandler",
+        priceDiscoveryHandler: "IBosonPriceDiscoveryHandler",
       };
 
       contractsAfter = { ...contractsBefore };
@@ -197,7 +209,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         contractsAfter[handlerName] = await ethers.getContractAt(interfaceName, protocolDiamondAddress);
       }
 
-      ({ accountHandler, configHandler, exchangeHandler, offerHandler } = contractsAfter);
+      ({ accountHandler, configHandler, exchangeHandler, offerHandler, fundsHandler, priceDiscoveryHandler } =
+        contractsAfter);
 
       // getFunctionHashesClosure = getStateModifyingFunctionsHashes(
       //   [
@@ -632,6 +645,120 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               .to.emit(offerHandler, "OfferRoyaltyInfoUpdated")
               .withArgs(offersToUpdate[2], seller.id, compareRoyaltyInfo.bind(expectedRoyaltyInfo), assistant.address);
           });
+        });
+      });
+
+      context("Price discovery handler facet", async function () {
+        it("Commit to price discovery offer", async function () {
+          // Deploy PriceDiscovery contract
+          const PriceDiscoveryFactory = await getContractFactory("PriceDiscoveryMock");
+          const priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
+          await priceDiscoveryContract.waitForDeployment();
+
+          const seller = preUpgradeEntities.sellers[0];
+          const assistant = seller.wallet;
+
+          const mo = await mockOffer({ refreshModule: true });
+          const { offer, offerDates, offerDurations } = mo;
+          offer.id = await offerHandler.getNextOfferId();
+          offer.priceType = PriceType.Discovery;
+          offer.price = "0";
+          offer.buyerCancelPenalty = "0";
+          offer.royaltyInfo[0].bps = [seller.voucherInitValues.royaltyPercentage];
+          const offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
+          const disputeResolverId = preUpgradeEntities.DRs[1].id;
+          const agentId = "0";
+
+          // Mock exchange
+          const exchange = mockExchange({
+            id: await exchangeHandler.getNextExchangeId(),
+            offerId: offer.id,
+            finalizedDate: "0",
+          });
+
+          // Create the offer, reserve range and premint vouchers
+          await offerHandler
+            .connect(assistant)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+          await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
+          const bosonVoucher = await getContractAt("BosonVoucher", seller.voucherContractAddress);
+          await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
+
+          // Deposit seller funds so the commit will succeed
+          console.log("Depositing funds");
+          const sellerPool = offer.sellerDeposit;
+          await fundsHandler.connect(assistant).depositFunds(seller.id, ZeroAddress, sellerPool, { value: sellerPool });
+
+          // Price on secondary market
+          const price = 100n;
+          const tokenId = deriveTokenId(offer.id, exchange.id);
+
+          // Prepare calldata for PriceDiscovery contract
+          const order = {
+            seller: assistant.address,
+            buyer: buyer.address,
+            voucherContract: seller.voucherContractAddress,
+            tokenId: tokenId,
+            exchangeToken: await weth.getAddress(), // when offer is in native, we need to use wrapped native
+            price: price,
+          };
+
+          const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
+          const priceDiscoveryContractAddress = await priceDiscoveryContract.getAddress();
+
+          const priceDiscovery = new PriceDiscovery(
+            price,
+            Side.Ask,
+            priceDiscoveryContractAddress,
+            priceDiscoveryContractAddress,
+            priceDiscoveryData
+          );
+
+          // Approve transfers
+          // Buyer needs to approve the protocol to transfer the ETH
+          await weth.connect(buyer).deposit({ value: price });
+          await weth.connect(buyer).approve(await priceDiscoveryHandler.getAddress(), price);
+
+          // Seller approves price discovery to transfer the voucher
+          await bosonVoucher.connect(assistant).setApprovalForAll(await priceDiscoveryContract.getAddress(), true);
+
+          // Seller also approves the protocol to encumber the paid price
+          await weth.connect(assistant).approve(await priceDiscoveryHandler.getAddress(), price);
+
+          const newBuyer = mockBuyer(buyer.address);
+          newBuyer.id = await accountHandler.getNextAccountId();
+          exchange.buyerId = newBuyer.id;
+
+          console.log("Commit to pd offer");
+
+          const tx = await priceDiscoveryHandler
+            .connect(buyer)
+            .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery);
+
+          // Get the block timestamp of the confirmed tx
+          const block = await provider.getBlock(tx.blockNumber);
+
+          // Update the committed date in the expected exchange struct with the block timestamp of the tx
+          const voucher = mockVoucher({
+            committedDate: block.timestamp.toString(),
+            validUntilDate: calculateVoucherExpiry(
+              block,
+              offerDates.voucherRedeemableFrom,
+              offerDurations.voucherValid
+            ),
+            redeemedDate: "0",
+          });
+
+          await expect(tx)
+            .to.emit(priceDiscoveryHandler, "BuyerCommitted")
+            .withArgs(
+              offer.id,
+              newBuyer.id,
+              exchange.id,
+              exchange.toStruct(),
+              voucher.toStruct(),
+              seller.voucherContractAddress
+            );
         });
       });
     });
