@@ -3,9 +3,12 @@ pragma solidity 0.8.22;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
+import { IBosonAgentHandler } from "../../interfaces/handlers/IBosonAgentHandler.sol";
+import { IBosonBuyerHandler } from "../../interfaces/handlers/IBosonBuyerHandler.sol";
+import { IBosonDisputeResolverHandler } from "../../interfaces/handlers/IBosonDisputeResolverHandler.sol";
+import { IBosonSellerHandler } from "../../interfaces/handlers/IBosonSellerHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
-import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
 /**
  * @title AccountHandlerFacet
@@ -21,7 +24,12 @@ contract AccountHandlerFacet is ProtocolBase {
         // The IBosonAccountHandler interface is contributed to by multiple facets which don't have their own interfaces.
         // This facet doesn't extend the interface since it doesn't implement all the methods.
         // However, it is logically responsible for registering the interface.
-        DiamondLib.addSupportedInterface(type(IBosonAccountHandler).interfaceId);
+        bytes4 commonAccountHandlerInterfaceId = type(IBosonAccountHandler).interfaceId ^
+            type(IBosonAgentHandler).interfaceId ^
+            type(IBosonBuyerHandler).interfaceId ^
+            type(IBosonDisputeResolverHandler).interfaceId ^
+            type(IBosonSellerHandler).interfaceId;
+        DiamondLib.addSupportedInterface(commonAccountHandlerInterfaceId);
     }
 
     /**

@@ -4,13 +4,14 @@ pragma solidity 0.8.22;
 import "../../domain/BosonConstants.sol";
 import { BuyerBase } from "../bases/BuyerBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
+import { IBosonBuyerHandler } from "../../interfaces/handlers/IBosonBuyerHandler.sol";
 
 /**
  * @title BuyerHandlerFacet
  *
  * @notice Handles buyer account management requests and queries.
  */
-contract BuyerHandlerFacet is BuyerBase {
+contract BuyerHandlerFacet is BuyerBase, IBosonBuyerHandler {
     /**
      * @notice Initializes facet.
      */

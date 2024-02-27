@@ -2,6 +2,7 @@
 pragma solidity 0.8.22;
 import "../../domain/BosonConstants.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
+import { IBosonSellerHandler } from "../../interfaces/handlers/IBosonSellerHandler.sol";
 import { SellerBase } from "../bases/SellerBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC721 } from "../../interfaces/IERC721.sol";
@@ -13,7 +14,7 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
  *
  * @notice Handles Seller account management requests and queries.
  */
-contract SellerHandlerFacet is SellerBase {
+contract SellerHandlerFacet is IBosonSellerHandler, SellerBase {
     /**
      * @notice Initializes facet.
      */
