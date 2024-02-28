@@ -9,6 +9,8 @@ const { RoyaltyRecipientInfo, RoyaltyRecipientInfoList } = require("../../script
 const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo");
 const PriceDiscovery = require("../../scripts/domain/PriceDiscovery");
 const Side = require("../../scripts/domain/Side");
+const PriceType = require("../../scripts/domain/PriceType.js");
+const Voucher = require("../../scripts/domain/Voucher.js");
 
 // const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const {
@@ -33,7 +35,6 @@ const {
 } = require("../util/upgrade");
 const { getGenericContext } = require("./01_generic");
 const { getGenericContext: getGenericContextVoucher } = require("./clients/01_generic");
-const PriceType = require("../../scripts/domain/PriceType.js");
 
 const version = "2.4.0";
 const { migrate } = require(`../../scripts/migrations/migrate_${version}.js`);
@@ -42,10 +43,17 @@ const { migrate } = require(`../../scripts/migrations/migrate_${version}.js`);
  *  Upgrade test case - After upgrade from 2.3.0 to 2.4.0 everything is still operational
  */
 describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
-  this.timeout(10000000);
+  this.timeout(1000000);
   // Common vars
   let deployer, rando, buyer, other1, other2, other3, other4, other5, other6;
-  let accountHandler, configHandler, exchangeHandler, twinHandler, offerHandler, fundsHandler, priceDiscoveryHandler;
+  let accountHandler,
+    configHandler,
+    exchangeHandler,
+    twinHandler,
+    offerHandler,
+    fundsHandler,
+    priceDiscoveryHandler,
+    sequentialCommitHandler;
   let snapshot;
   let protocolDiamondAddress, mockContracts;
   let contractsAfter;
@@ -201,6 +209,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         fundsHandler: "IBosonFundsHandler",
         exchangeHandler: "IBosonExchangeHandler",
         priceDiscoveryHandler: "IBosonPriceDiscoveryHandler",
+        sequentialCommitHandler: "IBosonSequentialCommitHandler",
       };
 
       contractsAfter = { ...contractsBefore };
@@ -209,8 +218,15 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         contractsAfter[handlerName] = await ethers.getContractAt(interfaceName, protocolDiamondAddress);
       }
 
-      ({ accountHandler, configHandler, exchangeHandler, offerHandler, fundsHandler, priceDiscoveryHandler } =
-        contractsAfter);
+      ({
+        accountHandler,
+        configHandler,
+        exchangeHandler,
+        offerHandler,
+        fundsHandler,
+        priceDiscoveryHandler,
+        sequentialCommitHandler,
+      } = contractsAfter);
 
       // getFunctionHashesClosure = getStateModifyingFunctionsHashes(
       //   [
@@ -685,7 +701,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
 
           // Deposit seller funds so the commit will succeed
-          console.log("Depositing funds");
           const sellerPool = offer.sellerDeposit;
           await fundsHandler.connect(assistant).depositFunds(seller.id, ZeroAddress, sellerPool, { value: sellerPool });
 
@@ -729,8 +744,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           newBuyer.id = await accountHandler.getNextAccountId();
           exchange.buyerId = newBuyer.id;
 
-          console.log("Commit to pd offer");
-
           const tx = await priceDiscoveryHandler
             .connect(buyer)
             .commitToPriceDiscoveryOffer(buyer.address, tokenId, priceDiscovery);
@@ -758,6 +771,102 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               exchange.toStruct(),
               voucher.toStruct(),
               seller.voucherContractAddress
+            );
+        });
+      });
+
+      context("Sequential commit handler facet", async function () {
+        it("Sequential Commit to offer", async function () {
+          // Deploy PriceDiscovery contract
+          const PriceDiscoveryFactory = await getContractFactory("PriceDiscoveryMock");
+          const priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
+          await priceDiscoveryContract.waitForDeployment();
+
+          // Create buyer with price discovery client address to not mess up ids in tests
+          const priceDiscoveryClientAddress = await configHandler.getPriceDiscoveryAddress();
+          await accountHandler.createBuyer(mockBuyer(priceDiscoveryClientAddress));
+
+          const exchangeMeta = preUpgradeEntities.exchanges[0];
+          const { offer } = preUpgradeEntities.offers[exchangeMeta.offerId - 1];
+          const seller = preUpgradeEntities.sellers.find((s) => s.id == exchangeMeta.sellerId);
+
+          const exchange = mockExchange({
+            id: exchangeMeta.exchangeId,
+            offerId: offer.id,
+            finalizedDate: "0",
+          });
+
+          const bosonVoucher = await getContractAt("BosonVoucher", seller.voucherContractAddress);
+
+          const price = offer.price;
+          const price2 = (BigInt(price) * 11n) / 10n; // 10% above the original price
+          const tokenId = deriveTokenId(exchangeMeta.offerId, exchangeMeta.exchangeId);
+
+          const reseller = preUpgradeEntities.buyers[exchangeMeta.buyerIndex].wallet;
+
+          // Prepare calldata for PriceDiscovery contract
+          const order = {
+            seller: reseller.address,
+            buyer: buyer.address,
+            voucherContract: seller.voucherContractAddress,
+            tokenId: tokenId,
+            exchangeToken: offer.exchangeToken == ZeroAddress ? await weth.getAddress() : offer.exchangeToken, // when offer is in native, we need to use wrapped native
+            price: price2,
+          };
+
+          const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
+          const priceDiscoveryContractAddress = await priceDiscoveryContract.getAddress();
+
+          const priceDiscovery = new PriceDiscovery(
+            price2,
+            Side.Ask,
+            priceDiscoveryContractAddress,
+            priceDiscoveryContractAddress,
+            priceDiscoveryData
+          );
+
+          const exchangeToken = await getContractAt(
+            "@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20",
+            order.exchangeToken
+          );
+
+          // Approve transfers
+          // Buyer needs to approve the protocol to transfer the exchange token
+          if (offer.exchangeToken == ZeroAddress) {
+            await weth.connect(buyer).deposit({ value: price2 });
+          } else {
+            await exchangeToken.connect(buyer).mint(buyer.address, price2);
+          }
+          await exchangeToken.connect(buyer).approve(await sequentialCommitHandler.getAddress(), price2);
+
+          // Seller approves price discovery to transfer the voucher
+          await bosonVoucher.connect(reseller).setApprovalForAll(await priceDiscoveryContract.getAddress(), true);
+
+          // Seller also approves the protocol to encumber the paid price
+          await exchangeToken.connect(reseller).approve(await sequentialCommitHandler.getAddress(), price2);
+
+          const newBuyer = mockBuyer(buyer.address);
+          newBuyer.id = await accountHandler.getNextAccountId();
+          exchange.buyerId = newBuyer.id;
+
+          // Get voucher info before the approval. Sequential commit should not change it
+          const [, , returnedVoucher] = await exchangeHandler.getExchange(exchange.id);
+          const voucher = Voucher.fromStruct(returnedVoucher);
+
+          // Sequential commit to offer, retrieving the event
+          const tx = await sequentialCommitHandler
+            .connect(buyer)
+            .sequentialCommitToOffer(buyer.address, tokenId, priceDiscovery);
+
+          await expect(tx)
+            .to.emit(sequentialCommitHandler, "BuyerCommitted")
+            .withArgs(
+              exchange.offerId,
+              newBuyer.id,
+              exchange.id,
+              exchange.toStruct(),
+              voucher.toStruct(),
+              buyer.address
             );
         });
       });
