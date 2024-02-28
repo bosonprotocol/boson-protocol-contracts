@@ -735,7 +735,6 @@ async function populateProtocolContract(
     const exchange = exchanges[id - 1];
 
     // If exchange has twins, mint them so the transfer can succeed
-    // const offer = offers[Number(exchange.offerId) - 1];
     const offer = offers.find((o) => o.offer.id == exchange.offerId);
     const seller = sellers.find((s) => s.seller.id == offer.offer.sellerId);
     if (twinHandler && Number(seller.id) % 2 == 1) {

@@ -705,6 +705,121 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           });
         });
       });
+
+      context("Funds handler", async function () {
+        context("release funds for pre-upgrade exchange works normally", async function () {
+          // not a breaking change, but it's a good test to see if the upgrade was successful
+          it("COMPLETED", async function () {
+            // same as expired/retracted
+            // seller: price + deposit, buyer: 0, protocol: fee, agent: fee
+            const exchangeId = 2; // redeemed already
+            const exchangeMeta = preUpgradeEntities.exchanges[exchangeId - 1];
+            const { wallet: buyer } = preUpgradeEntities.buyers[exchangeMeta.buyerIndex];
+            const { seller } = preUpgradeEntities.sellers.find((s) => s.id == exchangeMeta.sellerId);
+            const { offer, agentId } = preUpgradeEntities.offers.find((o) => o.offer.id == exchangeMeta.offerId);
+            const { agent } = preUpgradeEntities.agents.find((a) => a.id == agentId);
+
+            const protocolFeePercent = await configHandler.getProtocolFeePercentage();
+            const protocolPayoff = applyPercentage(offer.price, protocolFeePercent);
+            const agentPayoff = applyPercentage(offer.price, agent.feePercentage);
+            const sellerPayoff =
+              BigInt(offer.price) - BigInt(protocolPayoff) + BigInt(offer.sellerDeposit) - BigInt(agentPayoff);
+            // Complete the exchange, expecting event
+            const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "FundsReleased")
+              .withArgs(exchangeId, seller.id, offer.exchangeToken, sellerPayoff, buyer.address);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "FundsReleased")
+              .withArgs(exchangeId, agent.id, offer.exchangeToken, agentPayoff, buyer.address);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "ProtocolFeeCollected")
+              .withArgs(exchangeId, offer.exchangeToken, protocolPayoff, buyer.address);
+          });
+
+          it("REVOKED", async function () {
+            // seller: 0, buyer: price + seller deposit, protocol: 0, agent: 0
+            const exchangeId = 1; // committed only
+            const exchangeMeta = preUpgradeEntities.exchanges[exchangeId - 1];
+            const { id: buyerId } = preUpgradeEntities.buyers[exchangeMeta.buyerIndex];
+            const { offer } = preUpgradeEntities.offers.find((o) => o.offer.id == exchangeMeta.offerId);
+            const { wallet: assistant } = preUpgradeEntities.sellers.find((s) => s.id == exchangeMeta.sellerId);
+
+            const buyerPayoff = BigInt(offer.price) + BigInt(offer.sellerDeposit);
+
+            // Revoke the voucher, expecting event
+            const tx = await exchangeHandler.connect(assistant).revokeVoucher(exchangeId);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "FundsReleased")
+              .withArgs(exchangeId, buyerId, offer.exchangeToken, buyerPayoff, assistant.address);
+
+            await expect(tx).to.not.emit(exchangeHandler, "ProtocolFeeCollected");
+          });
+
+          it("CANCELED", async function () {
+            // seller: buyer cancel penalty + seller deposit, buyer: price - buyer cancel penalty, protocol: 0, agent: 0
+            const exchangeId = 1; // committed only
+            const exchangeMeta = preUpgradeEntities.exchanges[exchangeId - 1];
+            const { wallet: buyer, id: buyerId } = preUpgradeEntities.buyers[exchangeMeta.buyerIndex];
+            const { seller } = preUpgradeEntities.sellers.find((s) => s.id == exchangeMeta.sellerId);
+            const { offer } = preUpgradeEntities.offers.find((o) => o.offer.id == exchangeMeta.offerId);
+
+            const sellerPayoff = BigInt(offer.buyerCancelPenalty) + BigInt(offer.sellerDeposit);
+            const buyerPayoff = BigInt(offer.price) - BigInt(offer.buyerCancelPenalty);
+
+            // Cancel the voucher, expecting event
+            const tx = await exchangeHandler.connect(buyer).cancelVoucher(exchangeId);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "FundsReleased")
+              .withArgs(exchangeId, seller.id, offer.exchangeToken, sellerPayoff, buyer.address);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "FundsReleased")
+              .withArgs(exchangeId, buyerId, offer.exchangeToken, buyerPayoff, buyer.address);
+
+            await expect(tx).to.not.emit(exchangeHandler, "ProtocolFeeCollected");
+          });
+
+          it("DECIDED", async function () {
+            // same as resolved
+            // seller: (price + deposit)*(1-buyerPercent), buyer: (price + deposit)*buyerPercent, protocol: 0, agent: 0
+            const exchangeId = 5; // disputed already
+            const exchangeMeta = preUpgradeEntities.exchanges[exchangeId - 1];
+            const { id: buyerId, wallet: buyer } = preUpgradeEntities.buyers[exchangeMeta.buyerIndex];
+            const { seller } = preUpgradeEntities.sellers.find((s) => s.id == exchangeMeta.sellerId);
+            const { offer, disputeResolverId } = preUpgradeEntities.offers.find(
+              (o) => o.offer.id == exchangeMeta.offerId
+            );
+            const { wallet: assistantDR } = preUpgradeEntities.DRs.find((d) => d.id == disputeResolverId);
+
+            const buyerPercent = 1234;
+            const pot = BigInt(offer.price) + BigInt(offer.sellerDeposit);
+            const buyerPayoff = applyPercentage(pot, buyerPercent);
+            const sellerPayoff = pot - BigInt(buyerPayoff);
+
+            // escalate dispute, so DR can resolve it
+            await disputeHandler.connect(buyer).escalateDispute(exchangeId);
+
+            // Decide the exchange, expecting event
+            const tx = await disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercent);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "FundsReleased")
+              .withArgs(exchangeId, seller.id, offer.exchangeToken, sellerPayoff, assistantDR.address);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "FundsReleased")
+              .withArgs(exchangeId, buyerId, offer.exchangeToken, buyerPayoff, assistantDR.address);
+
+            await expect(tx).to.not.emit(exchangeHandler, "ProtocolFeeCollected");
+          });
+        });
+      });
     });
 
     context("New methods", async function () {
