@@ -12,6 +12,8 @@ const PriceDiscovery = require("../../scripts/domain/PriceDiscovery");
 const Side = require("../../scripts/domain/Side");
 const PriceType = require("../../scripts/domain/PriceType.js");
 const Voucher = require("../../scripts/domain/Voucher.js");
+const TokenType = require("../../scripts/domain/TokenType");
+const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const { RevertReasons } = require("../../scripts/config/revert-reasons");
 
 // const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
@@ -25,7 +27,17 @@ const {
   calculateVoucherExpiry,
   applyPercentage,
 } = require("../util/utils");
-const { mockOffer, mockExchange, mockVoucher, mockBuyer } = require("../util/mock");
+const {
+  mockOffer,
+  mockExchange,
+  mockVoucher,
+  mockBuyer,
+  mockSeller,
+  mockCondition,
+  mockAuthToken,
+  mockVoucherInitValues,
+  mockTwin,
+} = require("../util/mock");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens.js");
 
 const {
@@ -58,7 +70,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     fundsHandler,
     priceDiscoveryHandler,
     sequentialCommitHandler,
-    disputeHandler;
+    disputeHandler,
+    orchestrationHandler,
+    groupHandler;
   let snapshot;
   let protocolDiamondAddress, mockContracts;
   let contractsAfter;
@@ -233,6 +247,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         priceDiscoveryHandler,
         sequentialCommitHandler,
         disputeHandler,
+        orchestrationHandler,
+        groupHandler,
       } = contractsAfter);
 
       // getFunctionHashesClosure = getStateModifyingFunctionsHashes(
@@ -370,6 +386,323 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           await expect(
             deployer.sendTransaction({ to: await configHandler.getAddress(), data: getData })
           ).to.be.revertedWith("Diamond: Function does not exist");
+        });
+      });
+
+      context("Offer handler", async function () {
+        it("Create offer accepts fee limit", async function () {
+          const seller = preUpgradeEntities.sellers[0];
+          const assistant = seller.wallet;
+          const { offer, offerDates, offerDurations } = await mockOffer({ refreshModule: true });
+
+          const offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
+          const disputeResolverId = preUpgradeEntities.DRs[1].id;
+          const agentId = "0";
+          offer.royaltyInfo[0].bps = [seller.voucherInitValues.royaltyPercentage];
+
+          // Create the offer, test for the event
+          await expect(
+            offerHandler
+              .connect(assistant)
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit)
+          ).to.emit(offerHandler, "OfferCreated");
+        });
+
+        it("Old create offer does not work anymore", async function () {
+          const inputDataType = [
+            "tuple(uint256,uint256,uint256,uint256,uint256,uint256,address,uint8,string,string,bool,uint256)",
+            "tuple(uint256,uint256,uint256,uint256)",
+            "tuple(uint256,uint256,uint256)",
+            "uint256",
+            "uint256",
+          ];
+          const functionName = `createOffer(${inputDataType.join(",").replaceAll("tuple", "")})`;
+          const functionSelector = id(functionName).slice(0, 10);
+
+          const seller = preUpgradeEntities.sellers[0];
+          const assistant = seller.wallet;
+          const { offer, offerDates, offerDurations } = await mockOffer({ refreshModule: true });
+
+          const disputeResolverId = preUpgradeEntities.DRs[1].id;
+          const agentId = "0";
+
+          const abiCoder = new ethers.AbiCoder();
+          const encdata = abiCoder.encode(inputDataType, [
+            offer.toStruct().slice(0, -1),
+            offerDates.toStruct(),
+            offerDurations.toStruct(),
+            disputeResolverId,
+            agentId,
+          ]);
+          const data = functionSelector + encdata.slice(2);
+
+          // Try to create offer with old inputs, expect revert
+          await expect(
+            assistant.sendTransaction({ to: await offerHandler.getAddress(), data: data })
+          ).to.be.revertedWith("Diamond: Function does not exist");
+        });
+      });
+
+      context("Orchestration handler", async function () {
+        let seller, assistant, offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit;
+
+        beforeEach(async function () {
+          assistant = preUpgradeEntities.sellers[0].wallet;
+          ({ offer, offerDates, offerDurations } = await mockOffer({ refreshModule: true }));
+
+          offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
+          disputeResolverId = preUpgradeEntities.DRs[1].id;
+          agentId = "0";
+        });
+
+        context("new seller", async function () {
+          let emptyAuthToken, voucherInitValues;
+          beforeEach(async function () {
+            assistant = rando;
+            seller = mockSeller(
+              await assistant.getAddress(),
+              await assistant.getAddress(),
+              ZeroAddress,
+              await assistant.getAddress()
+            );
+
+            emptyAuthToken = mockAuthToken();
+            voucherInitValues = mockVoucherInitValues();
+          });
+
+          it("createSellerAndOffer", async function () {
+            // Create a seller and an offer, testing for the event
+            await expect(
+              orchestrationHandler
+                .connect(assistant)
+                .createSellerAndOffer(
+                  seller,
+                  offer,
+                  offerDates,
+                  offerDurations,
+                  disputeResolverId,
+                  emptyAuthToken,
+                  voucherInitValues,
+                  agentId,
+                  offerFeeLimit
+                )
+            ).to.emit(orchestrationHandler, "OfferCreated");
+          });
+
+          it("createSellerAndOfferWithCondition", async function () {
+            const condition = mockCondition({
+              tokenAddress: await other2.getAddress(),
+              tokenType: TokenType.MultiToken,
+              method: EvaluationMethod.Threshold,
+            });
+
+            // Create a seller and an offer with condition, testing for the events
+            const tx = await orchestrationHandler
+              .connect(assistant)
+              .createSellerAndOfferWithCondition(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                condition,
+                emptyAuthToken,
+                voucherInitValues,
+                agentId,
+                offerFeeLimit
+              );
+
+            await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+          });
+
+          it("createSellerAndOfferAndTwinWithBundle", async function () {
+            const [foreign20] = await deployMockTokens(["Foreign20"]);
+            const twin = mockTwin(await foreign20.getAddress());
+
+            await foreign20.connect(assistant).mint(assistant.address, 100);
+            await foreign20.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
+
+            // Create a seller, an offer with condition and a twin with bundle, testing for the events
+            const tx = await orchestrationHandler
+              .connect(assistant)
+              .createSellerAndOfferAndTwinWithBundle(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                twin,
+                emptyAuthToken,
+                voucherInitValues,
+                agentId,
+                offerFeeLimit
+              );
+
+            await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+          });
+
+          it("createSellerAndOfferWithConditionAndTwinAndBundle", async function () {
+            const [foreign20] = await deployMockTokens(["Foreign20"]);
+            const twin = mockTwin(await foreign20.getAddress());
+
+            await foreign20.connect(assistant).mint(assistant.address, 100);
+            await foreign20.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
+
+            const condition = mockCondition({
+              tokenAddress: await other2.getAddress(),
+              tokenType: TokenType.MultiToken,
+              method: EvaluationMethod.Threshold,
+            });
+
+            // Create a seller, an offer with condition, twin and bundle
+            const tx = await orchestrationHandler
+              .connect(assistant)
+              .createSellerAndOfferWithConditionAndTwinAndBundle(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                condition,
+                twin,
+                emptyAuthToken,
+                voucherInitValues,
+                agentId,
+                offerFeeLimit
+              );
+
+            await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+          });
+        });
+
+        context("existing seller", async function () {
+          let sellerMeta;
+          beforeEach(async function () {
+            sellerMeta = preUpgradeEntities.sellers[0];
+            seller = sellerMeta.seller;
+            assistant = sellerMeta.wallet;
+
+            offer.royaltyInfo[0].bps = [sellerMeta.voucherInitValues.royaltyPercentage];
+          });
+
+          it("createOfferWithCondition", async function () {
+            const condition = mockCondition({
+              tokenAddress: await other2.getAddress(),
+              tokenType: TokenType.MultiToken,
+              method: EvaluationMethod.Threshold,
+            });
+
+            // Create an offer with condition, testing for the events
+            const tx = await orchestrationHandler
+              .connect(assistant)
+              .createOfferWithCondition(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                condition,
+                agentId,
+                offerFeeLimit
+              );
+
+            // OfferCreated event
+            await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+          });
+
+          it("createOfferAddToGroup", async function () {
+            const condition = mockCondition({
+              tokenType: TokenType.MultiToken,
+              tokenAddress: await other2.getAddress(),
+              method: EvaluationMethod.Threshold,
+              maxCommits: "3",
+            });
+
+            const nextGroupId = await groupHandler.getNextGroupId();
+
+            // Create an offer and add it to a group
+            await orchestrationHandler
+              .connect(assistant)
+              .createOfferWithCondition(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                condition,
+                agentId,
+                offerFeeLimit
+              );
+
+            // Create an offer, add it to the existing group, testing for the events
+            const tx = await orchestrationHandler
+              .connect(assistant)
+              .createOfferAddToGroup(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                nextGroupId,
+                agentId,
+                offerFeeLimit
+              );
+
+            // OfferCreated event
+            await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+          });
+
+          it("createOfferAndTwinWithBundle", async function () {
+            const [foreign20] = await deployMockTokens(["Foreign20"]);
+            const twin = mockTwin(await foreign20.getAddress());
+
+            await foreign20.connect(assistant).mint(assistant.address, 100);
+            await foreign20.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
+
+            // Create an offer, a twin and a bundle, testing for the events
+            const tx = await orchestrationHandler
+              .connect(assistant)
+              .createOfferAndTwinWithBundle(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                twin,
+                agentId,
+                offerFeeLimit
+              );
+
+            // OfferCreated event
+            await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+          });
+
+          it("createOfferWithConditionAndTwinAndBundle", async function () {
+            const [foreign20] = await deployMockTokens(["Foreign20"]);
+            const twin = mockTwin(await foreign20.getAddress());
+
+            await foreign20.connect(assistant).mint(assistant.address, 100);
+            await foreign20.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
+
+            const condition = mockCondition({
+              tokenAddress: await other2.getAddress(),
+              tokenType: TokenType.MultiToken,
+              method: EvaluationMethod.Threshold,
+            });
+
+            // Create an offer with condition, twin and bundle
+            const tx = await orchestrationHandler
+              .connect(assistant)
+              .createOfferWithConditionAndTwinAndBundle(
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                condition,
+                twin,
+                agentId,
+                offerFeeLimit
+              );
+
+            // OfferCreated event
+            await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+          });
         });
       });
     });
