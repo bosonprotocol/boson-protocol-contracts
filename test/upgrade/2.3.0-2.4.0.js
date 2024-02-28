@@ -1,7 +1,8 @@
 const shell = require("shelljs");
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { ZeroAddress, encodeBytes32String, id, MaxUint256, getContractFactory, getContractAt, provider } = ethers;
+const { ZeroAddress, encodeBytes32String, id, MaxUint256, getContractFactory, getContractAt, provider, parseUnits } =
+  ethers;
 const { assert, expect } = require("chai");
 
 const { Collection, CollectionList } = require("../../scripts/domain/Collection");
@@ -11,6 +12,7 @@ const PriceDiscovery = require("../../scripts/domain/PriceDiscovery");
 const Side = require("../../scripts/domain/Side");
 const PriceType = require("../../scripts/domain/PriceType.js");
 const Voucher = require("../../scripts/domain/Voucher.js");
+const { RevertReasons } = require("../../scripts/config/revert-reasons");
 
 // const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 const {
@@ -21,8 +23,10 @@ const {
   deriveTokenId,
   compareRoyaltyInfo,
   calculateVoucherExpiry,
+  applyPercentage,
 } = require("../util/utils");
 const { mockOffer, mockExchange, mockVoucher, mockBuyer } = require("../util/mock");
+const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens.js");
 
 const {
   deploySuite,
@@ -53,7 +57,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     offerHandler,
     fundsHandler,
     priceDiscoveryHandler,
-    sequentialCommitHandler;
+    sequentialCommitHandler,
+    disputeHandler;
   let snapshot;
   let protocolDiamondAddress, mockContracts;
   let contractsAfter;
@@ -210,6 +215,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         exchangeHandler: "IBosonExchangeHandler",
         priceDiscoveryHandler: "IBosonPriceDiscoveryHandler",
         sequentialCommitHandler: "IBosonSequentialCommitHandler",
+        disputeHandler: "IBosonDisputeHandler",
       };
 
       contractsAfter = { ...contractsBefore };
@@ -226,6 +232,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         fundsHandler,
         priceDiscoveryHandler,
         sequentialCommitHandler,
+        disputeHandler,
       } = contractsAfter);
 
       // getFunctionHashesClosure = getStateModifyingFunctionsHashes(
@@ -384,7 +391,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         it("getEIP2981Royalties", async function () {
           const sellers = preUpgradeEntities.sellers;
           for (const offer of preUpgradeEntities.offers) {
-            console.log("new loop");
             const seller = sellers.find((s) => s.id == offer.offer.sellerId);
 
             const [returnedReceiver, returnedRoyaltyPercentage] = await exchangeHandler.getEIP2981Royalties(
@@ -411,11 +417,11 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             );
             expect(returnedReceiver).to.equal(
               seller.wallet.address,
-              `Receiver for exchange ${exchange.id} is not correct`
+              `Receiver for exchange ${exchange.exchangeId} is not correct`
             );
             expect(returnedRoyaltyPercentage).to.equal(
               seller.voucherInitValues.royaltyPercentage,
-              `Percentage for exchange ${exchange.id} is not correct`
+              `Percentage for exchange ${exchange.exchangeId} is not correct`
             );
           }
         });
@@ -450,11 +456,11 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             const [returnedReceiver, returnedRoyaltyPercentage] = await exchangeHandler.getRoyalties(queryId);
             expect(returnedReceiver).to.deep.equal(
               [seller.wallet.address],
-              `Receiver for exchange ${exchange.id} is not correct`
+              `Receiver for exchange ${exchange.exchangeId} is not correct`
             );
             expect(returnedRoyaltyPercentage).to.deep.equal(
               [seller.voucherInitValues.royaltyPercentage],
-              `Percentage for exchange ${exchange.id} is not correct`
+              `Percentage for exchange ${exchange.exchangeId} is not correct`
             );
           }
         });
@@ -868,6 +874,86 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               voucher.toStruct(),
               buyer.address
             );
+        });
+      });
+
+      context("Boson voucher", async function () {
+        it("royalty info", async function () {
+          for (const exchange of preUpgradeEntities.exchanges) {
+            const seller = preUpgradeEntities.sellers.find((s) => s.id == exchange.sellerId);
+            const bosonVoucher = await getContractAt("BosonVoucher", seller.voucherContractAddress);
+
+            const [exist, state] = await exchangeHandler.getExchangeState(exchange.exchangeId);
+            console.log("exchange state", exist, state);
+
+            const tokenId = deriveTokenId(exchange.offerId, exchange.exchangeId);
+            const offerPrice = parseUnits("1", "ether");
+            const [receiver, royaltyAmount] = await bosonVoucher.royaltyInfo(tokenId, offerPrice);
+
+            console.log(`Voucher - Exchange ${exchange.exchangeId} - Receiver: ${receiver}, Royalty: ${royaltyAmount}`);
+
+            const [returnedReceiver, returnedRoyaltyPercentage] = await exchangeHandler.getRoyalties(tokenId);
+            console.log(
+              `Protocol - Exchange ${exchange.exchangeId} - Receiver: ${returnedReceiver}, Royalty: ${returnedRoyaltyPercentage}`
+            );
+
+            let expectedReceiver, expectedRoyaltyAmount;
+            if (state > 0n) {
+              // voucher was burned
+              expectedReceiver = ZeroAddress;
+              expectedRoyaltyAmount = 0n;
+            } else {
+              expectedReceiver = seller.wallet.address;
+              expectedRoyaltyAmount = applyPercentage(offerPrice, seller.voucherInitValues.royaltyPercentage);
+            }
+            console.log(`Expected - Receiver: ${expectedReceiver}, Royalty: ${expectedRoyaltyAmount}`);
+
+            expect(receiver).to.equal(expectedReceiver, `Receiver for exchange ${exchange.exchangeId} is not correct`);
+            expect(royaltyAmount).to.equal(
+              expectedRoyaltyAmount,
+              `Royalty for exchange ${exchange.exchangeId} is not correct`
+            );
+          }
+        });
+      });
+
+      context("Price discovery client", async function () {
+        it("Can receive voucher only during price discovery", async function () {
+          const tokenId = 1;
+          const [foreign721] = await deployMockTokens(["Foreign721"]);
+          await foreign721.connect(rando).mint(tokenId, 1);
+
+          const bosonPriceDiscovery = await getContractAt(
+            "BosonPriceDiscovery",
+            await configHandler.getPriceDiscoveryAddress()
+          );
+          const bosonErrors = await getContractAt("BosonErrors", await bosonPriceDiscovery.getAddress());
+
+          await expect(
+            foreign721
+              .connect(rando)
+              ["safeTransferFrom(address,address,uint256)"](
+                rando.address,
+                await bosonPriceDiscovery.getAddress(),
+                tokenId
+              )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNEXPECTED_ERC721_RECEIVED);
+        });
+      });
+    });
+
+    context("Bug fixes", async function () {
+      context("Funds handler facet", async function () {
+        it("FundsEncumbered event is emitted during escalate dispute", async function () {
+          const exchangeId = 5; // exchange with dispute
+          const exchange = preUpgradeEntities.exchanges[exchangeId - 1];
+          const buyer = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
+
+          let buyerEscalationDeposit = 0; // Currently, DRfees can only be 0
+
+          await expect(
+            disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDeposit })
+          ).to.emit(disputeHandler, "FundsEncumbered");
         });
       });
     });
