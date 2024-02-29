@@ -198,8 +198,7 @@ async function migrate(env, params) {
 
     // check if functions were removed
     for (const selector of selectorsToRemove) {
-      const isFunctionAllowlisted = await metaTransactionHandlerFacet.getFunction("isFunctionAllowlisted(bytes32)");
-      const isAllowed = await isFunctionAllowlisted.staticCall(selector);
+      const isAllowed = await metaTransactionHandlerFacet["isFunctionAllowlisted(bytes32)"](selector);
       if (isAllowed) {
         console.error(`Selector ${selector} was not removed`);
       }
