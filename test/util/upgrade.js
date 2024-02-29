@@ -2,6 +2,7 @@ const shell = require("shelljs");
 const _ = require("lodash");
 const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const hre = require("hardhat");
+const { expect } = require("chai");
 const decache = require("decache");
 const {
   id: ethersId,
@@ -1343,9 +1344,11 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress, ign
 
   // incomingVoucherId
   const incomingVoucherId = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber + 5n);
+  expect(incomingVoucherId).to.equal(ZeroHash);
 
   // incomingVoucherCloneAddress
   const incomingVoucherCloneAddress = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber + 6n);
+  expect(incomingVoucherId).to.equal(ZeroHash);
 
   return {
     pauseScenario,
