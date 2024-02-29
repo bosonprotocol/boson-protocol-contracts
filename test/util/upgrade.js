@@ -341,6 +341,7 @@ async function populateProtocolContract(
   let sellers = [];
   let buyers = [];
   let agents = [];
+  let royaltyRecipients = [];
   let offers = [];
   let groups = [];
   let twins = [];
@@ -353,6 +354,7 @@ async function populateProtocolContract(
     DR: 1,
     AGENT: 2,
     BUYER: 3,
+    ROYALTY_RECIPIENT: 4,
   };
 
   const entities = [
@@ -371,6 +373,9 @@ async function populateProtocolContract(
     entityType.BUYER,
     entityType.BUYER,
     entityType.BUYER,
+    entityType.ROYALTY_RECIPIENT, // For next upgrade, it might make sense to move royalty recipients right after corresponding sellers to ensure correct account ids in tests
+    entityType.ROYALTY_RECIPIENT,
+    entityType.ROYALTY_RECIPIENT,
   ];
 
   let nextAccountId = Number(await accountHandler.getNextAccountId());
@@ -492,6 +497,12 @@ async function populateProtocolContract(
         // mint them conditional token in case they need it
         await mockConditionalToken.mint(await wallet.getAddress(), "10");
 
+        break;
+      }
+      case entityType.ROYALTY_RECIPIENT: {
+        // Just a placeholder for now
+        const id = nextAccountId.toString();
+        royaltyRecipients.push({ wallet: connectedWallet, id: id });
         break;
       }
     }
@@ -784,7 +795,7 @@ async function populateProtocolContract(
   await disputeHandler.connect(buyers[exchange.buyerIndex].wallet).raiseDispute(exchange.exchangeId);
   await disputeHandler.connect(seller.wallet).extendDisputeTimeout(exchange.exchangeId, 4000000000n);
 
-  return { DRs, sellers, buyers, agents, offers, exchanges, bundles, groups, twins, bosonVouchers };
+  return { DRs, sellers, buyers, agents, offers, exchanges, bundles, groups, twins, bosonVouchers, royaltyRecipients };
 }
 
 // Returns protocol state for provided entities
@@ -802,7 +813,7 @@ async function getProtocolContractState(
     configHandler,
   },
   { mockToken, mockTwinTokens },
-  { DRs, sellers, buyers, agents, offers, exchanges, bundles, groups, twins },
+  { DRs, sellers, buyers, agents, offers, exchanges, bundles, groups, twins, royaltyRecipients },
   { isBefore, skipFacets } = { isBefore: false, skipFacets: [] }
 ) {
   rando = (await getSigners())[10]; // random account making the calls
@@ -821,6 +832,7 @@ async function getProtocolContractState(
     metaTxPrivateContractState,
     protocolStatusPrivateContractState,
     protocolLookupsPrivateContractState,
+    protocolEntitiesPrivateContractState,
   ] = await Promise.all([
     getAccountContractState(accountHandler, { DRs, sellers, buyers, agents }, isBefore),
     getOfferContractState(offerHandler, offers),
@@ -837,9 +849,10 @@ async function getProtocolContractState(
     getProtocolLookupsPrivateContractState(
       protocolDiamondAddress,
       { mockToken, mockTwinTokens },
-      { sellers, DRs, agents, buyers, offers, groups, twins },
+      { sellers, DRs, agents, buyers, offers, groups, twins, royaltyRecipients },
       groupHandler
     ),
+    getProtocolEntitiesPrivateContractState(protocolDiamondAddress, { exchanges, royaltyRecipients }),
   ]);
 
   return {
@@ -856,6 +869,7 @@ async function getProtocolContractState(
     metaTxPrivateContractState,
     protocolStatusPrivateContractState,
     protocolLookupsPrivateContractState,
+    protocolEntitiesPrivateContractState,
   };
 }
 
@@ -1284,6 +1298,8 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress, ign
           #2 [ ] // placeholder for initializedInterfaces
           #3 [ ] // placeholder for initializedVersions
           #4 [ version ] - not here as should be updated one very upgrade
+          #5 [ incomingVoucherId ] // should always be empty
+          #6 [ incomingVoucherCloneAddress ] // should always be empty
           */
 
   // starting slot
@@ -1307,6 +1323,7 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress, ign
     });
   }
 
+  // initializedInterfaces
   const initializedInterfacesState = [];
   for (const interfaceId of Object.values(preUpgradeInterfaceIds)) {
     const storageSlot = getMappingStoragePosition(protocolStatusStorageSlotNumber + 2n, interfaceId, paddingType.END);
@@ -1317,19 +1334,33 @@ async function getProtocolStatusPrivateContractState(protocolDiamondAddress, ign
     preUpgradeVersions = getVersionsBeforeTarget(Object.keys(facets.upgrade), versionTags.newVersion);
   }
 
+  // initializedVersions
   const initializedVersionsState = [];
   for (const version of preUpgradeVersions) {
     const storageSlot = getMappingStoragePosition(protocolStatusStorageSlotNumber + 3n, version, paddingType.END);
     initializedVersionsState.push(await getStorageAt(protocolDiamondAddress, storageSlot));
   }
 
-  return { pauseScenario, reentrancyStatus, initializedInterfacesState, initializedVersionsState };
+  // incomingVoucherId
+  const incomingVoucherId = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber + 5n);
+
+  // incomingVoucherCloneAddress
+  const incomingVoucherCloneAddress = await getStorageAt(protocolDiamondAddress, protocolStatusStorageSlotNumber + 6n);
+
+  return {
+    pauseScenario,
+    reentrancyStatus,
+    initializedInterfacesState,
+    initializedVersionsState,
+    incomingVoucherId,
+    incomingVoucherCloneAddress,
+  };
 }
 
 async function getProtocolLookupsPrivateContractState(
   protocolDiamondAddress,
   { mockToken, mockTwinTokens },
-  { sellers, DRs, agents, buyers, offers, groups, twins },
+  { sellers, DRs, agents, buyers, offers, groups, twins, royaltyRecipients },
   groupHandler
 ) {
   /*
@@ -1373,6 +1404,9 @@ async function getProtocolLookupsPrivateContractState(
         #34 [X] // placeholder for additionalCollections
         #35 [ ] // placeholder for sellerSalt
         #36 [ ] // placeholder for isUsedSellerSalt
+        #37 [X] // placeholder for royaltyRecipientsBySeller
+        #38 [ ] // placeholder for royaltyRecipientIndexBySellerAndRecipient
+        #39 [ ] // placeholder for royaltyRecipientIdByWallet
         */
 
   // starting slot
@@ -1692,6 +1726,40 @@ async function getProtocolLookupsPrivateContractState(
     );
   }
 
+  let royaltyRecipientIndexBySellerAndRecipient = [];
+  let royaltyRecipientIdByWallet = [];
+  // royaltyRecipientIndexBySellerAndRecipient, royaltyRecipientIdByWallet
+  for (const royaltyRecipient of royaltyRecipients) {
+    const { wallet: royaltyRecipientWallet } = royaltyRecipient;
+    const royaltyRecipientAddress = royaltyRecipientWallet.address;
+
+    // royaltyRecipientIndexBySellerAndRecipient
+    const royaltyRecipientIndexRecipient = [];
+    for (const seller of sellers) {
+      const { id } = seller;
+      const firstMappingStorageSlot = await getStorageAt(
+        protocolDiamondAddress,
+        getMappingStoragePosition(protocolLookupsSlotNumber + 38n, id, paddingType.START)
+      );
+
+      royaltyRecipientIndexRecipient.push(
+        await getStorageAt(
+          protocolDiamondAddress,
+          getMappingStoragePosition(firstMappingStorageSlot, royaltyRecipientAddress, paddingType.START)
+        )
+      );
+      royaltyRecipientIndexBySellerAndRecipient.push(royaltyRecipientIndexRecipient);
+    }
+
+    // royaltyRecipientIdByWallet
+    royaltyRecipientIdByWallet.push(
+      getStorageAt(
+        protocolDiamondAddress,
+        getMappingStoragePosition(protocolLookupsSlotNumber + 39n, royaltyRecipientAddress, paddingType.START)
+      )
+    );
+  }
+
   return {
     exchangeIdsByOfferState,
     groupIdByOfferState,
@@ -1714,6 +1782,57 @@ async function getProtocolLookupsPrivateContractState(
     sellerSalt,
     isUsedSellerSalt,
   };
+}
+
+async function getProtocolEntitiesPrivateContractState(protocolDiamondAddress, { exchanges, royaltyRecipients }) {
+  /*
+    ProtocolEntities storage layout
+
+    #0-#18 [X] // placeholders for entites {offers}....{authTokens}
+    #19 [ ] // placeholder for exchangeCosts
+    #20 [ ] // placeholder for royaltyRecipients
+  */
+
+  // starting slot
+  const protocolEntitiesStorageSlot = keccak256(toUtf8Bytes("boson.protocol.entities"));
+  const protocolEntitiesStorageSlotNumber = BigInt(protocolEntitiesStorageSlot);
+
+  // exchangeCosts
+  const exchangeCosts = [];
+  for (const exchange of exchanges) {
+    let exchangeCostByExchange = [];
+    const id = exchange.exchangeId;
+    const arraySlot = getMappingStoragePosition(protocolEntitiesStorageSlotNumber + 19n, id, paddingType.START);
+    const arrayLength = await getStorageAt(protocolDiamondAddress, arraySlot);
+    const arrayStart = BigInt(keccak256(arraySlot));
+    const structLength = 5n; // BosonTypes.ExchangeCost has 2 fields
+    for (let i = 0n; i < arrayLength; i++) {
+      const ExchangeCost = [];
+      for (let j = 0n; j < structLength; j++) {
+        ExchangeCost.push(await getStorageAt(protocolDiamondAddress, BigInt(arrayStart) + i * structLength + j));
+      }
+      exchangeCostByExchange.push(ExchangeCost);
+    }
+    exchangeCosts.push(exchangeCostByExchange);
+  }
+
+  // royaltyRecipients
+  const royaltyRecipientStructs = [];
+  const structLength = 2n; // BosonTypes.RoyaltyRecipient has 2 fields
+  for (const royaltyRecipient of royaltyRecipients) {
+    const { id } = royaltyRecipient;
+    const storageSlot = BigInt(
+      getMappingStoragePosition(protocolEntitiesStorageSlotNumber + 20n, id, paddingType.START)
+    );
+    const royaltyRecipientStruct = [];
+    for (let i = 0n; i < structLength; i++) {
+      royaltyRecipientStruct.push(await getStorageAt(protocolDiamondAddress, storageSlot + i));
+    }
+
+    royaltyRecipientStructs.push(royaltyRecipientStruct);
+  }
+
+  return { exchangeCosts, royaltyRecipientStructs };
 }
 
 async function getStorageLayout(contractName) {

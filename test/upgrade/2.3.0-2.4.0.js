@@ -1337,13 +1337,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             const offerPrice = parseUnits("1", "ether");
             const [receiver, royaltyAmount] = await bosonVoucher.royaltyInfo(tokenId, offerPrice);
 
-            console.log(`Voucher - Exchange ${exchange.exchangeId} - Receiver: ${receiver}, Royalty: ${royaltyAmount}`);
-
-            const [returnedReceiver, returnedRoyaltyPercentage] = await exchangeHandler.getRoyalties(tokenId);
-            console.log(
-              `Protocol - Exchange ${exchange.exchangeId} - Receiver: ${returnedReceiver}, Royalty: ${returnedRoyaltyPercentage}`
-            );
-
             let expectedReceiver, expectedRoyaltyAmount;
             if (state > 0n) {
               // voucher was burned
@@ -1353,7 +1346,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               expectedReceiver = seller.wallet.address;
               expectedRoyaltyAmount = applyPercentage(offerPrice, seller.voucherInitValues.royaltyPercentage);
             }
-            console.log(`Expected - Receiver: ${expectedReceiver}, Royalty: ${expectedRoyaltyAmount}`);
 
             expect(receiver).to.equal(expectedReceiver, `Receiver for exchange ${exchange.exchangeId} is not correct`);
             expect(royaltyAmount).to.equal(
