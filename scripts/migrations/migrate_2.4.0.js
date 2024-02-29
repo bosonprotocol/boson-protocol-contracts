@@ -20,7 +20,7 @@ const { META_TRANSACTION_FORWARDER } = require("../config/client-upgrade");
 const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
 
 const config = {
-  // status at v2.4.0-rc.2
+  // status at v2.4.0-rc.3
   addOrUpgrade: [
     "AccountHandlerFacet",
     "AgentHandlerFacet",

@@ -39,6 +39,7 @@ const {
   mockTwin,
 } = require("../util/mock");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens.js");
+const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils.js");
 
 const {
   deploySuite,
@@ -72,13 +73,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     sequentialCommitHandler,
     disputeHandler,
     orchestrationHandler,
-    groupHandler;
+    groupHandler,
+    metaTransactionsHandler;
   let snapshot;
   let protocolDiamondAddress, mockContracts;
   let contractsAfter;
   let protocolContractStateBefore, protocolContractStateAfter;
   let weth;
-  // let removedFunctionHashes, addedFunctionHashes;
+  let removedFunctionHashes, addedFunctionHashes;
 
   // reference protocol state
   let preUpgradeEntities;
@@ -105,9 +107,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         mockContracts,
       } = await deploySuite(deployer, version));
 
-      twinHandler = contractsBefore.twinHandler; // <- probably not needed?
-      delete contractsBefore.twinHandler;
-
       // Populate protocol with data
       preUpgradeEntities = await populateProtocolContract(
         deployer,
@@ -116,9 +115,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         mockContracts,
         true
       );
-
-      // Add twin handler back
-      contractsBefore.twinHandler = twinHandler;
 
       const preUpgradeStorageLayout = await getStorageLayout("BosonVoucher");
       const preUpgradeEntitiesVoucher = await populateVoucherContract(
@@ -137,7 +133,15 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         contractsBefore,
         mockContracts,
         preUpgradeEntities,
-        { isBefore: true, skipInterfaceIds: ["IBosonPriceDiscoveryHandler", "IBosonSequentialCommitHandler"] }
+        {
+          isBefore: true,
+          skipFacets: [
+            "IBosonPriceDiscoveryHandler",
+            "IBosonSequentialCommitHandler",
+            "PriceDiscoveryHandlerFacet",
+            "SequentialCommitHandlerFacet",
+          ],
+        }
       );
 
       const { offers } = preUpgradeEntities;
@@ -150,63 +154,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
       ({ exchangeHandler, twinHandler } = contractsBefore);
 
-      // let getFunctionHashesClosure = getStateModifyingFunctionsHashes(
-      //   [
-      //     "SellerHandlerFacet",
-      //     "OfferHandlerFacet",
-      //     "ConfigHandlerFacet",
-      //     "PauseHandlerFacet",
-      //     "GroupHandlerFacet",
-      //     "OrchestrationHandlerFacet1",
-      //   ],
-      //   undefined,
-      //   [
-      //     "createSeller",
-      //     "createOffer",
-      //     "createPremintedOffer",
-      //     "unpause",
-      //     "createGroup",
-      //     "setGroupCondition",
-      //     "setMaxOffersPerBatch",
-      //     "setMaxOffersPerGroup",
-      //     "setMaxTwinsPerBundle",
-      //     "setMaxOffersPerBundle",
-      //     "setMaxTokensPerWithdrawal",
-      //     "setMaxFeesPerDisputeResolver",
-      //     "setMaxDisputesPerBatch",
-      //     "setMaxAllowedSellers",
-      //     "setMaxExchangesPerBatch",
-      //     "setMaxPremintedVouchers",
-      //   ]
-      // );
+      let getFunctionHashesClosure = getStateModifyingFunctionsHashes(
+        ["OrchestrationHandlerFacet1", "OfferHandlerFacet", "ConfigHandlerFacet", "ExchangeHandlerFacet"],
+        undefined,
+        ["createSellerAnd", "createOffer", "createPremintedOffer", "setMaxRoyaltyPecentage", "commitToPreMintedOffer"]
+      );
 
-      // removedFunctionHashes = await getFunctionHashesClosure();
-
-      // prepare seller creators
-      // const { sellers } = preUpgradeEntities;
-
-      // // Start a seller update (finished in tests)
-      // accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamondAddress);
-      // let { wallet, id, seller, authToken } = sellers[0];
-      // seller.clerk = rando.address;
-      // await accountHandler.connect(wallet).updateSeller(seller, authToken);
-      // ({ wallet, id, seller, authToken } = sellers[1]);
-      // seller.clerk = rando.address;
-      // seller.assistant = rando.address;
-      // await accountHandler.connect(wallet).updateSeller(seller, authToken);
-      // ({ wallet, id, seller, authToken } = sellers[2]);
-      // seller.clerk = clerk.address;
-      // await accountHandler.connect(wallet).updateSeller(seller, authToken);
-      // await accountHandler.connect(clerk).optInToSellerUpdate(id, [SellerUpdateFields.Clerk]);
-      // const { DRs } = preUpgradeEntities;
-      // let disputeResolver;
-      // ({ wallet, disputeResolver } = DRs[0]);
-      // disputeResolver.clerk = rando.address;
-      // await accountHandler.connect(wallet).updateDisputeResolver(disputeResolver);
-      // ({ wallet, disputeResolver } = DRs[1]);
-      // disputeResolver.clerk = rando.address;
-      // disputeResolver.assistant = rando.address;
-      // await accountHandler.connect(wallet).updateDisputeResolver(disputeResolver);
+      removedFunctionHashes = await getFunctionHashesClosure();
 
       shell.exec(`git checkout HEAD scripts`);
 
@@ -230,6 +184,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         priceDiscoveryHandler: "IBosonPriceDiscoveryHandler",
         sequentialCommitHandler: "IBosonSequentialCommitHandler",
         disputeHandler: "IBosonDisputeHandler",
+        metaTransactionsHandler: "IBosonMetaTransactionsHandler",
       };
 
       contractsAfter = { ...contractsBefore };
@@ -249,34 +204,38 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         disputeHandler,
         orchestrationHandler,
         groupHandler,
+        metaTransactionsHandler,
       } = contractsAfter);
 
-      // getFunctionHashesClosure = getStateModifyingFunctionsHashes(
-      //   [
-      //     "SellerHandlerFacet",
-      //     "OfferHandlerFacet",
-      //     "ConfigHandlerFacet",
-      //     "PauseHandlerFacet",
-      //     "GroupHandlerFacet",
-      //     "OrchestrationHandlerFacet1",
-      //     "ExchangeHandlerFacet",
-      //   ],
-      //   undefined,
-      //   [
-      //     "createSeller",
-      //     "createOffer",
-      //     "createPremintedOffer",
-      //     "unpause",
-      //     "createGroup",
-      //     "setGroupCondition",
-      //     "createNewCollection",
-      //     "setMinResolutionPeriod",
-      //     "commitToConditionalOffer",
-      //     "updateSellerSalt",
-      //   ]
-      // );
+      getFunctionHashesClosure = getStateModifyingFunctionsHashes(
+        [
+          "OrchestrationHandlerFacet1",
+          "OfferHandlerFacet",
+          "SellerHandlerFacet",
+          "ConfigHandlerFacet",
+          "PriceDiscoveryHandlerFacet",
+          "SequentialCommitHandlerFacet",
+          "ExchangeHandlerFacet",
+        ],
+        undefined,
+        [
+          "createSellerAnd",
+          "createOffer",
+          "createPremintedOffer",
+          "addRoyaltyRecipients",
+          "updateRoyaltyRecipients",
+          "removeRoyaltyRecipients",
+          "setPriceDiscoveryAddress",
+          "setMaxRoyaltyPercentage",
+          "onPremintedVoucherTransferred",
+          "updateOfferRoyaltyRecipients",
+          "updateOfferRoyaltyRecipientsBatch",
+          "commitToPriceDiscoveryOffer",
+          "sequentialCommitToOffer",
+        ]
+      );
 
-      // addedFunctionHashes = await getFunctionHashesClosure();
+      addedFunctionHashes = await getFunctionHashesClosure();
 
       snapshot = await getSnapshot();
 
@@ -818,6 +777,46 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
             await expect(tx).to.not.emit(exchangeHandler, "ProtocolFeeCollected");
           });
+        });
+      });
+
+      context("MetaTransactionHandler", async function () {
+        it("Function hashes from removedFunctionsHashes list should not be allowlisted", async function () {
+          for (const hash of removedFunctionHashes) {
+            // get function name from hash
+            const isAllowed = await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](hash);
+            expect(isAllowed).to.be.false;
+          }
+        });
+
+        it("Function hashes from from addedFunctionsHashes list should be allowlisted", async function () {
+          for (const hash of addedFunctionHashes) {
+            const isAllowed = await metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](hash);
+            expect(isAllowed).to.be.true;
+          }
+        });
+
+        it("State of metaTxPrivateContractState is not affected apart from isAllowlistedState mapping", async function () {
+          // make a shallow copy to not modify original protocolContractState as it's used on getGenericContext
+          const metaTxPrivateContractStateBefore = { ...protocolContractStateBefore.metaTxPrivateContractState };
+          const metaTxPrivateContractStateAfter = { ...protocolContractStateAfter.metaTxPrivateContractState };
+          const { isAllowlistedState: isAllowlistedStateBefore } = metaTxPrivateContractStateBefore;
+          removedFunctionHashes.forEach((hash) => {
+            delete isAllowlistedStateBefore[hash];
+          });
+
+          const { isAllowlistedState: isAllowlistedStateAfter } = metaTxPrivateContractStateAfter;
+          addedFunctionHashes.forEach((hash) => {
+            delete isAllowlistedStateAfter[hash];
+          });
+
+          delete metaTxPrivateContractStateBefore.isAllowlistedState;
+          delete metaTxPrivateContractStateAfter.isAllowlistedState;
+
+          expect(isAllowlistedStateAfter).to.deep.equal(isAllowlistedStateBefore);
+          expect(protocolContractStateAfter.metaTxPrivateContractState).to.deep.equal(
+            protocolContractStateBefore.metaTxPrivateContractState
+          );
         });
       });
     });

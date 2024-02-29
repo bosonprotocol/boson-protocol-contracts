@@ -737,8 +737,9 @@ async function populateProtocolContract(
     // If exchange has twins, mint them so the transfer can succeed
     const offer = offers.find((o) => o.offer.id == exchange.offerId);
     const seller = sellers.find((s) => s.seller.id == offer.offer.sellerId);
-    if (twinHandler && Number(seller.id) % 2 == 1) {
+    if (twinHandler) {
       const bundle = bundles.find((b) => b.sellerId == seller.id);
+      if (!bundle) continue; // no twins for this seller
       const twinsIds = bundle.twinIds;
       for (const twinId of twinsIds) {
         const [, twin] = await twinHandler.getTwin(twinId);
@@ -802,7 +803,7 @@ async function getProtocolContractState(
   },
   { mockToken, mockTwinTokens },
   { DRs, sellers, buyers, agents, offers, exchanges, bundles, groups, twins },
-  { isBefore, skipInterfaceIds } = { isBefore: false, skipInterfaceIds: [] }
+  { isBefore, skipFacets } = { isBefore: false, skipFacets: [] }
 ) {
   rando = (await getSigners())[10]; // random account making the calls
 
@@ -831,8 +832,8 @@ async function getProtocolContractState(
     getGroupContractState(groupHandler, groups),
     getTwinContractState(twinHandler, twins),
     getMetaTxContractState(),
-    getMetaTxPrivateContractState(protocolDiamondAddress),
-    getProtocolStatusPrivateContractState(protocolDiamondAddress, skipInterfaceIds),
+    getMetaTxPrivateContractState(protocolDiamondAddress, skipFacets),
+    getProtocolStatusPrivateContractState(protocolDiamondAddress, skipFacets),
     getProtocolLookupsPrivateContractState(
       protocolDiamondAddress,
       { mockToken, mockTwinTokens },
@@ -1175,7 +1176,7 @@ async function getMetaTxContractState() {
   return {};
 }
 
-async function getMetaTxPrivateContractState(protocolDiamondAddress) {
+async function getMetaTxPrivateContractState(protocolDiamondAddress, skipFacets = []) {
   /*
           ProtocolMetaTxInfo storage layout
       
@@ -1260,7 +1261,9 @@ async function getMetaTxPrivateContractState(protocolDiamondAddress) {
     "MetaTransactionsHandlerFacet",
     "OrchestrationHandlerFacet1",
     "OrchestrationHandlerFacet2",
-  ];
+    "PriceDiscoveryHandlerFacet",
+    "SequentialCommitHandlerFacet",
+  ].filter((id) => !skipFacets.includes(id));
 
   const selectors = await getMetaTransactionsHandlerFacetInitArgs(facets);
 
