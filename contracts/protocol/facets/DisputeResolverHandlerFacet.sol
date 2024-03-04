@@ -3,7 +3,7 @@ pragma solidity 0.8.22;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents.sol";
-import { DiamondLib } from "../../diamond/DiamondLib.sol";
+import { IBosonDisputeResolverHandler } from "../../interfaces/handlers/IBosonDisputeResolverHandler.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
@@ -12,7 +12,7 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
  *
  * @notice Handles dispute resolver account management requests and queries
  */
-contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
+contract DisputeResolverHandlerFacet is IBosonDisputeResolverHandler, IBosonAccountEvents, ProtocolBase {
     /**
      * @notice Initializes facet.
      */

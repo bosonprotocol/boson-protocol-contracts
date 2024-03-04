@@ -3,6 +3,7 @@ pragma solidity 0.8.22;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents.sol";
+import { IBosonAgentHandler } from "../../interfaces/handlers/IBosonAgentHandler.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
@@ -11,7 +12,7 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
  *
  * @notice Handles Agent account management requests and queries.
  */
-contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
+contract AgentHandlerFacet is IBosonAgentHandler, IBosonAccountEvents, ProtocolBase {
     /**
      * @notice Initializes facet.
      */
