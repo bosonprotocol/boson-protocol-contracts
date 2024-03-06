@@ -275,14 +275,7 @@ async function prepareInitializationData(protocolAddress) {
   const nextOfferId = await offerHandler.getNextOfferId();
 
   for (let i = 1n; i < nextOfferId; i++) {
-    const [, offer /*offerDates*/] = await offerHandler.getOffer(i);
-
-    // if voided or expired, skip
-    // const currentTime = BigInt(Math.floor(Date.now() / 1000));
-    // const currentTime = 0n;
-    // if (offer.voided || offerDates.validUntil < currentTime) {
-    //   continue;
-    // }
+    const [, offer] = await offerHandler.getOffer(i);
 
     const collectionIndex = offer.collectionIndex;
     const sellerId = offer.sellerId;

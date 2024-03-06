@@ -259,7 +259,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
       // and those values are undefined if this is placed outside "before".
       // Normally, this would be solved with mocha's --delay option, but it does not behave as expected when running with hardhat.
-      context.skip(
+      context(
         "Generic tests",
         getGenericContext(
           deployer,
@@ -284,7 +284,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         _royaltyPercentage: "_royaltyPercentageUnused",
       };
 
-      context.skip(
+      context(
         "Generic tests on Voucher",
         getGenericContextVoucher(
           deployer,
