@@ -6,7 +6,7 @@ const Role = require("../domain/Role");
 const tipMultiplier = BigInt(environments.tipMultiplier);
 const tipSuggestion = 1500000000n; // js always returns this constant, it does not vary per block
 const maxPriorityFeePerGas = tipSuggestion + tipMultiplier;
-const { readContracts, getFees, checkRole } = require("../util/utils.js");
+const { readContracts, getFees, checkRole, writeContracts, deploymentComplete } = require("../util/utils.js");
 const hre = require("hardhat");
 const PausableRegion = require("../domain/PausableRegion.js");
 const ethers = hre.ethers;
@@ -146,6 +146,8 @@ async function migrate(env, params) {
 
     // Get the data for back-filling
     const { sellerIds, royaltyPercentages, offerIds } = await prepareInitializationData(protocolAddress);
+    const { backFillData } = require("../../scripts/upgrade-hooks/2.4.0.js");
+    backFillData({ sellerIds, royaltyPercentages, offerIds });
 
     console.log(`Checking out contracts on version ${tag}`);
     shell.exec(`rm -rf contracts/*`);
@@ -166,16 +168,20 @@ async function migrate(env, params) {
 
     // Deploy Boson Price Discovery Client
     console.log("Deploying Boson Price Discovery Client...");
+    const constructorArgs = [WrappedNative[network], protocolAddress];
     const bosonPriceDiscoveryFactory = await ethers.getContractFactory("BosonPriceDiscovery");
-    const bosonPriceDiscovery = await bosonPriceDiscoveryFactory.deploy(WrappedNative[network], protocolAddress);
+    const bosonPriceDiscovery = await bosonPriceDiscoveryFactory.deploy(...constructorArgs);
     await bosonPriceDiscovery.waitForDeployment();
 
-    // Prepare initialization data
-    let priceDiscoveryClientAddress = await bosonPriceDiscovery.getAddress();
-    config.initializationData = abiCoder.encode(
-      ["uint256[]", "uint256[][]", "uint256[][]", "address"],
-      [royaltyPercentages, sellerIds, offerIds, priceDiscoveryClientAddress]
+    deploymentComplete(
+      "BosonPriceDiscoveryClient",
+      await bosonPriceDiscovery.getAddress(),
+      constructorArgs,
+      "",
+      contracts
     );
+
+    await writeContracts(contracts, env, version);
 
     console.log("Executing upgrade facets script");
     await hre.run("upgrade-facets", {
@@ -269,14 +275,14 @@ async function prepareInitializationData(protocolAddress) {
   const nextOfferId = await offerHandler.getNextOfferId();
 
   for (let i = 1n; i < nextOfferId; i++) {
-    const [, offer, offerDates] = await offerHandler.getOffer(i);
+    const [, offer /*offerDates*/] = await offerHandler.getOffer(i);
 
     // if voided or expired, skip
     // const currentTime = BigInt(Math.floor(Date.now() / 1000));
-    const currentTime = 0n;
-    if (offer.voided || offerDates.validUntil < currentTime) {
-      continue;
-    }
+    // const currentTime = 0n;
+    // if (offer.voided || offerDates.validUntil < currentTime) {
+    //   continue;
+    // }
 
     const collectionIndex = offer.collectionIndex;
     const sellerId = offer.sellerId;

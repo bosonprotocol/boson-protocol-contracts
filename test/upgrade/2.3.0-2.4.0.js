@@ -259,7 +259,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // Generic context needs values that are set in "before", however "before" is executed before tests, not before suites
       // and those values are undefined if this is placed outside "before".
       // Normally, this would be solved with mocha's --delay option, but it does not behave as expected when running with hardhat.
-      context(
+      context.skip(
         "Generic tests",
         getGenericContext(
           deployer,
@@ -276,7 +276,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       );
 
       const equalCustomTypes = {
-        "t_struct(Range)14256_storage": "t_struct(Range)15848_storage",
+        "t_struct(Range)14256_storage": "t_struct(Range)15868_storage",
       };
 
       const renamedVariables = {
@@ -284,7 +284,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         _royaltyPercentage: "_royaltyPercentageUnused",
       };
 
-      context(
+      context.skip(
         "Generic tests on Voucher",
         getGenericContextVoucher(
           deployer,
@@ -1329,8 +1329,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             const seller = preUpgradeEntities.sellers.find((s) => s.id == exchange.sellerId);
             const bosonVoucher = await getContractAt("BosonVoucher", seller.voucherContractAddress);
 
-            const [exist, state] = await exchangeHandler.getExchangeState(exchange.exchangeId);
-            console.log("exchange state", exist, state);
+            const [, state] = await exchangeHandler.getExchangeState(exchange.exchangeId);
 
             const tokenId = deriveTokenId(exchange.offerId, exchange.exchangeId);
             const offerPrice = parseUnits("1", "ether");

@@ -127,13 +127,23 @@ async function main(env, facetConfig, version, functionNamesToSelector) {
     facets = await getFacets();
   }
 
+  let deployedFacets = [];
   if (preUpgrade) {
     console.log("\n📋Running pre-upgrade script...");
-    facets = await preUpgrade(protocolAddress, facets);
+    const { facets: preUpgradeModifiedFacets, deployedFacets: preUpgradeDeployedFacets } = await preUpgrade(
+      protocolAddress,
+      facets,
+      env
+    );
+    facets = preUpgradeModifiedFacets;
+    deployedFacets = preUpgradeDeployedFacets;
   }
 
   // Deploy new facets
-  let deployedFacets = await deployProtocolFacets(facets.addOrUpgrade, facets.facetsToInit, maxPriorityFeePerGas);
+  deployedFacets = [
+    ...deployedFacets,
+    ...(await deployProtocolFacets(facets.addOrUpgrade, facets.facetsToInit, maxPriorityFeePerGas)),
+  ];
 
   // Cast Diamond to DiamondCutFacet, DiamondLoupeFacet and IERC165Extended
   const diamondCutFacet = await getContractAt("DiamondCutFacet", protocolAddress);
