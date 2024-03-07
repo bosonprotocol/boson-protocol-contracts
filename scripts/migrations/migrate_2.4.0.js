@@ -72,7 +72,7 @@ async function migrate(env, params) {
   }
 
   try {
-    if (env != "upgrade-test") {
+    if (env !== "upgrade-test") {
       console.log("Removing any local changes before upgrading");
       shell.exec(`git reset @{u}`);
       const statusOutput = shell.exec("git status -s -uno scripts package.json");
@@ -85,7 +85,7 @@ async function migrate(env, params) {
     const { chainId } = await ethers.provider.getNetwork();
     const contractsFile = readContracts(chainId, network, env);
 
-    if (contractsFile?.protocolVersion != "2.3.0") {
+    if (contractsFile?.protocolVersion !== "2.3.0") {
       throw new Error("Current contract version must be 2.3.0");
     }
 
@@ -97,7 +97,7 @@ async function migrate(env, params) {
     const accessController = await getContractAt("AccessController", accessControllerAddress);
 
     const signer = (await getSigners())[0].address;
-    if (env == "upgrade-test") {
+    if (env === "upgrade-test") {
       // Grant PAUSER role to the deployer
       await accessController.grantRole(Role.PAUSER, signer);
     } else {
@@ -106,7 +106,7 @@ async function migrate(env, params) {
 
     const protocolAddress = contracts.find((c) => c.name === "ProtocolDiamond")?.address;
 
-    if (env != "upgrade-test") {
+    if (env !== "upgrade-test") {
       // Checking old version contracts to get selectors to remove
       console.log("Checking out contracts on version 2.3.0");
       shell.exec(`rm -rf contracts/*`);
