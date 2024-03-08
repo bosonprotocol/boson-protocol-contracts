@@ -241,6 +241,13 @@ function getGenericContext(
         const offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
         const seller = preUpgradeEntities.sellers[2];
 
+        offer.royaltyInfo = [
+          {
+            bps: [`${seller.voucherInitValues.royaltyPercentage}`],
+            recipients: [ZeroAddress],
+          },
+        ];
+
         offerHandler = contractsAfter.offerHandler;
         await offerHandler
           .connect(seller.wallet)

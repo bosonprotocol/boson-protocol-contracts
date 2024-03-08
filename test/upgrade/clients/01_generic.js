@@ -18,7 +18,7 @@ function getGenericContext(
   preUpgradeEntities,
   preUpgradeStorageLayout,
   snapshot,
-  equalCustomTypes
+  { equalCustomTypes, renamedVariables }
 ) {
   const genericContextFunction = async function () {
     afterEach(async function () {
@@ -44,7 +44,7 @@ function getGenericContext(
         const postUpgradeStorageLayout = await getStorageLayout("BosonVoucher");
 
         assert(
-          compareStorageLayouts(preUpgradeStorageLayout, postUpgradeStorageLayout, equalCustomTypes),
+          compareStorageLayouts(preUpgradeStorageLayout, postUpgradeStorageLayout, equalCustomTypes, renamedVariables),
           "Upgrade breaks storage layout"
         );
       });

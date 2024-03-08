@@ -197,7 +197,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      *  - Length of _sellerIds, _royaltyPercentages and _offerIds arrays do not match
      *  - Any of the offerIds does not exist
      *
-     * @param _initializationData - data representing uint256[] _sellerIds, uint256[] _royaltyPercentages, uint256[][] _offerIds, address _priceDiscovery
+     * @param _initializationData - data representing uint256[] _royaltyPercentages, uint256[][] _sellerIds, uint256[][] _offerIds, address _priceDiscovery
      */
     function initV2_4_0(bytes calldata _initializationData) internal {
         // Current version must be 2.3.0
@@ -249,7 +249,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
      * This method should not be registered as a diamond public method.
      * Refer to initV2_4_0 for more details about the data structure.
      *
-     * @param _initializationData - data representing uint256[] _sellerIds, uint256[] _royaltyPercentages, uint256[][] _offerIds
+     * @param _initializationData - data representing uint256[] _royaltyPercentages, uint256[][] _sellerIds, uint256[][] _offerIds, address _priceDiscovery
      */
     function initV2_4_0External(bytes calldata _initializationData) external onlyRole(UPGRADER) {
         initV2_4_0(_initializationData);
