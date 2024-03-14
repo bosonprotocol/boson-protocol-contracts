@@ -112,7 +112,7 @@ async function migrate(env, params) {
       shell.exec(`rm -rf contracts/*`);
       shell.exec(`git checkout v2.3.0 contracts package.json package-lock.json`);
       console.log("Installing dependencies");
-      shell.exec("npm install");
+      shell.exec("yarn");
       console.log("Compiling old contracts");
       await hre.run("clean");
       await hre.run("compile");
@@ -156,7 +156,7 @@ async function migrate(env, params) {
     shell.exec(`git checkout HEAD scripts`);
 
     console.log("Installing dependencies");
-    shell.exec(`npm install`);
+    shell.exec(`yarn`);
 
     console.log("Compiling contracts");
     await hre.run("clean");
