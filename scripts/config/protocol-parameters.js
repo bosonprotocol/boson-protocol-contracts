@@ -85,13 +85,13 @@ module.exports = {
   },
 
   WrappedNative: {
-    mainnet: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
+    mainnet: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
     hardhat: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
     localhost: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
     test: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
-    mumbai: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
-    polygon: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
-    goerli: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
+    mumbai: "0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889",
+    polygon: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+    goerli: "0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6",
   },
 
   PRICE_DISCOVERY: {
