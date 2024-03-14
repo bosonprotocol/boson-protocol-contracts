@@ -91,6 +91,10 @@ async function migrate(env, params) {
 
     let contracts = contractsFile?.contracts;
 
+    // compile contracts
+    await hre.run("clean");
+    await hre.run("compile");
+
     // Get addresses of currently deployed contracts
     const accessControllerAddress = contracts.find((c) => c.name === "AccessController")?.address;
 
