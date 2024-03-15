@@ -93,7 +93,11 @@ async function migrate(env, params) {
 
     // compile contracts
     await hre.run("clean");
-    await hre.run("compile");
+    // If some contract was removed, compilation succeeds, but afterwards it falsely reports missing artifacts
+    // This is a workaround to ignore the error
+    try {
+      await hre.run("compile");
+    } catch {}
 
     // Get addresses of currently deployed contracts
     const accessControllerAddress = contracts.find((c) => c.name === "AccessController")?.address;
