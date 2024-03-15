@@ -177,7 +177,7 @@ async function migrate(env, params) {
       contracts
     );
 
-    await writeContracts(contracts, env, version);
+    await writeContracts(contracts, env, contractsFile.protocolVersion); // keep existing protocol version to avoid troubles in the upgrade script
 
     console.log("Executing upgrade facets script");
     await hre.run("upgrade-facets", {
