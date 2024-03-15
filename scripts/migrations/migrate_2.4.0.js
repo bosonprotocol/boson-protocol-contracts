@@ -257,7 +257,7 @@ async function prepareInitializationData(protocolAddress) {
 
   console.log("Preparing initialization data...");
   console.log("Number of accounts", nextSellerId - 1n);
-  let decile = (nextSellerId - 1n) / 10n;
+  let decile = (nextSellerId - 1n) / 10n + 1n; // not very precise for small numbers, but it's just a progress indicator
 
   const collections = {};
   const royaltyPercentageToSellersAndOffers = {};
@@ -292,7 +292,7 @@ async function prepareInitializationData(protocolAddress) {
   const nextOfferId = await offerHandler.getNextOfferId();
 
   console.log("Number of offers", nextOfferId - 1n);
-  decile = (nextOfferId - 1n) / 10n;
+  decile = (nextOfferId - 1n) / 10n + 1n; // not very precise for small numbers, but it's just a progress indicator
 
   for (let i = 1n; i < nextOfferId; i++) {
     if (i % decile === 0n) {
