@@ -10,7 +10,7 @@ const { readContracts, getFees, checkRole, writeContracts, deploymentComplete } 
 const hre = require("hardhat");
 const PausableRegion = require("../domain/PausableRegion.js");
 const ethers = hre.ethers;
-const { getContractAt, getSigners, ZeroAddress } = ethers;
+const { getContractAt, getSigners, ZeroAddress, getDefaultProvider, Wallet } = ethers;
 const network = hre.network.name;
 const abiCoder = new ethers.AbiCoder();
 const tag = "HEAD";
@@ -247,7 +247,12 @@ async function recompileContracts() {
 }
 
 async function prepareInitializationData(protocolAddress) {
-  const sellerHandler = await getContractAt("IBosonAccountHandler", protocolAddress);
+  // We initialize a new provider which is not forked
+  const ethereumProvider = getDefaultProvider(hre.network.config.url || hre.network.config.forking.url);
+
+  const signer = Wallet.createRandom(ethereumProvider);
+
+  const sellerHandler = await getContractAt("IBosonAccountHandler", protocolAddress, signer);
   const nextSellerId = await sellerHandler.getNextAccountId();
 
   console.log("Preparing initialization data...");
@@ -267,7 +272,7 @@ async function prepareInitializationData(protocolAddress) {
     const [defaultVoucherAddress, additionalCollections] = await sellerHandler.getSellersCollections(i);
     const allCollections = [defaultVoucherAddress, ...additionalCollections];
     const bosonVouchers = await Promise.all(
-      allCollections.map((collectionAddress) => getContractAt("IBosonVoucher", collectionAddress))
+      allCollections.map((collectionAddress) => getContractAt("IBosonVoucher", collectionAddress, signer))
     );
     const royaltyPercentages = await Promise.all(bosonVouchers.map((voucher) => voucher.getRoyaltyPercentage()));
     collections[i] = royaltyPercentages;
@@ -283,7 +288,7 @@ async function prepareInitializationData(protocolAddress) {
     royaltyPercentageToSellersAndOffers[minRoyaltyPercentage].sellers.push(i);
   }
 
-  const offerHandler = await getContractAt("IBosonOfferHandler", protocolAddress);
+  const offerHandler = await getContractAt("IBosonOfferHandler", protocolAddress, signer);
   const nextOfferId = await offerHandler.getNextOfferId();
 
   console.log("Number of offers", nextOfferId - 1n);
