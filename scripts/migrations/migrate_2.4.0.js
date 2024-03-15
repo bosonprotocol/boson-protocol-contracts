@@ -91,13 +91,7 @@ async function migrate(env, params) {
 
     let contracts = contractsFile?.contracts;
 
-    // compile contracts
-    await hre.run("clean");
-    // If some contract was removed, compilation succeeds, but afterwards it falsely reports missing artifacts
-    // This is a workaround to ignore the error
-    try {
-      await hre.run("compile");
-    } catch {}
+    await recompileContracts();
 
     // Get addresses of currently deployed contracts
     const accessControllerAddress = contracts.find((c) => c.name === "AccessController")?.address;
@@ -122,8 +116,7 @@ async function migrate(env, params) {
       console.log("Installing dependencies");
       shell.exec("npm install");
       console.log("Compiling old contracts");
-      await hre.run("clean");
-      await hre.run("compile");
+      await recompileContracts();
     }
 
     console.log("Pausing the Seller, Offer and Exchanges region...");
@@ -167,12 +160,7 @@ async function migrate(env, params) {
     shell.exec(`npm install`);
 
     console.log("Compiling contracts");
-    await hre.run("clean");
-    // If some contract was removed, compilation succeeds, but afterwards it falsely reports missing artifacts
-    // This is a workaround to ignore the error
-    try {
-      await hre.run("compile");
-    } catch {}
+    await recompileContracts();
 
     // Deploy Boson Price Discovery Client
     console.log("Deploying Boson Price Discovery Client...");
@@ -247,6 +235,15 @@ async function migrate(env, params) {
     shell.exec(`git reset HEAD`);
     throw `Migration failed with: ${e}`;
   }
+}
+
+async function recompileContracts() {
+  await hre.run("clean");
+  // If some contract was removed, compilation succeeds, but afterwards it falsely reports missing artifacts
+  // This is a workaround to ignore the error
+  try {
+    await hre.run("compile");
+  } catch {}
 }
 
 async function prepareInitializationData(protocolAddress) {
