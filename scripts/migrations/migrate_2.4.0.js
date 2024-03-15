@@ -250,9 +250,16 @@ async function prepareInitializationData(protocolAddress) {
   const sellerHandler = await getContractAt("IBosonAccountHandler", protocolAddress);
   const nextSellerId = await sellerHandler.getNextAccountId();
 
+  console.log("Preparing initialization data...");
+  console.log("Number of accounts", nextSellerId - 1n);
+  let decile = (nextSellerId - 1n) / 10n;
+
   const collections = {};
   const royaltyPercentageToSellersAndOffers = {};
   for (let i = 1n; i < nextSellerId; i++) {
+    if (i % decile === 0n) {
+      console.log(`${(i / decile) * 10n}%`);
+    }
     const [exists] = await sellerHandler.getSeller(i);
     if (!exists) {
       continue;
@@ -279,7 +286,14 @@ async function prepareInitializationData(protocolAddress) {
   const offerHandler = await getContractAt("IBosonOfferHandler", protocolAddress);
   const nextOfferId = await offerHandler.getNextOfferId();
 
+  console.log("Number of offers", nextOfferId - 1n);
+  decile = (nextOfferId - 1n) / 10n;
+
   for (let i = 1n; i < nextOfferId; i++) {
+    if (i % decile === 0n) {
+      console.log(`${(i / decile) * 10n}%`);
+    }
+
     const [, offer] = await offerHandler.getOffer(i);
 
     const collectionIndex = offer.collectionIndex;
