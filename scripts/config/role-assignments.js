@@ -56,7 +56,7 @@ exports.RoleAssignments = {
   goerli: {
     AdminAddress: {
       // do not change name
-      roles: [Role.ADMIN, Role.UPGRADER],
+      roles: [Role.ADMIN, Role.UPGRADER, Role.PAUSER],
     },
 
     // For minting vouchers

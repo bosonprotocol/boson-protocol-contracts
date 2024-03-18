@@ -3,9 +3,6 @@ pragma solidity 0.8.22;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonMetaTransactionsHandler } from "../../interfaces/handlers/IBosonMetaTransactionsHandler.sol";
-import { IBosonDisputeHandler } from "../../interfaces/handlers/IBosonDisputeHandler.sol";
-import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
-import { IBosonFundsHandler } from "../../interfaces/handlers/IBosonFundsHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
@@ -20,10 +17,12 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     /**
      * @notice Initializes Facet.
      * This function is callable only once.
+     *
+     * N.B. InterfaceId did not change from v2.3.0 to v2.4.0, so input to modifier onlyUninitialized must be adjusted to allow initalization.
      */
     function initialize(
         bytes32[] calldata _functionNameHashes
-    ) public onlyUninitialized(type(IBosonMetaTransactionsHandler).interfaceId) {
+    ) public onlyUninitialized(type(IBosonMetaTransactionsHandler).interfaceId ^ bytes4("v240")) {
         DiamondLib.addSupportedInterface(type(IBosonMetaTransactionsHandler).interfaceId);
 
         // Set types for special metatxs

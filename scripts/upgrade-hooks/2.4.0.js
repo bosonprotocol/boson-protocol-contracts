@@ -19,7 +19,7 @@ async function preUpgrade(protocolAddress, facets, env) {
   console.log("sellerIds", sellerIds);
   console.log("offerIds", offerIds);
 
-  const maxBackfill = 25; // max number of sellers and offers to backfill in a single transaction
+  const maxBackfill = 100; // max number of sellers and offers to backfill in a single transaction
 
   // Backfill the data pre-upgrade
   let totalCount =

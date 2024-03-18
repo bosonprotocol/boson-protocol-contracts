@@ -22,7 +22,7 @@ async function writeContracts(contracts, env, version) {
     fs.mkdirSync(addressesDirPath);
   }
 
-  const chainId = Number((await provider.getNetwork()).chainId);
+  const chainId = Number((await hre.ethers.provider.getNetwork()).chainId);
   const network = hre.network.name;
   const path = getAddressesFilePath(chainId, network, env);
   fs.writeFileSync(

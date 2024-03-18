@@ -10,7 +10,7 @@ const { readContracts, getFees, checkRole, writeContracts, deploymentComplete } 
 const hre = require("hardhat");
 const PausableRegion = require("../domain/PausableRegion.js");
 const ethers = hre.ethers;
-const { getContractAt, getSigners, ZeroAddress } = ethers;
+const { getContractAt, getSigners, ZeroAddress, getDefaultProvider, Wallet } = ethers;
 const network = hre.network.name;
 const abiCoder = new ethers.AbiCoder();
 const tag = "HEAD";
@@ -20,7 +20,7 @@ const { META_TRANSACTION_FORWARDER } = require("../config/client-upgrade");
 const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
 
 const config = {
-  // status at v2.4.0-rc.3
+  // status at v2.4.0
   addOrUpgrade: [
     "AccountHandlerFacet",
     "AgentHandlerFacet",
@@ -49,6 +49,7 @@ const config = {
     ExchangeHandlerFacet: { init: [], constructorArgs: [EXCHANGE_ID_2_2_0[network]] }, // must match nextExchangeId at the time of the upgrade
     AccountHandlerFacet: { init: [] },
     DisputeResolverHandlerFacet: { init: [] },
+    MetaTransactionsHandlerFacet: { init: [[]] },
     OfferHandlerFacet: { init: [] },
     OrchestrationHandlerFacet1: { init: [] },
     PriceDiscoveryHandlerFacet: { init: [], constructorArgs: [WrappedNative[network]] },
@@ -91,6 +92,8 @@ async function migrate(env, params) {
 
     let contracts = contractsFile?.contracts;
 
+    await recompileContracts();
+
     // Get addresses of currently deployed contracts
     const accessControllerAddress = contracts.find((c) => c.name === "AccessController")?.address;
 
@@ -114,8 +117,7 @@ async function migrate(env, params) {
       console.log("Installing dependencies");
       shell.exec("npm install");
       console.log("Compiling old contracts");
-      await hre.run("clean");
-      await hre.run("compile");
+      await recompileContracts();
     }
 
     console.log("Pausing the Seller, Offer and Exchanges region...");
@@ -159,12 +161,7 @@ async function migrate(env, params) {
     shell.exec(`npm install`);
 
     console.log("Compiling contracts");
-    await hre.run("clean");
-    // If some contract was removed, compilation succeeds, but afterwards it falsely reports missing artifacts
-    // This is a workaround to ignore the error
-    try {
-      await hre.run("compile");
-    } catch {}
+    await recompileContracts();
 
     // Deploy Boson Price Discovery Client
     console.log("Deploying Boson Price Discovery Client...");
@@ -181,7 +178,7 @@ async function migrate(env, params) {
       contracts
     );
 
-    await writeContracts(contracts, env, version);
+    await writeContracts(contracts, env, contractsFile.protocolVersion); // keep existing protocol version to avoid troubles in the upgrade script
 
     console.log("Executing upgrade facets script");
     await hre.run("upgrade-facets", {
@@ -241,13 +238,34 @@ async function migrate(env, params) {
   }
 }
 
+async function recompileContracts() {
+  await hre.run("clean");
+  // If some contract was removed, compilation succeeds, but afterwards it falsely reports missing artifacts
+  // This is a workaround to ignore the error
+  try {
+    await hre.run("compile");
+  } catch {}
+}
+
 async function prepareInitializationData(protocolAddress) {
-  const sellerHandler = await getContractAt("IBosonAccountHandler", protocolAddress);
+  // We initialize a new provider which is not forked
+  const ethereumProvider = getDefaultProvider(hre.network.config.url || hre.network.config.forking.url);
+
+  const signer = Wallet.createRandom(ethereumProvider);
+
+  const sellerHandler = await getContractAt("IBosonAccountHandler", protocolAddress, signer);
   const nextSellerId = await sellerHandler.getNextAccountId();
+
+  console.log("Preparing initialization data...");
+  console.log("Number of accounts", nextSellerId - 1n);
+  let decile = (nextSellerId - 1n) / 10n + 1n; // not very precise for small numbers, but it's just a progress indicator
 
   const collections = {};
   const royaltyPercentageToSellersAndOffers = {};
   for (let i = 1n; i < nextSellerId; i++) {
+    if (i % decile === 0n) {
+      console.log(`${(i / decile) * 10n}%`);
+    }
     const [exists] = await sellerHandler.getSeller(i);
     if (!exists) {
       continue;
@@ -255,7 +273,7 @@ async function prepareInitializationData(protocolAddress) {
     const [defaultVoucherAddress, additionalCollections] = await sellerHandler.getSellersCollections(i);
     const allCollections = [defaultVoucherAddress, ...additionalCollections];
     const bosonVouchers = await Promise.all(
-      allCollections.map((collectionAddress) => getContractAt("IBosonVoucher", collectionAddress))
+      allCollections.map((collectionAddress) => getContractAt("IBosonVoucher", collectionAddress, signer))
     );
     const royaltyPercentages = await Promise.all(bosonVouchers.map((voucher) => voucher.getRoyaltyPercentage()));
     collections[i] = royaltyPercentages;
@@ -271,10 +289,17 @@ async function prepareInitializationData(protocolAddress) {
     royaltyPercentageToSellersAndOffers[minRoyaltyPercentage].sellers.push(i);
   }
 
-  const offerHandler = await getContractAt("IBosonOfferHandler", protocolAddress);
+  const offerHandler = await getContractAt("IBosonOfferHandler", protocolAddress, signer);
   const nextOfferId = await offerHandler.getNextOfferId();
 
+  console.log("Number of offers", nextOfferId - 1n);
+  decile = (nextOfferId - 1n) / 10n + 1n; // not very precise for small numbers, but it's just a progress indicator
+
   for (let i = 1n; i < nextOfferId; i++) {
+    if (i % decile === 0n) {
+      console.log(`${(i / decile) * 10n}%`);
+    }
+
     const [, offer] = await offerHandler.getOffer(i);
 
     const collectionIndex = offer.collectionIndex;
