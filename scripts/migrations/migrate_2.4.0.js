@@ -49,6 +49,7 @@ const config = {
     ExchangeHandlerFacet: { init: [], constructorArgs: [EXCHANGE_ID_2_2_0[network]] }, // must match nextExchangeId at the time of the upgrade
     AccountHandlerFacet: { init: [] },
     DisputeResolverHandlerFacet: { init: [] },
+    MetaTransactionsHandlerFacet: { init: [[]] },
     OfferHandlerFacet: { init: [] },
     OrchestrationHandlerFacet1: { init: [] },
     PriceDiscoveryHandlerFacet: { init: [], constructorArgs: [WrappedNative[network]] },
