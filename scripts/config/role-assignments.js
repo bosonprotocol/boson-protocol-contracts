@@ -53,7 +53,7 @@ exports.RoleAssignments = {
     },
   },
 
-  goerli: {
+  sepolia: {
     AdminAddress: {
       // do not change name
       roles: [Role.ADMIN, Role.UPGRADER, Role.PAUSER],

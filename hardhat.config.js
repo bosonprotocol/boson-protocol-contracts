@@ -160,9 +160,9 @@ module.exports = {
       url: environments.mainnet.txNode,
       accounts: environments.mainnet.keys,
     },
-    goerli: {
-      url: environments.goerli.txNode,
-      accounts: environments.goerli.keys,
+    sepolia: {
+      url: environments.sepolia.txNode,
+      accounts: environments.sepolia.keys,
     },
     mumbai: {
       url: environments.mumbai.txNode,
@@ -176,7 +176,7 @@ module.exports = {
   etherscan: {
     apiKey: {
       mainnet: environments.etherscan.apiKey,
-      goerli: environments.etherscan.apiKey,
+      sepolia: environments.etherscan.apiKey,
       polygonMumbai: environments.polygonscan.apiKey,
       polygon: environments.polygonscan.apiKey,
     },
