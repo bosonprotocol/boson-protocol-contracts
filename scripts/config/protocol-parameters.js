@@ -99,7 +99,7 @@ module.exports = {
     hardhat: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
     localhost: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
     test: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
-    mumbai: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
+    mumbai: "0x74874fF29597b6e01E16475b7BB9D6dC954d0411",
     polygon: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
     sepolia: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
   },

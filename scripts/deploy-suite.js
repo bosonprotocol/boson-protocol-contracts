@@ -1,6 +1,6 @@
 const environments = require("../environments");
 const hre = require("hardhat");
-const { ZeroAddress, getContractAt, getSigners } = hre.ethers;
+const { ZeroAddress, getContractAt, getSigners, getContractFactory } = hre.ethers;
 const network = hre.network.name;
 const confirmations = network == "hardhat" ? 1 : environments.confirmations;
 const tipMultiplier = BigInt(environments.tipMultiplier);
@@ -20,6 +20,7 @@ const { getInterfaceIds, interfaceImplementers } = require("./config/supported-i
 const { deploymentComplete, getFees, writeContracts } = require("./util/utils");
 const AuthTokenType = require("../scripts/domain/AuthTokenType");
 const clientConfig = require("./config/client-upgrade");
+const { WrappedNative } = require("./config/protocol-parameters");
 
 /**
  * Deploy Boson Protocol V2 contract suite
@@ -110,6 +111,21 @@ async function main(env, facetConfig) {
   );
   await transactionResponse.wait(confirmations);
 
+  // Deploy Boson Price Discovery Client
+  console.log("\n💸 Deploying Boson Price Discovery Client...");
+  const constructorArgs = [WrappedNative[network], await protocolDiamond.getAddress()];
+  const bosonPriceDiscoveryFactory = await getContractFactory("BosonPriceDiscovery");
+  const bosonPriceDiscovery = await bosonPriceDiscoveryFactory.deploy(...constructorArgs);
+  await bosonPriceDiscovery.waitForDeployment();
+
+  deploymentComplete(
+    "BosonPriceDiscoveryClient",
+    await bosonPriceDiscovery.getAddress(),
+    constructorArgs,
+    "",
+    contracts
+  );
+
   console.log(`\n💎 Deploying and initializing protocol handler facets...`);
 
   // Deploy and cut facets
@@ -123,6 +139,9 @@ async function main(env, facetConfig) {
     // Get values from default config file
     facetData = await getFacets();
   }
+
+  // Update boson price discovery address in config init
+  facetData["ConfigHandlerFacet"].init[0].priceDiscovery = await bosonPriceDiscovery.getAddress();
 
   const { version } = packageFile;
   let { deployedFacets } = await deployAndCutFacets(
