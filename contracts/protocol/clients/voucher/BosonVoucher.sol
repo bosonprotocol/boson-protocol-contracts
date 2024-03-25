@@ -776,7 +776,8 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * Updates owners, but do not emit Transfer event. Event was already emited during pre-mint.
      */
     function silentMint(address _from, uint256 _tokenId) internal {
-        if (_from != owner() && _from != address(this)) revert NoSilentMintAllowed();
+        // If voucher was already transferred, revert (relevant for price discovery offers)
+        if (_exists(_tokenId)) revert NoSilentMintAllowed();
 
         // update data, so transfer will succeed
         getERC721UpgradeableStorage()._owners[_tokenId] = _from;

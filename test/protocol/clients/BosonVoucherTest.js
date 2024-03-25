@@ -819,7 +819,7 @@ describe("IBosonVoucher", function () {
           // make offer not voided so premint is possible
           offer.voided = false;
           // make offer not voided
-          offer.id = offerId = ++offerId;
+          offer.id = offerId = "3"; // Two offers are created in beforeAll
           length = amount = "10";
           start = "1";
 
@@ -1623,10 +1623,6 @@ describe("IBosonVoucher", function () {
                   let tokenOwner = await bosonVoucher.ownerOf(tokenId.toString());
                   assert.equal(tokenOwner, await assistant.getAddress(), "Seller is not the owner");
 
-                  console.log("assistant", await assistant.getAddress());
-                  console.log("rando", await rando.getAddress());
-                  console.log("voucher", await bosonVoucher.getAddress());
-
                   // Following call should fail, since rando is not the owner of preminted voucher
                   await expect(
                     bosonVoucher
@@ -1725,7 +1721,7 @@ describe("IBosonVoucher", function () {
                         tokenId,
                         ...additionalArgs
                       )
-                  ).to.be.revertedWith(RevertReasons.ERC721_CALLER_NOT_OWNER_OR_APPROVED);
+                  ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.NO_SILENT_MINT_ALLOWED);
                 });
 
                 it.skip("Transfer preminted voucher, which was committed and burned already", async function () {
@@ -1973,7 +1969,7 @@ describe("IBosonVoucher", function () {
               ["200", voucherInitValues.royaltyPercentage, "250"]
             ),
           ];
-          offer.id = 2;
+          offer.id = "3"; // Two offers are created in beforeAll
 
           await offerHandler
             .connect(assistant)
@@ -2010,7 +2006,7 @@ describe("IBosonVoucher", function () {
           // Create an offer with multiple recipients
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
           offer.royaltyInfo = [new RoyaltyInfo([], [])];
-          offer.id = 2;
+          offer.id = "3"; // Two offers are created in beforeAll
 
           await offerHandler
             .connect(assistant)
@@ -2044,7 +2040,7 @@ describe("IBosonVoucher", function () {
           // Create an offer with multiple recipients
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
           offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
-          offer.id = 2;
+          offer.id = "3"; // Two offers are created in beforeAll
           offer.quantityAvailable = 20;
 
           await offerHandler
