@@ -30,9 +30,11 @@ interface SeaportInterface {
      */
     function validate(Order[] calldata orders) external returns (bool validated);
 
-    function matchOrders(
-        Order[] calldata orders,
-        Fulfillment[] calldata fulfillments
+    function matchAdvancedOrders(
+        AdvancedOrder[] calldata orders,
+        CriteriaResolver[] calldata criteriaResolvers,
+        Fulfillment[] calldata fulfillments,
+        address recipient
     ) external payable returns (Execution[] memory executions);
 
     /**
@@ -64,29 +66,29 @@ interface SeaportInterface {
         bytes signature;
     }
 
-/**
- * @dev A fulfillment is applied to a group of orders. It decrements a series of
- *      offer and consideration items, then generates a single execution
- *      element. A given fulfillment can be applied to as many offer and
- *      consideration items as desired, but must contain at least one offer and
- *      at least one consideration that match. The fulfillment must also remain
- *      consistent on all key parameters across all offer items (same offerer,
- *      token, type, tokenId, and conduit preference) as well as across all
- *      consideration items (token, type, tokenId, and recipient).
- */
-struct Fulfillment {
-    FulfillmentComponent[] offerComponents;
-    FulfillmentComponent[] considerationComponents;
-}
+    /**
+     * @dev A fulfillment is applied to a group of orders. It decrements a series of
+     *      offer and consideration items, then generates a single execution
+     *      element. A given fulfillment can be applied to as many offer and
+     *      consideration items as desired, but must contain at least one offer and
+     *      at least one consideration that match. The fulfillment must also remain
+     *      consistent on all key parameters across all offer items (same offerer,
+     *      token, type, tokenId, and conduit preference) as well as across all
+     *      consideration items (token, type, tokenId, and recipient).
+     */
+    struct Fulfillment {
+        FulfillmentComponent[] offerComponents;
+        FulfillmentComponent[] considerationComponents;
+    }
 
-/**
- * @dev Each fulfillment component contains one index referencing a specific
- *      order and another referencing a specific offer or consideration item.
- */
-struct FulfillmentComponent {
-    uint256 orderIndex;
-    uint256 itemIndex;
-}
+    /**
+     * @dev Each fulfillment component contains one index referencing a specific
+     *      order and another referencing a specific offer or consideration item.
+     */
+    struct FulfillmentComponent {
+        uint256 orderIndex;
+        uint256 itemIndex;
+    }
 
     /**
      * @dev An offer item has five components: an item type (ETH or other native
@@ -119,6 +121,51 @@ struct FulfillmentComponent {
         address payable recipient;
     }
 
+    /**
+     * @dev Advanced orders include a numerator (i.e. a fraction to attempt to fill)
+     *      and a denominator (the total size of the order) in addition to the
+     *      signature and other order parameters. It also supports an optional field
+     *      for supplying extra data; this data will be provided to the zone if the
+     *      order type is restricted and the zone is not the caller, or will be
+     *      provided to the offerer as context for contract order types.
+     */
+    struct AdvancedOrder {
+        OrderParameters parameters;
+        uint120 numerator;
+        uint120 denominator;
+        bytes signature;
+        bytes extraData;
+    }
+
+    struct Execution {
+        ReceivedItem item;
+        address offerer;
+        bytes32 conduitKey;
+    }
+
+    struct ReceivedItem {
+        ItemType itemType;
+        address token;
+        uint256 identifier;
+        uint256 amount;
+        address payable recipient;
+    }
+
+    struct CriteriaResolver {
+        uint256 orderIndex;
+        Side side;
+        uint256 index;
+        uint256 identifier;
+        bytes32[] criteriaProof;
+    }
+
+    enum Side {
+        // 0: Items that can be spent
+        OFFER,
+        // 1: Items that must be received
+        CONSIDERATION
+    }
+
     enum OrderType {
         // 0: no partial fills, anyone can execute
         FULL_OPEN,
@@ -133,24 +180,19 @@ struct FulfillmentComponent {
     }
 
     enum ItemType {
-    // 0: ETH on mainnet, MATIC on polygon, etc.
-    NATIVE,
-
-    // 1: ERC20 items (ERC777 and ERC20 analogues could also technically work)
-    ERC20,
-
-    // 2: ERC721 items
-    ERC721,
-
-    // 3: ERC1155 items
-    ERC1155,
-
-    // 4: ERC721 items where a number of tokenIds are supported
-    ERC721_WITH_CRITERIA,
-
-    // 5: ERC1155 items where a number of ids are supported
-    ERC1155_WITH_CRITERIA
-}
+        // 0: ETH on mainnet, MATIC on polygon, etc.
+        NATIVE,
+        // 1: ERC20 items (ERC777 and ERC20 analogues could also technically work)
+        ERC20,
+        // 2: ERC721 items
+        ERC721,
+        // 3: ERC1155 items
+        ERC1155,
+        // 4: ERC721 items where a number of tokenIds are supported
+        ERC721_WITH_CRITERIA,
+        // 5: ERC1155 items where a number of ids are supported
+        ERC1155_WITH_CRITERIA
+    }
 }
 
 /**
@@ -176,8 +218,7 @@ contract OpenSeaWrapper is BosonTypes, Ownable, ERC721 {
     address private immutable unwrapperAddress;
     address private immutable wethAddress;
 
-    address private constant SEAPORT =  address(0x00000000000000ADc04C56Bf30aC9d3c0aAF14dC); 
-    
+    address private constant SEAPORT = address(0x00000000000000ADc04C56Bf30aC9d3c0aAF14dC);
 
     uint256 private openSeaFee;
     address payable openSeaRecipient;
@@ -211,7 +252,7 @@ contract OpenSeaWrapper is BosonTypes, Ownable, ERC721 {
         openSeaFee = 250; // 2.5%
         openSeaRecipient = payable(address(0x0000a26b00c1F0DF003000390027140000fAa719));
         openSeaConduitKey = 0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000;
-        openSeaConduit = address(0x1E0049783F008A0085193E00003D00cd54003c71); 
+        openSeaConduit = address(0x1E0049783F008A0085193E00003D00cd54003c71);
     }
 
     /**
@@ -255,7 +296,7 @@ contract OpenSeaWrapper is BosonTypes, Ownable, ERC721 {
 
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             uint256 tokenId = _tokenIds[i];
-            uint256 reducedPrice = (10000 - openSeaFee) * _price / 10000;
+            uint256 reducedPrice = ((10000 - openSeaFee) * _price) / 10000;
             price[tokenId] = reducedPrice;
 
             // Get exchange token and balance
@@ -273,24 +314,26 @@ contract OpenSeaWrapper is BosonTypes, Ownable, ERC721 {
 
             SeaportInterface.ConsiderationItem[] memory consideration = new SeaportInterface.ConsiderationItem[](2);
             consideration[0] = SeaportInterface.ConsiderationItem({
-                itemType: exchangeToken == address(0) ? SeaportInterface.ItemType.NATIVE : SeaportInterface.ItemType.ERC20,
+                itemType: exchangeToken == address(0)
+                    ? SeaportInterface.ItemType.NATIVE
+                    : SeaportInterface.ItemType.ERC20,
                 token: exchangeToken,
                 identifierOrCriteria: 0,
                 startAmount: reducedPrice,
                 endAmount: reducedPrice,
                 recipient: payable(address(this))
-                }
-            );
+            });
 
             consideration[1] = SeaportInterface.ConsiderationItem({
-                itemType: exchangeToken == address(0) ? SeaportInterface.ItemType.NATIVE : SeaportInterface.ItemType.ERC20,
+                itemType: exchangeToken == address(0)
+                    ? SeaportInterface.ItemType.NATIVE
+                    : SeaportInterface.ItemType.ERC20,
                 token: exchangeToken,
                 identifierOrCriteria: 0,
                 startAmount: _price - reducedPrice, // If this is too small, OS won't show the order. This can happen if the price is too low.
                 endAmount: _price - reducedPrice,
                 recipient: openSeaRecipient
-                }
-            );
+            });
 
             orders[i] = SeaportInterface.Order({
                 parameters: SeaportInterface.OrderParameters({
@@ -305,8 +348,7 @@ contract OpenSeaWrapper is BosonTypes, Ownable, ERC721 {
                     salt: 0,
                     conduitKey: openSeaConduitKey,
                     totalOriginalConsiderationItems: 2
-                }
-                ),
+                }),
                 signature: ""
             });
         }
@@ -314,32 +356,122 @@ contract OpenSeaWrapper is BosonTypes, Ownable, ERC721 {
         SeaportInterface(SEAPORT).validate(orders);
     }
 
-    function _beforeTokenTransfer(from, to, tokenId) internal override {
-        // Do not allow transfers of wrapped vouchers
-    }
+    // function _beforeTokenTransfer(from, to, tokenId) internal override {
+    //     // Do not allow transfers of wrapped vouchers
+    // }
 
     function wrapForAuction(uint256[] calldata _tokenIds) external {
         wrap(_tokenIds, msg.sender);
     }
 
-    function finalizeAuction(uint256 _tokenId) external {
-       address wrappedVoucherOwner = ownerOf(_tokenId);
+    function finalizeAuction(uint256 _tokenId, SeaportInterface.AdvancedOrder calldata _buyerOrder) external {
+        address wrappedVoucherOwner = ownerOf(_tokenId); // tokenId can be taken from buyer order
 
         // Get exchange token and balance
-        (address exchangeToken, uint256 balance) = getCurrentBalance(tokenId);
-        
-        require(
-            msg.sender == wrappedVoucherOwner,
-            "OpenSeaWrapper: Only owner can finalize auction"
-        );
+        (address exchangeToken, uint256 balance) = getCurrentBalance(_tokenId);
+
+        require(msg.sender == wrappedVoucherOwner, "OpenSeaWrapper: Only owner can finalize auction");
 
         // transfer to itself to finalize the auction
         _transfer(wrappedVoucherOwner, address(this), _tokenId);
 
-       // prepare match advanced order. Can this be optimized with some simpler order?
-       // caller must supply buyers signed order
+        uint256 _price = _buyerOrder.parameters.offer[0].startAmount;
+        uint256 _openSeaFee = _buyerOrder.parameters.consideration[1].startAmount; // toDo: make check that this is the fee
+        uint256 reducedPrice = _price - _openSeaFee;
+        price[_tokenId] = reducedPrice;
 
+        // prepare match advanced order. Can this be optimized with some simpler order?
+        // caller must supply buyers signed order (_buyerOrder)
+        // ToDo: verify that buyerOrder matches the expected format
+        SeaportInterface.OfferItem[] memory offer = new SeaportInterface.OfferItem[](1);
+        offer[0] = SeaportInterface.OfferItem({
+            itemType: SeaportInterface.ItemType.ERC721,
+            token: address(this),
+            identifierOrCriteria: _tokenId,
+            startAmount: 1,
+            endAmount: 1
+        });
 
+        SeaportInterface.ConsiderationItem[] memory consideration = new SeaportInterface.ConsiderationItem[](2);
+        consideration[0] = SeaportInterface.ConsiderationItem({
+            itemType: _buyerOrder.parameters.offer[0].itemType,
+            token: _buyerOrder.parameters.offer[0].token,
+            identifierOrCriteria: 0,
+            startAmount: reducedPrice,
+            endAmount: reducedPrice,
+            recipient: payable(address(this))
+        });
+
+        SeaportInterface.AdvancedOrder memory wrapperOrder = SeaportInterface.AdvancedOrder({
+            parameters: SeaportInterface.OrderParameters({
+                offerer: address(this),
+                zone: address(0), // ToDo: make variable/
+                offer: offer,
+                consideration: consideration,
+                orderType: SeaportInterface.OrderType.FULL_OPEN,
+                startTime: _buyerOrder.parameters.startTime,
+                endTime: _buyerOrder.parameters.endTime,
+                zoneHash: bytes32(0), // ToDo: make variable
+                salt: 0,
+                conduitKey: openSeaConduitKey,
+                totalOriginalConsiderationItems: 1
+            }),
+            numerator: 1,
+            denominator: 1,
+            signature: "",
+            extraData: ""
+        });
+
+        SeaportInterface.AdvancedOrder[] memory orders = new SeaportInterface.AdvancedOrder[](2);
+        orders[0] = _buyerOrder;
+        orders[1] = wrapperOrder;
+
+        SeaportInterface.Fulfillment[] memory fulfillments = new SeaportInterface.Fulfillment[](3);
+
+        // NFT from buyer, to NFT from seller
+        fulfillments[0] = SeaportInterface.Fulfillment({
+            offerComponents: new SeaportInterface.FulfillmentComponent[](1),
+            considerationComponents: new SeaportInterface.FulfillmentComponent[](1)
+        });
+        fulfillments[0].offerComponents[0] = SeaportInterface.FulfillmentComponent({ orderIndex: 1, itemIndex: 0 });
+        fulfillments[0].considerationComponents[0] = SeaportInterface.FulfillmentComponent({
+            orderIndex: 0,
+            itemIndex: 0
+        });
+
+        // Payment from buyer to seller
+        fulfillments[1] = SeaportInterface.Fulfillment({
+            offerComponents: new SeaportInterface.FulfillmentComponent[](1),
+            considerationComponents: new SeaportInterface.FulfillmentComponent[](1)
+        });
+        fulfillments[1].offerComponents[0] = SeaportInterface.FulfillmentComponent({ orderIndex: 0, itemIndex: 0 });
+        fulfillments[1].considerationComponents[0] = SeaportInterface.FulfillmentComponent({
+            orderIndex: 1,
+            itemIndex: 0
+        });
+
+        // Payment from buyer to OpenSea
+        fulfillments[2] = SeaportInterface.Fulfillment({
+            offerComponents: new SeaportInterface.FulfillmentComponent[](1),
+            considerationComponents: new SeaportInterface.FulfillmentComponent[](1)
+        });
+        fulfillments[2].offerComponents[0] = SeaportInterface.FulfillmentComponent({ orderIndex: 0, itemIndex: 0 });
+        fulfillments[2].considerationComponents[0] = SeaportInterface.FulfillmentComponent({
+            orderIndex: 0,
+            itemIndex: 1
+        });
+
+        SeaportInterface.Execution[] memory executions = SeaportInterface(SEAPORT).matchAdvancedOrders(
+            orders,
+            new SeaportInterface.CriteriaResolver[](0),
+            fulfillments,
+            address(this)
+        );
+
+        // if invoked from BP, we can probably immediately unwrap it?
+        if (msg.sender == unwrapperAddress) {
+            unwrap(_tokenId);
+        }
     }
 
     /**
@@ -350,7 +482,7 @@ contract OpenSeaWrapper is BosonTypes, Ownable, ERC721 {
      *
      * @param _tokenId The token id.
      */
-    function unwrap(uint256 _tokenId) external {
+    function unwrap(uint256 _tokenId) public  {
         address wrappedVoucherOwner = ownerOf(_tokenId);
 
         // Either contract owner or protocol can unwrap
