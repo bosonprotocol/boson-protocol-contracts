@@ -1414,6 +1414,8 @@ describe("IPriceDiscoveryHandlerFacet", function () {
                 priceDiscovery = new PriceDiscovery(price, Side.Wrapper, wethAddress, wethAddress, calldata);
 
                 // Transfer the voucher to weth to pass the "is owner" check
+                // Use token that was not wrapped yet
+                tokenId = deriveTokenId(offer.id, 3);
                 await bosonVoucher.connect(assistant).transferFrom(assistant.address, wethAddress, tokenId);
 
                 // Attempt to commit, expecting revert
