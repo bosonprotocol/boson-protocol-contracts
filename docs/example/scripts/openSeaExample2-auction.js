@@ -17,9 +17,10 @@ const CHAIN = Chain.Mumbai;
 const PRIVATE_KEY = "###"; // seller
 const WETH_ADDRESS = "0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa";
 const PROTOCOL_ADDRESS = "0x76051FC05Ab42D912a737d59a8711f1446712630";
+const PRICE_DISCOVERY_CLIENT = "0x74874fF29597b6e01E16475b7BB9D6dC954d0411";
 
 const CONTRACT_ADDRESS = "0x7889dB3b4B605c7Dc3Bc5A47286b7BB20Fac331F"; // voucher, <change
-let TOKEN_ID = "245683868916917570620556466565736648671529"; // <change
+let TOKEN_ID = "245683868916917570620556466565736648671526"; // <change
 
 // INIT
 const provider = new ethersv5.providers.JsonRpcProvider(RPC_URL);
@@ -87,14 +88,14 @@ await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable)
 
 // 4. WRAPPER
 // create wrapper (if it does not exist yet)
-const PRICE_DISCOVERY_CLIENT = "0x74874fF29597b6e01E16475b7BB9D6dC954d0411";
+
 const bosonWrapperFactory = await getContractFactory("OpenSeaWrapper");
 const bosonWrapper = await bosonWrapperFactory.deploy(CONTRACT_ADDRESS, PROTOCOL_ADDRESS, WETH_ADDRESS, PRICE_DISCOVERY_CLIENT);
 await bosonWrapper.waitForDeployment();
 
 // if already exists
-// const WRAPPER_ADDRESS = "0xcEaAb5096E968CdD4727422002FDa9FbD02F8337";
-// const bosonWrapper = await getContractAt("OpenSeaWrapper", WRAPPER_ADDRESS);
+const WRAPPER_ADDRESS = "0xcEaAb5096E968CdD4727422002FDa9FbD02F8337";
+const bosonWrapper = await getContractAt("OpenSeaWrapper", WRAPPER_ADDRESS);
 
 
 // 5. LIST ON OPENSEA
@@ -139,4 +140,5 @@ await priceDiscoveryHandler.connect(seller).commitToPriceDiscoveryOffer(input.or
 // it must be the owner...
 await bosonVoucher.connect(seller).setApprovalForAll(PROTOCOL_ADDRESS, true);
 let pdd = bosonWrapper.interface.encodeFunctionData("finalizeAuction", [TOKEN_ID, buyerAdvancedOrder]);
+let input = ffd.fulfillment_data.transaction.input_data;
 let priceDiscovery = new PriceDiscovery(input.orders[1].parameters.consideration[0].startAmount,  Side.Bid, WRAPPER_ADDRESS, WRAPPER_ADDRESS, pdd);
