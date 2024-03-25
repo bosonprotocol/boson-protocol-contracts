@@ -388,12 +388,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         bool committable = isTokenCommittable(_tokenId);
 
         if (committable) {
-            if (_from == address(this) || _from == owner()) {
-                // If offer is committable, temporarily update _owners, so transfer succeeds
-                silentMint(_from, _tokenId);
-            }
-
-            _isCommittable = true;
+            silentMint(_from, _tokenId);
         }
 
         super.transferFrom(_from, _to, _tokenId);
@@ -411,12 +406,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         bool committable = isTokenCommittable(_tokenId);
 
         if (committable) {
-            if (_from == address(this) || _from == owner()) {
-                // If offer is committable, temporarily update _owners, so transfer succeeds
-                silentMint(_from, _tokenId);
-            }
-
-            _isCommittable = true;
+            silentMint(_from, _tokenId);
         }
 
         super.safeTransferFrom(_from, _to, _tokenId, _data);
@@ -776,11 +766,12 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
      * Updates owners, but do not emit Transfer event. Event was already emited during pre-mint.
      */
     function silentMint(address _from, uint256 _tokenId) internal {
-        // If voucher was already transferred, revert (relevant for price discovery offers)
-        if (_exists(_tokenId)) revert NoSilentMintAllowed();
+        if (!_exists(_tokenId) && (_from == address(this) || _from == owner())) {
+            // update data, so transfer will succeed
+            getERC721UpgradeableStorage()._owners[_tokenId] = _from;
+        }
 
-        // update data, so transfer will succeed
-        getERC721UpgradeableStorage()._owners[_tokenId] = _from;
+        _isCommittable = true;
     }
 
     /*

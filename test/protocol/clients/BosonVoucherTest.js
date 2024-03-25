@@ -1721,7 +1721,7 @@ describe("IBosonVoucher", function () {
                         tokenId,
                         ...additionalArgs
                       )
-                  ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.NO_SILENT_MINT_ALLOWED);
+                  ).to.be.revertedWith(RevertReasons.ERC721_CALLER_NOT_OWNER_OR_APPROVED);
                 });
 
                 it.skip("Transfer preminted voucher, which was committed and burned already", async function () {
