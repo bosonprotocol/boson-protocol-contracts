@@ -218,7 +218,9 @@ contract OpenSeaWrapper is BosonTypes, Ownable, ERC721 {
     address private immutable unwrapperAddress;
     address private immutable wethAddress;
 
-    address private constant SEAPORT = address(0x00000000000000ADc04C56Bf30aC9d3c0aAF14dC);
+    // address private constant SEAPORT = address(0x00000000000000ADc04C56Bf30aC9d3c0aAF14dC);
+    address private constant SEAPORT = address(0x0000000000000068F116a894984e2DB1123eB395); // 1.6
+
 
     uint256 private openSeaFee;
     address payable openSeaRecipient;
@@ -370,7 +372,11 @@ contract OpenSeaWrapper is BosonTypes, Ownable, ERC721 {
         // Get exchange token and balance
         (address exchangeToken, uint256 balance) = getCurrentBalance(_tokenId);
 
-        require(msg.sender == wrappedVoucherOwner, "OpenSeaWrapper: Only owner can finalize auction");
+        if (msg.sender == unwrapperAddress) {
+            // ToDo: verify that the seller agrees, i.e. by signing the order
+        } else {
+            require(msg.sender == wrappedVoucherOwner, "OpenSeaWrapper: Only owner can finalize auction");
+        }
 
         // transfer to itself to finalize the auction
         _transfer(wrappedVoucherOwner, address(this), _tokenId);

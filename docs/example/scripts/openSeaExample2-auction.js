@@ -20,7 +20,7 @@ const PROTOCOL_ADDRESS = "0x76051FC05Ab42D912a737d59a8711f1446712630";
 const PRICE_DISCOVERY_CLIENT = "0x74874fF29597b6e01E16475b7BB9D6dC954d0411";
 
 const CONTRACT_ADDRESS = "0x7889dB3b4B605c7Dc3Bc5A47286b7BB20Fac331F"; // voucher, <change
-let TOKEN_ID = "245683868916917570620556466565736648671526"; // <change
+let TOKEN_ID = "245683868916917570620556466565736648671527"; // <change
 
 // INIT
 const provider = new ethersv5.providers.JsonRpcProvider(RPC_URL);
@@ -94,7 +94,7 @@ const bosonWrapper = await bosonWrapperFactory.deploy(CONTRACT_ADDRESS, PROTOCOL
 await bosonWrapper.waitForDeployment();
 
 // if already exists
-const WRAPPER_ADDRESS = "0xcEaAb5096E968CdD4727422002FDa9FbD02F8337";
+const WRAPPER_ADDRESS = "0xD12E9291475bAC889A1386F079D625854bE94D02";
 const bosonWrapper = await getContractAt("OpenSeaWrapper", WRAPPER_ADDRESS);
 
 
@@ -141,4 +141,4 @@ await priceDiscoveryHandler.connect(seller).commitToPriceDiscoveryOffer(input.or
 await bosonVoucher.connect(seller).setApprovalForAll(PROTOCOL_ADDRESS, true);
 let pdd = bosonWrapper.interface.encodeFunctionData("finalizeAuction", [TOKEN_ID, buyerAdvancedOrder]);
 let input = ffd.fulfillment_data.transaction.input_data;
-let priceDiscovery = new PriceDiscovery(input.orders[1].parameters.consideration[0].startAmount,  Side.Bid, WRAPPER_ADDRESS, WRAPPER_ADDRESS, pdd);
+let priceDiscovery = new PriceDiscovery(input.orders[1].parameters.consideration[0].startAmount,  Side.Wrapper, WRAPPER_ADDRESS, WRAPPER_ADDRESS, pdd);
