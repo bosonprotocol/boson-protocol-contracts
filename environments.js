@@ -12,6 +12,12 @@ module.exports = {
   confirmations: parseInt(process.env.CONFIRMATIONS),
   tipMultiplier: parseInt(process.env.TIP_MULTIPLIER),
 
+  // For deploying with CREATE3
+  create3: {
+    address: process.env.CREATE3_FACTORY_ADDRESS,
+    salt: process.env.CREATE3_SALT,
+  },
+
   // Needed for verifying contract code on Etherscan
   etherscan: {
     apiKey: process.env.DEPLOYER_ETHERSCAN_API_KEY,
@@ -28,7 +34,7 @@ module.exports = {
   },
 
   /*
-    NETWORK SPECIFIC ENVIROMENT CONFIGURATIONS
+    NETWORK SPECIFIC ENVIRONMENT CONFIGURATIONS
     - txNode: blockchain node url (e.g. local, infura, alchemy etc.)
     - keys: private key used for deployment
     - gasLimit: maximum gas spent per transaction
