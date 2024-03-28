@@ -113,7 +113,8 @@ async function deployContract(
     }
 
     // deploy the contract
-    await deployer.sendTransaction(transaction);
+    const tx = await deployer.sendTransaction(transaction);
+    await tx.wait(confirmations);
     const contract = await getContractAt(contractName, contractAddress);
 
     return contract;

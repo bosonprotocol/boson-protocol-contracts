@@ -89,7 +89,7 @@ async function main(env, facetConfig, create3) {
   // Deploy the Diamond
   const [protocolDiamond, dlf, dcf, erc165f, accessController, diamondArgs] = await deployProtocolDiamond(
     maxPriorityFeePerGas,
-    environments.create3
+    create3 ? environments.create3 : null
   );
   deploymentComplete("AccessController", await accessController.getAddress(), [], "", contracts);
   deploymentComplete(
