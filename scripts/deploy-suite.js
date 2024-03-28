@@ -212,8 +212,8 @@ async function main(env, facetConfig, create3) {
 
   // Add NFT auth token addresses to protocol config
   // LENS
-  // Skip the step for ethereum networks, since LENS is not present there
-  if (!(network === "mainnet" || network === "sepolia")) {
+  // Skip the step if the LENS is not available on the network
+  if (authTokenContracts.lensAddress && authTokenContracts.lensAddress != "") {
     transactionResponse = await bosonConfigHandler.setAuthTokenContract(
       AuthTokenType.Lens,
       authTokenContracts.lensAddress,
@@ -223,8 +223,8 @@ async function main(env, facetConfig, create3) {
   }
 
   // ENS
-  // Skip the step for polygon networks, since ENS is not present there
-  if (!(network === "polygon" || network === "mumbai")) {
+  // Skip the step if the LENS is not available on the network
+  if (authTokenContracts.ensAddress && authTokenContracts.ensAddress != "") {
     transactionResponse = await bosonConfigHandler.setAuthTokenContract(
       AuthTokenType.ENS,
       authTokenContracts.ensAddress,

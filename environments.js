@@ -87,6 +87,13 @@ module.exports = {
     adminAddress: process.env.ADMIN_ADDRESS_MUMBAI,
   },
 
+  // Polygon Amoy testnet
+  amoy: {
+    txNode: process.env.DEPLOYER_AMOY_TXNODE,
+    keys: [process.env.DEPLOYER_AMOY_KEY],
+    adminAddress: process.env.ADMIN_ADDRESS_AMOY,
+  },
+
   // Polygon Mainnet
   polygon: {
     txNode: process.env.DEPLOYER_POLYGON_TXNODE,

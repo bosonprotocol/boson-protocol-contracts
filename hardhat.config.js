@@ -169,6 +169,10 @@ module.exports = {
       url: environments.mumbai.txNode,
       accounts: environments.mumbai.keys,
     },
+    amoy: {
+      url: environments.amoy.txNode,
+      accounts: environments.amoy.keys,
+    },
     polygon: {
       url: environments.polygon.txNode,
       accounts: environments.polygon.keys,
