@@ -13,11 +13,14 @@ contract AccessController is AccessControl {
     /**
      * @notice Constructor
      *
-     * Grants ADMIN role to deployer.
+     * Grants ADMIN role to the provided address.
      * Sets ADMIN as role admin for all other roles.
+     *
+     * @param _defaultAdmin - the address to grant the ADMIN role to
      */
-    constructor() {
-        _setupRole(ADMIN, msg.sender);
+    constructor(address _defaultAdmin) {
+        require(_defaultAdmin != address(0), "Invalid address");
+        _setupRole(ADMIN, _defaultAdmin);
         _setRoleAdmin(ADMIN, ADMIN);
         _setRoleAdmin(PAUSER, ADMIN);
         _setRoleAdmin(PROTOCOL, ADMIN);
