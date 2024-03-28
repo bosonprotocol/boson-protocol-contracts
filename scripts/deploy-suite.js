@@ -1,6 +1,6 @@
 const environments = require("../environments");
 const hre = require("hardhat");
-const { ZeroAddress, getContractAt, getSigners } = hre.ethers;
+const { ZeroAddress, getContractAt, getSigners, provider } = hre.ethers;
 const network = hre.network.name;
 const confirmations = network == "hardhat" ? 1 : environments.confirmations;
 const tipMultiplier = BigInt(environments.tipMultiplier);
@@ -42,7 +42,15 @@ function getAuthTokenContracts() {
   };
 }
 
-async function main(env, facetConfig) {
+async function main(env, facetConfig, create3) {
+  if (create3) {
+    const code = await provider.getCode(environments.create3.address);
+    if (code === "0x") {
+      console.log("CREATE3 factory contract is not deployed on this network.");
+      process.exit(1);
+    }
+  }
+
   // Compile everything (in case run by node)
   await hre.run("compile");
 
@@ -80,7 +88,8 @@ async function main(env, facetConfig) {
 
   // Deploy the Diamond
   const [protocolDiamond, dlf, dcf, erc165f, accessController, diamondArgs] = await deployProtocolDiamond(
-    maxPriorityFeePerGas
+    maxPriorityFeePerGas,
+    create3 ? environments.create3 : null
   );
   deploymentComplete("AccessController", await accessController.getAddress(), [], "", contracts);
   deploymentComplete(

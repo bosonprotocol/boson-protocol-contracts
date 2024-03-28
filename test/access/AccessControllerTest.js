@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { getContractFactory, getSigners, keccak256, toUtf8Bytes } = ethers;
+const { getContractFactory, getSigners, keccak256, toUtf8Bytes, ZeroAddress } = ethers;
 const { expect } = require("chai");
 const Role = require("../../scripts/domain/Role");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
@@ -25,7 +25,7 @@ describe("AccessController", function () {
 
     // Deploy the contract
     AccessController = await getContractFactory("AccessController");
-    accessController = await AccessController.deploy();
+    accessController = await AccessController.deploy(deployer.address);
     await accessController.waitForDeployment();
   });
 
@@ -491,6 +491,14 @@ describe("AccessController", function () {
       ).to.be.revertedWith(
         `AccessControl: account ${(await rando.getAddress()).toLowerCase()} is missing role ${Role.ADMIN}`
       );
+    });
+
+    it("Should revert if default admin is a zero address", async function () {
+      // Grant role
+      await accessController.connect(deployer).grantRole(Role.PAUSER, await pauser.getAddress());
+
+      // Revoke Role, expecting revert
+      await expect(AccessController.deploy(ZeroAddress)).to.be.revertedWith(`Invalid address`);
     });
   });
 });
