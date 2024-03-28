@@ -45,7 +45,8 @@ task(
   .addOptionalParam("env", "The deployment environment")
   .addOptionalParam("facetConfig", "JSON list of facets to deploy")
   .addFlag("dryRun", "Test the deployment without deploying")
-  .setAction(async ({ env, facetConfig, dryRun }) => {
+  .addFlag("create3", "Use CREATE3 for deployment")
+  .setAction(async ({ env, facetConfig, dryRun, create3 }) => {
     let balanceBefore, getBalance;
     if (dryRun) {
       let setupDryRun;
@@ -54,7 +55,7 @@ task(
     }
 
     const { deploySuite } = await lazyImport("./scripts/deploy-suite.js");
-    await deploySuite(env, facetConfig);
+    await deploySuite(env, facetConfig, create3);
 
     if (dryRun) {
       const balanceAfter = await getBalance();
