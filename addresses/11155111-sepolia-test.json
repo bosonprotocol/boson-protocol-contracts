@@ -7,7 +7,9 @@
     {
       "name": "AccessController",
       "address": "0xacddab2215d0b4fe62d3f07338ea3020425046d1",
-      "args": [],
+      "args": [
+        "0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8"
+      ],
       "interfaceId": ""
     },
     {

@@ -92,7 +92,7 @@ async function main(env, facetConfig, create3) {
     maxPriorityFeePerGas,
     create3 ? environments.create3 : null
   );
-  deploymentComplete("AccessController", await accessController.getAddress(), [], "", contracts);
+  deploymentComplete("AccessController", await accessController.getAddress(), [deployer.address], "", contracts);
   deploymentComplete(
     "DiamondLoupeFacet",
     await dlf.getAddress(),
