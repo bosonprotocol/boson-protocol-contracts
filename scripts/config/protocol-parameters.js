@@ -107,7 +107,7 @@ module.exports = {
     test: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
     mumbai: "0x74874fF29597b6e01E16475b7BB9D6dC954d0411",
     polygon: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
-    sepolia: "0x03e583A035aFFF33ec0918a4c690BC9883C423a0",
+    sepolia: "0x789d8727b9ae0A8546489232EB55b6fBE86b21Ac",
     amoy: "0x03e583A035aFFF33ec0918a4c690BC9883C423a0", //dummy
   },
 };
