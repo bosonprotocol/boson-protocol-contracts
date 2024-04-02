@@ -150,3 +150,53 @@ Boson Protocol V2 Contract Suite Deployer
 ✅ ConfigHandlerFacet updated with remaining post-initialization config.
 ✅ Granted roles to appropriate contract and addresses.
 ✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/11155111-sepolia-test.json
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: sepolia
+📅 Tue Apr 02 2024 11:25:46 GMT+0200 (Srednjeevropski poletni čas)
+🔱 Deployer account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0x92c45979a38aa16daced5470d7f976e9e7ba6b58
+✅ DiamondLoupeFacet deployed to: 0xb517a2aee8bbfbf038d27d4451c46469b229a1e6
+✅ DiamondCutFacet deployed to: 0x3751e1dfbe3ed4ae595d80f4138aaee7337a78f2
+✅ ERC165Facet deployed to: 0x77cd8a9ad93a5a95ce746e104ebf1710f8beb993
+✅ ProtocolDiamond deployed to: 0x26f643746cbc918b46c2d47edca68c4a6c98ebe6
+
+💎 Granting UPGRADER role...
+
+💸 Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0x9F3dAAA2D7B39C7ad4f375e095357012296e69B8
+
+💎 Deploying and initializing protocol handler facets...
+✅ AccountHandlerFacet deployed to: 0xBc0531d17c7576d20C4D7eE65A6A0671e9b2491B
+✅ SellerHandlerFacet deployed to: 0x9dBc8CdFb547eA09DcC811090D43afD4225aFBE7
+✅ BuyerHandlerFacet deployed to: 0x065398cf0603ebB0D479F821e3af691D2EC11271
+✅ DisputeResolverHandlerFacet deployed to: 0x86cfD570910d12605e7174C35Fdc6Fceda09B37e
+✅ AgentHandlerFacet deployed to: 0xeB2DE1c786F404199Ce248344A7aD2BDbeC0d092
+✅ BundleHandlerFacet deployed to: 0x1a68A423485F965B92a724b525082c7968aac2fD
+✅ DisputeHandlerFacet deployed to: 0x593Bc391ebEc9771b72d10f27426D94c42c83915
+✅ FundsHandlerFacet deployed to: 0x1C85e93C9210a412982B7B814e71BBAbf5EFFeb4
+✅ GroupHandlerFacet deployed to: 0x46EbE7F77Fd3Bf9CD9745B563d2eB8D5EB8D2098
+✅ OfferHandlerFacet deployed to: 0x295E367a9415D248158cA59B70ab0146D7ccf935
+✅ OrchestrationHandlerFacet1 deployed to: 0x4B02fe28Ac47EF1E6B64F78191AABA43f4Ce5B23
+✅ OrchestrationHandlerFacet2 deployed to: 0x4B6108C789272341B381B103a5c32200ee772f5c
+✅ TwinHandlerFacet deployed to: 0xd7B4Bbae13A0678f367911bE84758aBd6DfF1fA0
+✅ PauseHandlerFacet deployed to: 0xB1951217991D5D6FEC83b477d8fC175dc3962279
+✅ ProtocolInitializationHandlerFacet deployed to: 0x52BFE3459E5f25b301AFAd41496Cdf328aa04c1B
+✅ SequentialCommitHandlerFacet deployed to: 0x3512CBf24A0c2aAf1b79C1bbeAf8f720D04f098B
+✅ PriceDiscoveryHandlerFacet deployed to: 0x1585b19373feCa5363cfb69143f894A22995752d
+✅ ConfigHandlerFacet deployed to: 0xbdC7877453fc3427eD0ADF890edE67d26e401Ad1
+✅ ExchangeHandlerFacet deployed to: 0x25D86BF38A9fB5767292Bb0F0b2506FC635EB52B
+✅ MetaTransactionsHandlerFacet deployed to: 0x2Cf54F72A26AD2D68E5673caA084C67c4570B330
+
+⧉ Deploying Protocol Client implementation/proxy pairs...
+✅ BosonVoucher Logic deployed to: 0x830a82eB2868C9099F6ed26273F4bFb55CB9f8d7
+✅ BosonVoucher Beacon deployed to: 0xee7e9342B908A57cDDD0d43FE2462688DCcAf9eA
+
+🌐️Configuring and granting roles...
+✅ ConfigHandlerFacet updated with remaining post-initialization config.
+✅ Granted roles to appropriate contract and addresses.
+✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/11155111-sepolia-staging.json
