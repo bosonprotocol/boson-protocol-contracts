@@ -2,8 +2,9 @@ const shell = require("shelljs");
 const { getAddressesFilePath } = require("./utils.js");
 const hre = require("hardhat");
 const { ethers } = hre;
-const { getSigners, parseEther } = hre.ethers;
+const { getSigners, parseEther, getContractAt } = hre.ethers;
 const network = hre.network.name;
+const environments = require("../../environments");
 
 async function setupDryRun(env) {
   let forkedChainId;
@@ -13,6 +14,7 @@ async function setupDryRun(env) {
   ({ chainId: forkedChainId } = await ethers.provider.getNetwork());
 
   forkedEnv = env;
+
   let deployerBalance = await getBalance();
   // const blockNumber = await ethers.provider.getBlockNumber();
 
@@ -38,6 +40,34 @@ async function setupDryRun(env) {
 
   // copy addresses file
   shell.cp(getAddressesFilePath(forkedChainId, network, forkedEnv), getAddressesFilePath(chainId, "hardhat", env));
+
+  const adminAddressConfig = environments[network].adminAddress;
+  const upgraderAddress = (await getSigners())[0].address;
+  if (adminAddressConfig != upgraderAddress) {
+    const upgrader = await ethers.getSigner(upgraderAddress);
+    await upgrader.sendTransaction({ to: adminAddressConfig, value: parseEther("1", "ether") });
+    deployerBalance -= parseEther("1", "ether");
+
+    await hre.network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: ["adminAddressConfig"],
+    });
+
+    const admin = await ethers.getSigner(adminAddressConfig);
+
+    // give roles to upgrader
+    const { readContracts } = require("./../util/utils");
+    const contractsFile = readContracts(chainId, network, env);
+    const accessControllerInfo = contractsFile.contracts.find((i) => i.name === "AccessController");
+
+    // Get AccessController abstraction
+    const accessController = await getContractAt("AccessController", accessControllerInfo.address, admin);
+
+    const Role = require("./../domain/Role");
+    await accessController.grantRole(Role.ADMIN, upgraderAddress);
+    await accessController.grantRole(Role.PAUSER, upgraderAddress);
+    await accessController.grantRole(Role.UPGRADER, upgraderAddress);
+  }
 
   return { env, deployerBalance };
 }
