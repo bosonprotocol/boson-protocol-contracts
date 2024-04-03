@@ -18,8 +18,8 @@ async function setupDryRun(env) {
   let deployerBalance = await getBalance();
   // const blockNumber = await ethers.provider.getBlockNumber();
 
-  // if deployerBalance is 0, set it to 10 ether
-  if (deployerBalance == 0n) deployerBalance = parseEther("10", "ether");
+  // if deployerBalance is 0, set it to 100 ether
+  if (deployerBalance == 0n) deployerBalance = parseEther("100", "ether");
 
   // change network to hardhat with forking enabled
   hre.config.networks["hardhat"].forking = {
