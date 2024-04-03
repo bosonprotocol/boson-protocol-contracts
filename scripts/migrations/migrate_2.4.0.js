@@ -197,7 +197,8 @@ async function migrate(env, params) {
 
     const metaTransactionHandlerFacet = await getContractAt("MetaTransactionsHandlerFacet", protocolAddress);
     console.log("Removing selectors", selectorsToRemove.join(","));
-    await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToRemove, false);
+    const tx = await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToRemove, false);
+    await tx.wait(confirmations); // wait, so the next check is accurate
 
     // check if functions were removed
     for (const selector of selectorsToRemove) {
