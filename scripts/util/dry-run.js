@@ -44,26 +44,28 @@ async function setupDryRun(env) {
   const adminAddressConfig = environments[network].adminAddress;
   const upgraderAddress = (await getSigners())[0].address;
   if (adminAddressConfig != upgraderAddress) {
+    console.log("Sending 1 ether to the admin");
     const upgrader = await ethers.getSigner(upgraderAddress);
     await upgrader.sendTransaction({ to: adminAddressConfig, value: parseEther("1", "ether") });
     deployerBalance -= parseEther("1", "ether");
 
     await hre.network.provider.request({
       method: "hardhat_impersonateAccount",
-      params: ["adminAddressConfig"],
+      params: [adminAddressConfig],
     });
 
     const admin = await ethers.getSigner(adminAddressConfig);
 
     // give roles to upgrader
     const { readContracts } = require("./../util/utils");
-    const contractsFile = readContracts(chainId, network, env);
+    const contractsFile = readContracts(chainId, "hardhat", env);
     const accessControllerInfo = contractsFile.contracts.find((i) => i.name === "AccessController");
 
     // Get AccessController abstraction
     const accessController = await getContractAt("AccessController", accessControllerInfo.address, admin);
 
     const Role = require("./../domain/Role");
+    console.log("Granting roles to upgrader");
     await accessController.grantRole(Role.ADMIN, upgraderAddress);
     await accessController.grantRole(Role.PAUSER, upgraderAddress);
     await accessController.grantRole(Role.UPGRADER, upgraderAddress);
