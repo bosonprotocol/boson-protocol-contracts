@@ -73,11 +73,11 @@ module.exports = {
     adminAddress: process.env.ADMIN_ADDRESS_MAINNET,
   },
 
-  // Ethereum testnet Goerli
-  goerli: {
-    txNode: process.env.DEPLOYER_GOERLI_TXNODE,
-    keys: [process.env.DEPLOYER_GOERLI_KEY],
-    adminAddress: process.env.ADMIN_ADDRESS_GOERLI,
+  // Ethereum testnet Sepolia
+  sepolia: {
+    txNode: process.env.DEPLOYER_SEPOLIA_TXNODE,
+    keys: [process.env.DEPLOYER_SEPOLIA_KEY],
+    adminAddress: process.env.ADMIN_ADDRESS_SEPOLIA,
   },
 
   // Polygon Mumbai testnet
@@ -85,6 +85,13 @@ module.exports = {
     txNode: process.env.DEPLOYER_MUMBAI_TXNODE,
     keys: [process.env.DEPLOYER_MUMBAI_KEY],
     adminAddress: process.env.ADMIN_ADDRESS_MUMBAI,
+  },
+
+  // Polygon Amoy testnet
+  amoy: {
+    txNode: process.env.DEPLOYER_AMOY_TXNODE,
+    keys: [process.env.DEPLOYER_AMOY_KEY],
+    adminAddress: process.env.ADMIN_ADDRESS_AMOY,
   },
 
   // Polygon Mainnet

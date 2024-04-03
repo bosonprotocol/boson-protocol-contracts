@@ -7,6 +7,7 @@ module.exports = {
     staging: "0x69015912AA33720b842dCD6aC059Ed623F28d9f7",
     mumbai: "0x69015912AA33720b842dCD6aC059Ed623F28d9f7",
     polygon: "0x86C80a8aa58e0A4fa09A69624c31Ab2a6CAD56b8",
-    goerli: "0xE041608922d06a4F26C0d4c27d8bCD01daf1f792",
+    sepolia: "0xbdeA59c8801658561a16fF58D68FC2b198DE4E93",
+    amoy: "", // not deployed
   },
 };

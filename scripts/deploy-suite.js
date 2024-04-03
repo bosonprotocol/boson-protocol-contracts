@@ -1,6 +1,6 @@
 const environments = require("../environments");
 const hre = require("hardhat");
-const { ZeroAddress, getContractAt, getSigners, provider } = hre.ethers;
+const { ZeroAddress, getContractAt, getSigners, getContractFactory, provider } = hre.ethers;
 const network = hre.network.name;
 const confirmations = network == "hardhat" ? 1 : environments.confirmations;
 const tipMultiplier = BigInt(environments.tipMultiplier);
@@ -20,6 +20,7 @@ const { getInterfaceIds, interfaceImplementers } = require("./config/supported-i
 const { deploymentComplete, getFees, writeContracts } = require("./util/utils");
 const AuthTokenType = require("../scripts/domain/AuthTokenType");
 const clientConfig = require("./config/client-upgrade");
+const { WrappedNative } = require("./config/protocol-parameters");
 
 /**
  * Deploy Boson Protocol V2 contract suite
@@ -91,7 +92,7 @@ async function main(env, facetConfig, create3) {
     maxPriorityFeePerGas,
     create3 ? environments.create3 : null
   );
-  deploymentComplete("AccessController", await accessController.getAddress(), [], "", contracts);
+  deploymentComplete("AccessController", await accessController.getAddress(), [deployer.address], "", contracts);
   deploymentComplete(
     "DiamondLoupeFacet",
     await dlf.getAddress(),
@@ -119,6 +120,21 @@ async function main(env, facetConfig, create3) {
   );
   await transactionResponse.wait(confirmations);
 
+  // Deploy Boson Price Discovery Client
+  console.log("\n💸 Deploying Boson Price Discovery Client...");
+  const constructorArgs = [WrappedNative[network], await protocolDiamond.getAddress()];
+  const bosonPriceDiscoveryFactory = await getContractFactory("BosonPriceDiscovery");
+  const bosonPriceDiscovery = await bosonPriceDiscoveryFactory.deploy(...constructorArgs);
+  await bosonPriceDiscovery.waitForDeployment();
+
+  deploymentComplete(
+    "BosonPriceDiscoveryClient",
+    await bosonPriceDiscovery.getAddress(),
+    constructorArgs,
+    "",
+    contracts
+  );
+
   console.log(`\n💎 Deploying and initializing protocol handler facets...`);
 
   // Deploy and cut facets
@@ -132,6 +148,9 @@ async function main(env, facetConfig, create3) {
     // Get values from default config file
     facetData = await getFacets();
   }
+
+  // Update boson price discovery address in config init
+  facetData["ConfigHandlerFacet"].init[0].priceDiscovery = await bosonPriceDiscovery.getAddress();
 
   const { version } = packageFile;
   let { deployedFacets } = await deployAndCutFacets(
@@ -193,8 +212,8 @@ async function main(env, facetConfig, create3) {
 
   // Add NFT auth token addresses to protocol config
   // LENS
-  // Skip the step for ethereum networks, since LENS is not present there
-  if (!(network === "mainnet" || network === "goerli")) {
+  // Skip the step if the LENS is not available on the network
+  if (authTokenContracts.lensAddress && authTokenContracts.lensAddress != "") {
     transactionResponse = await bosonConfigHandler.setAuthTokenContract(
       AuthTokenType.Lens,
       authTokenContracts.lensAddress,
@@ -204,8 +223,8 @@ async function main(env, facetConfig, create3) {
   }
 
   // ENS
-  // Skip the step for polygon networks, since ENS is not present there
-  if (!(network === "polygon" || network === "mumbai")) {
+  // Skip the step if the LENS is not available on the network
+  if (authTokenContracts.ensAddress && authTokenContracts.ensAddress != "") {
     transactionResponse = await bosonConfigHandler.setAuthTokenContract(
       AuthTokenType.ENS,
       authTokenContracts.ensAddress,
