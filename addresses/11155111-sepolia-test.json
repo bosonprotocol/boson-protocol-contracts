@@ -2,7 +2,7 @@
   "chainId": 11155111,
   "network": "sepolia",
   "env": "test",
-  "protocolVersion": "2.4.0",
+  "protocolVersion": "2.4.1",
   "contracts": [
     {
       "name": "AccessController",
@@ -208,19 +208,19 @@
       "interfaceId": "0xb3e4e803"
     },
     {
-      "name": "BosonVoucher Logic",
-      "address": "0x3dB93Af53e31D17C2715B31835bCd0175179cD0f",
-      "args": [
-        "0xbdeA59c8801658561a16fF58D68FC2b198DE4E93"
-      ],
-      "interfaceId": ""
-    },
-    {
       "name": "BosonVoucher Beacon",
       "address": "0xaCbaf088C1D7E14aF68E739c5cc2039F20911889",
       "args": [
         "0x7de418a7ce94debd057c34ebac232e7027634ade",
         "0x3dB93Af53e31D17C2715B31835bCd0175179cD0f"
+      ],
+      "interfaceId": ""
+    },
+    {
+      "name": "BosonVoucher Logic",
+      "address": "0x5FF36Ee3a85883b3b6A1CCA081565814c838c41A",
+      "args": [
+        "0xbdeA59c8801658561a16fF58D68FC2b198DE4E93"
       ],
       "interfaceId": ""
     }
