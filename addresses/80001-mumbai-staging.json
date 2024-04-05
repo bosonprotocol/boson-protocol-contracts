@@ -2,7 +2,7 @@
   "chainId": 80001,
   "network": "mumbai",
   "env": "staging",
-  "protocolVersion": "2.4.0",
+  "protocolVersion": "2.4.1",
   "contracts": [
     {
       "name": "AccessController",
@@ -219,7 +219,7 @@
     },
     {
       "name": "BosonVoucher Logic",
-      "address": "0x443Ee3BF52E932495d35Ab4Ebcb25DC2e98c3EC5",
+      "address": "0x906397e15b0662f284b378A2856716477615B14d",
       "args": [
         "0x69015912AA33720b842dCD6aC059Ed623F28d9f7"
       ],
