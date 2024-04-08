@@ -31,9 +31,9 @@ async function migrate(env) {
     const { chainId } = await ethers.provider.getNetwork();
     const contractsFile = readContracts(chainId, network, env);
 
-    if (contractsFile?.protocolVersion !== "2.4.0") {
-      throw new Error("Current contract version must be 2.4.0");
-    }
+    // if (contractsFile?.protocolVersion !== "2.4.0") {
+    //   throw new Error("Current contract version must be 2.4.0");
+    // }
 
     console.log(`Checking out contracts on version ${tag}`);
     shell.exec(`rm -rf contracts/*`);
@@ -52,38 +52,38 @@ async function migrate(env) {
     // Check if admin has UPGRADER role
     checkRole(contracts, "UPGRADER", signer);
 
-    const protocolAddress = contracts.find((c) => c.name === "ProtocolDiamond")?.address;
-    const initializationFacetAddress = contracts.find((c) => c.name === "ProtocolInitializationHandlerFacet")?.address;
+    // const protocolAddress = contracts.find((c) => c.name === "ProtocolDiamond")?.address;
+    // const initializationFacetAddress = contracts.find((c) => c.name === "ProtocolInitializationHandlerFacet")?.address;
 
-    console.log("Update protocol version");
-    const diamondCutFacet = await getContractAt("DiamondCutFacet", protocolAddress);
-    const protocolInitializationFacet = await getContractAt("ProtocolInitializationHandlerFacet", protocolAddress);
-    const versionBytes32 = encodeBytes32String(version);
-    const initializationData = protocolInitializationFacet.interface.encodeFunctionData("initialize", [
-      versionBytes32,
-      [],
-      [],
-      true,
-      "0x",
-      [],
-      [],
-    ]);
+    // console.log("Update protocol version");
+    // const diamondCutFacet = await getContractAt("DiamondCutFacet", protocolAddress);
+    // const protocolInitializationFacet = await getContractAt("ProtocolInitializationHandlerFacet", protocolAddress);
+    // const versionBytes32 = encodeBytes32String(version);
+    // const initializationData = protocolInitializationFacet.interface.encodeFunctionData("initialize", [
+    //   versionBytes32,
+    //   [],
+    //   [],
+    //   true,
+    //   "0x",
+    //   [],
+    //   [],
+    // ]);
 
-    const tx = await diamondCutFacet.diamondCut(
-      [],
-      initializationFacetAddress,
-      initializationData,
-      await getFees(maxPriorityFeePerGas)
-    );
-    await tx.wait(confirmations);
+    // const tx = await diamondCutFacet.diamondCut(
+    //   [],
+    //   initializationFacetAddress,
+    //   initializationData,
+    //   await getFees(maxPriorityFeePerGas)
+    // );
+    // await tx.wait(confirmations);
 
-    // Update version in contracts file
-    const newVersion = (await protocolInitializationFacet.getVersion()).replace(/\0/g, "");
+    // // Update version in contracts file
+    // const newVersion = (await protocolInitializationFacet.getVersion()).replace(/\0/g, "");
 
-    console.log(`\n📋 New version: ${newVersion}`);
+    // console.log(`\n📋 New version: ${newVersion}`);
 
-    const contractsPath = await writeContracts(contracts, env, newVersion);
-    console.log(`✅ Contracts written to ${contractsPath}`);
+    // const contractsPath = await writeContracts(contracts, env, newVersion);
+    // console.log(`✅ Contracts written to ${contractsPath}`);
 
     console.log("Executing upgrade clients script");
 

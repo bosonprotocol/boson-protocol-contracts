@@ -2,7 +2,7 @@
   "chainId": 1,
   "network": "mainnet",
   "env": "prod",
-  "protocolVersion": "2.4.0",
+  "protocolVersion": "2.4.1",
   "contracts": [
     {
       "name": "AccessController",
