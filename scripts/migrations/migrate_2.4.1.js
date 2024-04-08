@@ -9,7 +9,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { getContractAt, getSigners, encodeBytes32String } = ethers;
 const network = hre.network.name;
-const tag = "HEAD";
+const tag = "v2.4.1";
 const version = "2.4.1";
 const { META_TRANSACTION_FORWARDER } = require("../config/client-upgrade");
 const confirmations = hre.network.name == "hardhat" ? 1 : environments.confirmations;
