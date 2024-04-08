@@ -2,7 +2,7 @@
   "chainId": 137,
   "network": "polygon",
   "env": "prod",
-  "protocolVersion": "2.4.0",
+  "protocolVersion": "2.4.1",
   "contracts": [
     {
       "name": "AccessController",
@@ -219,7 +219,7 @@
     },
     {
       "name": "BosonVoucher Logic",
-      "address": "0x72f92782FFa7d6b2dcdCFcF25B6dB4FC3F8aE7B0",
+      "address": "0x1711057874B7B591f00AD309D174245A8c1545ee",
       "args": [
         "0x86C80a8aa58e0A4fa09A69624c31Ab2a6CAD56b8"
       ],
