@@ -40,7 +40,7 @@ module.exports = {
     mumbai: "0x1f5431E8679630790E8EbA3a9b41d1BB4d41aeD0",
     polygon: "0x9b3b0703d392321ad24338ff1f846650437a43c9",
     sepolia: "0x791Bf9Da3DEF5D7Cd3A7a748e56720Cd119D53AC",
-    amoy: "", // waiting to be mapped
+    amoy: "0x94e32c4bfcA1D3fe08B6F8252ABB47A5B14AC2bD",
   },
 
   // Treasury contract address
@@ -108,6 +108,6 @@ module.exports = {
     mumbai: "0x74874fF29597b6e01E16475b7BB9D6dC954d0411",
     polygon: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
     sepolia: "0x789d8727b9ae0A8546489232EB55b6fBE86b21Ac",
-    amoy: "0x03e583A035aFFF33ec0918a4c690BC9883C423a0", //dummy
+    amoy: "0xFFcd4c407B60B0d4351945484F9354d2C9E34EA1",
   },
 };
