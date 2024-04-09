@@ -2,7 +2,7 @@
   "chainId": 80002,
   "network": "amoy",
   "env": "test",
-  "protocolVersion": "2.4.0",
+  "protocolVersion": "2.4.1",
   "contracts": [
     {
       "name": "AccessController",
@@ -208,19 +208,19 @@
       "interfaceId": "0xb3e4e803"
     },
     {
-      "name": "BosonVoucher Logic",
-      "address": "0x8c25447AE830993eCeFAB50Bfe825D85DB69bcFC",
-      "args": [
-        "0xd240234dacd7ffdca7e4effcf6c7190885d7e2f0"
-      ],
-      "interfaceId": ""
-    },
-    {
       "name": "BosonVoucher Beacon",
       "address": "0x78163c984cE226fdbfBC671c74E9f32dc14ee930",
       "args": [
         "0x7de418a7ce94debd057c34ebac232e7027634ade",
         "0x8c25447AE830993eCeFAB50Bfe825D85DB69bcFC"
+      ],
+      "interfaceId": ""
+    },
+    {
+      "name": "BosonVoucher Logic",
+      "address": "0x9a86258B73Df1Dc92131E4db465236151387734d",
+      "args": [
+        "0xd240234dacd7ffdca7e4effcf6c7190885d7e2f0"
       ],
       "interfaceId": ""
     }
