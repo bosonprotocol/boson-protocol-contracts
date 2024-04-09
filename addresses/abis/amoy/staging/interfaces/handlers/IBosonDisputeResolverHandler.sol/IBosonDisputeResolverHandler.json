@@ -1,0 +1,465 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "IBosonDisputeResolverHandler",
+  "sourceName": "contracts/interfaces/handlers/IBosonDisputeResolverHandler.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_disputeResolverId",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "tokenAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "tokenName",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "feeAmount",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.DisputeResolverFee[]",
+          "name": "_disputeResolverFees",
+          "type": "tuple[]"
+        }
+      ],
+      "name": "addFeesToDisputeResolver",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_disputeResolverId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "_sellerAllowList",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "addSellersToAllowList",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_disputeResolverId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "_sellerIds",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "areSellersAllowed",
+      "outputs": [
+        {
+          "internalType": "bool[]",
+          "name": "sellerAllowed",
+          "type": "bool[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "escalationResponsePeriod",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "assistant",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "admin",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "clerk",
+              "type": "address"
+            },
+            {
+              "internalType": "address payable",
+              "name": "treasury",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "active",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct BosonTypes.DisputeResolver",
+          "name": "_disputeResolver",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "tokenAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "tokenName",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "feeAmount",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.DisputeResolverFee[]",
+          "name": "_disputeResolverFees",
+          "type": "tuple[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "_sellerAllowList",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "createDisputeResolver",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_disputeResolverId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getDisputeResolver",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "exists",
+          "type": "bool"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "escalationResponsePeriod",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "assistant",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "admin",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "clerk",
+              "type": "address"
+            },
+            {
+              "internalType": "address payable",
+              "name": "treasury",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "active",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct BosonTypes.DisputeResolver",
+          "name": "disputeResolver",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "tokenAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "tokenName",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "feeAmount",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.DisputeResolverFee[]",
+          "name": "disputeResolverFees",
+          "type": "tuple[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "sellerAllowList",
+          "type": "uint256[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_associatedAddress",
+          "type": "address"
+        }
+      ],
+      "name": "getDisputeResolverByAddress",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "exists",
+          "type": "bool"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "escalationResponsePeriod",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "assistant",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "admin",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "clerk",
+              "type": "address"
+            },
+            {
+              "internalType": "address payable",
+              "name": "treasury",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "active",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct BosonTypes.DisputeResolver",
+          "name": "disputeResolver",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "tokenAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "tokenName",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "feeAmount",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.DisputeResolverFee[]",
+          "name": "disputeResolverFees",
+          "type": "tuple[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "sellerAllowList",
+          "type": "uint256[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_disputeResolverId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "enum BosonTypes.DisputeResolverUpdateFields[]",
+          "name": "_fieldsToUpdate",
+          "type": "uint8[]"
+        }
+      ],
+      "name": "optInToDisputeResolverUpdate",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_disputeResolverId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address[]",
+          "name": "_feeTokenAddresses",
+          "type": "address[]"
+        }
+      ],
+      "name": "removeFeesFromDisputeResolver",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_disputeResolverId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "_sellerAllowList",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "removeSellersFromAllowList",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "escalationResponsePeriod",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "assistant",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "admin",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "clerk",
+              "type": "address"
+            },
+            {
+              "internalType": "address payable",
+              "name": "treasury",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "active",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct BosonTypes.DisputeResolver",
+          "name": "_disputeResolver",
+          "type": "tuple"
+        }
+      ],
+      "name": "updateDisputeResolver",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
