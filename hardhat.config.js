@@ -184,7 +184,18 @@ module.exports = {
       sepolia: environments.etherscan.apiKey,
       polygonMumbai: environments.polygonscan.apiKey,
       polygon: environments.polygonscan.apiKey,
+      polygonAmoy: environments.okLink.apiKey,
     },
+    customChains: [
+      {
+        network: "polygonAmoy",
+        chainId: 80002,
+        urls: {
+          apiURL: "https://www.oklink.com/api/v5/explorer/contract/verify-source-code-plugin/AMOY_TESTNET",
+          browserURL: "https://www.oklink.com/amoy/",
+        },
+      },
+    ],
   },
   solidity: {
     compilers: [
