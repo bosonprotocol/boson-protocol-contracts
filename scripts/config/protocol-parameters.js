@@ -101,12 +101,12 @@ module.exports = {
   },
 
   PRICE_DISCOVERY: {
-    mainnet: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
+    mainnet: "0xb60cf39Fb18e5111174f346d0f39521ef6531fD4",
     hardhat: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
     localhost: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
     test: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
     mumbai: "0x74874fF29597b6e01E16475b7BB9D6dC954d0411",
-    polygon: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
+    polygon: "0xb60cf39Fb18e5111174f346d0f39521ef6531fD4",
     sepolia: "0x789d8727b9ae0A8546489232EB55b6fBE86b21Ac",
     amoy: "0xFFcd4c407B60B0d4351945484F9354d2C9E34EA1",
   },
