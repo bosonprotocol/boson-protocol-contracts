@@ -882,8 +882,6 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_QUANTITY_AVAILABLE);
         });
 
-        
-
         it("Dispute resolver wallet is not registered", async function () {
           // Set some address that is not registered as a dispute resolver
           disputeResolver.id = "16";
@@ -2454,14 +2452,7 @@ describe("IBosonOfferHandler", function () {
         await expect(
           offerHandler
             .connect(assistant)
-            .createOfferBatch(
-              offers,
-              offerDatesList,
-              offerDurationsList,
-              disputeResolverIds,
-              agentIds,
-              offerFeeLimits
-            )
+            .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds, offerFeeLimits)
         ).to.emit(offerHandler, "OfferCreated");
       });
 
