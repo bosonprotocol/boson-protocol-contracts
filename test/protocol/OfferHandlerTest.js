@@ -688,6 +688,18 @@ describe("IBosonOfferHandler", function () {
           );
       });
 
+      it("Should allow create of an offer with offer type = discovery and the price is not set to zero", async function () {
+        // Set offer type to discovery
+        offer.priceType = PriceType.Discovery;
+
+        // Create an offer and emit OfferCreated event
+        await expect(
+          offerHandler
+            .connect(assistant)
+            .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit)
+        ).to.emit(offerHandler, "OfferCreated");
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The offers region of protocol is paused", async function () {
           // Pause the offers region of the protocol
@@ -870,17 +882,7 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_QUANTITY_AVAILABLE);
         });
 
-        it("Offer type is discovery and the price is not set to zero", async function () {
-          // Set offer type to discovery
-          offer.priceType = PriceType.Discovery;
-
-          // Create an offer and emit OfferCreated event
-          await expect(
-            offerHandler
-              .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit)
-          ).to.emit(offerHandler, "OfferCreated");
-        });
+        
 
         it("Dispute resolver wallet is not registered", async function () {
           // Set some address that is not registered as a dispute resolver

@@ -62,7 +62,6 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
      *   - Reseller did not approve protocol to transfer exchange token in escrow
      * - Call to price discovery contract fails
      * - Protocol fee and royalties combined exceed the secondary price
-     * - The secondary price cannot cover the buyer's cancellation penalty
      * - Transfer of exchange token fails
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
