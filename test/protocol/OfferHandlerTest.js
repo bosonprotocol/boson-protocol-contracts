@@ -874,12 +874,12 @@ describe("IBosonOfferHandler", function () {
           // Set offer type to discovery
           offer.priceType = PriceType.Discovery;
 
-          // Attempt to Create an offer, expecting revert
+          // Create an offer and emit OfferCreated event
           await expect(
             offerHandler
               .connect(assistant)
               .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_PRICE_DISCOVERY_PRICE);
+          ).to.emit(offerHandler, "OfferCreated");
         });
 
         it("Dispute resolver wallet is not registered", async function () {
@@ -2444,6 +2444,25 @@ describe("IBosonOfferHandler", function () {
           );
       });
 
+      it("should emit an OfferCreated event for all offers, one of which has offer type = discovery and the price is not set to zero", async function () {
+        // Set offer type to discovery
+        offers[2].priceType = PriceType.Discovery;
+
+        // Attempt to Create an offer, expecting revert
+        await expect(
+          offerHandler
+            .connect(assistant)
+            .createOfferBatch(
+              offers,
+              offerDatesList,
+              offerDurationsList,
+              disputeResolverIds,
+              agentIds,
+              offerFeeLimits
+            )
+        ).to.emit(offerHandler, "OfferCreated");
+      });
+
       it("should update state", async function () {
         // Create an offers
         await offerHandler
@@ -2962,25 +2981,6 @@ describe("IBosonOfferHandler", function () {
                 offerFeeLimits
               )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_QUANTITY_AVAILABLE);
-        });
-
-        it("For some offer, offer type is discovery and the price is not set to zero", async function () {
-          // Set offer type to discovery
-          offers[2].priceType = PriceType.Discovery;
-
-          // Attempt to Create an offer, expecting revert
-          await expect(
-            offerHandler
-              .connect(assistant)
-              .createOfferBatch(
-                offers,
-                offerDatesList,
-                offerDurationsList,
-                disputeResolverIds,
-                agentIds,
-                offerFeeLimits
-              )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_PRICE_DISCOVERY_PRICE);
         });
 
         it("For some offer, dispute resolver wallet is not registered", async function () {

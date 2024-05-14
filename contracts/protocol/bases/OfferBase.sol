@@ -149,9 +149,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // quantity must be greater than zero
         if (_offer.quantityAvailable == 0) revert InvalidQuantityAvailable();
 
-        // If offer is of the discovery type, price must be zero
-        if (_offer.priceType == PriceType.Discovery && _offer.price != 0) revert InvalidPriceDiscoveryPrice();
-
         DisputeResolutionTerms memory disputeResolutionTerms;
         OfferFees storage offerFees = fetchOfferFees(_offer.id);
         {

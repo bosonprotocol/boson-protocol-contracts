@@ -105,9 +105,6 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
         // It might be lower than submitted for buy orders and higher for sell orders
         thisExchangeCost.price = fulfilOrder(_tokenId, offer, _priceDiscovery, seller, _buyer);
 
-        // Price must be high enough to cover cancellation penalty in case of buyer's cancellation
-        if (thisExchangeCost.price < offer.buyerCancelPenalty) revert PriceDoesNotCoverPenalty();
-
         // Get token address
         address exchangeToken = offer.exchangeToken;
 
