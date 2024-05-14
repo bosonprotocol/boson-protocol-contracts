@@ -78,22 +78,16 @@ contract PriceDiscoveryBase is ProtocolBase {
                 bosonVoucher
             );
         } else if (_priceDiscovery.side == Side.Bid) {
-            actualPrice = fulfilBidOrder(
-                _tokenId,
-                _offer.exchangeToken,
-                _priceDiscovery,
-                _seller,
-                bosonVoucher
-            );
+            actualPrice = fulfilBidOrder(_tokenId, _offer.exchangeToken, _priceDiscovery, _seller, bosonVoucher);
         } else {
             // _priceDiscovery.side == Side.Wrapper
             // Handle wrapper voucher, there is no difference between ask and bid
             actualPrice = handleWrapper(_tokenId, _offer.exchangeToken, _priceDiscovery, bosonVoucher);
         }
-        
+
         // Price must be high enough to cover cancellation penalty in case of buyer's cancellation
         if (actualPrice < _offer.buyerCancelPenalty) {
-            revert PriceDoesNotCoverPenalty(); 
+            revert PriceDoesNotCoverPenalty();
         }
         return actualPrice;
     }
