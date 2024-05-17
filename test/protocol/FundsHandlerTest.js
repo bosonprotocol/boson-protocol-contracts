@@ -488,7 +488,7 @@ describe("IBosonFundsHandler", function () {
         offerNative = offer;
 
         offerToken = offer.clone();
-        offerToken.id = "2";
+        offerToken.id = (await offerHandler.getNextOfferId()).toString();
         offerToken.exchangeToken = await mockToken.getAddress();
 
         // Check if domains are valid
@@ -600,7 +600,7 @@ describe("IBosonFundsHandler", function () {
             // buyer withdrawal
             const tx2 = await fundsHandler.connect(buyer).withdrawFunds(buyerId, tokenListBuyer, tokenAmountsBuyer);
             await expect(tx2)
-              .to.emit(fundsHandler, "FundsWithdrawn", await buyer.getAddress())
+              .to.emit(fundsHandler, "FundsWithdrawn")
               .withArgs(
                 buyerId,
                 await buyer.getAddress(),
@@ -780,7 +780,7 @@ describe("IBosonFundsHandler", function () {
               // Mock offer
               const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
               agentOffer = offer.clone();
-              agentOffer.id = "3";
+              agentOffer.id = (await offerHandler.getNextOfferId()).toString();
               exchangeId = "3";
               agentOffer.exchangeToken = await mockToken.getAddress();
 
@@ -1847,11 +1847,11 @@ describe("IBosonFundsHandler", function () {
       expect(offerNative.isValid()).is.true;
 
       offerToken = offerNative.clone();
-      offerToken.id = (await offerHandler.getNextOfferId()) + 1n;
+      offerToken.id = ((await offerHandler.getNextOfferId()) + 1n).toString();
       offerToken.exchangeToken = await mockToken.getAddress();
 
       offerPriceDiscovery = offer.clone();
-      offerPriceDiscovery.id = offerToken.id + 1n;
+      offerPriceDiscovery.id = (BigInt(offerToken.id) + 1n).toString();
       offerPriceDiscovery.quantityAvailable = "2";
       offerPriceDiscovery.priceType = PriceType.Discovery;
       offerPriceDiscovery.exchangeToken = await mockToken.getAddress();
@@ -1915,7 +1915,7 @@ describe("IBosonFundsHandler", function () {
       await accountHandler.connect(rando).createAgent(agent);
 
       agentOffer = offerNative.clone();
-      agentOffer.id = await offerHandler.getNextOfferId();
+      agentOffer.id = (await offerHandler.getNextOfferId()).toString();
       agentOfferProtocolFee = mo.offerFees.protocolFee;
 
       randoBuyerId = "4"; // 1: seller, 2: disputeResolver, 3: agent, 4: rando
@@ -2275,7 +2275,7 @@ describe("IBosonFundsHandler", function () {
 
           // create an offer with a bad token contract
           offerToken.exchangeToken = await bosonToken.getAddress();
-          offerToken.id = "3";
+          offerToken.id = (await offerHandler.getNextOfferId()).toString();
 
           // add to DR fees
           await accountHandler
@@ -2296,7 +2296,7 @@ describe("IBosonFundsHandler", function () {
         it("Token address is not a contract", async function () {
           // create an offer with a bad token contract
           offerToken.exchangeToken = await admin.getAddress();
-          offerToken.id = "3";
+          offerToken.id = (await offerHandler.getNextOfferId()).toString();
 
           // add to DR fees
           await accountHandler
@@ -2335,7 +2335,7 @@ describe("IBosonFundsHandler", function () {
         it("Seller'a availableFunds is less than the required sellerDeposit", async function () {
           // create an offer with token with higher seller deposit
           offerToken.sellerDeposit = BigInt(offerToken.sellerDeposit) * 4n;
-          offerToken.id = "3";
+          offerToken.id = (await offerHandler.getNextOfferId()).toString();
           await offerHandler
             .connect(assistant)
             .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
@@ -2347,7 +2347,7 @@ describe("IBosonFundsHandler", function () {
 
           // create an offer with native currency with higher seller deposit
           offerNative.sellerDeposit = BigInt(offerNative.sellerDeposit) * 4n;
-          offerNative.id = "4";
+          offerNative.id = (await offerHandler.getNextOfferId()).toString();
           await offerHandler
             .connect(assistant)
             .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
@@ -2414,7 +2414,7 @@ describe("IBosonFundsHandler", function () {
           // Prepare an absolute zero offer
           offerToken.exchangeToken = await Foreign20WithFee.getAddress();
           offerToken.sellerDeposit = "0";
-          offerToken.id++;
+          offerToken.id = (await offerHandler.getNextOfferId()).toString();
 
           // Create a new offer
           await offerHandler
@@ -4860,7 +4860,7 @@ describe("IBosonFundsHandler", function () {
                 await configHandler.setProtocolFeePercentage(fee.protocol);
 
                 offer = offerToken.clone();
-                offer.id = "3";
+                offer.id = (await offerHandler.getNextOfferId()).toString();
                 offer.price = "100";
                 offer.sellerDeposit = "10";
                 offer.buyerCancelPenalty = "30";
@@ -5628,7 +5628,7 @@ describe("IBosonFundsHandler", function () {
 
               // create a new offer
               offer = offerToken.clone();
-              offer.id = "3";
+              offer.id = (await offerHandler.getNextOfferId()).toString();
               offer.price = "100";
               offer.sellerDeposit = "10";
               offer.buyerCancelPenalty = "30";
