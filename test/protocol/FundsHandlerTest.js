@@ -6797,7 +6797,7 @@ describe("IBosonFundsHandler", function () {
 
             sellerPayoff =
               (BigInt(offerPriceDiscovery.sellerDeposit) * (10000n - BigInt(buyerPercentBasisPoints))) / 10000n;
-            
+
             const sellerPricePart =
               BigInt(offerPriceDiscovery.price) -
               (BigInt(offerPriceDiscovery.price) * sellerPercentBasisPoints) / 10000n;
