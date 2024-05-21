@@ -428,7 +428,7 @@ const offerHandler = {
 
               if (propKey === "createOffer") {
                 return function (...args) {
-                  return new Promise((resolve) => {
+                  return new Promise((resolve, reject) => {
                     originalMethod
                       .apply(target, args)
                       .then((tx) => {
@@ -443,7 +443,7 @@ const offerHandler = {
                         }
                         return resolve(tx);
                       })
-                      .catch(console.error);
+                      .catch(reject);
                   });
                 };
               }
