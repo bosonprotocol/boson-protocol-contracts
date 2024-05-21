@@ -2832,10 +2832,7 @@ describe("IBosonFundsHandler", function () {
             // seller: 0; but during the commitToOffer, sellerDeposit is encumbered
             // protocol: 0
             // agent: 0
-            expectedBuyerAvailableFunds.funds[0] = new Funds(
-              ZeroAddress, "Native currency",
-              BigInt(buyerPayoff) * 2n
-            );
+            expectedBuyerAvailableFunds.funds[0] = new Funds(ZeroAddress, "Native currency", BigInt(buyerPayoff) * 2n);
             expectedSellerAvailableFunds = new FundsList([
               new Funds(await mockToken.getAddress(), "Foreign20", `${3 * sellerDeposit}`),
             ]);

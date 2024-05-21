@@ -415,36 +415,39 @@ function objectToArray(input) {
 const generateOfferId = incrementer();
 const offerHandler = {
   get(target, propKey) {
-      const original = target[propKey];
+    const original = target[propKey];
 
-      if (typeof original === 'function') {
-          if (propKey === 'connect') {
-              return function(...args) {
-                  const connectedObject = original.apply(target, args);
+    if (typeof original === "function") {
+      if (propKey === "connect") {
+        return function (...args) {
+          const connectedObject = original.apply(target, args);
 
-                  return new Proxy(connectedObject, {
-                      get(target, propKey) {
-                          const originalMethod = target[propKey];
+          return new Proxy(connectedObject, {
+            get(target, propKey) {
+              const originalMethod = target[propKey];
 
-                          if (propKey === 'createOffer') {
-                              return function(...args) {
-                                return new Promise((resolve)=>{
-                                  originalMethod.apply(target, args).then(()=>{
-                                    resolve(generateOfferId.next().value);
-                                  }).catch(console.error);
-                                })
-                              };
-                          }
-
-                          return originalMethod;
-                      }
+              if (propKey === "createOffer") {
+                return function (...args) {
+                  return new Promise((resolve) => {
+                    originalMethod
+                      .apply(target, args)
+                      .then(() => {
+                        resolve(generateOfferId.next().value);
+                      })
+                      .catch(console.error);
                   });
-              };
-          }
-      }
+                };
+              }
 
-      return original;
-  }
+              return originalMethod;
+            },
+          });
+        };
+      }
+    }
+
+    return original;
+  },
 };
 async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAddress, wethAddress } = {}) {
   // Load modules only here to avoid the caching issues in upgrade tests
@@ -553,7 +556,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
   let contractInstances = {};
   for (const contract of Object.keys(contracts)) {
     contractInstances[contract] = await getContractAt(contracts[contract], await protocolDiamond.getAddress());
-    if(contract === "offerHandler"){
+    if (contract === "offerHandler") {
       const proxiedOfferHandler = new Proxy(contractInstances[contract], offerHandler);
       contractInstances[contract] = proxiedOfferHandler;
     }
