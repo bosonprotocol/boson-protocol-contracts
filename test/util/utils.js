@@ -431,8 +431,17 @@ const offerHandler = {
                   return new Promise((resolve) => {
                     originalMethod
                       .apply(target, args)
-                      .then(() => {
-                        resolve(generateOfferId.next().value);
+                      .then((tx) => {
+                        const lastArg = args.at(6);
+                        if (
+                          lastArg &&
+                          typeof lastArg === "object" &&
+                          "getOfferId" in lastArg &&
+                          lastArg["getOfferId"]
+                        ) {
+                          return resolve(generateOfferId.next().value);
+                        }
+                        return resolve(tx);
                       })
                       .catch(console.error);
                   });
