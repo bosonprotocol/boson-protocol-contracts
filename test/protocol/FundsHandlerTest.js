@@ -24,6 +24,7 @@ const {
   getSnapshot,
   revertToSnapshot,
   deriveTokenId,
+  generateOfferId,
 } = require("../util/utils.js");
 const {
   mockOffer,
@@ -117,6 +118,7 @@ describe("IBosonFundsHandler", function () {
 
   before(async function () {
     accountId.next(true);
+    generateOfferId.next(true);
 
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
@@ -265,6 +267,7 @@ describe("IBosonFundsHandler", function () {
     afterEach(async function () {
       // Reset the accountId iterator
       accountId.next(true);
+      generateOfferId.next(true);
     });
 
     context("👉 depositFunds()", async function () {
@@ -484,11 +487,11 @@ describe("IBosonFundsHandler", function () {
         // Mock offer
         const { offer, offerDates, offerDurations, disputeResolverId, offerFees } = await mockOffer();
         offer.quantityAvailable = "2";
-
+        offer.id = "0";
         offerNative = offer;
 
         offerToken = offer.clone();
-        offerToken.id = (await offerHandler.getNextOfferId()).toString();
+        offerToken.id = "0";
         offerToken.exchangeToken = await mockToken.getAddress();
 
         // Check if domains are valid
@@ -501,14 +504,13 @@ describe("IBosonFundsHandler", function () {
         voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
 
         // Create both offers
-        await Promise.all([
-          offerHandler
-            .connect(assistant)
-            .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit),
-          offerHandler
-            .connect(assistant)
-            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit),
-        ]);
+
+        offerNative.id = await offerHandler
+          .connect(assistant)
+          .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+        offerToken.id = await offerHandler
+          .connect(assistant)
+          .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
         // Set used variables
         price = offerToken.price;
@@ -545,6 +547,7 @@ describe("IBosonFundsHandler", function () {
       afterEach(async function () {
         // Reset the accountId iterator
         accountId.next(true);
+        generateOfferId.next(true);
       });
 
       context("👉 withdrawFunds()", async function () {
@@ -780,12 +783,12 @@ describe("IBosonFundsHandler", function () {
               // Mock offer
               const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
               agentOffer = offer.clone();
-              agentOffer.id = (await offerHandler.getNextOfferId()).toString();
+              agentOffer.id = "0";
               exchangeId = "3";
               agentOffer.exchangeToken = await mockToken.getAddress();
 
               // Create offer with agent
-              await offerHandler
+              agentOffer.id = await offerHandler
                 .connect(assistant)
                 .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit);
 
@@ -1842,20 +1845,19 @@ describe("IBosonFundsHandler", function () {
         .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
       const { offer, ...mo } = await mockOffer();
+      offer.id = "0";
       offer.quantityAvailable = "2";
       offerNative = offer;
-      expect(offerNative.isValid()).is.true;
 
       offerToken = offerNative.clone();
-      offerToken.id = ((await offerHandler.getNextOfferId()) + 1n).toString();
+      offerToken.id = "0";
       offerToken.exchangeToken = await mockToken.getAddress();
 
       offerPriceDiscovery = offer.clone();
-      offerPriceDiscovery.id = (BigInt(offerToken.id) + 1n).toString();
+      offerPriceDiscovery.id = "0";
       offerPriceDiscovery.quantityAvailable = "2";
       offerPriceDiscovery.priceType = PriceType.Discovery;
       offerPriceDiscovery.exchangeToken = await mockToken.getAddress();
-      expect(offerPriceDiscovery.isValid()).is.true;
 
       offerDates = mo.offerDates;
       expect(offerDates.isValid()).is.true;
@@ -1868,18 +1870,17 @@ describe("IBosonFundsHandler", function () {
       agentId = "0"; // agent id is optional while creating an offer
       offerFeeLimit = MaxUint256;
       // Create both offers
-      await Promise.all([
-        offerHandler
-          .connect(assistant)
-          .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit),
-        offerHandler
-          .connect(assistant)
-          .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit),
-        offerHandler
-          .connect(assistant)
-          .createOffer(offerPriceDiscovery, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit),
-      ]);
-
+      offerNative.id = await offerHandler
+        .connect(assistant)
+        .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+      offerToken.id = await offerHandler
+        .connect(assistant)
+        .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+      offerPriceDiscovery.id = await offerHandler
+        .connect(assistant)
+        .createOffer(offerPriceDiscovery, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+      expect(offerNative.isValid()).is.true;
+      expect(offerPriceDiscovery.isValid()).is.true;
       // Set used variables
       price = offerToken.price;
       offerTokenProtocolFee = mo.offerFees.protocolFee;
@@ -1915,7 +1916,7 @@ describe("IBosonFundsHandler", function () {
       await accountHandler.connect(rando).createAgent(agent);
 
       agentOffer = offerNative.clone();
-      agentOffer.id = (await offerHandler.getNextOfferId()).toString();
+      agentOffer.id = "0";
       agentOfferProtocolFee = mo.offerFees.protocolFee;
 
       randoBuyerId = "4"; // 1: seller, 2: disputeResolver, 3: agent, 4: rando
@@ -1924,6 +1925,7 @@ describe("IBosonFundsHandler", function () {
     afterEach(async function () {
       // Reset the accountId iterator
       accountId.next(true);
+      generateOfferId.next(true);
     });
 
     context("👉 encumberFunds()", async function () {
@@ -2275,7 +2277,6 @@ describe("IBosonFundsHandler", function () {
 
           // create an offer with a bad token contract
           offerToken.exchangeToken = await bosonToken.getAddress();
-          offerToken.id = (await offerHandler.getNextOfferId()).toString();
 
           // add to DR fees
           await accountHandler
@@ -2283,7 +2284,7 @@ describe("IBosonFundsHandler", function () {
             .addFeesToDisputeResolver(disputeResolver.id, [
               new DisputeResolverFee(offerToken.exchangeToken, "BadContract", "0"),
             ]);
-          await offerHandler
+          offerToken.id = await offerHandler
             .connect(assistant)
             .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
@@ -2296,7 +2297,6 @@ describe("IBosonFundsHandler", function () {
         it("Token address is not a contract", async function () {
           // create an offer with a bad token contract
           offerToken.exchangeToken = await admin.getAddress();
-          offerToken.id = (await offerHandler.getNextOfferId()).toString();
 
           // add to DR fees
           await accountHandler
@@ -2305,7 +2305,7 @@ describe("IBosonFundsHandler", function () {
               new DisputeResolverFee(offerToken.exchangeToken, "NotAContract", "0"),
             ]);
 
-          await offerHandler
+          offerToken.id = await offerHandler
             .connect(assistant)
             .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
@@ -2335,8 +2335,8 @@ describe("IBosonFundsHandler", function () {
         it("Seller'a availableFunds is less than the required sellerDeposit", async function () {
           // create an offer with token with higher seller deposit
           offerToken.sellerDeposit = BigInt(offerToken.sellerDeposit) * 4n;
-          offerToken.id = (await offerHandler.getNextOfferId()).toString();
-          await offerHandler
+
+          offerToken.id = await offerHandler
             .connect(assistant)
             .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
@@ -2347,8 +2347,8 @@ describe("IBosonFundsHandler", function () {
 
           // create an offer with native currency with higher seller deposit
           offerNative.sellerDeposit = BigInt(offerNative.sellerDeposit) * 4n;
-          offerNative.id = (await offerHandler.getNextOfferId()).toString();
-          await offerHandler
+
+          offerNative.id = await offerHandler
             .connect(assistant)
             .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
@@ -2414,10 +2414,9 @@ describe("IBosonFundsHandler", function () {
           // Prepare an absolute zero offer
           offerToken.exchangeToken = await Foreign20WithFee.getAddress();
           offerToken.sellerDeposit = "0";
-          offerToken.id = (await offerHandler.getNextOfferId()).toString();
 
           // Create a new offer
-          await offerHandler
+          offerToken.id = await offerHandler
             .connect(assistant)
             .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
 
@@ -2433,13 +2432,12 @@ describe("IBosonFundsHandler", function () {
       });
     });
 
-    context("👉 releaseFunds() - Static Offer price", async function () {
+    context("👉 releaseFunds() - Static offer price", async function () {
       beforeEach(async function () {
         // ids
         protocolId = "0";
         buyerId = "4";
         exchangeId = "1";
-
         // commit to offer
         await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
       });
@@ -2552,12 +2550,14 @@ describe("IBosonFundsHandler", function () {
         context("Offer has an agent", async function () {
           beforeEach(async function () {
             // Create Agent offer
-            await offerHandler
+            agentOffer.id = await offerHandler
               .connect(assistant)
               .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit);
 
             // Commit to Offer
-            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id, {
+              value: agentOffer.price,
+            });
 
             // succesfully redeem exchange
             exchangeId = "2";
@@ -2610,7 +2610,8 @@ describe("IBosonFundsHandler", function () {
 
             // Chain state should match the expected available funds
             expectedSellerAvailableFunds = new FundsList([
-              new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+              new Funds(await mockToken.getAddress(), "Foreign20", `${sellerDeposit}`),
+              new Funds(ZeroAddress, "Native currency", `${sellerDeposit}`),
             ]);
             expectedBuyerAvailableFunds = new FundsList([]);
             expectedProtocolAvailableFunds = new FundsList([]);
@@ -2625,14 +2626,18 @@ describe("IBosonFundsHandler", function () {
 
             // Available funds should be increased for
             // buyer: 0
-            // seller: sellerDeposit + price - protocolFee - agentFee
+            // seller: sellerDeposit + price - protocolFee - agentFee; note that seller has sellerDeposit in availableFunds from before
             // protocol: protocolFee
             // agent: agentFee
-            expectedSellerAvailableFunds.funds.push(new Funds(await mockToken.getAddress(), "Foreign20", sellerPayoff));
+            expectedSellerAvailableFunds.funds[1] = new Funds(
+              ZeroAddress,
+              "Native currency",
+              BigInt(sellerPayoff) + BigInt(sellerDeposit)
+            );
             expectedProtocolAvailableFunds = new FundsList([
-              new Funds(await mockToken.getAddress(), "Foreign20", agentOfferProtocolFee),
+              new Funds(ZeroAddress, "Native currency", agentOfferProtocolFee),
             ]);
-            expectedAgentAvailableFunds.funds.push(new Funds(await mockToken.getAddress(), "Foreign20", agentPayoff));
+            expectedAgentAvailableFunds.funds.push(new Funds(ZeroAddress, "Native currency", agentPayoff));
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(protocolId));
@@ -2737,7 +2742,7 @@ describe("IBosonFundsHandler", function () {
         context("Offer has an agent", async function () {
           beforeEach(async function () {
             // Create Agent offer
-            await offerHandler
+            agentOffer.id = await offerHandler
               .connect(assistant)
               .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit);
 
@@ -2755,7 +2760,9 @@ describe("IBosonFundsHandler", function () {
               .depositFunds(seller.id, await mockToken.getAddress(), `${2 * sellerDeposit}`);
 
             // Commit to Offer
-            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+            await exchangeHandler
+              .connect(buyer)
+              .commitToOffer(await buyer.getAddress(), agentOffer.id, { value: agentOffer.price });
 
             // expected payoffs
             // buyer: sellerDeposit + price
@@ -2782,8 +2789,8 @@ describe("IBosonFundsHandler", function () {
 
             // Chain state should match the expected available funds
             expectedSellerAvailableFunds = new FundsList([
-              new Funds(await mockToken.getAddress(), "Foreign20", `${2 * sellerDeposit}`),
-              new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+              new Funds(await mockToken.getAddress(), "Foreign20", `${3 * sellerDeposit}`),
+              new Funds(ZeroAddress, "Native currency", `${sellerDeposit}`),
             ]);
             expectedBuyerAvailableFunds = new FundsList([]);
             expectedProtocolAvailableFunds = new FundsList([]);
@@ -2801,7 +2808,7 @@ describe("IBosonFundsHandler", function () {
             // seller: 0
             // protocol: 0
             // agent: 0
-            expectedBuyerAvailableFunds.funds.push(new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff));
+            expectedBuyerAvailableFunds.funds.push(new Funds(ZeroAddress, "Native currency", buyerPayoff));
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(protocolId));
@@ -2813,7 +2820,9 @@ describe("IBosonFundsHandler", function () {
 
             // Test that if buyer has some funds available, and gets more, the funds are only updated
             // Commit again
-            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+            await exchangeHandler
+              .connect(buyer)
+              .commitToOffer(await buyer.getAddress(), agentOffer.id, { value: agentOffer.price });
 
             // Revoke another voucher
             await exchangeHandler.connect(assistant).revokeVoucher(++exchangeId);
@@ -2824,13 +2833,11 @@ describe("IBosonFundsHandler", function () {
             // protocol: 0
             // agent: 0
             expectedBuyerAvailableFunds.funds[0] = new Funds(
-              await mockToken.getAddress(),
-              "Foreign20",
+              ZeroAddress, "Native currency",
               BigInt(buyerPayoff) * 2n
             );
             expectedSellerAvailableFunds = new FundsList([
-              new Funds(await mockToken.getAddress(), "Foreign20", `${sellerDeposit}`),
-              new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+              new Funds(await mockToken.getAddress(), "Foreign20", `${3 * sellerDeposit}`),
             ]);
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
@@ -2919,7 +2926,7 @@ describe("IBosonFundsHandler", function () {
         context("Offer has an agent", async function () {
           beforeEach(async function () {
             // Create Agent offer
-            await offerHandler
+            agentOffer.id = await offerHandler
               .connect(assistant)
               .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit);
 
@@ -2937,7 +2944,9 @@ describe("IBosonFundsHandler", function () {
               .depositFunds(seller.id, await mockToken.getAddress(), `${sellerDeposit}`);
 
             // Commit to Offer
-            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+            await exchangeHandler
+              .connect(buyer)
+              .commitToOffer(await buyer.getAddress(), agentOffer.id, { value: agentOffer.price });
 
             // expected payoffs
             // buyer: price - buyerCancelPenalty
@@ -2964,8 +2973,8 @@ describe("IBosonFundsHandler", function () {
 
             // Chain state should match the expected available funds
             expectedSellerAvailableFunds = new FundsList([
-              new Funds(await mockToken.getAddress(), "Foreign20", sellerDeposit),
-              new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+              new Funds(await mockToken.getAddress(), "Foreign20", `${2 * sellerDeposit}`),
+              new Funds(ZeroAddress, "Native currency", sellerDeposit),
             ]);
             expectedBuyerAvailableFunds = new FundsList([]);
             expectedProtocolAvailableFunds = new FundsList([]);
@@ -2984,12 +2993,12 @@ describe("IBosonFundsHandler", function () {
             // seller: sellerDeposit + buyerCancelPenalty; note that seller has sellerDeposit in availableFunds from before
             // protocol: 0
             // agent: 0
-            expectedSellerAvailableFunds.funds[0] = new Funds(
-              await mockToken.getAddress(),
-              "Foreign20",
+            expectedSellerAvailableFunds.funds[1] = new Funds(
+              ZeroAddress,
+              "Native currency",
               (BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString()
             );
-            expectedBuyerAvailableFunds.funds.push(new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff));
+            expectedBuyerAvailableFunds.funds.push(new Funds(ZeroAddress, "Native currency", buyerPayoff));
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(protocolId));
@@ -3126,10 +3135,12 @@ describe("IBosonFundsHandler", function () {
 
               // Exchange id
               exchangeId = "2";
-              await offerHandler
+              agentOffer.id = await offerHandler
                 .connect(assistant)
                 .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit);
-              await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+              await exchangeHandler
+                .connect(buyer)
+                .commitToOffer(await buyer.getAddress(), agentOffer.id, { value: agentOffer.price });
 
               // succesfully redeem exchange
               await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
@@ -3144,11 +3155,11 @@ describe("IBosonFundsHandler", function () {
 
               await expect(tx)
                 .to.emit(disputeHandler, "ProtocolFeeCollected")
-                .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, await buyer.getAddress());
+                .withArgs(exchangeId, agentOffer.exchangeToken, protocolPayoff, await buyer.getAddress());
 
               await expect(tx)
                 .to.emit(disputeHandler, "FundsReleased")
-                .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, await buyer.getAddress());
+                .withArgs(exchangeId, seller.id, agentOffer.exchangeToken, sellerPayoff, await buyer.getAddress());
 
               await expect(tx)
                 .to.emit(exchangeHandler, "FundsReleased")
@@ -3164,7 +3175,8 @@ describe("IBosonFundsHandler", function () {
 
               // Chain state should match the expected available funds
               expectedSellerAvailableFunds = new FundsList([
-                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+                new Funds(await mockToken.getAddress(), "Foreign20", `${sellerDeposit}`),
+                new Funds(ZeroAddress, "Native currency", `${sellerDeposit}`),
               ]);
               expectedBuyerAvailableFunds = new FundsList([]);
               expectedProtocolAvailableFunds = new FundsList([]);
@@ -3183,13 +3195,15 @@ describe("IBosonFundsHandler", function () {
               // seller: sellerDeposit + price - protocol fee - agentFee;
               // protocol: protocolFee
               // agent: agentFee
-              expectedSellerAvailableFunds.funds.push(
-                new Funds(await mockToken.getAddress(), "Foreign20", BigInt(sellerPayoff).toString())
+              expectedSellerAvailableFunds.funds[1] = new Funds(
+                ZeroAddress,
+                "Native currency",
+                BigInt(sellerPayoff) + BigInt(sellerDeposit)
               );
               expectedProtocolAvailableFunds = new FundsList([
-                new Funds(await mockToken.getAddress(), "Foreign20", protocolPayoff),
+                new Funds(ZeroAddress, "Native currency", protocolPayoff),
               ]);
-              expectedAgentAvailableFunds.funds.push(new Funds(await mockToken.getAddress(), "Foreign20", agentPayoff));
+              expectedAgentAvailableFunds.funds.push(new Funds(ZeroAddress, "Native currency", agentPayoff));
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(protocolId));
@@ -3294,12 +3308,14 @@ describe("IBosonFundsHandler", function () {
           context("Offer has an agent", async function () {
             beforeEach(async function () {
               // Create Agent offer
-              await offerHandler
+              agentOffer.id = await offerHandler
                 .connect(assistant)
                 .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit);
 
               // Commit to Offer
-              await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+              await exchangeHandler
+                .connect(buyer)
+                .commitToOffer(await buyer.getAddress(), agentOffer.id, { value: agentOffer.price });
 
               // expected payoffs
               // buyer: 0
@@ -3364,7 +3380,8 @@ describe("IBosonFundsHandler", function () {
 
               // Chain state should match the expected available funds
               expectedSellerAvailableFunds = new FundsList([
-                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+                new Funds(await mockToken.getAddress(), "Foreign20", `${sellerDeposit}`),
+                new Funds(ZeroAddress, "Native currency", `${sellerDeposit}`),
               ]);
               expectedBuyerAvailableFunds = new FundsList([]);
               expectedProtocolAvailableFunds = new FundsList([]);
@@ -3384,14 +3401,14 @@ describe("IBosonFundsHandler", function () {
               // protocol: protocolFee
               // agent: agent fee
               expectedSellerAvailableFunds = new FundsList([
-                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
-                new Funds(await mockToken.getAddress(), "Foreign20", sellerPayoff),
+                new Funds(await mockToken.getAddress(), "Foreign20", sellerDeposit),
+                new Funds(ZeroAddress, "Native currency", `${BigInt(sellerPayoff) + BigInt(sellerDeposit)}`),
               ]);
 
               expectedProtocolAvailableFunds = new FundsList([
-                new Funds(await mockToken.getAddress(), "Foreign20", protocolPayoff),
+                new Funds(ZeroAddress, "Native currency", protocolPayoff),
               ]);
-              expectedAgentAvailableFunds.funds[0] = new Funds(await mockToken.getAddress(), "Foreign20", agentPayoff);
+              expectedAgentAvailableFunds.funds[0] = new Funds(ZeroAddress, "Native currency", agentPayoff);
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(protocolId));
@@ -3512,12 +3529,14 @@ describe("IBosonFundsHandler", function () {
           context("Offer has an agent", async function () {
             beforeEach(async function () {
               // Create Agent offer
-              await offerHandler
+              agentOffer.id = await offerHandler
                 .connect(assistant)
                 .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit);
 
               // Commit to Offer
-              await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+              await exchangeHandler
+                .connect(buyer)
+                .commitToOffer(await buyer.getAddress(), agentOffer.id, { value: agentOffer.price });
 
               exchangeId = "2";
 
@@ -3580,7 +3599,8 @@ describe("IBosonFundsHandler", function () {
 
               // Chain state should match the expected available funds
               expectedSellerAvailableFunds = new FundsList([
-                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+                new Funds(await mockToken.getAddress(), "Foreign20", `${sellerDeposit}`),
+                new Funds(ZeroAddress, "Native currency", `${sellerDeposit}`),
               ]);
               expectedBuyerAvailableFunds = new FundsList([]);
               expectedProtocolAvailableFunds = new FundsList([]);
@@ -3599,12 +3619,12 @@ describe("IBosonFundsHandler", function () {
               // seller: (price + sellerDeposit)*(1-buyerPercentage);
               // protocol: 0
               // agent: 0
-              expectedSellerAvailableFunds.funds.push(
-                new Funds(await mockToken.getAddress(), "Foreign20", sellerPayoff)
+              expectedSellerAvailableFunds.funds[1] = new Funds(
+                ZeroAddress,
+                "Native currency",
+                BigInt(sellerPayoff) + BigInt(sellerDeposit)
               );
-              expectedBuyerAvailableFunds = new FundsList([
-                new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
-              ]);
+              expectedBuyerAvailableFunds = new FundsList([new Funds(ZeroAddress, "Native currency", buyerPayoff)]);
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(protocolId));
@@ -3735,14 +3755,16 @@ describe("IBosonFundsHandler", function () {
 
               // Exchange id
               exchangeId = "2";
-              await offerHandler
+              agentOffer.id = await offerHandler
                 .connect(assistant)
                 .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit);
 
               // approve protocol to transfer the tokens
               await mockToken.connect(buyer).approve(protocolDiamondAddress, agentOffer.price);
               await mockToken.mint(await buyer.getAddress(), agentOffer.price);
-              await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+              await exchangeHandler
+                .connect(buyer)
+                .commitToOffer(await buyer.getAddress(), agentOffer.id, { value: agentOffer.price });
 
               // succesfully redeem exchange
               await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
@@ -3765,7 +3787,8 @@ describe("IBosonFundsHandler", function () {
 
               // Chain state should match the expected available funds
               expectedSellerAvailableFunds = new FundsList([
-                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+                new Funds(await mockToken.getAddress(), "Foreign20", `${sellerDeposit}`),
+                new Funds(ZeroAddress, "Native currency", `${sellerDeposit}`),
               ]);
               expectedBuyerAvailableFunds = new FundsList([]);
               expectedProtocolAvailableFunds = new FundsList([]);
@@ -3783,13 +3806,15 @@ describe("IBosonFundsHandler", function () {
               // seller: sellerDeposit + price - protocol fee - agentFee  + buyerEscalationDeposit;
               // protocol: protocolFee
               // agent: agentFee
-              expectedSellerAvailableFunds.funds.push(
-                new Funds(await mockToken.getAddress(), "Foreign20", sellerPayoff)
+              expectedSellerAvailableFunds.funds[1] = new Funds(
+                ZeroAddress,
+                "Native currency",
+                BigInt(sellerPayoff) + BigInt(sellerDeposit)
               );
               expectedProtocolAvailableFunds = new FundsList([
-                new Funds(await mockToken.getAddress(), "Foreign20", protocolPayoff),
+                new Funds(ZeroAddress, "Native currency", protocolPayoff),
               ]);
-              expectedAgentAvailableFunds.funds.push(new Funds(await mockToken.getAddress(), "Foreign20", agentPayoff));
+              expectedAgentAvailableFunds.funds.push(new Funds(ZeroAddress, "Native currency", agentPayoff));
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(protocolId));
@@ -3918,7 +3943,7 @@ describe("IBosonFundsHandler", function () {
           context("Offer has an agent", async function () {
             beforeEach(async function () {
               // Create Agent offer
-              await offerHandler
+              agentOffer.id = await offerHandler
                 .connect(assistant)
                 .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit);
 
@@ -3927,7 +3952,9 @@ describe("IBosonFundsHandler", function () {
               await mockToken.mint(await buyer.getAddress(), agentOffer.price);
 
               // Commit to Offer
-              await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+              await exchangeHandler
+                .connect(buyer)
+                .commitToOffer(await buyer.getAddress(), agentOffer.id, { value: agentOffer.price });
 
               exchangeId = "2";
 
@@ -3997,7 +4024,8 @@ describe("IBosonFundsHandler", function () {
 
               // Chain state should match the expected available funds
               expectedSellerAvailableFunds = new FundsList([
-                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+                new Funds(await mockToken.getAddress(), "Foreign20", `${sellerDeposit}`),
+                new Funds(ZeroAddress, "Native currency", `${sellerDeposit}`),
               ]);
               expectedBuyerAvailableFunds = new FundsList([]);
               expectedProtocolAvailableFunds = new FundsList([]);
@@ -4017,12 +4045,10 @@ describe("IBosonFundsHandler", function () {
               // protocol: 0
               // agent: 0
               expectedSellerAvailableFunds = new FundsList([
-                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
-                new Funds(await mockToken.getAddress(), "Foreign20", sellerPayoff),
+                new Funds(await mockToken.getAddress(), "Foreign20", sellerDeposit),
+                new Funds(ZeroAddress, "Native currency", BigInt(sellerPayoff) + BigInt(sellerDeposit)),
               ]);
-              expectedBuyerAvailableFunds = new FundsList([
-                new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
-              ]);
+              expectedBuyerAvailableFunds = new FundsList([new Funds(ZeroAddress, "Native currency", buyerPayoff)]);
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(protocolId));
@@ -4127,7 +4153,7 @@ describe("IBosonFundsHandler", function () {
           context("Offer has an agent", async function () {
             beforeEach(async function () {
               // Create Agent offer
-              await offerHandler
+              agentOffer.id = await offerHandler
                 .connect(assistant)
                 .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit);
 
@@ -4136,7 +4162,9 @@ describe("IBosonFundsHandler", function () {
               await mockToken.mint(await buyer.getAddress(), agentOffer.price);
 
               // Commit to Offer
-              await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+              await exchangeHandler
+                .connect(buyer)
+                .commitToOffer(await buyer.getAddress(), agentOffer.id, { value: agentOffer.price });
 
               exchangeId = "2";
 
@@ -4188,7 +4216,8 @@ describe("IBosonFundsHandler", function () {
 
               // Chain state should match the expected available funds
               expectedSellerAvailableFunds = new FundsList([
-                new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+                new Funds(await mockToken.getAddress(), "Foreign20", `${sellerDeposit}`),
+                new Funds(ZeroAddress, "Native currency", `${sellerDeposit}`),
               ]);
               expectedBuyerAvailableFunds = new FundsList([]);
               expectedProtocolAvailableFunds = new FundsList([]);
@@ -4207,12 +4236,12 @@ describe("IBosonFundsHandler", function () {
               // seller: (price + sellerDeposit + buyerEscalationDeposit)*(1-buyerPercentage);
               // protocol: 0
               // agent: 0
-              expectedSellerAvailableFunds.funds.push(
-                new Funds(await mockToken.getAddress(), "Foreign20", sellerPayoff)
+              expectedSellerAvailableFunds.funds[1] = new Funds(
+                ZeroAddress,
+                "Native currency",
+                BigInt(sellerPayoff) + BigInt(sellerDeposit)
               );
-              expectedBuyerAvailableFunds = new FundsList([
-                new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
-              ]);
+              expectedBuyerAvailableFunds = new FundsList([new Funds(ZeroAddress, "Native currency", buyerPayoff)]);
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(protocolId));
@@ -4310,7 +4339,7 @@ describe("IBosonFundsHandler", function () {
             context("Offer has an agent", async function () {
               beforeEach(async function () {
                 // Create Agent offer
-                await offerHandler
+                agentOffer.id = await offerHandler
                   .connect(assistant)
                   .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit);
 
@@ -4319,7 +4348,9 @@ describe("IBosonFundsHandler", function () {
                 await mockToken.mint(await buyer.getAddress(), agentOffer.price);
 
                 // Commit to Offer
-                await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+                await exchangeHandler
+                  .connect(buyer)
+                  .commitToOffer(await buyer.getAddress(), agentOffer.id, { value: agentOffer.price });
 
                 exchangeId = "2";
 
@@ -4363,7 +4394,8 @@ describe("IBosonFundsHandler", function () {
 
                 // Chain state should match the expected available funds
                 expectedSellerAvailableFunds = new FundsList([
-                  new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+                  new Funds(await mockToken.getAddress(), "Foreign20", `${sellerDeposit}`),
+                  new Funds(ZeroAddress, "Native currency", `${sellerDeposit}`),
                 ]);
                 expectedBuyerAvailableFunds = new FundsList([]);
                 expectedProtocolAvailableFunds = new FundsList([]);
@@ -4378,14 +4410,14 @@ describe("IBosonFundsHandler", function () {
 
                 // Available funds should be increased for
                 // buyer: price + buyerEscalationDeposit
-                // seller: sellerDeposit;
+                // seller: sellerDeposit; note that seller has sellerDeposit in availableFunds from before
                 // protocol: 0
                 // agent: 0
-                expectedBuyerAvailableFunds = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
-                ]);
-                expectedSellerAvailableFunds.funds.push(
-                  new Funds(await mockToken.getAddress(), "Foreign20", sellerPayoff)
+                expectedBuyerAvailableFunds = new FundsList([new Funds(ZeroAddress, "Native currency", buyerPayoff)]);
+                expectedSellerAvailableFunds.funds[1] = new Funds(
+                  ZeroAddress,
+                  "Native currency",
+                  BigInt(sellerPayoff) + BigInt(sellerDeposit)
                 );
                 sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
                 buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
@@ -4502,7 +4534,7 @@ describe("IBosonFundsHandler", function () {
             context("Offer has an agent", async function () {
               beforeEach(async function () {
                 // Create Agent offer
-                await offerHandler
+                agentOffer.id = await offerHandler
                   .connect(assistant)
                   .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit);
 
@@ -4511,7 +4543,9 @@ describe("IBosonFundsHandler", function () {
                 await mockToken.mint(await buyer.getAddress(), agentOffer.price);
 
                 // Commit to Offer
-                await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+                await exchangeHandler
+                  .connect(buyer)
+                  .commitToOffer(await buyer.getAddress(), agentOffer.id, { value: agentOffer.price });
 
                 exchangeId = "2";
 
@@ -4546,7 +4580,8 @@ describe("IBosonFundsHandler", function () {
 
                 // Chain state should match the expected available funds
                 expectedSellerAvailableFunds = new FundsList([
-                  new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
+                  new Funds(await mockToken.getAddress(), "Foreign20", `${sellerDeposit}`),
+                  new Funds(ZeroAddress, "Native currency", `${sellerDeposit}`),
                 ]);
 
                 expectedBuyerAvailableFunds = new FundsList([]);
@@ -4565,12 +4600,10 @@ describe("IBosonFundsHandler", function () {
                 // seller: sellerDeposit;
                 // protocol: 0
                 // agent: 0
-                expectedBuyerAvailableFunds = new FundsList([
-                  new Funds(await mockToken.getAddress(), "Foreign20", buyerPayoff),
-                ]);
+                expectedBuyerAvailableFunds = new FundsList([new Funds(ZeroAddress, "Native currency", buyerPayoff)]);
                 expectedSellerAvailableFunds = new FundsList([
-                  new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
                   new Funds(await mockToken.getAddress(), "Foreign20", sellerPayoff),
+                  new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
                 ]);
 
                 sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
@@ -4677,12 +4710,14 @@ describe("IBosonFundsHandler", function () {
             protocolPayoff = agentOfferProtocolFee;
 
             // Create Agent Offer before setting new protocol fee as 3%
-            await offerHandler
+            agentOffer.id = await offerHandler
               .connect(assistant)
               .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit);
 
             // Commit to Agent Offer
-            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+            await exchangeHandler
+              .connect(buyer)
+              .commitToOffer(await buyer.getAddress(), agentOffer.id, { value: agentOffer.price });
 
             // set the new procol fee
             protocolFeePercentage = "300"; // 3%
@@ -4727,7 +4762,9 @@ describe("IBosonFundsHandler", function () {
             await fundsHandler.connect(assistant).depositFunds(seller.id, await mockToken.getAddress(), sellerDeposit);
 
             // commit to offer and get the correct exchangeId
-            tx = await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+            tx = await exchangeHandler
+              .connect(buyer)
+              .commitToOffer(await buyer.getAddress(), agentOffer.id, { value: agentOffer.price });
             txReceipt = await tx.wait();
             event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
             exchangeId = event.exchangeId.toString();
@@ -4860,7 +4897,7 @@ describe("IBosonFundsHandler", function () {
                 await configHandler.setProtocolFeePercentage(fee.protocol);
 
                 offer = offerToken.clone();
-                offer.id = (await offerHandler.getNextOfferId()).toString();
+                offer.id = "0";
                 offer.price = "100";
                 offer.sellerDeposit = "10";
                 offer.buyerCancelPenalty = "30";
@@ -4883,7 +4920,7 @@ describe("IBosonFundsHandler", function () {
                   .connect(assistant)
                   .depositFunds(seller.id, await mockToken.getAddress(), offer.sellerDeposit);
 
-                await offerHandler
+                offer.id = await offerHandler
                   .connect(assistant)
                   .createOffer(offer, offerDates, offerDurations, disputeResolverId, 0, offerFeeLimit);
 
@@ -5628,7 +5665,7 @@ describe("IBosonFundsHandler", function () {
 
               // create a new offer
               offer = offerToken.clone();
-              offer.id = (await offerHandler.getNextOfferId()).toString();
+              offer.id = "0";
               offer.price = "100";
               offer.sellerDeposit = "10";
               offer.buyerCancelPenalty = "30";
@@ -5642,7 +5679,7 @@ describe("IBosonFundsHandler", function () {
                 .connect(assistant)
                 .depositFunds(seller.id, await mockToken.getAddress(), offer.sellerDeposit);
 
-              await offerHandler
+              offer.id = await offerHandler
                 .connect(assistant)
                 .createOffer(offer, offerDates, offerDurations, disputeResolverId, 0, offerFeeLimit);
 

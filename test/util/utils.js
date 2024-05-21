@@ -412,6 +412,40 @@ function objectToArray(input) {
   return result;
 }
 
+const generateOfferId = incrementer();
+const offerHandler = {
+  get(target, propKey) {
+      const original = target[propKey];
+
+      if (typeof original === 'function') {
+          if (propKey === 'connect') {
+              return function(...args) {
+                  const connectedObject = original.apply(target, args);
+
+                  return new Proxy(connectedObject, {
+                      get(target, propKey) {
+                          const originalMethod = target[propKey];
+
+                          if (propKey === 'createOffer') {
+                              return function(...args) {
+                                return new Promise((resolve)=>{
+                                  originalMethod.apply(target, args).then(()=>{
+                                    resolve(generateOfferId.next().value);
+                                  }).catch(console.error);
+                                })
+                              };
+                          }
+
+                          return originalMethod;
+                      }
+                  });
+              };
+          }
+      }
+
+      return original;
+  }
+};
 async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAddress, wethAddress } = {}) {
   // Load modules only here to avoid the caching issues in upgrade tests
   const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -519,6 +553,10 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
   let contractInstances = {};
   for (const contract of Object.keys(contracts)) {
     contractInstances[contract] = await getContractAt(contracts[contract], await protocolDiamond.getAddress());
+    if(contract === "offerHandler"){
+      const proxiedOfferHandler = new Proxy(contractInstances[contract], offerHandler);
+      contractInstances[contract] = proxiedOfferHandler;
+    }
   }
 
   const extraReturnValues = { accessController, voucherImplementation, beacon };
@@ -579,3 +617,4 @@ exports.revertToSnapshot = revertToSnapshot;
 exports.getSellerSalt = getSellerSalt;
 exports.compareRoyaltyInfo = compareRoyaltyInfo;
 exports.compareProtocolVersions = compareProtocolVersions;
+exports.generateOfferId = generateOfferId;
