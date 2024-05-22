@@ -50,7 +50,6 @@ interface IDiamondCut {
     function diamondCut(FacetCut[] calldata _facetCuts, address _init, bytes calldata _calldata) external;
 }
 
-
 // File contracts/interfaces/IAccessControl.sol
 
 // Original license: SPDX_License_Identifier: MIT
@@ -142,12 +141,10 @@ interface IAccessControl {
     function renounceRole(bytes32 role, address account) external;
 }
 
-
 // File contracts/diamond/DiamondLib.sol
 
 // Original license: SPDX_License_Identifier: MIT
 pragma solidity 0.8.22;
-
 
 /**
  * @title DiamondLib
@@ -241,7 +238,6 @@ library DiamondLib {
         return ds.supportedInterfaces[_interfaceId];
     }
 }
-
 
 // File contracts/domain/BosonTypes.sol
 
@@ -607,7 +603,6 @@ contract BosonTypes {
     }
 }
 
-
 // File contracts/domain/BosonConstants.sol
 
 // Original license: SPDX_License_Identifier: GPL-3.0-or-later
@@ -704,7 +699,6 @@ string constant RETRACT_DISPUTE = "retractDispute(uint256)";
 string constant RAISE_DISPUTE = "raiseDispute(uint256)";
 string constant ESCALATE_DISPUTE = "escalateDispute(uint256)";
 string constant RESOLVE_DISPUTE = "resolveDispute(uint256,uint256,bytes32,bytes32,uint8)";
-
 
 // File contracts/domain/BosonErrors.sol
 
@@ -1084,7 +1078,6 @@ interface BosonErrors {
     error PriceDoesNotCoverPenalty();
 }
 
-
 // File contracts/interfaces/events/IClientExternalAddressesEvents.sol
 
 // Original license: SPDX_License_Identifier: GPL-3.0-or-later
@@ -1100,12 +1093,10 @@ interface IClientExternalAddressesEvents {
     event ProtocolAddressChanged(address indexed protocol, address indexed executedBy);
 }
 
-
 // File contracts/interfaces/clients/IClientExternalAddresses.sol
 
 // Original license: SPDX_License_Identifier: GPL-3.0-or-later
 pragma solidity 0.8.22;
-
 
 /**
  * @title IClientExternalAddresses
@@ -1155,7 +1146,6 @@ interface IClientExternalAddresses is IClientExternalAddressesEvents {
     function getProtocolAddress() external view returns (address);
 }
 
-
 // File contracts/interfaces/events/IBosonConfigEvents.sol
 
 // Original license: SPDX_License_Identifier: GPL-3.0-or-later
@@ -1190,13 +1180,10 @@ interface IBosonConfigEvents {
     event AccessControllerAddressChanged(address indexed accessControllerAddress, address indexed executedBy);
 }
 
-
 // File contracts/interfaces/handlers/IBosonConfigHandler.sol
 
 // Original license: SPDX_License_Identifier: GPL-3.0-or-later
 pragma solidity 0.8.22;
-
-
 
 /**
  * @title IBosonConfigHandler
@@ -1539,7 +1526,6 @@ interface IBosonConfigHandler is IBosonConfigEvents, BosonErrors {
      */
     function getAccessControllerAddress() external view returns (address);
 }
-
 
 // File contracts/protocol/libs/ProtocolLib.sol
 
@@ -1905,14 +1891,10 @@ library ProtocolLib {
     }
 }
 
-
 // File contracts/protocol/bases/PausableBase.sol
 
 // Original license: SPDX_License_Identifier: MIT
 pragma solidity 0.8.22;
-
-
-
 
 /**
  * @title PausableBase
@@ -2115,12 +2097,9 @@ contract PausableBase is BosonTypes {
     }
 }
 
-
 // File contracts/protocol/bases/ReentrancyGuardBase.sol
 
 // Original license: SPDX_License_Identifier: MIT
-
-
 
 pragma solidity 0.8.22;
 
@@ -2168,13 +2147,10 @@ abstract contract ReentrancyGuardBase {
     }
 }
 
-
 // File contracts/protocol/libs/EIP712Lib.sol
 
 // Original license: SPDX_License_Identifier: MIT
 pragma solidity 0.8.22;
-
-
 
 /**
  * @title EIP712Lib
@@ -2304,18 +2280,10 @@ library EIP712Lib {
     }
 }
 
-
 // File contracts/protocol/bases/ProtocolBase.sol
 
 // Original license: SPDX_License_Identifier: GPL-3.0-or-later
 pragma solidity 0.8.22;
-
-
-
-
-
-
-
 
 /**
  * @title ProtocolBase
@@ -3082,7 +3050,6 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
     }
 }
 
-
 // File contracts/protocol/clients/proxy/Proxy.sol
 
 // Original license: SPDX_License_Identifier: MIT
@@ -3175,12 +3142,10 @@ abstract contract Proxy {
     function _beforeFallback() internal virtual {}
 }
 
-
 // File contracts/protocol/libs/BeaconClientLib.sol
 
 // Original license: SPDX_License_Identifier: MIT
 pragma solidity 0.8.22;
-
 
 /**
  * @title BeaconClientLib
@@ -3242,13 +3207,10 @@ library BeaconClientLib {
     }
 }
 
-
 // File contracts/protocol/clients/proxy/BeaconClientProxy.sol
 
 // Original license: SPDX_License_Identifier: MIT
 pragma solidity 0.8.22;
-
-
 
 /**
  * @title BeaconClientProxy
@@ -3298,18 +3260,10 @@ contract BeaconClientProxy is Proxy {
     }
 }
 
-
 // File contracts/protocol/facets/ConfigHandlerFacet.sol
 
 // Original license: SPDX_License_Identifier: GPL-3.0-or-later
 pragma solidity 0.8.22;
-
-
-
-
-
-
-
 
 /**
  * @title ConfigHandlerFacet
