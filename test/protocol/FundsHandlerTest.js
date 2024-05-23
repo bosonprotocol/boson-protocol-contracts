@@ -6704,8 +6704,8 @@ describe("IBosonFundsHandler", function () {
 
             // Available funds should be increased for
             // buyer: 0
-            // seller: sellerDeposit + price - 2 * protocol fee + buyerEscalationDeposit; note that seller has sellerDeposit in availableFunds from before
-            // protocol: 2 * protocolFee
+            // seller: sellerDeposit + price - protocol fee + buyerEscalationDeposit; note that seller has sellerDeposit in availableFunds from before
+            // protocol: protocolFee
             // agent: 0
             expectedSellerAvailableFunds.funds[0] = new Funds(
               await mockToken.getAddress(),
