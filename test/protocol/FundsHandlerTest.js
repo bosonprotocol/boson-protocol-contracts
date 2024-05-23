@@ -5954,7 +5954,7 @@ describe("IBosonFundsHandler", function () {
           protocolPayoff = (2n * BigInt(offerTokenProtocolFee)).toString(); // regular protocolFee + protocolFee from releaseFundsToIntermediateSellers
 
           // seller: price - protocolFee
-          sellerPayoff = BigInt(offerPriceDiscovery.price) - BigInt(offerTokenProtocolFee);
+          sellerPayoff = BigInt(order.price) - BigInt(priceDiscoveryFee);
 
           // seller: sellerDeposit  - protocolFee
           sellerPayoff2 = BigInt(offerPriceDiscovery.sellerDeposit) - BigInt(offerTokenProtocolFee);
