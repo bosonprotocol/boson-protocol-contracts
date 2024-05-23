@@ -6627,7 +6627,7 @@ describe("IBosonFundsHandler", function () {
             // buyer: 0
             buyerPayoff = 0;
 
-            sellerPayoff = BigInt(offerPriceDiscovery.price) - BigInt(offerTokenProtocolFee);
+            sellerPayoff = BigInt(order.price) - BigInt(priceDiscoveryProtocolFee);
 
             sellerPayoff2 = BigInt(offerPriceDiscovery.sellerDeposit) - BigInt(offerTokenProtocolFee);
 
