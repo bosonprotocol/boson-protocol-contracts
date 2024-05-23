@@ -6629,10 +6629,10 @@ describe("IBosonFundsHandler", function () {
 
             sellerPayoff = BigInt(order.price) - BigInt(priceDiscoveryProtocolFee);
 
-            sellerPayoff2 = BigInt(offerPriceDiscovery.sellerDeposit) - BigInt(offerTokenProtocolFee);
+            sellerPayoff2 = BigInt(offerPriceDiscovery.sellerDeposit);
 
-            // protocol: 2 * protocolFee
-            protocolPayoff = (2n * BigInt(offerTokenProtocolFee)).toString(); // regular protocolFee + protocolFee from releaseFundsToIntermediateSellers
+            // protocol: protocolFee
+            protocolPayoff = (BigInt(offerTokenProtocolFee)).toString(); // regular protocolFee + protocolFee from releaseFundsToIntermediateSellers
 
             // Escalate the dispute
             await disputeHandler.connect(buyer).escalateDispute(exchangeId);
