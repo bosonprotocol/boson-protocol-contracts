@@ -6031,8 +6031,8 @@ describe("IBosonFundsHandler", function () {
 
           // Available funds should be increased for
           // buyer: 0
-          // seller: sellerDeposit + price - 2 * protocolFee - agentFee
-          // protocol: 2 * protocolFee  (second is from commitToPriceDiscoveryOffer)
+          // seller: sellerDeposit + price - protocolFee - agentFee
+          // protocol: protocolFee
           // agent: 0
           expectedSellerAvailableFunds.funds.push(
             new Funds(await mockToken.getAddress(), "Foreign20", BigInt(sellerPayoff) + BigInt(sellerPayoff2))
