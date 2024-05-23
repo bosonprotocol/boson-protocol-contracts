@@ -1,3 +1,4 @@
+/* eslint-disable no-only-tests/no-only-tests */
 const { ethers } = require("hardhat");
 const { ZeroAddress, getSigners, provider, parseUnits, getContractAt, getContractFactory, MaxUint256 } = ethers;
 const { expect, assert } = require("chai");
@@ -75,7 +76,7 @@ describe("IBosonFundsHandler", function () {
   let buyer, offerToken, offerNative, offerPriceDiscovery;
   let mockToken, bosonToken;
   let depositAmount;
-  let offerTokenProtocolFee, offerNativeProtocolFee, price, sellerDeposit;
+  let offerTokenProtocolFee, offerNativeProtocolFee, priceDiscoveryProtocolFee, price, sellerDeposit;
   let offerDates, voucherRedeemableFrom;
   let resolutionPeriod, offerDurations;
   let protocolFeePercentage, buyerEscalationDepositPercentage;
@@ -1804,6 +1805,7 @@ describe("IBosonFundsHandler", function () {
   // Funds library methods.
   // Cannot be invoked directly, so tests calls the methods that use them
   context("📋 FundsLib  Methods", async function () {
+    let orderPrice;
     beforeEach(async function () {
       // Create a valid seller
       seller = mockSeller(
@@ -1864,6 +1866,7 @@ describe("IBosonFundsHandler", function () {
       offerPriceDiscovery.quantityAvailable = "2";
       offerPriceDiscovery.priceType = PriceType.Discovery;
       offerPriceDiscovery.exchangeToken = await mockToken.getAddress();
+      orderPrice = BigInt(offerPriceDiscovery.price) + 10000n;
 
       offerDates = mo.offerDates;
       expect(offerDates.isValid()).is.true;
@@ -1901,12 +1904,12 @@ describe("IBosonFundsHandler", function () {
       resolutionPeriod = offerDurations.resolutionPeriod;
 
       // top up seller's and buyer's account
-      await mockToken.mint(await assistant.getAddress(), `${2 * sellerDeposit}`);
-      await mockToken.mint(await buyer.getAddress(), `${2 * price}`);
+      await mockToken.mint(await assistant.getAddress(), `${20 * sellerDeposit}`);
+      await mockToken.mint(await buyer.getAddress(), `${20 * price}`);
 
       // approve protocol to transfer the tokens
-      await mockToken.connect(assistant).approve(protocolDiamondAddress, `${2 * sellerDeposit}`);
-      await mockToken.connect(buyer).approve(protocolDiamondAddress, `${2 * price}`);
+      await mockToken.connect(assistant).approve(protocolDiamondAddress, `${20 * sellerDeposit}`);
+      await mockToken.connect(buyer).approve(protocolDiamondAddress, `${20 * price}`);
 
       // deposit to seller's pool
       await fundsHandler
@@ -5889,7 +5892,7 @@ describe("IBosonFundsHandler", function () {
     });
 
     context("👉 releaseFunds() - Price discovery", async function () {
-      let voucherCloneAddress;
+      let voucherCloneAddress, order;
       beforeEach(async function () {
         // ids
         protocolId = "0";
@@ -5910,14 +5913,15 @@ describe("IBosonFundsHandler", function () {
         await bosonVoucher.connect(assistant).setApprovalForAll(await priceDiscoveryContract.getAddress(), true);
         const tokenId = deriveTokenId(offerPriceDiscovery.id, exchangeId);
 
-        const order = {
+        order = {
           seller: assistant.address,
           buyer: buyer.address,
           voucherContract: voucherCloneAddress,
           tokenId: tokenId,
           exchangeToken: offerPriceDiscovery.exchangeToken,
-          price: BigInt(price),
+          price: orderPrice,
         };
+        priceDiscoveryProtocolFee = applyPercentage(order.price, protocolFeePercentage);
 
         const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
 
@@ -5951,13 +5955,13 @@ describe("IBosonFundsHandler", function () {
           buyerPayoff = 0;
 
           // protocol: protocolFee
-          protocolPayoff = (2n * BigInt(offerTokenProtocolFee)).toString(); // regular protocolFee + protocolFee from releaseFundsToIntermediateSellers
+          protocolPayoff = priceDiscoveryProtocolFee.toString();
 
           // seller: price - protocolFee
-          sellerPayoff = BigInt(order.price) - BigInt(priceDiscoveryFee);
+          sellerPayoff = BigInt(order.price) - BigInt(protocolPayoff);
 
-          // seller: sellerDeposit  - protocolFee
-          sellerPayoff2 = BigInt(offerPriceDiscovery.sellerDeposit) - BigInt(offerTokenProtocolFee);
+          // seller: sellerDeposit
+          sellerPayoff2 = BigInt(offerPriceDiscovery.sellerDeposit);
         });
 
         it("should emit a FundsReleased event", async function () {
@@ -5984,13 +5988,13 @@ describe("IBosonFundsHandler", function () {
         it("should update state", async function () {
           const tokenId = deriveTokenId(offerPriceDiscovery.id, "2");
 
-          const order = {
+          order = {
             seller: assistant.address,
             buyer: buyer.address,
             voucherContract: voucherCloneAddress,
             tokenId: tokenId,
             exchangeToken: offerPriceDiscovery.exchangeToken,
-            price: BigInt(price),
+            price: orderPrice,
           };
 
           const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
@@ -6060,12 +6064,12 @@ describe("IBosonFundsHandler", function () {
           expectedSellerAvailableFunds.funds[1] = new Funds(
             await mockToken.getAddress(),
             "Foreign20",
-            (BigInt(sellerPayoff) + BigInt(sellerPayoff2)) * 2n
+            (BigInt(sellerPayoff) + BigInt(sellerPayoff2)) * 2n // completed twice
           );
           expectedProtocolAvailableFunds.funds[0] = new Funds(
             await mockToken.getAddress(),
             "Foreign20",
-            BigInt(protocolPayoff) * 2n
+            BigInt(protocolPayoff) * 2n // completed twice
           );
           expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
           expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
@@ -6078,7 +6082,7 @@ describe("IBosonFundsHandler", function () {
         beforeEach(async function () {
           // expected payoffs
           // buyer: sellerDeposit + price
-          buyerPayoff = BigInt(offerPriceDiscovery.sellerDeposit) + BigInt(order.price);
+          buyerPayoff = BigInt(offerPriceDiscovery.sellerDeposit) + BigInt(orderPrice);
 
           // seller: 0
           sellerPayoff = 0;
@@ -6149,7 +6153,7 @@ describe("IBosonFundsHandler", function () {
             voucherContract: voucherCloneAddress,
             tokenId: tokenId,
             exchangeToken: offerPriceDiscovery.exchangeToken,
-            price: BigInt(price),
+            price: orderPrice,
           };
 
           const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
@@ -6289,14 +6293,14 @@ describe("IBosonFundsHandler", function () {
             // buyer: 0
             buyerPayoff = 0;
 
+            // protocol: 0
+            protocolPayoff = BigInt(priceDiscoveryProtocolFee).toString();
+
             // seller: price - protocolFee
-            sellerPayoff = BigInt(order.price) - BigInt(priceDiscoveryProtocolFee);
+            sellerPayoff = BigInt(order.price) - BigInt(protocolPayoff);
 
             // seller: sellerDeposit  - protocolFee
             sellerPayoff2 = BigInt(offerPriceDiscovery.sellerDeposit);
-
-            // protocol: 0
-            protocolPayoff = (BigInt(offerTokenProtocolFee)).toString(); 
           });
           it("should emit a FundsReleased event", async function () {
             // Retract from the dispute, expecting event
@@ -6391,14 +6395,14 @@ describe("IBosonFundsHandler", function () {
             // buyer: 0
             buyerPayoff = 0;
 
-            // seller: price - protocolFee
-            sellerPayoff = BigInt(order.price) - BigInt(priceDiscoveryProtocolFee);
-
-            // seller: sellerDeposit  - protocolFee
-            sellerPayoff2 = BigInt(offerPriceDiscovery.sellerDeposit);
-
             // protocol: 0
-            protocolPayoff = ( BigInt(offerTokenProtocolFee)).toString(); // regular protocolFee + protocolFee from releaseFundsToIntermediateSellers
+            protocolPayoff = BigInt(priceDiscoveryProtocolFee).toString();
+
+            // seller: price - protocolFee
+            sellerPayoff = BigInt(order.price) - BigInt(protocolPayoff);
+
+            // seller: sellerDeposit
+            sellerPayoff2 = BigInt(offerPriceDiscovery.sellerDeposit);
 
             await setNextBlockTimestamp(Number(timeout) + 1);
           });
@@ -6485,8 +6489,7 @@ describe("IBosonFundsHandler", function () {
             // expected payoffs
             // buyer: (price + sellerDeposit)*buyerPercentage
             buyerPayoff =
-              ((BigInt(order.price) + BigInt(offerPriceDiscovery.sellerDeposit)) *
-                BigInt(buyerPercentBasisPoints)) /
+              ((BigInt(order.price) + BigInt(offerPriceDiscovery.sellerDeposit)) * BigInt(buyerPercentBasisPoints)) /
               10000n;
 
             const sellerPercentBasisPoints = 10000n - BigInt(buyerPercentBasisPoints);
@@ -6494,9 +6497,7 @@ describe("IBosonFundsHandler", function () {
             sellerPayoff =
               (BigInt(offerPriceDiscovery.sellerDeposit) * (10000n - BigInt(buyerPercentBasisPoints))) / 10000n;
 
-            const sellerPricePart =
-              BigInt(order.price) -
-              (BigInt(order.price) * sellerPercentBasisPoints) / 10000n;
+            const sellerPricePart = BigInt(order.price) - (BigInt(order.price) * sellerPercentBasisPoints) / 10000n;
             const sellerProtocolFeePart = (BigInt(priceDiscoveryProtocolFee) * sellerPercentBasisPoints) / 10000n;
             sellerPayoff2 = BigInt(order.price) - sellerPricePart - sellerProtocolFeePart;
 
@@ -6627,12 +6628,12 @@ describe("IBosonFundsHandler", function () {
             // buyer: 0
             buyerPayoff = 0;
 
-            sellerPayoff = BigInt(order.price) - BigInt(priceDiscoveryProtocolFee);
+            // protocol: protocolFee
+            protocolPayoff = BigInt(priceDiscoveryProtocolFee).toString();
+
+            sellerPayoff = BigInt(order.price) - BigInt(protocolPayoff);
 
             sellerPayoff2 = BigInt(offerPriceDiscovery.sellerDeposit);
-
-            // protocol: protocolFee
-            protocolPayoff = (BigInt(offerTokenProtocolFee)).toString(); // regular protocolFee + protocolFee from releaseFundsToIntermediateSellers
 
             // Escalate the dispute
             await disputeHandler.connect(buyer).escalateDispute(exchangeId);
@@ -6734,8 +6735,7 @@ describe("IBosonFundsHandler", function () {
             // expected payoffs
             // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
             buyerPayoff =
-              ((BigInt(order.price) + BigInt(offerPriceDiscovery.sellerDeposit)) *
-                BigInt(buyerPercentBasisPoints)) /
+              ((BigInt(order.price) + BigInt(offerPriceDiscovery.sellerDeposit)) * BigInt(buyerPercentBasisPoints)) /
               10000n;
 
             const sellerPercentBasisPoints = 10000n - BigInt(buyerPercentBasisPoints);
@@ -6743,9 +6743,7 @@ describe("IBosonFundsHandler", function () {
             sellerPayoff =
               (BigInt(offerPriceDiscovery.sellerDeposit) * (10000n - BigInt(buyerPercentBasisPoints))) / 10000n;
 
-            const sellerPricePart =
-              BigInt(order.price) -
-              (BigInt(order.price) * sellerPercentBasisPoints) / 10000n;
+            const sellerPricePart = BigInt(order.price) - (BigInt(order.price) * sellerPercentBasisPoints) / 10000n;
             const sellerProtocolFeePart = (BigInt(priceDiscoveryProtocolFee) * sellerPercentBasisPoints) / 10000n;
             sellerPayoff2 = BigInt(order.price) - sellerPricePart - sellerProtocolFeePart;
 
@@ -6873,8 +6871,7 @@ describe("IBosonFundsHandler", function () {
             // expected payoffs
             // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
             buyerPayoff =
-              ((BigInt(order.price) + BigInt(offerPriceDiscovery.sellerDeposit)) *
-                BigInt(buyerPercentBasisPoints)) /
+              ((BigInt(orderPrice) + BigInt(offerPriceDiscovery.sellerDeposit)) * BigInt(buyerPercentBasisPoints)) /
               10000n;
 
             const sellerPercentBasisPoints = 10000n - BigInt(buyerPercentBasisPoints);
@@ -6882,11 +6879,9 @@ describe("IBosonFundsHandler", function () {
             sellerPayoff =
               (BigInt(offerPriceDiscovery.sellerDeposit) * (10000n - BigInt(buyerPercentBasisPoints))) / 10000n;
 
-            const sellerPricePart =
-              BigInt(order.price) -
-              (BigInt(order.price) * sellerPercentBasisPoints) / 10000n;
+            const sellerPricePart = BigInt(orderPrice) - (BigInt(orderPrice) * sellerPercentBasisPoints) / 10000n;
             const sellerProtocolFeePart = (BigInt(priceDiscoveryProtocolFee) * sellerPercentBasisPoints) / 10000n;
-            sellerPayoff2 = BigInt(order.price) - sellerPricePart - sellerProtocolFeePart;
+            sellerPayoff2 = BigInt(orderPrice) - sellerPricePart - sellerProtocolFeePart;
 
             protocolPayoff = sellerProtocolFeePart;
 

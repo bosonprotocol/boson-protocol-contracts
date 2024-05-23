@@ -89,7 +89,6 @@ contract PriceDiscoveryBase is ProtocolBase {
         if (actualPrice < _offer.buyerCancelPenalty) {
             revert PriceDoesNotCoverPenalty();
         }
-        return actualPrice;
     }
 
     /**

@@ -432,7 +432,7 @@ const offerHandler = {
                     originalMethod
                       .apply(target, args)
                       .then((tx) => {
-                        const lastArg = args.at(6);
+                        const lastArg = args.at(-1);
                         if (
                           lastArg &&
                           typeof lastArg === "object" &&
