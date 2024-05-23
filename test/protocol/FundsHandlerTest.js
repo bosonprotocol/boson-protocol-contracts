@@ -1,4 +1,3 @@
-/* eslint-disable no-only-tests/no-only-tests */
 const { ethers } = require("hardhat");
 const { ZeroAddress, getSigners, provider, parseUnits, getContractAt, getContractFactory, MaxUint256 } = ethers;
 const { expect, assert } = require("chai");
@@ -5921,7 +5920,7 @@ describe("IBosonFundsHandler", function () {
           exchangeToken: offerPriceDiscovery.exchangeToken,
           price: orderPrice,
         };
-        priceDiscoveryProtocolFee = applyPercentage(order.price, protocolFeePercentage);
+        priceDiscoveryProtocolFee = applyPercentage(order.price, "200");
 
         const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [order]);
 
@@ -6871,7 +6870,7 @@ describe("IBosonFundsHandler", function () {
             // expected payoffs
             // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
             buyerPayoff =
-              ((BigInt(orderPrice) + BigInt(offerPriceDiscovery.sellerDeposit)) * BigInt(buyerPercentBasisPoints)) /
+              ((BigInt(order.price) + BigInt(offerPriceDiscovery.sellerDeposit)) * BigInt(buyerPercentBasisPoints)) /
               10000n;
 
             const sellerPercentBasisPoints = 10000n - BigInt(buyerPercentBasisPoints);
@@ -6879,9 +6878,9 @@ describe("IBosonFundsHandler", function () {
             sellerPayoff =
               (BigInt(offerPriceDiscovery.sellerDeposit) * (10000n - BigInt(buyerPercentBasisPoints))) / 10000n;
 
-            const sellerPricePart = BigInt(orderPrice) - (BigInt(orderPrice) * sellerPercentBasisPoints) / 10000n;
+            const sellerPricePart = BigInt(order.price) - (BigInt(order.price) * sellerPercentBasisPoints) / 10000n;
             const sellerProtocolFeePart = (BigInt(priceDiscoveryProtocolFee) * sellerPercentBasisPoints) / 10000n;
-            sellerPayoff2 = BigInt(orderPrice) - sellerPricePart - sellerProtocolFeePart;
+            sellerPayoff2 = BigInt(order.price) - sellerPricePart - sellerProtocolFeePart;
 
             protocolPayoff = sellerProtocolFeePart;
 
