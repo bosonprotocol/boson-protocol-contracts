@@ -6197,7 +6197,7 @@ describe("IBosonFundsHandler", function () {
         beforeEach(async function () {
           // expected payoffs
           // buyer: price - buyerCancelPenalty
-          buyerPayoff = BigInt(offerPriceDiscovery.price) - BigInt(offerPriceDiscovery.buyerCancelPenalty);
+          buyerPayoff = BigInt(order.price) - BigInt(offerPriceDiscovery.buyerCancelPenalty);
 
           // seller: sellerDeposit + buyerCancelPenalty
           sellerPayoff = BigInt(offerPriceDiscovery.sellerDeposit) + BigInt(offerPriceDiscovery.buyerCancelPenalty);
