@@ -6395,10 +6395,10 @@ describe("IBosonFundsHandler", function () {
             sellerPayoff = BigInt(offerPriceDiscovery.price) - BigInt(offerTokenProtocolFee);
 
             // seller: sellerDeposit  - protocolFee
-            sellerPayoff2 = BigInt(offerPriceDiscovery.sellerDeposit) - BigInt(offerTokenProtocolFee);
+            sellerPayoff2 = BigInt(offerPriceDiscovery.sellerDeposit);
 
             // protocol: 0
-            protocolPayoff = (2n * BigInt(offerTokenProtocolFee)).toString(); // regular protocolFee + protocolFee from releaseFundsToIntermediateSellers
+            protocolPayoff = ( BigInt(offerTokenProtocolFee)).toString(); // regular protocolFee + protocolFee from releaseFundsToIntermediateSellers
 
             await setNextBlockTimestamp(Number(timeout) + 1);
           });
