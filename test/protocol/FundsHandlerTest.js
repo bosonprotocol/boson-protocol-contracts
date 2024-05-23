@@ -5888,7 +5888,7 @@ describe("IBosonFundsHandler", function () {
       });
     });
 
-    context("👉 releaseFunds() - Static Offer price - Price discovery", async function () {
+    context("👉 releaseFunds() - Price discovery", async function () {
       let voucherCloneAddress;
       beforeEach(async function () {
         // ids
