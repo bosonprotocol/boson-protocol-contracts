@@ -6883,10 +6883,10 @@ describe("IBosonFundsHandler", function () {
               (BigInt(offerPriceDiscovery.sellerDeposit) * (10000n - BigInt(buyerPercentBasisPoints))) / 10000n;
 
             const sellerPricePart =
-              BigInt(offerPriceDiscovery.price) -
-              (BigInt(offerPriceDiscovery.price) * sellerPercentBasisPoints) / 10000n;
-            const sellerProtocolFeePart = (BigInt(offerTokenProtocolFee) * sellerPercentBasisPoints) / 10000n;
-            sellerPayoff2 = BigInt(offerPriceDiscovery.price) - sellerPricePart - sellerProtocolFeePart;
+              BigInt(order.price) -
+              (BigInt(order.price) * sellerPercentBasisPoints) / 10000n;
+            const sellerProtocolFeePart = (BigInt(priceDiscoveryProtocolFee) * sellerPercentBasisPoints) / 10000n;
+            sellerPayoff2 = BigInt(order.price) - sellerPricePart - sellerProtocolFeePart;
 
             protocolPayoff = sellerProtocolFeePart;
 
