@@ -7072,7 +7072,7 @@ describe("IBosonFundsHandler", function () {
             beforeEach(async function () {
               // expected payoffs
               // buyer: price + buyerEscalationDeposit
-              buyerPayoff = (BigInt(offerPriceDiscovery.price) + BigInt(buyerEscalationDeposit)).toString();
+              buyerPayoff = (BigInt(order.price) + BigInt(buyerEscalationDeposit)).toString();
 
               // seller: sellerDeposit
               sellerPayoff = offerPriceDiscovery.sellerDeposit;
