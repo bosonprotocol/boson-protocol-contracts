@@ -6873,7 +6873,7 @@ describe("IBosonFundsHandler", function () {
             // expected payoffs
             // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
             buyerPayoff =
-              ((BigInt(offerPriceDiscovery.price) + BigInt(offerPriceDiscovery.sellerDeposit)) *
+              ((BigInt(order.price) + BigInt(offerPriceDiscovery.sellerDeposit)) *
                 BigInt(buyerPercentBasisPoints)) /
               10000n;
 
