@@ -210,7 +210,7 @@ contract PriceDiscoveryNoTransfer is PriceDiscoveryMock {
 /**
  * @dev Simple bad price discovery contract used in tests
  *
- * This contract transfers the voucher to itself instead of the origina msg.sender
+ * This contract transfers the voucher to itself instead of the original msg.sender
  */
 contract PriceDiscoveryTransferElsewhere is PriceDiscoveryMock, IERC721Receiver {
     /**
