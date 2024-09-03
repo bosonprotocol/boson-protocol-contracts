@@ -58,7 +58,7 @@ async function mockOfferDates() {
 }
 
 // Returns a mock offer with price in native token
-async function mockOffer({ refreshModule } = {}) {
+async function mockOffer({ refreshModule, legacyOffer } = {}) {
   if (refreshModule) {
     decache("../../scripts/domain/Offer.js");
     Offer = require("../../scripts/domain/Offer.js");
@@ -80,21 +80,38 @@ async function mockOffer({ refreshModule } = {}) {
   const royaltyInfo = [new RoyaltyInfo([ZeroAddress], ["0"])];
 
   // Create a valid offer, then set fields in tests directly
-  let offer = new Offer(
-    id,
-    sellerId,
-    price,
-    sellerDeposit,
-    buyerCancelPenalty,
-    quantityAvailable,
-    exchangeToken,
-    priceType,
-    metadataUri,
-    metadataHash,
-    voided,
-    collectionIndex,
-    royaltyInfo
-  );
+  let offer;
+  if (legacyOffer) {
+    offer = new Offer(
+      id,
+      sellerId,
+      price,
+      sellerDeposit,
+      buyerCancelPenalty,
+      quantityAvailable,
+      exchangeToken,
+      metadataUri,
+      metadataHash,
+      voided,
+      collectionIndex
+    );
+  } else {
+    offer = new Offer(
+      id,
+      sellerId,
+      price,
+      sellerDeposit,
+      buyerCancelPenalty,
+      quantityAvailable,
+      exchangeToken,
+      priceType,
+      metadataUri,
+      metadataHash,
+      voided,
+      collectionIndex,
+      royaltyInfo
+    );
+  }
 
   const offerDates = await mockOfferDates();
   const offerDurations = mockOfferDurations();

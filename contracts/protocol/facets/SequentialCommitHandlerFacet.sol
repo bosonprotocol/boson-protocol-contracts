@@ -62,7 +62,6 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
      *   - Reseller did not approve protocol to transfer exchange token in escrow
      * - Call to price discovery contract fails
      * - Protocol fee and royalties combined exceed the secondary price
-     * - The secondary price cannot cover the buyer's cancellation penalty
      * - Transfer of exchange token fails
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
@@ -104,9 +103,6 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
         // First call price discovery and get actual price
         // It might be lower than submitted for buy orders and higher for sell orders
         thisExchangeCost.price = fulfilOrder(_tokenId, offer, _priceDiscovery, seller, _buyer);
-
-        // Price must be high enough to cover cancellation penalty in case of buyer's cancellation
-        if (thisExchangeCost.price < offer.buyerCancelPenalty) revert PriceDoesNotCoverPenalty();
 
         // Get token address
         address exchangeToken = offer.exchangeToken;

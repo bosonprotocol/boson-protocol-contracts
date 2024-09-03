@@ -128,7 +128,7 @@ library FundsLib {
         BosonTypes.Payoff memory payoff;
 
         BosonTypes.OfferFees storage offerFee = pe.offerFees[exchange.offerId];
-        uint256 offerPrice = offer.price;
+        uint256 offerPrice = offer.priceType == BosonTypes.PriceType.Discovery ? 0 : offer.price;
         BosonTypes.ExchangeCosts[] storage exchangeCosts = pe.exchangeCosts[_exchangeId];
         uint256 lastPrice = exchangeCosts.length == 0 ? offerPrice : exchangeCosts[exchangeCosts.length - 1].price;
         {
@@ -297,7 +297,7 @@ library FundsLib {
         address msgSender = EIP712Lib.msgSender();
         uint256 len = exchangeCosts.length;
         for (uint256 i = 0; i < len; ) {
-            // Since all elements of exchangeCosts[i] are used it makes sense to copy them to memory
+            // Since all elements of exchangeCosts[i] are used, it makes sense to copy them to memory
             BosonTypes.ExchangeCosts memory secondaryCommit = exchangeCosts[i];
 
             // amount to be released

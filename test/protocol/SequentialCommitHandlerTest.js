@@ -336,7 +336,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
           it("should emit FundsEncumbered, FundsReleased, FundsWithdrawn and BuyerCommitted events", async function () {
             // Sequential commit to offer, retrieving the event
-            const tx = sequentialCommitHandler
+            const tx = await sequentialCommitHandler
               .connect(buyer2)
               .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery);
 

@@ -819,3 +819,1070 @@ Unstaged changes after reset:
 M	addresses/137-polygon-prod.json
 M	logs/polygon.upgrade.contracts.txt
 Migration HEAD completed
+Migration HEAD started
+Removing any local changes before upgrading
+Unstaged changes after reset:
+M	logs/polygon.upgrade.contracts.txt
+Compiled 190 Solidity files successfully (evm targets: istanbul, london, unknown evm version for solc version 0.4.17).
+Checking out contracts on version 2.3.0
+Installing dependencies
+
+added 212 packages, removed 355 packages, changed 95 packages, and audited 1615 packages in 30s
+
+204 packages are looking for funding
+  run `npm fund` for details
+
+44 vulnerabilities (6 low, 33 moderate, 2 high, 3 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+Compiling old contracts
+Admin address does not have PAUSER role
+Migration HEAD started
+Removing any local changes before upgrading
+Unstaged changes after reset:
+M	logs/polygon.upgrade.contracts.txt
+Compiled 190 Solidity files successfully (evm targets: istanbul, london, unknown evm version for solc version 0.4.17).
+Checking out contracts on version 2.3.0
+Installing dependencies
+
+added 212 packages, removed 355 packages, changed 95 packages, and audited 1615 packages in 13s
+
+204 packages are looking for funding
+  run `npm fund` for details
+
+44 vulnerabilities (6 low, 33 moderate, 2 high, 3 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+Compiling old contracts
+Compiled 163 Solidity files successfully (evm targets: london, unknown evm version for solc version 0.4.17).
+Pausing the Seller, Offer and Exchanges region...
+Preparing initialization data...
+Number of accounts 509n
+10%
+20%
+30%
+40%
+50%
+60%
+70%
+80%
+90%
+Number of offers 1157n
+10%
+20%
+30%
+40%
+50%
+60%
+70%
+80%
+90%
+Checking out contracts on version HEAD
+Installing dependencies
+
+added 355 packages, removed 213 packages, changed 95 packages, and audited 1757 packages in 25s
+
+151 packages are looking for funding
+  run `npm fund` for details
+
+39 vulnerabilities (4 low, 30 moderate, 4 high, 1 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+Compiling contracts
+Compiled 190 Solidity files successfully (evm targets: istanbul, london, unknown evm version for solc version 0.4.17).
+Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0xb60cf39Fb18e5111174f346d0f39521ef6531fD4
+Executing upgrade facets script
+--------------------------------------------------------------------------------
+Boson Protocol Contract Suite Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: polygon
+📅 Mon Apr 08 2024 14:44:48 GMT+0200 (Srednjeevropski poletni čas)
+🔱 Admin account:  0x19f66ac022Df0D9aa7E5D0AE7ed66D0c8BBE9668
+--------------------------------------------------------------------------------
+
+📋Running pre-upgrade script...
+Backfilling sellers and offers...
+royaltyPercentages [
+  '0',   '1',    '2',   '5',
+  '6',   '7',    '8',   '10',
+  '50',  '60',   '70',  '100',
+  '200', '250',  '300', '303',
+  '333', '350',  '400', '500',
+  '550', '594',  '700', '750',
+  '900', '1000'
+]
+sellerIds [
+  [
+      5n,  14n, 184n, 195n, 216n, 217n, 220n,
+    221n, 226n, 234n, 240n, 245n, 262n, 266n,
+    271n, 276n, 277n, 289n, 292n, 302n, 305n,
+    430n, 431n, 443n, 445n, 448n, 454n, 455n,
+    456n, 458n, 459n, 461n, 464n, 466n, 467n,
+    469n, 475n, 476n, 483n, 484n, 485n, 486n,
+    494n, 496n, 502n, 504n, 506n, 508n, 509n
+  ],
+  [ 225n, 228n ],
+  [ 227n, 309n ],
+  [ 291n ],
+  [ 450n ],
+  [ 479n ],
+  [ 449n ],
+  [ 265n ],
+  [ 487n ],
+  [ 250n ],
+  [ 264n ],
+  [
+      2n, 181n, 223n, 242n,
+    243n, 267n, 273n, 310n,
+    447n, 470n, 490n, 492n,
+    498n
+  ],
+  [ 172n, 214n, 255n ],
+  [ 285n, 482n ],
+  [ 219n, 224n, 230n, 258n, 477n, 505n ],
+  [ 468n ],
+  [ 171n ],
+  [ 211n ],
+  [ 207n, 222n, 297n ],
+  [
+      4n,   6n,   7n,   8n,  11n,  12n,
+     13n,  16n, 180n, 182n, 183n, 190n,
+    191n, 196n, 197n, 213n, 232n, 249n,
+    251n, 253n, 259n, 260n, 261n, 272n,
+    287n, 300n, 426n, 429n, 441n, 444n,
+    457n, 474n, 478n
+  ],
+  [ 301n ],
+  [ 308n ],
+  [ 296n, 306n ],
+  [ 311n, 442n ],
+  [ 257n, 286n, 472n ],
+  [
+      9n,  27n, 129n, 202n, 212n, 215n,
+    218n, 229n, 231n, 233n, 235n, 237n,
+    238n, 241n, 247n, 248n, 256n, 263n,
+    268n, 269n, 270n, 284n, 290n, 293n,
+    294n, 299n, 304n, 439n, 440n, 446n,
+    460n, 465n, 471n, 473n, 480n, 481n,
+    488n, 493n, 495n, 497n, 500n, 501n,
+    507n
+  ]
+]
+offerIds [
+  [
+      17n,   18n,   19n,   20n,   23n,   24n,   25n,   26n,   27n,
+      28n,   29n,   30n,   31n,   32n,   33n,   34n,   35n,   36n,
+      37n,   46n,   47n,   48n,   49n,   50n,   51n,   52n,   53n,
+      54n,   95n,   96n,   97n,  153n,  154n,  155n,  156n,  157n,
+     158n,  159n,  160n,  161n,  162n,  164n,  165n,  166n,  167n,
+     168n,  169n,  170n,  171n,  172n,  173n,  174n,  175n,  176n,
+     177n,  178n,  416n,  417n,  695n,  696n,  697n,  698n,  762n,
+     763n,  764n,  765n,  766n,  767n,  768n,  769n,  893n,  978n,
+     979n,  980n,  981n,  982n,  983n,  984n, 1017n, 1073n, 1079n,
+    1080n, 1081n, 1082n, 1083n, 1084n, 1085n, 1086n, 1087n, 1088n,
+    1090n, 1095n, 1119n, 1120n, 1124n, 1125n, 1145n, 1146n, 1156n,
+    1157n
+  ],
+  [ 631n, 638n, 639n ],
+  [ 632n, 633n, 634n, 635n, 636n, 637n ],
+  [],
+  [ 1072n ],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [ 815n, 816n ],
+  [
+      1n,   2n,   3n,   4n,   5n,   6n,   7n,   8n,   9n,  10n,
+     15n,  16n,  64n,  65n,  66n,  67n,  68n,  69n,  70n,  71n,
+     72n,  73n, 102n, 103n, 297n, 298n, 299n, 300n, 301n, 302n,
+    303n, 304n, 305n, 306n, 332n, 333n, 334n, 335n, 336n, 337n,
+    338n, 339n, 340n, 341n, 342n, 343n, 344n, 345n, 346n, 347n,
+    348n, 349n, 350n, 351n, 352n, 360n, 361n, 362n, 363n, 364n,
+    365n, 366n, 367n, 368n, 369n, 370n, 371n, 372n, 373n, 487n,
+    488n, 489n, 490n, 491n, 492n, 493n, 494n, 495n, 496n, 542n,
+    547n, 553n, 619n, 685n, 686n, 827n, 828n, 829n, 830n, 831n,
+    832n, 833n, 834n, 835n, 836n, 837n, 838n, 839n, 894n, 895n,
+    ... 16 more items
+  ],
+  [
+    309n, 310n, 311n, 312n, 313n, 314n,
+    315n, 316n, 317n, 318n, 319n, 320n,
+    321n, 322n, 323n, 324n, 325n, 326n,
+    327n, 328n, 329n, 394n, 395n, 396n,
+    415n, 644n, 645n, 646n, 647n, 648n,
+    649n, 650n, 651n, 652n, 653n, 654n,
+    655n, 656n, 657n, 658n, 659n, 660n,
+    661n, 662n, 663n
+  ],
+  [ 1118n ],
+  [ 738n, 1096n, 1143n, 1144n ],
+  [ 1091n, 1092n, 1093n, 1094n ],
+  [ 292n, 293n, 294n, 295n, 296n ],
+  [
+     606n,  622n,  623n,  624n,  625n,  626n,
+     627n,  628n,  629n,  630n,  740n,  741n,
+     742n,  743n,  744n,  745n,  746n,  747n,
+     748n,  749n,  750n,  752n,  753n,  754n,
+     755n,  756n,  757n,  770n,  783n,  784n,
+     787n,  800n,  810n,  813n,  814n,  820n,
+     856n, 1018n, 1019n, 1020n, 1021n, 1022n,
+    1023n, 1024n, 1025n
+  ],
+  [
+    566n, 567n, 568n, 569n, 570n,
+    571n, 572n, 573n, 574n, 575n,
+    576n, 577n, 578n, 579n, 580n,
+    581n, 582n, 583n, 584n, 585n,
+    586n, 587n, 588n, 589n, 590n,
+    591n, 592n, 593n, 594n, 595n,
+    596n, 597n, 598n, 599n, 600n,
+    618n
+  ],
+  [
+     11n,  12n,  13n,  14n,  21n,  22n,  38n,  39n,  40n,  41n,
+     42n,  43n,  44n,  45n,  55n,  56n,  57n,  58n,  59n,  60n,
+     61n,  62n,  63n,  74n,  75n,  76n,  77n,  78n,  79n,  80n,
+     81n,  82n,  83n,  84n,  85n,  86n,  87n,  88n,  89n,  90n,
+     91n,  92n,  93n,  94n,  98n,  99n, 100n, 101n, 104n, 105n,
+    106n, 107n, 108n, 109n, 110n, 111n, 112n, 113n, 114n, 115n,
+    116n, 117n, 118n, 119n, 120n, 121n, 122n, 123n, 124n, 125n,
+    126n, 127n, 128n, 129n, 130n, 131n, 132n, 133n, 134n, 135n,
+    136n, 137n, 138n, 139n, 140n, 141n, 142n, 143n, 144n, 145n,
+    146n, 147n, 148n, 149n, 150n, 151n, 152n, 163n, 179n, 180n,
+    ... 302 more items
+  ],
+  [],
+  [],
+  [],
+  [ 998n, 1070n ],
+  [ 737n ],
+  [
+    189n, 190n, 191n, 192n, 193n, 194n, 195n, 196n, 197n, 198n,
+    199n, 200n, 201n, 202n, 203n, 204n, 205n, 206n, 207n, 208n,
+    209n, 210n, 211n, 212n, 217n, 218n, 219n, 220n, 221n, 222n,
+    223n, 224n, 225n, 226n, 227n, 228n, 229n, 230n, 231n, 232n,
+    233n, 234n, 235n, 236n, 237n, 238n, 239n, 240n, 241n, 242n,
+    243n, 244n, 245n, 246n, 247n, 248n, 249n, 250n, 251n, 252n,
+    253n, 254n, 255n, 256n, 257n, 258n, 259n, 260n, 261n, 262n,
+    263n, 264n, 265n, 266n, 267n, 268n, 269n, 270n, 271n, 272n,
+    273n, 274n, 275n, 276n, 277n, 278n, 279n, 280n, 281n, 282n,
+    283n, 284n, 285n, 286n, 287n, 288n, 289n, 290n, 291n, 559n,
+    ... 284 more items
+  ]
+]
+Backfilling sellers and offers... #13
+[
+  [ '0' ],
+  [
+    [
+        5n,  14n, 184n, 195n, 216n, 217n, 220n,
+      221n, 226n, 234n, 240n, 245n, 262n, 266n,
+      271n, 276n, 277n, 289n, 292n, 302n, 305n,
+      430n, 431n, 443n, 445n, 448n, 454n, 455n,
+      456n, 458n, 459n, 461n, 464n, 466n, 467n,
+      469n, 475n, 476n, 483n, 484n, 485n, 486n,
+      494n, 496n, 502n, 504n, 506n, 508n, 509n
+    ]
+  ],
+  [
+    [
+       17n,  18n,  19n,  20n,  23n,  24n,  25n,  26n,
+       27n,  28n,  29n,  30n,  31n,  32n,  33n,  34n,
+       35n,  36n,  37n,  46n,  47n,  48n,  49n,  50n,
+       51n,  52n,  53n,  54n,  95n,  96n,  97n, 153n,
+      154n, 155n, 156n, 157n, 158n, 159n, 160n, 161n,
+      162n, 164n, 165n, 166n, 167n, 168n, 169n, 170n,
+      171n, 172n, 173n
+    ]
+  ],
+  '0x0000000000000000000000000000000000000000'
+]
+Backfilling sellers and offers... #12
+[
+  [
+    '0',  '1',  '2',
+    '5',  '6',  '7',
+    '8',  '10', '50',
+    '60', '70', '100'
+  ],
+  [
+    [],
+    [ 225n, 228n ],
+    [ 227n, 309n ],
+    [ 291n ],
+    [ 450n ],
+    [ 479n ],
+    [ 449n ],
+    [ 265n ],
+    [ 487n ],
+    [ 250n ],
+    [ 264n ],
+    [
+        2n, 181n, 223n, 242n,
+      243n, 267n, 273n, 310n,
+      447n, 470n, 490n, 492n,
+      498n
+    ]
+  ],
+  [
+    [
+       174n,  175n,  176n,  177n,  178n,  416n,
+       417n,  695n,  696n,  697n,  698n,  762n,
+       763n,  764n,  765n,  766n,  767n,  768n,
+       769n,  893n,  978n,  979n,  980n,  981n,
+       982n,  983n,  984n, 1017n, 1073n, 1079n,
+      1080n, 1081n, 1082n, 1083n, 1084n, 1085n,
+      1086n, 1087n, 1088n, 1090n, 1095n, 1119n,
+      1120n, 1124n, 1125n, 1145n, 1146n, 1156n,
+      1157n
+    ],
+    [ 631n, 638n, 639n ],
+    [ 632n, 633n, 634n, 635n, 636n, 637n ],
+    [],
+    [ 1072n ],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [ 815n, 816n ],
+    [
+       1n,  2n,  3n,  4n,  5n,
+       6n,  7n,  8n,  9n, 10n,
+      15n, 16n, 64n, 65n
+    ]
+  ],
+  '0x0000000000000000000000000000000000000000'
+]
+Backfilling sellers and offers... #11
+[
+  [ '100' ],
+  [ [] ],
+  [
+    [
+        66n,   67n,   68n,   69n,   70n,   71n,   72n,   73n,  102n,
+       103n,  297n,  298n,  299n,  300n,  301n,  302n,  303n,  304n,
+       305n,  306n,  332n,  333n,  334n,  335n,  336n,  337n,  338n,
+       339n,  340n,  341n,  342n,  343n,  344n,  345n,  346n,  347n,
+       348n,  349n,  350n,  351n,  352n,  360n,  361n,  362n,  363n,
+       364n,  365n,  366n,  367n,  368n,  369n,  370n,  371n,  372n,
+       373n,  487n,  488n,  489n,  490n,  491n,  492n,  493n,  494n,
+       495n,  496n,  542n,  547n,  553n,  619n,  685n,  686n,  827n,
+       828n,  829n,  830n,  831n,  832n,  833n,  834n,  835n,  836n,
+       837n,  838n,  839n,  894n,  895n,  896n,  897n,  898n, 1099n,
+      1100n, 1101n, 1102n, 1103n, 1104n, 1105n, 1106n, 1107n, 1108n,
+      1109n
+    ]
+  ],
+  '0x0000000000000000000000000000000000000000'
+]
+Backfilling sellers and offers... #10
+[
+  [
+    '100', '200',
+    '250', '300',
+    '303', '333',
+    '350'
+  ],
+  [
+    [],
+    [ 172n, 214n, 255n ],
+    [ 285n, 482n ],
+    [ 219n, 224n, 230n, 258n, 477n, 505n ],
+    [ 468n ],
+    [ 171n ],
+    [ 211n ]
+  ],
+  [
+    [ 1110n, 1126n ],
+    [
+      309n, 310n, 311n, 312n, 313n, 314n,
+      315n, 316n, 317n, 318n, 319n, 320n,
+      321n, 322n, 323n, 324n, 325n, 326n,
+      327n, 328n, 329n, 394n, 395n, 396n,
+      415n, 644n, 645n, 646n, 647n, 648n,
+      649n, 650n, 651n, 652n, 653n, 654n,
+      655n, 656n, 657n, 658n, 659n, 660n,
+      661n, 662n, 663n
+    ],
+    [ 1118n ],
+    [ 738n, 1096n, 1143n, 1144n ],
+    [ 1091n, 1092n, 1093n, 1094n ],
+    [ 292n, 293n, 294n, 295n, 296n ],
+    [
+      606n, 622n, 623n, 624n, 625n,
+      626n, 627n, 628n, 629n, 630n,
+      740n, 741n, 742n, 743n, 744n,
+      745n, 746n, 747n, 748n, 749n,
+      750n, 752n, 753n, 754n, 755n
+    ]
+  ],
+  '0x0000000000000000000000000000000000000000'
+]
+Backfilling sellers and offers... #9
+[
+  [ '350', '400', '500' ],
+  [
+    [],
+    [ 207n, 222n, 297n ],
+    [
+        4n,   6n,   7n,   8n,  11n,  12n,
+       13n,  16n, 180n, 182n, 183n, 190n,
+      191n, 196n, 197n, 213n, 232n, 249n,
+      251n, 253n, 259n, 260n, 261n, 272n,
+      287n, 300n, 426n, 429n, 441n, 444n,
+      457n, 474n, 478n
+    ]
+  ],
+  [
+    [
+       756n,  757n,  770n,  783n,
+       784n,  787n,  800n,  810n,
+       813n,  814n,  820n,  856n,
+      1018n, 1019n, 1020n, 1021n,
+      1022n, 1023n, 1024n, 1025n
+    ],
+    [
+      566n, 567n, 568n, 569n, 570n,
+      571n, 572n, 573n, 574n, 575n,
+      576n, 577n, 578n, 579n, 580n,
+      581n, 582n, 583n, 584n, 585n,
+      586n, 587n, 588n, 589n, 590n,
+      591n, 592n, 593n, 594n, 595n,
+      596n, 597n, 598n, 599n, 600n,
+      618n
+    ],
+    [
+      11n, 12n, 13n,
+      14n, 21n, 22n,
+      38n, 39n
+    ]
+  ],
+  '0x0000000000000000000000000000000000000000'
+]
+Backfilling sellers and offers... #8
+[
+  [ '500' ],
+  [ [] ],
+  [
+    [
+       40n,  41n,  42n,  43n,  44n,  45n,  55n,  56n,  57n,  58n,
+       59n,  60n,  61n,  62n,  63n,  74n,  75n,  76n,  77n,  78n,
+       79n,  80n,  81n,  82n,  83n,  84n,  85n,  86n,  87n,  88n,
+       89n,  90n,  91n,  92n,  93n,  94n,  98n,  99n, 100n, 101n,
+      104n, 105n, 106n, 107n, 108n, 109n, 110n, 111n, 112n, 113n,
+      114n, 115n, 116n, 117n, 118n, 119n, 120n, 121n, 122n, 123n,
+      124n, 125n, 126n, 127n, 128n, 129n, 130n, 131n, 132n, 133n,
+      134n, 135n, 136n, 137n, 138n, 139n, 140n, 141n, 142n, 143n,
+      144n, 145n, 146n, 147n, 148n, 149n, 150n, 151n, 152n, 163n,
+      179n, 180n, 181n, 182n, 183n, 184n, 185n, 186n, 187n, 188n
+    ]
+  ],
+  '0x0000000000000000000000000000000000000000'
+]
+Backfilling sellers and offers... #7
+[
+  [ '500' ],
+  [ [] ],
+  [
+    [
+      213n, 214n, 215n, 216n, 307n, 308n, 330n, 331n, 353n,
+      354n, 355n, 356n, 357n, 358n, 359n, 374n, 375n, 376n,
+      377n, 378n, 379n, 380n, 381n, 382n, 383n, 384n, 385n,
+      386n, 387n, 388n, 389n, 390n, 391n, 392n, 393n, 397n,
+      398n, 399n, 400n, 401n, 402n, 403n, 404n, 405n, 406n,
+      407n, 408n, 409n, 410n, 411n, 412n, 413n, 414n, 418n,
+      419n, 420n, 421n, 422n, 423n, 424n, 425n, 426n, 427n,
+      428n, 429n, 430n, 431n, 432n, 433n, 434n, 435n, 436n,
+      437n, 438n, 439n, 440n, 441n, 442n, 443n, 444n, 445n,
+      446n, 447n, 448n, 449n, 450n, 451n, 452n, 453n, 454n,
+      455n, 456n, 457n, 458n, 459n, 460n, 461n, 462n, 463n,
+      464n
+    ]
+  ],
+  '0x0000000000000000000000000000000000000000'
+]
+Backfilling sellers and offers... #6
+[
+  [ '500' ],
+  [ [] ],
+  [
+    [
+      465n, 466n, 467n, 468n, 469n, 470n, 471n, 472n, 473n,
+      474n, 475n, 476n, 477n, 478n, 479n, 480n, 481n, 482n,
+      483n, 484n, 485n, 486n, 497n, 498n, 499n, 500n, 501n,
+      502n, 503n, 504n, 505n, 506n, 507n, 508n, 509n, 510n,
+      511n, 512n, 513n, 514n, 515n, 516n, 517n, 518n, 519n,
+      520n, 521n, 522n, 523n, 524n, 525n, 526n, 527n, 528n,
+      529n, 530n, 531n, 532n, 533n, 534n, 535n, 536n, 537n,
+      538n, 539n, 540n, 541n, 543n, 544n, 545n, 546n, 548n,
+      549n, 550n, 551n, 552n, 554n, 555n, 556n, 557n, 558n,
+      561n, 562n, 563n, 564n, 565n, 607n, 608n, 609n, 610n,
+      611n, 612n, 613n, 614n, 615n, 616n, 705n, 706n, 707n,
+      708n
+    ]
+  ],
+  '0x0000000000000000000000000000000000000000'
+]
+Backfilling sellers and offers... #5
+[
+  [ '500', '550', '594', '700', '750' ],
+  [ [], [ 301n ], [ 308n ], [ 296n, 306n ], [ 311n, 442n ] ],
+  [
+    [
+       709n,  710n,  711n,  713n,  714n,  715n,  716n,  717n,
+       718n,  719n,  720n,  721n,  722n,  723n,  724n,  725n,
+       726n,  727n,  732n,  751n,  842n,  843n,  880n,  977n,
+       985n,  986n,  987n,  992n,  993n,  994n,  995n,  996n,
+       997n,  999n, 1000n, 1026n, 1027n, 1028n, 1029n, 1030n,
+      1031n, 1032n, 1033n, 1034n, 1035n, 1036n, 1037n, 1038n,
+      1039n, 1040n, 1041n, 1042n, 1043n, 1044n, 1045n, 1046n,
+      1047n, 1048n, 1049n, 1050n, 1051n, 1052n, 1053n, 1054n,
+      1055n, 1056n, 1057n, 1058n, 1059n, 1060n, 1061n, 1062n,
+      1063n, 1064n, 1065n, 1066n, 1067n, 1068n, 1069n, 1074n,
+      1075n, 1076n, 1077n, 1078n, 1089n, 1097n, 1098n, 1111n,
+      1112n, 1113n, 1114n, 1115n, 1116n, 1117n
+    ],
+    [],
+    [],
+    [],
+    []
+  ],
+  '0x0000000000000000000000000000000000000000'
+]
+Backfilling sellers and offers... #4
+[
+  [ '750', '900', '1000' ],
+  [
+    [],
+    [ 257n, 286n, 472n ],
+    [
+        9n,  27n, 129n, 202n, 212n, 215n,
+      218n, 229n, 231n, 233n, 235n, 237n,
+      238n, 241n, 247n, 248n, 256n, 263n,
+      268n, 269n, 270n, 284n, 290n, 293n,
+      294n, 299n, 304n, 439n, 440n, 446n,
+      460n, 465n, 471n, 473n, 480n, 481n,
+      488n, 493n, 495n, 497n, 500n, 501n,
+      507n
+    ]
+  ],
+  [
+    [ 998n, 1070n ],
+    [ 737n ],
+    [
+      189n, 190n, 191n, 192n, 193n, 194n, 195n,
+      196n, 197n, 198n, 199n, 200n, 201n, 202n,
+      203n, 204n, 205n, 206n, 207n, 208n, 209n,
+      210n, 211n, 212n, 217n, 218n, 219n, 220n,
+      221n, 222n, 223n, 224n, 225n, 226n, 227n,
+      228n, 229n, 230n, 231n, 232n, 233n, 234n,
+      235n, 236n, 237n, 238n, 239n, 240n, 241n,
+      242n, 243n
+    ]
+  ],
+  '0x0000000000000000000000000000000000000000'
+]
+Backfilling sellers and offers... #3
+[
+  [ '1000' ],
+  [ [] ],
+  [
+    [
+      244n, 245n, 246n, 247n, 248n, 249n, 250n, 251n, 252n,
+      253n, 254n, 255n, 256n, 257n, 258n, 259n, 260n, 261n,
+      262n, 263n, 264n, 265n, 266n, 267n, 268n, 269n, 270n,
+      271n, 272n, 273n, 274n, 275n, 276n, 277n, 278n, 279n,
+      280n, 281n, 282n, 283n, 284n, 285n, 286n, 287n, 288n,
+      289n, 290n, 291n, 559n, 560n, 601n, 602n, 603n, 604n,
+      605n, 617n, 620n, 621n, 640n, 641n, 642n, 643n, 664n,
+      665n, 666n, 667n, 668n, 669n, 670n, 671n, 672n, 673n,
+      674n, 675n, 676n, 677n, 678n, 679n, 680n, 681n, 682n,
+      683n, 684n, 687n, 688n, 689n, 690n, 691n, 692n, 693n,
+      694n, 699n, 700n, 701n, 702n, 703n, 704n, 712n, 728n,
+      729n
+    ]
+  ],
+  '0x0000000000000000000000000000000000000000'
+]
+Backfilling sellers and offers... #2
+[
+  [ '1000' ],
+  [ [] ],
+  [
+    [
+      730n, 731n, 733n, 734n, 735n, 736n, 739n, 758n, 759n,
+      760n, 761n, 771n, 772n, 773n, 774n, 775n, 776n, 777n,
+      778n, 779n, 780n, 781n, 782n, 785n, 786n, 788n, 789n,
+      790n, 791n, 792n, 793n, 794n, 795n, 796n, 797n, 798n,
+      799n, 801n, 802n, 803n, 804n, 805n, 806n, 807n, 808n,
+      809n, 811n, 812n, 817n, 818n, 819n, 821n, 822n, 823n,
+      824n, 825n, 826n, 840n, 841n, 844n, 845n, 846n, 847n,
+      848n, 849n, 850n, 851n, 852n, 853n, 854n, 855n, 857n,
+      858n, 859n, 860n, 861n, 862n, 863n, 864n, 865n, 866n,
+      867n, 868n, 869n, 870n, 871n, 872n, 873n, 874n, 875n,
+      876n, 877n, 878n, 879n, 881n, 882n, 883n, 884n, 885n,
+      886n
+    ]
+  ],
+  '0x0000000000000000000000000000000000000000'
+]
+Backfilling sellers and offers... #1
+[
+  [ '1000' ],
+  [ [] ],
+  [
+    [
+       887n,  888n,  889n,  890n,  891n,  892n,  899n,  900n,  901n,
+       902n,  903n,  904n,  905n,  906n,  907n,  908n,  909n,  910n,
+       911n,  912n,  913n,  914n,  915n,  916n,  917n,  918n,  919n,
+       920n,  921n,  922n,  923n,  924n,  925n,  926n,  927n,  928n,
+       929n,  930n,  931n,  932n,  933n,  934n,  935n,  936n,  937n,
+       938n,  939n,  940n,  941n,  942n,  943n,  944n,  945n,  946n,
+       947n,  948n,  949n,  950n,  951n,  952n,  953n,  954n,  955n,
+       956n,  957n,  958n,  959n,  960n,  961n,  962n,  963n,  964n,
+       965n,  966n,  967n,  968n,  969n,  970n,  971n,  972n,  973n,
+       974n,  975n,  976n,  988n,  989n,  990n,  991n, 1001n, 1002n,
+      1003n, 1004n, 1005n, 1006n, 1007n, 1008n, 1009n, 1010n, 1011n,
+      1012n
+    ]
+  ],
+  '0x0000000000000000000000000000000000000000'
+]
+remaining data
+[
+  [ '1000' ],
+  [ [] ],
+  [
+    [
+      1013n, 1014n, 1015n, 1016n, 1071n,
+      1121n, 1122n, 1123n, 1127n, 1128n,
+      1129n, 1130n, 1131n, 1132n, 1133n,
+      1134n, 1135n, 1136n, 1137n, 1138n,
+      1139n, 1140n, 1141n, 1142n, 1147n,
+      1148n, 1149n, 1150n, 1151n, 1152n,
+      1153n, 1154n, 1155n
+    ]
+  ],
+  '0xb60cf39Fb18e5111174f346d0f39521ef6531fD4'
+]
+✅ ProtocolInitializationHandlerFacet deployed to: 0x789A38c305374079d9D64A1f42ff8E5698565345
+✅ AccountHandlerFacet deployed to: 0xA8c6aEdb04060f197CE3e318e034A55A98b8d003
+✅ AgentHandlerFacet deployed to: 0x8Fb0211f98B553aB1157506e6C4ED324F7bdE859
+✅ BundleHandlerFacet deployed to: 0xd4447521a7cc7bAE8e264f27fAb2Ad9Aa9D85bbE
+✅ BuyerHandlerFacet deployed to: 0xD97557273b41752644162D7C5bf26d6A7Aff0cb1
+✅ ConfigHandlerFacet deployed to: 0xEbe97F9b9A2Fa636115fEc000f6Ceceb5979ca68
+✅ DisputeHandlerFacet deployed to: 0xc938879658A28dC85d43Cc67C689800831BBdc1a
+✅ DisputeResolverHandlerFacet deployed to: 0x635FA4E0c3E3B519257aD6fe3982de647511ce54
+✅ ExchangeHandlerFacet deployed to: 0xdf56ca45d05ea6e648E29d91e7e95D2c2e404c92
+✅ FundsHandlerFacet deployed to: 0xd2844D9425DA09B6f785c694f85b93e4A4695EbD
+✅ GroupHandlerFacet deployed to: 0x501081D252b265fDaAe4aAfA07dB80BEe09818f9
+✅ MetaTransactionsHandlerFacet deployed to: 0x2145a758384647De598a1dC39a343fFc0B869d85
+✅ OfferHandlerFacet deployed to: 0x6488B198c30cFE802A9d82C2D13A982C40974d8E
+✅ OrchestrationHandlerFacet1 deployed to: 0x3e74b0c160A5cA1F9Bc83063981BB98d9BD02Ea5
+✅ OrchestrationHandlerFacet2 deployed to: 0xa6cCC9d1198c5f48c26BC6B1971f209C44250b12
+✅ PauseHandlerFacet deployed to: 0x8b93dd711FC33b475Df1cFFaAEF6fD835396Fdd6
+✅ SellerHandlerFacet deployed to: 0x00d1c196A28d9fd8bfBe4790260908f10b1f5ff0
+✅ TwinHandlerFacet deployed to: 0x2FC1C9C7c52509EB4742667476b2f154fBae4199
+✅ PriceDiscoveryHandlerFacet deployed to: 0xeB4dDdc066cB0E2E732F72F8708cEB8bBBE4d863
+✅ SequentialCommitHandlerFacet deployed to: 0x213073b8555eA50A3F2C930adfcfe7916aAd4110
+
+📋 Facet: ProtocolInitializationHandlerFacet
+💎 Add selectors:
+	initV2_4_0External: 0xc90423da
+💎 Replace selectors:
+	getVersion: 0x0d8e6e2c
+
+📋 Facet: AccountHandlerFacet
+💎 Replace selectors:
+	getNextAccountId: 0xab00c0da
+
+📋 Facet: AgentHandlerFacet
+💎 Replace selectors:
+	createAgent: 0xda14451c
+	getAgent: 0x2de5aaf7
+	updateAgent: 0x0eb1de1c
+
+📋 Facet: BundleHandlerFacet
+💎 Replace selectors:
+	createBundle: 0x7c016ad5
+	getBundle: 0x2d0821b7
+	getBundleIdByOffer: 0xa8e31107
+	getBundleIdByTwin: 0xc6cce096
+	getNextBundleId: 0x4475643d
+
+📋 Facet: BuyerHandlerFacet
+💎 Replace selectors:
+	createBuyer: 0x6adb0d9c
+	getBuyer: 0x5bf608b8
+	updateBuyer: 0x0ae2126d
+
+📋 Facet: ConfigHandlerFacet
+💎 Add selectors:
+	getMaxRoyaltyPercentage: 0x43024f0c
+	getPriceDiscoveryAddress: 0x9d273d67
+	setMaxRoyaltyPercentage: 0xa4fbc18b
+	setPriceDiscoveryAddress: 0x07c1fdad
+💎 Replace selectors:
+	getAccessControllerAddress: 0x694ca8ab
+	getAuthTokenContract: 0x6c2c13c2
+	getBeaconProxyAddress: 0xc2f73795
+	getBuyerEscalationDepositPercentage: 0x36ee008c
+	setMinResolutionPeriod: 0xdda575c9
+	getMinResolutionPeriod: 0x1b57b63d
+	getMaxEscalationResponsePeriod: 0xeb04d54b
+	getMaxResolutionPeriod: 0x32cf96ff
+	getMaxTotalOfferFeePercentage: 0xd3ab3d25
+	getMinDisputePeriod: 0xbe620a41
+	getProtocolFeeFlatBoson: 0x23bbe5d5
+	getProtocolFeePercentage: 0x706d9f78
+	getTokenAddress: 0x10fe9ae8
+	getTreasuryAddress: 0xe0024604
+	getVoucherBeaconAddress: 0xf8aaad60
+	setAccessControllerAddress: 0x6cb84158
+	setAuthTokenContract: 0x250664d4
+	setBeaconProxyAddress: 0x31cd131e
+	setBuyerEscalationDepositPercentage: 0x6ba0f545
+	setMaxEscalationResponsePeriod: 0x37987b52
+	setMaxResolutionPeriod: 0xf920fc17
+	setMaxTotalOfferFeePercentage: 0x589e4e58
+	setMinDisputePeriod: 0x84a91ce6
+	setProtocolFeeFlatBoson: 0x4dbcca7e
+	setProtocolFeePercentage: 0xd8a5e936
+	setTokenAddress: 0x26a4e8d2
+	setTreasuryAddress: 0x6605bfda
+	setVoucherBeaconAddress: 0x938d1b27
+💎 Remove selectors:
+	getMaxRoyaltyPecentage: 0xa7f7801a
+	setMaxRoyaltyPecentage: 0x84bf1ac2
+
+📋 Facet: DisputeHandlerFacet
+💎 Replace selectors:
+	decideDispute: 0x04f63e12
+	escalateDispute: 0x20a68d25
+	expireDispute: 0x42443efd
+	expireDisputeBatch: 0xae707f1e
+	expireEscalatedDispute: 0xf7d95f3b
+	extendDisputeTimeout: 0xfb50e235
+	getDispute: 0xe3a96cbd
+	getDisputeState: 0xc6a470e2
+	getDisputeTimeout: 0x50f5e643
+	isDisputeFinalized: 0xc3c834b7
+	raiseDispute: 0xa5c1674e
+	refuseEscalatedDispute: 0xdfdcd613
+	resolveDispute: 0xb4dcefaf
+	retractDispute: 0x65f65c94
+
+📋 Facet: DisputeResolverHandlerFacet
+💎 Replace selectors:
+	addFeesToDisputeResolver: 0xa880fd89
+	addSellersToAllowList: 0x1227dbbb
+	areSellersAllowed: 0x8236d3c0
+	createDisputeResolver: 0x1843b3a9
+	getDisputeResolver: 0x9b646e88
+	getDisputeResolverByAddress: 0x6f4fbc16
+	removeFeesFromDisputeResolver: 0x4e534c96
+	removeSellersFromAllowList: 0xfa92792a
+	updateDisputeResolver: 0x125e35ec
+	optInToDisputeResolverUpdate: 0x2230dd12
+
+📋 Facet: ExchangeHandlerFacet
+💎 Add selectors:
+	getEIP2981Royalties: 0xd3cd4747
+	getRoyalties: 0xbb3bafd6
+	onPremintedVoucherTransferred: 0xa2443b71
+💎 Replace selectors:
+	cancelVoucher: 0xbed3ac50
+	commitToOffer: 0x1f317d1c
+	completeExchange: 0x58477db8
+	completeExchangeBatch: 0x492edd28
+	expireVoucher: 0x18170b73
+	extendVoucher: 0x229f6943
+	getExchange: 0x0b9d5847
+	getExchangeState: 0xe0cdab47
+	getNextExchangeId: 0x452ddd66
+	getReceipt: 0xb63e6ac3
+	isExchangeFinalized: 0x309bb762
+	onVoucherTransferred: 0x7b02365d
+	redeemVoucher: 0x1c6d6b5e
+	revokeVoucher: 0x79a5fea9
+	commitToConditionalOffer: 0x2334fd56
+	isEligibleToCommit: 0x337e6a6d
+💎 Remove selectors:
+	commitToPreMintedOffer: 0x5f119c40
+
+📋 Facet: FundsHandlerFacet
+💎 Replace selectors:
+	depositFunds: 0xa07fcc70
+	getTokenListPaginated: 0x8c46317f
+	withdrawFunds: 0x685ef733
+	withdrawProtocolFees: 0x11ec8693
+	getAllAvailableFunds: 0x573f625a
+	getAvailableFunds: 0x6c48b1fa
+	getTokenList: 0x41b63bd8
+
+📋 Facet: GroupHandlerFacet
+💎 Replace selectors:
+	addOffersToGroup: 0x4ff2e056
+	setGroupCondition: 0x9349f39c
+	getGroup: 0xceb60654
+	getNextGroupId: 0x49b3cccf
+	removeOffersFromGroup: 0x20dead55
+	createGroup: 0x73acab43
+
+📋 Facet: MetaTransactionsHandlerFacet
+💎 Replace selectors:
+	executeMetaTransaction: 0xdcb9c266
+	isUsedNonce: 0x0ee60fa7
+	isFunctionAllowlisted: 0x6759b8f1
+	isFunctionAllowlisted: 0xbc4d3dd0
+	setAllowlistedFunctions: 0xbaafa0e3
+
+📋 Facet: OfferHandlerFacet
+💎 Add selectors:
+	createOffer: 0xc0f1cff5
+	createOfferBatch: 0x113753aa
+	updateOfferRoyaltyRecipients: 0x0cf9c2e7
+	updateOfferRoyaltyRecipientsBatch: 0x7629327e
+💎 Replace selectors:
+	extendOffer: 0xcc00c061
+	extendOfferBatch: 0xdb7af92f
+	getAgentIdByOffer: 0x1ac3e64a
+	getNextOfferId: 0x1d73add8
+	getOffer: 0x4579268a
+	isOfferVoided: 0x4bec59f4
+	voidOffer: 0x4915907b
+	voidOfferBatch: 0x12b52cf5
+	reserveRange: 0x7f5c9236
+💎 Remove selectors:
+	createOfferBatch: 0x264ed13a
+	createOffer: 0xbd0e4b3c
+
+📋 Facet: OrchestrationHandlerFacet1
+💎 Add selectors:
+	createOfferAddToGroup: 0x2835d0cd
+	createOfferAndTwinWithBundle: 0xea78b8b0
+	createOfferWithCondition: 0x6c361572
+	createOfferWithConditionAndTwinAndBundle: 0xc2afd172
+	createPremintedOfferAddToGroup: 0x99ba294a
+	createPremintedOfferAndTwinWithBundle: 0xeb6fbd51
+	createPremintedOfferWithCondition: 0xdb42d039
+	createPremintedOfferWithConditionAndTwinAndBundle: 0xbde43f02
+	createSellerAndOffer: 0x5908f3c3
+	createSellerAndOfferAndTwinWithBundle: 0xe12b8056
+	createSellerAndOfferWithCondition: 0x6986189d
+	createSellerAndOfferWithConditionAndTwinAndBundle: 0xf6d4dcda
+	createSellerAndPremintedOffer: 0xc1f4bab1
+	createSellerAndPremintedOfferAndTwinWithBundle: 0xa409e3b2
+	createSellerAndPremintedOfferWithCondition: 0x13685c72
+	createSellerAndPremintedOfferWithConditionAndTwinAndBundle: 0x95b78674
+💎 Remove selectors:
+	createOfferAddToGroup: 0x707d33af
+	createOfferAndTwinWithBundle: 0xc6c9d615
+	createOfferWithCondition: 0x30fcdede
+	createOfferWithConditionAndTwinAndBundle: 0xcd4ce199
+	createPremintedOfferAddToGroup: 0x041d740b
+	createPremintedOfferAndTwinWithBundle: 0x5cace001
+	createPremintedOfferWithCondition: 0xf6917165
+	createPremintedOfferWithConditionAndTwinAndBundle: 0xf52fbdce
+	createSellerAndOffer: 0xf6b902e5
+	createSellerAndOfferAndTwinWithBundle: 0x316cee94
+	createSellerAndOfferWithCondition: 0xaaba8d63
+	createSellerAndOfferWithConditionAndTwinAndBundle: 0x2c8cd044
+	createSellerAndPremintedOffer: 0xc30df7f0
+	createSellerAndPremintedOfferAndTwinWithBundle: 0x041dc9b6
+	createSellerAndPremintedOfferWithCondition: 0x78a497f7
+	createSellerAndPremintedOfferWithConditionAndTwinAndBundle: 0x68628c7f
+
+📋 Facet: OrchestrationHandlerFacet2
+💎 Replace selectors:
+	raiseAndEscalateDispute: 0xf81f7640
+
+📋 Facet: PauseHandlerFacet
+💎 Replace selectors:
+	unpause: 0x8b93dd63
+	pause: 0xa290249c
+	getPausedRegions: 0x5e086f2f
+
+📋 Facet: SellerHandlerFacet
+💎 Add selectors:
+	addRoyaltyRecipients: 0xca5e34c5
+	getRoyaltyRecipients: 0xf0c40cf9
+	getSellersCollectionCount: 0xbbccbc71
+	getSellersCollectionsPaginated: 0x355b7c6a
+	removeRoyaltyRecipients: 0xd993f833
+	updateRoyaltyRecipients: 0xd6d47579
+💎 Replace selectors:
+	updateSeller: 0x695ac7c9
+	getSeller: 0xd6a9de51
+	getSellerByAddress: 0x2e1528ae
+	getSellerByAuthToken: 0x135bdebd
+	updateSellerSalt: 0xa5055733
+	optInToSellerUpdate: 0xf7e469fd
+	calculateCollectionAddress: 0x5737c566
+	createNewCollection: 0xa34084af
+	createSeller: 0x8854063a
+	getSellersCollections: 0x1058e0c6
+	isSellerSaltAvailable: 0x39e3adf2
+
+📋 Facet: TwinHandlerFacet
+💎 Replace selectors:
+	removeTwin: 0x6574e3ba
+	getTwin: 0x164a82f7
+	createTwin: 0xb44d17eb
+	getNextTwinId: 0xa7c078d6
+
+📋 Facet: PriceDiscoveryHandlerFacet
+💎 Add selectors:
+	commitToPriceDiscoveryOffer: 0xdec319c9
+
+📋 Facet: SequentialCommitHandlerFacet
+💎 Add selectors:
+	sequentialCommitToOffer: 0x34780cc6
+
+💀 Removed facets:
+	
+📋 Added interfaces:
+	0xe27f0773 (ConfigHandlerFacet)
+	0x66e9075a (ExchangeHandlerFacet)
+	0x91b54fdc (OfferHandlerFacet)
+	0x44eb95ca (OrchestrationHandlerFacet1)
+	0x0757010c (SellerHandlerFacet)
+💀 Removed interfaces:
+	0xbc28d3e6 (ConfigHandlerFacet)
+	0xf34a48fa (ExchangeHandlerFacet)
+	0xa1e3b91c (OfferHandlerFacet)
+	0x7e216084 (OrchestrationHandlerFacet1)
+	0xbc1d7461 (SellerHandlerFacet)
+--------------------------------------------------------------------------------
+
+📋 New version: 2.4.0
+--------------------------------------------------------------------------------
+✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/137-polygon-prod.json
+--------------------------------------------------------------------------------
+
+📋 Diamond upgraded.
+
+
+Removing selectors 0x84bf1ac2bf98039ebc45cb4a3b5ab2af1891d6d0687e8e5797b8c4b76851f154,0x5f119c40938c3ae05dcadcac680748ccc14f460b341454412abc3329b6751bc9,0xbd0e4b3ca96bfe7d7c028498fe528902d696f09580c032f7792d2ed450fe60a5,0x264ed13a1ee4bde6beca80843165a845c53ebc1f7ff0a9d4bda6f33392efc848,0x707d33af04d7f029de0fe3eaf65fda22ec27c241a62bcd8239df84ff6d59010e,0xc6c9d61561df4f5cb050c847c564d0e70f99a37fdf35d0fc4cf2b6d6e3a9ef45,0x30fcdede06e0b9ccb13008e58a5186dda2adbedc641773693673131954324079,0xcd4ce199ed4786a477676afd86459adbb763301dc8312196535758f7a518dc92,0x041d740bc5e6e8d6255ca844d13c30ed58a3ee7ee1be3f0fbf7b516cc68c73e7,0x5cace0016db70007238743a6aa35521b897e6c2dcc4f9e67cac4b578ec37a3ca,0xf69171653192b8df1c3359a4747469459f16027b3b9ff0cecec0e62b62fae818,0xf52fbdce5c3bfcf610fbd64b22e181befb4958b9e4c52bde5a2d9bc4d34ae5af,0xf6b902e5811b33a65d04fb8398d175001e7fbc48f040b3a0e977be5fa350ae20,0x316cee9473a0f71d5765ece0ad5d741a3f5873ad3e7c1100b7453e3010288f5d,0xaaba8d63075cd13f81d94bffd6dbdb832d6c0fd1ad36372c9519cd65e9728c7c,0x2c8cd04413100a4363199cead605c903890571cd1eaa3b8cf6fac5eaadeb34a4,0xc30df7f0925e66e6c10178a164baacbef163657f6b2eb7c14cc847acba5ed4cd,0x041dc9b6a8c2f4972ab5d66c6dcf0a44d8c491604677883edca4cea5066af4f8,0x78a497f7dc8f458f9fcc6b24ae5cd0db62ca40ed77d9b6af41e0bf5d09ebb96f,0x68628c7f229ef7bf31e5fd142ea38594f06bec5ec3f35ff22b19b89e26b637e8
+Adding selectors 0xa4fbc18bba1ab1e6b7a9ddecaa601f687713f7bdf255b87274d2c91a1cfb2221,0x07c1fdad76111217827c89f4daba712586a2ee7f26e55d8319a21faf52000887,0xa2443b717b5e138b0763132d06732265630160a661bfe610cd7fbe1f998cf608,0xc0f1cff5dc7957b73ed0d3407579ab2458c58bb5102971a9b7be4ab7174398b8,0x113753aa50af83d7f4dfbb86e18230403b33e33a356523278c49a182903920b5,0x0cf9c2e728da8cb9fcd03e4e66254cfca23c0dc67d7db690c349997d9cadf522,0x7629327e267b4dfff4ddc54e9deb62e536b09380ed5de3564e435edba323f702,0x2835d0cd92dcac953cb12d9b71a1ed659be1fe79470d05bdca828a6dfae536bb,0xea78b8b0d8a12ab060b9a406c29144fc47af0fff21148600d51a876f94cdff7f,0x6c3615729e02edcdb17b439170a2b2205bd2d3ba29c187aba2ce5816253dc145,0xc2afd172650f2a1914d6e05253f9c3d453e7a014e53e871f56a869e5b4040acd,0x99ba294ae16a8512b55e012d58c7343889589cab4d1a2fd215bd632df7d37224,0xeb6fbd51df298378797fa6e12fdccd86928b4f9de203d0f40551ddd4646fd4ef,0xdb42d039b4db9999994f79ad02209b1fc33b3ad2b07fb18c3cf575e09ba92532,0xbde43f028d4955d1ddbaa1118e3b94f15f3e9a9a915d5f5e6869b2f4f272a2b4,0x5908f3c301ddb99e604aa71f530fe4fa858840933fac5a05b00999e709e46b3e,0xe12b80562a1f52de34ed9777f1cb1c034333c3191d891b16f2ec6a0f73998a1f,0x6986189d6c96351f08a0631b4802588591416b3e42785a49ef2ebec9093c3e5e,0xf6d4dcdae2e6a1ec7b8ff2bc54e0cd2d77180b18037f5af0e0ef9a16ff761559,0xc1f4bab1fa15265ac3f727ba5c2958abc589dcd08e40f202874604b0c71681b4,0xa409e3b26e6ed6832f36eec359a523c9110b4f7582a23d47d3dd6504a56c34ba,0x13685c725d6407286ceda977a416b0a4b8e393ac890fb3bcda87b380eaf23a84,0x95b78674243f55a9327328ab448467d8c31ecbeade72da5ddda9ed5c80f547a1,0xc90423da4e45e8bb75ce8b81cf93f9f2054981cc4eb78b1e61bfb5834973d0f7,0xca5e34c5fd4990baddde44729feed0a205d7b03eb9bbb3a5f3a415d314c987ab,0xd993f833f3570473c8de7a5adf8045e86d2455318441b2103270da50f4d1e66b,0xd6d475797ac1911b90699019509138e01ac8ce3e85ba212f80a03ddafd413ef9,0xdec319c9b67a0290e6cbc3aa62dce408f7a0b9a1624cbda6fec1ba3d913b3cde,0x34780cc6290f571ba7f1271c2100ad037d8a21a21190f85b0e82aed9eed0c2d7
+Executing upgrade clients script
+--------------------------------------------------------------------------------
+Boson Protocol Client Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: polygon
+📅 Mon Apr 08 2024 14:47:53 GMT+0200 (Srednjeevropski poletni čas)
+🔱 Admin account:  0x19f66ac022Df0D9aa7E5D0AE7ed66D0c8BBE9668
+--------------------------------------------------------------------------------
+
+📋 Deploying new logic contract
+
+📋 Updating implementation address on beacon
+✅ BosonVoucher Logic deployed to: 0x72f92782FFa7d6b2dcdCFcF25B6dB4FC3F8aE7B0
+--------------------------------------------------------------------------------
+✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/137-polygon-prod.json
+--------------------------------------------------------------------------------
+
+📋 Client upgraded.
+
+
+Unpausing all regions...
+M	addresses/137-polygon-prod.json
+M	logs/polygon.upgrade.contracts.txt
+M	package-lock.json
+M	submodules/royalty-registry-solidity
+Your branch is up to date with 'origin/release-2_4_0'.
+Unstaged changes after reset:
+M	addresses/137-polygon-prod.json
+M	logs/polygon.upgrade.contracts.txt
+M	package-lock.json
+Migration HEAD completed
+Migration HEAD started
+Removing any local changes before upgrading
+Unstaged changes after reset:
+M	logs/polygon.upgrade.contracts.txt
+M	package-lock.json
+Checking out contracts on version HEAD
+Installing dependencies
+
+up to date, audited 1757 packages in 4s
+
+151 packages are looking for funding
+  run `npm fund` for details
+
+39 vulnerabilities (4 low, 30 moderate, 4 high, 1 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+Compiling contracts
+Compiled 190 Solidity files successfully (evm targets: istanbul, london, unknown evm version for solc version 0.4.17).
+Update protocol version
+
+📋 New version: 2.4.1
+✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/137-polygon-prod.json
+Executing upgrade clients script
+--------------------------------------------------------------------------------
+Boson Protocol Client Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: polygon
+📅 Mon Apr 08 2024 14:58:51 GMT+0200 (Srednjeevropski poletni čas)
+🔱 Admin account:  0x19f66ac022Df0D9aa7E5D0AE7ed66D0c8BBE9668
+--------------------------------------------------------------------------------
+
+📋 Deploying new logic contract
+
+📋 Updating implementation address on beacon
+✅ BosonVoucher Logic deployed to: 0x1711057874B7B591f00AD309D174245A8c1545ee
+--------------------------------------------------------------------------------
+✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/137-polygon-prod.json
+--------------------------------------------------------------------------------
+
+📋 Client upgraded.
+
+
+M	addresses/137-polygon-prod.json
+M	logs/polygon.upgrade.contracts.txt
+M	submodules/royalty-registry-solidity
+Your branch is up to date with 'origin/release-2_4_1'.
+Unstaged changes after reset:
+M	addresses/137-polygon-prod.json
+M	logs/polygon.upgrade.contracts.txt
+Migration HEAD completed

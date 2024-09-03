@@ -45,7 +45,8 @@ task(
   .addOptionalParam("env", "The deployment environment")
   .addOptionalParam("facetConfig", "JSON list of facets to deploy")
   .addFlag("dryRun", "Test the deployment without deploying")
-  .setAction(async ({ env, facetConfig, dryRun }) => {
+  .addFlag("create3", "Use CREATE3 for deployment")
+  .setAction(async ({ env, facetConfig, dryRun, create3 }) => {
     let balanceBefore, getBalance;
     if (dryRun) {
       let setupDryRun;
@@ -54,7 +55,7 @@ task(
     }
 
     const { deploySuite } = await lazyImport("./scripts/deploy-suite.js");
-    await deploySuite(env, facetConfig);
+    await deploySuite(env, facetConfig, create3);
 
     if (dryRun) {
       const balanceAfter = await getBalance();
@@ -160,13 +161,17 @@ module.exports = {
       url: environments.mainnet.txNode,
       accounts: environments.mainnet.keys,
     },
-    goerli: {
-      url: environments.goerli.txNode,
-      accounts: environments.goerli.keys,
+    sepolia: {
+      url: environments.sepolia.txNode,
+      accounts: environments.sepolia.keys,
     },
     mumbai: {
       url: environments.mumbai.txNode,
       accounts: environments.mumbai.keys,
+    },
+    amoy: {
+      url: environments.amoy.txNode,
+      accounts: environments.amoy.keys,
     },
     polygon: {
       url: environments.polygon.txNode,
@@ -176,10 +181,21 @@ module.exports = {
   etherscan: {
     apiKey: {
       mainnet: environments.etherscan.apiKey,
-      goerli: environments.etherscan.apiKey,
+      sepolia: environments.etherscan.apiKey,
       polygonMumbai: environments.polygonscan.apiKey,
       polygon: environments.polygonscan.apiKey,
+      polygonAmoy: environments.okLink.apiKey,
     },
+    customChains: [
+      {
+        network: "polygonAmoy",
+        chainId: 80002,
+        urls: {
+          apiURL: "https://www.oklink.com/api/v5/explorer/contract/verify-source-code-plugin/AMOY_TESTNET",
+          browserURL: "https://www.oklink.com/amoy/",
+        },
+      },
+    ],
   },
   solidity: {
     compilers: [
@@ -203,6 +219,20 @@ module.exports = {
           },
         },
         viaIR: true,
+      },
+      {
+        version: "0.8.21",
+        settings: {
+          viaIR: false,
+          optimizer: {
+            enabled: true,
+            runs: 200,
+            details: {
+              yul: true,
+            },
+          },
+          evmVersion: "london", // for ethereum mainnet, use shanghai, for polygon, use london
+        },
       },
       {
         version: "0.8.22",

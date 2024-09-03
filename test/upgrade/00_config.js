@@ -76,6 +76,7 @@ async function getFacets() {
       "v2.1.0": v2_0_0, // same as v2.0.0
       "v2.2.0": v2_2_0,
       "v2.2.1": v2_2_0, // same as v2.2.0
+      "v2.3.0": v2_2_0, // same as v2.2.0
     },
     upgrade: {
       "v2.1.0": {
@@ -218,6 +219,11 @@ const tagsByVersion = {
     oldVersion: "v2.2.1",
     newVersion: "v2.3.0",
     updateDomain: ["Condition"],
+  },
+  "2.4.0": {
+    oldVersion: "v2.3.0",
+    newVersion: "HEAD",
+    updateDomain: ["Offer"],
   },
 };
 

@@ -39,7 +39,8 @@ module.exports = {
     test: "0x520ce45DF6d14334257BFdD360a5C22B06E309c7", //dummy
     mumbai: "0x1f5431E8679630790E8EbA3a9b41d1BB4d41aeD0",
     polygon: "0x9b3b0703d392321ad24338ff1f846650437a43c9",
-    goerli: "0xE3c811AbbD19FBb9Fe324EB0F30f32d1F6D20C95",
+    sepolia: "0x791Bf9Da3DEF5D7Cd3A7a748e56720Cd119D53AC",
+    amoy: "0x94e32c4bfcA1D3fe08B6F8252ABB47A5B14AC2bD",
   },
 
   // Treasury contract address
@@ -50,7 +51,8 @@ module.exports = {
     test: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
     mumbai: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
     polygon: "0x11D0d293751E18FCC56c70E1FB264CeB9f7C3fE7",
-    goerli: "0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8",
+    sepolia: "0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8",
+    amoy: "0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8",
   },
 
   // Boson voucher beacon contract address
@@ -61,7 +63,8 @@ module.exports = {
     test: "0x494f5238b40119e707582Ce87E0ca3627dB23Bcb", //dummy
     mumbai: "0x494f5238b40119e707582Ce87E0ca3627dB23Bcb", //dummy
     polygon: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy,
-    goerli: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
+    sepolia: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
+    amoy: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
   },
 
   // Beacon proxy contract address
@@ -72,35 +75,39 @@ module.exports = {
     test: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
     mumbai: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
     polygon: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
-    goerli: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
+    sepolia: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
+    amoy: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
   },
 
   EXCHANGE_ID_2_2_0: {
     hardhat: 1,
     mumbai: 1, // test: 1, staging: 1
+    amoy: 1, // test: 1, staging: 1
     polygon: 413,
     localhost: 1,
-    goerli: 1,
+    sepolia: 1, // test: 1, staging: 1
     mainnet: 1,
   },
 
   WrappedNative: {
-    mainnet: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
+    mainnet: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
     hardhat: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
     localhost: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
     test: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
-    mumbai: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
-    polygon: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
-    goerli: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
+    mumbai: "0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889",
+    polygon: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+    sepolia: "0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9",
+    amoy: "0x52eF3d68BaB452a294342DC3e5f464d7f610f72E",
   },
 
   PRICE_DISCOVERY: {
-    mainnet: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
+    mainnet: "0xb60cf39Fb18e5111174f346d0f39521ef6531fD4",
     hardhat: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
     localhost: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
     test: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
-    mumbai: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
-    polygon: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
-    goerli: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
+    mumbai: "0x74874fF29597b6e01E16475b7BB9D6dC954d0411",
+    polygon: "0xb60cf39Fb18e5111174f346d0f39521ef6531fD4",
+    sepolia: "0x789d8727b9ae0A8546489232EB55b6fBE86b21Ac",
+    amoy: "0xFFcd4c407B60B0d4351945484F9354d2C9E34EA1",
   },
 };
