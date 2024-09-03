@@ -740,6 +740,29 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(ZeroAddress, await assistant.getAddress());
       });
 
+      it("should emit a SellerCreated and OfferCreated events when offer type is discovery and the price is not set to zero", async function () {
+        // Set offer type to discovery
+        offer.priceType = PriceType.Discovery;
+
+        // Attempt to create a seller and an offer, expecting revert
+
+        tx = orchestrationHandler
+          .connect(assistant)
+          .createSellerAndOffer(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolver.id,
+            emptyAuthToken,
+            voucherInitValues,
+            agentId,
+            offerFeeLimit
+          );
+        await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
+        await expect(tx).to.emit(orchestrationHandler, "SellerCreated");
+      });
+
       it("should update state", async function () {
         seller.admin = ZeroAddress;
         sellerStruct = seller.toStruct();
@@ -2082,28 +2105,6 @@ describe("IBosonOrchestrationHandler", function () {
                 offerFeeLimit
               )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_QUANTITY_AVAILABLE);
-        });
-
-        it("Offer type is discovery and the price is not set to zero", async function () {
-          // Set offer type to discovery
-          offer.priceType = PriceType.Discovery;
-
-          // Attempt to create a seller and an offer, expecting revert
-          await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                disputeResolver.id,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_PRICE_DISCOVERY_PRICE);
         });
 
         it("Dispute resolver wallet is not registered", async function () {
