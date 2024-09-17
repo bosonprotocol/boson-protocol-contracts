@@ -20,9 +20,9 @@ const { getFees } = require("../../util/utils");
  * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deploySnapshotGateExample(snapshotGateArgs, maxPriorityFeePerGas) {
+async function deploySnapshotGateExample(snapshotGateArgs, maxPriorityFeePerGas, advanced = false) {
   // Deploy the SnapshotGate
-  const SnapshotGate = await getContractFactory("SnapshotGate");
+  const SnapshotGate = await getContractFactory(advanced ? "AdvancedGate" : "SnapshotGate");
   const snapshotGate = await SnapshotGate.deploy(...snapshotGateArgs, await getFees(maxPriorityFeePerGas));
   await snapshotGate.waitForDeployment(confirmations);
 
