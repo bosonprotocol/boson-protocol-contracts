@@ -22,12 +22,16 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _addresses - struct of Boson Protocol addresses (Boson Token (ERC-20) contract, treasury, and Voucher contract)
      * @param _limits - struct with Boson Protocol limits
-     * @param _fees - struct of Boson Protocol fees
+     * @param defaultFeePercentage - efault percentage that will be taken as a fee from the net of a Boson Protocol exchange.
+     * @param flatBosonFee - flat fee taken for exchanges in $BOSON
+     * @param buyerEscalationDepositPercentage - buyer escalation deposit percentage
      */
     function initialize(
         ProtocolLib.ProtocolAddresses calldata _addresses,
         ProtocolLib.ProtocolLimits calldata _limits,
-        ProtocolLib.ProtocolFees calldata _fees
+        uint256 defaultFeePercentage,
+        uint256 flatBosonFee,
+        uint256 buyerEscalationDepositPercentage
     ) public onlyUninitialized(type(IBosonConfigHandler).interfaceId) {
         // Register supported interfaces
         DiamondLib.addSupportedInterface(type(IBosonConfigHandler).interfaceId);
@@ -38,10 +42,10 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setTreasuryAddress(_addresses.treasury);
         setVoucherBeaconAddress(_addresses.voucherBeacon);
         setPriceDiscoveryAddress(_addresses.priceDiscovery);
-        setProtocolFeePercentage(_fees.percentage);
-        setProtocolFeeFlatBoson(_fees.flatBoson);
+        setProtocolFeePercentage(defaultFeePercentage); // this sets the default fee percentage if fee table is not configured for the exchange token
+        setProtocolFeeFlatBoson(flatBosonFee);
         setMaxEscalationResponsePeriod(_limits.maxEscalationResponsePeriod);
-        setBuyerEscalationDepositPercentage(_fees.buyerEscalationDepositPercentage);
+        setBuyerEscalationDepositPercentage(buyerEscalationDepositPercentage);
         setMaxTotalOfferFeePercentage(_limits.maxTotalOfferFeePercentage);
         setMaxRoyaltyPercentage(_limits.maxRoyaltyPercentage);
         setMaxResolutionPeriod(_limits.maxResolutionPeriod);
@@ -226,12 +230,77 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     }
 
     /**
-     * @notice Gets the protocol fee percentage.
+    * @notice Sets the price ranges for a specific token.
+    *
+    * Reverts if token is unsupported or ranges are invalid.
+    *
+    * @param _tokenAddress - the address of the token
+    * @param _priceRanges - array of price ranges for the token
+    */
+    function setTokenPriceRanges(address _tokenAddress, uint256[] calldata _priceRanges) external onlyRole(ADMIN) nonReentrant {
+        checkNonZeroAddress(_tokenAddress);
+        // Clear existing price ranges
+        delete protocolFees().tokenPriceRanges[_tokenAddress];
+
+        // Set new price ranges
+        for (uint256 i = 0; i < _priceRanges.length; i++) {
+            protocolFees().tokenPriceRanges[_tokenAddress].push(_priceRanges[i]);
+        }
+
+        emit TokenPriceRangesUpdated(_tokenAddress, _priceRanges);
+    }
+
+    /**
+    * @notice Sets the fee percentages for a specific token and price ranges.
+    *
+    * Reverts if the number of fee percentages does not match the number of price ranges.
+    *
+    * @param _tokenAddress - the address of the token
+    * @param _feePercentages - array of fee percentages corresponding to each price range
+    */
+    function setTokenFeePercentages(
+        address _tokenAddress,
+        uint256[] calldata _feePercentages
+    ) external onlyRole(ADMIN) nonReentrant {
+        checkNonZeroAddress(_tokenAddress);
+
+        uint256[] storage priceRanges = protocolFees().tokenPriceRanges[_tokenAddress];
+        require(priceRanges.length == _feePercentages.length, "Mismatched price ranges and fee percentages");
+
+        // Set the fee percentages for the token
+        delete protocolFees().tokenFeePercentages[_tokenAddress];  // Clear existing data
+        for (uint256 i = 0; i < _feePercentages.length; i++) {
+            protocolFees().tokenFeePercentages[_tokenAddress].push(_feePercentages[i]);
+        }
+
+        emit TokenFeePercentagesUpdated(_tokenAddress, _feePercentages);
+    }
+
+    /**
+     * @notice Gets the default protocol fee percentage.
      *
-     * @return the protocol fee percentage
+     * @return the default protocol fee percentage
      */
     function getProtocolFeePercentage() external view override returns (uint256) {
         return protocolFees().percentage;
+    }
+
+    /**
+    * @notice Retrieves the protocol fee percentage for a given token and price.
+    * 
+    * @dev This function calculates the protocol fee based on the token and price.
+    * If the token has a custom fee table, it applies the corresponding fee percentage
+    * for the price range. If the token does not have a custom fee table, it falls back
+    * to the default protocol fee percentage. If the exchange token is BOSON, 
+    * this function returns the flatBoson fee
+    *
+    * @param _exchangeToken - The address of the token being used for the exchange.
+    * @param _price - The price of the item or service in the exchange.
+    *
+    * @return The protocol fee amount based on the token and the price.
+    */
+    function getProtocolFeePercentage(address _exchangeToken, uint256 _price) external view override returns (uint256) {
+        return getProtocolFee(_exchangeToken, _price);
     }
 
     /**

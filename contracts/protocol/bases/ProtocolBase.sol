@@ -686,19 +686,39 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
         exists = (_exchangeId > 0 && condition.method != EvaluationMethod.None);
     }
 
-    /**
-     * @notice calculate the protocol fee for a given exchange
-     *
-     * @param _exchangeToken - the token used for the exchange
-     * @param _price - the price of the exchange
-     * @return protocolFee - the protocol fee
-     */
+   /**
+    * @notice calculate the protocol fee for a given exchange
+    *
+    * @param _exchangeToken - the token used for the exchange
+    * @param _price - the price of the exchange
+    * @return protocolFee - the protocol fee
+    */
     function getProtocolFee(address _exchangeToken, uint256 _price) internal view returns (uint256 protocolFee) {
-        // Calculate and set the protocol fee
-        return
-            _exchangeToken == protocolAddresses().token
-                ? protocolFees().flatBoson
-                : (protocolFees().percentage * _price) / HUNDRED_PERCENT;
+        // Check if the exchange token is the Boson token
+        if (_exchangeToken == protocolAddresses().token) {
+            // Apply the flatBoson fee if the exchange token is the Boson token
+            return protocolFees().flatBoson;
+        }
+
+        // Check if the token has a custom fee table
+        uint256[] storage priceRanges = protocolFees().tokenPriceRanges[_exchangeToken];
+        
+        // If the token has a custom fee table, calculate based on the price ranges
+        if (priceRanges.length > 0) {
+            for (uint256 i = 0; i < priceRanges.length; i++) {
+                if (_price <= priceRanges[i]) {
+                    // Apply the fee percentage for the matching price range
+                    uint256 feePercentage = protocolFees().tokenFeePercentages[_exchangeToken][i];
+                    return (feePercentage * _price) / HUNDRED_PERCENT;
+                }
+            }
+            // If price exceeds all ranges, use the highest fee percentage
+            uint256 highestFeePercentage = protocolFees().tokenFeePercentages[_exchangeToken][priceRanges.length - 1];
+            return (highestFeePercentage * _price) / HUNDRED_PERCENT;
+        }
+        
+        // If no custom fee table exists, fallback to using the default protocol percentage
+        return (protocolFees().percentage * _price) / HUNDRED_PERCENT;
     }
 
     /**
