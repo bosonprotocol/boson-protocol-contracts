@@ -113,7 +113,7 @@ describe("IBosonSequentialCommitHandler", function () {
         pauseHandler,
         sequentialCommitHandler,
       },
-      protocolConfig: [, , { percentage: protocolFeePercentage }],
+      protocolConfig: [, ,protocolFeePercentage],
       diamondAddress: protocolDiamondAddress,
     } = await setupTestEnvironment(contracts, {
       wethAddress: await weth.getAddress(),

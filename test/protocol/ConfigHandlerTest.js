@@ -126,11 +126,9 @@ describe("IBosonConfigHandler", function () {
             maxPremintedVouchers,
           },
           //Protocol fees
-          {
-            percentage: protocolFeePercentage,
-            flatBoson: protocolFeeFlatBoson,
-            buyerEscalationDepositPercentage,
-          },
+          protocolFeePercentage,
+          protocolFeeFlatBoson,
+          buyerEscalationDepositPercentage,
         ];
 
         const facetNames = ["ProtocolInitializationHandlerFacet", "ConfigHandlerFacet"];
@@ -227,11 +225,9 @@ describe("IBosonConfigHandler", function () {
           maxPremintedVouchers,
         },
         // Protocol fees
-        {
-          percentage: protocolFeePercentage,
-          flatBoson: protocolFeeFlatBoson,
-          buyerEscalationDepositPercentage,
-        },
+        protocolFeePercentage,
+        protocolFeeFlatBoson,
+        buyerEscalationDepositPercentage,
       ];
       const facetNames = ["ProtocolInitializationHandlerFacet", "ConfigHandlerFacet"];
 

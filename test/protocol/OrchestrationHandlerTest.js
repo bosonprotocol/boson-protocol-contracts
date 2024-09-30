@@ -167,7 +167,9 @@ describe("IBosonOrchestrationHandler", function () {
       protocolConfig: [
         ,
         ,
-        { percentage: protocolFeePercentage, flatBoson: protocolFeeFlatBoson, buyerEscalationDepositPercentage },
+        protocolFeePercentage,
+        protocolFeeFlatBoson,
+        buyerEscalationDepositPercentage,
       ],
       diamondAddress: protocolDiamondAddress,
     } = await setupTestEnvironment(contracts, { bosonTokenAddress: await bosonToken.getAddress() }));

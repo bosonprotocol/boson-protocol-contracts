@@ -7,11 +7,9 @@ const { oneWeek, ninetyDays } = require("../../test/util/constants");
 
 module.exports = {
   // Protocol configuration params
-  fees: {
-    percentage: "50", // 0.5%  : 50
-    flatBoson: "0",
-    buyerEscalationDepositPercentage: "1000", // 10%
-  },
+  protocolFeePercentage: "50", // 0.5%  : 50
+  protocolFeeFlatBoson: "0",
+  buyerEscalationDepositPercentage: "1000", // 10%,
   limits: {
     maxExchangesPerBatch: "140",
     maxOffersPerGroup: "95",
