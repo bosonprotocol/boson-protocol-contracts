@@ -56,7 +56,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       diamondAddress: protocolDiamondAddress,
       signers: [admin, treasury, buyer, rando, adminDR, treasuryDR, agent],
       contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler },
-      protocolConfig: [, , { buyerEscalationDepositPercentage }],
+      protocolConfig: [, , , ,buyerEscalationDepositPercentage],
     } = await setupTestEnvironment(contracts));
 
     bosonErrors = await getContractAt("BosonErrors", await accountHandler.getAddress());
