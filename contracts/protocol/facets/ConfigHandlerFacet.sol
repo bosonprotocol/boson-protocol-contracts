@@ -230,28 +230,32 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     }
 
     /**
-    * @notice Sets the feeTable for a specific token given price ranges and fee tiers for
-    * the corresponding price ranges.
-    *
-    * Reverts if the number of fee percentages does not match the number of price ranges.
-    * Reverts if token is Zero address.
-    *
-    * @dev Caller must have ADMIN role.
-    *
-    * @param _tokenAddress - the address of the token
-    * @param _priceRanges - array of token price ranges
-    * @param _feePercentages - array of fee percentages corresponding to each price range
-    */
-    function setProtocolFeeTable(address _tokenAddress, uint256[] calldata _priceRanges,  uint256[] calldata _feePercentages) external override onlyRole(ADMIN) nonReentrant {
+     * @notice Sets the feeTable for a specific token given price ranges and fee tiers for
+     * the corresponding price ranges.
+     *
+     * Reverts if the number of fee percentages does not match the number of price ranges.
+     * Reverts if token is Zero address.
+     *
+     * @dev Caller must have ADMIN role.
+     *
+     * @param _tokenAddress - the address of the token
+     * @param _priceRanges - array of token price ranges
+     * @param _feePercentages - array of fee percentages corresponding to each price range
+     */
+    function setProtocolFeeTable(
+        address _tokenAddress,
+        uint256[] calldata _priceRanges,
+        uint256[] calldata _feePercentages
+    ) external override onlyRole(ADMIN) nonReentrant {
         checkNonZeroAddress(_tokenAddress);
-        if(_priceRanges.length != _feePercentages.length) revert ArrayLengthMismatch();
+        if (_priceRanges.length != _feePercentages.length) revert ArrayLengthMismatch();
         // Clear existing price ranges and percentage tiers
         delete protocolFees().tokenPriceRanges[_tokenAddress];
         delete protocolFees().tokenFeePercentages[_tokenAddress];
 
-        if(_priceRanges.length != 0){
-            setTokenPriceRanges(_tokenAddress,_priceRanges);
-            setTokenFeePercentages(_tokenAddress,_feePercentages);
+        if (_priceRanges.length != 0) {
+            setTokenPriceRanges(_tokenAddress, _priceRanges);
+            setTokenFeePercentages(_tokenAddress, _feePercentages);
         }
         emit FeeTableUpdated(_tokenAddress, _priceRanges, _feePercentages);
     }
@@ -266,19 +270,19 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     }
 
     /**
-    * @notice Retrieves the protocol fee percentage for a given token and price.
-    * 
-    * @dev This function calculates the protocol fee based on the token and price.
-    * If the token has a custom fee table, it applies the corresponding fee percentage
-    * for the price range. If the token does not have a custom fee table, it falls back
-    * to the default protocol fee percentage. If the exchange token is BOSON, 
-    * this function returns the flatBoson fee
-    *
-    * @param _exchangeToken - The address of the token being used for the exchange.
-    * @param _price - The price of the item or service in the exchange.
-    *
-    * @return The protocol fee amount based on the token and the price.
-    */
+     * @notice Retrieves the protocol fee percentage for a given token and price.
+     *
+     * @dev This function calculates the protocol fee based on the token and price.
+     * If the token has a custom fee table, it applies the corresponding fee percentage
+     * for the price range. If the token does not have a custom fee table, it falls back
+     * to the default protocol fee percentage. If the exchange token is BOSON,
+     * this function returns the flatBoson fee
+     *
+     * @param _exchangeToken - The address of the token being used for the exchange.
+     * @param _price - The price of the item or service in the exchange.
+     *
+     * @return The protocol fee amount based on the token and the price.
+     */
     function getProtocolFeePercentage(address _exchangeToken, uint256 _price) external view override returns (uint256) {
         return getProtocolFee(_exchangeToken, _price);
     }
@@ -608,11 +612,11 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     }
 
     /**
-    * @notice Sets the price ranges for a specific token.
-    *
-    * @param _tokenAddress - the address of the token
-    * @param _priceRanges - array of price ranges for the token
-    */
+     * @notice Sets the price ranges for a specific token.
+     *
+     * @param _tokenAddress - the address of the token
+     * @param _priceRanges - array of price ranges for the token
+     */
     function setTokenPriceRanges(address _tokenAddress, uint256[] calldata _priceRanges) internal {
         // Set new price ranges
         for (uint256 i = 0; i < _priceRanges.length; i++) {
@@ -621,11 +625,11 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     }
 
     /**
-    * @notice Sets the fee percentages for a specific token and price ranges.
-    *
-    * @param _tokenAddress - the address of the token
-    * @param _feePercentages - array of fee percentages corresponding to each price range
-    */
+     * @notice Sets the fee percentages for a specific token and price ranges.
+     *
+     * @param _tokenAddress - the address of the token
+     * @param _feePercentages - array of fee percentages corresponding to each price range
+     */
     function setTokenFeePercentages(address _tokenAddress, uint256[] calldata _feePercentages) internal {
         // Set the fee percentages for the token
         for (uint256 i = 0; i < _feePercentages.length; i++) {

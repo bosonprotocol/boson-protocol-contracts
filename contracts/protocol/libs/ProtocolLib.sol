@@ -78,8 +78,8 @@ library ProtocolLib {
         // buyer escalation deposit percentage
         uint256 buyerEscalationDepositPercentage;
         // Token-specific fee tables
-        mapping(address => uint256[]) tokenPriceRanges;  // Price ranges for each token
-        mapping(address => uint256[]) tokenFeePercentages;  // Fee percentages for each price range
+        mapping(address => uint256[]) tokenPriceRanges; // Price ranges for each token
+        mapping(address => uint256[]) tokenFeePercentages; // Fee percentages for each price range
     }
 
     // Protocol entities storage

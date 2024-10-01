@@ -686,13 +686,13 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
         exists = (_exchangeId > 0 && condition.method != EvaluationMethod.None);
     }
 
-   /**
-    * @notice calculate the protocol fee amount for a given exchange
-    *
-    * @param _exchangeToken - the token used for the exchange
-    * @param _price - the price of the exchange
-    * @return protocolFee - the protocol fee
-    */
+    /**
+     * @notice calculate the protocol fee amount for a given exchange
+     *
+     * @param _exchangeToken - the token used for the exchange
+     * @param _price - the price of the exchange
+     * @return protocolFee - the protocol fee
+     */
     function getProtocolFee(address _exchangeToken, uint256 _price) internal view returns (uint256 protocolFee) {
         // Check if the exchange token is the Boson token
         if (_exchangeToken == protocolAddresses().token) {
@@ -701,10 +701,10 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
         }
 
         uint256[] storage priceRanges = protocolFees().tokenPriceRanges[_exchangeToken];
-        uint256[] storage feePercentages =  protocolFees().tokenFeePercentages[_exchangeToken];
-        
+        uint256[] storage feePercentages = protocolFees().tokenFeePercentages[_exchangeToken];
+
         // If the token has a custom fee table, calculate based on the price ranges
-        if (priceRanges.length > 0 && feePercentages.length > 0 ) {
+        if (priceRanges.length > 0 && feePercentages.length > 0) {
             for (uint256 i = 0; i < priceRanges.length; i++) {
                 if (_price <= priceRanges[i]) {
                     // Apply the fee percentage for the matching price range
@@ -716,7 +716,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
             uint256 highestFeePercentage = feePercentages[priceRanges.length - 1];
             return (highestFeePercentage * _price) / HUNDRED_PERCENT;
         }
-        
+
         // If no custom fee table exists, fallback to using the default protocol percentage
         return (protocolFees().percentage * _price) / HUNDRED_PERCENT;
     }
