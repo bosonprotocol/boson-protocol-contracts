@@ -199,6 +199,7 @@ exports.RevertReasons = {
   // Config related
   FEE_PERCENTAGE_INVALID: "InvalidFeePercentage",
   VALUE_ZERO_NOT_ALLOWED: "ValueZeroNotAllowed",
+  ARRAY_LENGTH_MISSMATCH: "ArrayLengthMissmatch",
 
   // ERC2981 related
   ROYALTY_FEE_INVALID: "InvalidRoyaltyFee",

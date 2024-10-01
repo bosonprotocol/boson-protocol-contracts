@@ -7,7 +7,7 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
-const { getFacetsWithArgs, getSnapshot, revertToSnapshot, calculateBosonProxyAddress } = require("../util/utils");
+const { getFacetsWithArgs, getSnapshot, revertToSnapshot, calculateBosonProxyAddress, applyPercentage } = require("../util/utils");
 const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 
 /**
@@ -16,7 +16,7 @@ const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handl
 describe("IBosonConfigHandler", function () {
   // Common vars
   let InterfaceIds, support;
-  let accounts, deployer, rando, token, treasury, beacon, priceDiscovery;
+  let accounts, deployer, rando, token, treasury, beacon, priceDiscovery, usdc;
   let maxOffersPerGroup,
     maxTwinsPerBundle,
     maxOffersPerBundle,
@@ -45,7 +45,7 @@ describe("IBosonConfigHandler", function () {
 
     // Make accounts available
     accounts = await getSigners();
-    [deployer, rando, token, treasury, beacon, priceDiscovery] = accounts;
+    [deployer, rando, token, treasury, beacon, priceDiscovery, usdc] = accounts;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
@@ -229,6 +229,7 @@ describe("IBosonConfigHandler", function () {
         protocolFeeFlatBoson,
         buyerEscalationDepositPercentage,
       ];
+
       const facetNames = ["ProtocolInitializationHandlerFacet", "ConfigHandlerFacet"];
 
       const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
@@ -944,6 +945,88 @@ describe("IBosonConfigHandler", function () {
             await expect(
               configHandler.connect(deployer).setAccessControllerAddress(ZeroAddress)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
+          });
+        });
+      });
+      
+      context("👉 setProtocolFeeTable()", async function () {
+        const FIVE_PERCENT = 500;
+        const TEN_PERCENT = 1000;
+        const TWENTY_PERCENT = 2000;
+
+        const feePriceRanges = [
+          parseUnits("1", "ether").toString(),
+          parseUnits("2", "ether").toString(),
+          parseUnits("5", "ether").toString(),
+        ];
+        const feePercentages = [FIVE_PERCENT,TEN_PERCENT,TWENTY_PERCENT];
+
+        let usdcAddress;
+        let bosonToken;
+        beforeEach(async function () {
+          usdcAddress = await usdc.getAddress();
+          bosonToken = await token.getAddress()
+        });
+
+        it("should emit a FeeTableUpdated event", async function () {
+          // Set new protocol fee precentage address, testing for the event
+          await expect(configHandler.connect(deployer).setProtocolFeeTable(usdcAddress, feePriceRanges, feePercentages))
+            .to.emit(configHandler, "FeeTableUpdated")
+            .withArgs(usdcAddress, feePriceRanges, feePercentages);
+        });
+
+        it("should update state and return fee amount based on configured fee table", async function () {
+          await configHandler.connect(deployer).setProtocolFeeTable(usdcAddress, feePriceRanges, feePercentages);
+          let exchangeAmount, feeTier;
+          let expectedFeeAmount;
+          for(let i=0; i<feePriceRanges.length; i++){
+            exchangeAmount = feePriceRanges[i];
+            feeTier = feePercentages[i]
+            expectedFeeAmount = applyPercentage(exchangeAmount,feeTier)
+            expect(await configHandler.getProtocolFeePercentage(usdcAddress,exchangeAmount)).to.equal(expectedFeeAmount);
+          }
+
+          // check for a way bigger value
+          feeTier = feePercentages[feePercentages.length-1];
+          exchangeAmount = BigInt(feePriceRanges[feePriceRanges.length-1])* BigInt(2);
+          expectedFeeAmount = applyPercentage(exchangeAmount,feeTier)
+          console.log(`Fee Tier ${feeTier}`);
+          console.log(`Exchange Amt ${expectedFeeAmount}`);
+          expect(await configHandler.getProtocolFeePercentage(usdcAddress,exchangeAmount)).to.equal(expectedFeeAmount);
+        });
+
+        it("should update state and return boson flat fee if boson token used as exchange token", async function () {
+          await configHandler.connect(deployer).setProtocolFeeTable(usdcAddress, feePriceRanges, feePercentages);
+          exchangeAmount = feePriceRanges[0];
+          expect(await configHandler.getProtocolFeePercentage(bosonToken,exchangeAmount)).to.equal(protocolFeeFlatBoson);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new protocol fee precentage, expecting revert
+            await expect(
+              configHandler.connect(rando).setProtocolFeeTable(usdcAddress, feePriceRanges, feePercentages)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
+          });
+
+          it("exchange token is zero address", async function () {
+            await expect(
+              configHandler.connect(deployer).setProtocolFeeTable(ZeroAddress, feePriceRanges, feePercentages)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ADDRESS);
+          });
+          it("price ranges count different from fee percents", async function () {
+            const newPriceRanges =  [...feePriceRanges, parseUnits("10", "ether").toString()]
+            await expect(
+              configHandler.connect(deployer).setProtocolFeeTable(usdcAddress, newPriceRanges, feePercentages)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ARRAY_LENGTH_MISMATCH);
+          });
+          it("percentage value is > 100%", async function () {
+            const invalidPercent = 10001 // 101%
+            const newFeePercentages = [FIVE_PERCENT,TEN_PERCENT,invalidPercent];
+
+            await expect(
+              configHandler.connect(deployer).setProtocolFeeTable(usdcAddress, feePriceRanges, newFeePercentages)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_PERCENTAGE_INVALID);
           });
         });
       });
