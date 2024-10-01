@@ -115,7 +115,7 @@ describe("IBosonDisputeHandler", function () {
         disputeHandler,
         pauseHandler,
       },
-      protocolConfig: [, , , ,buyerEscalationDepositPercentage],
+      protocolConfig: [, , , , buyerEscalationDepositPercentage],
     } = await setupTestEnvironment(contracts));
 
     bosonErrors = await getContractAt("BosonErrors", await accountHandler.getAddress());

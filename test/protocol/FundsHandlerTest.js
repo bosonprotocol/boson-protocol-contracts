@@ -170,7 +170,7 @@ describe("IBosonFundsHandler", function () {
         sequentialCommitHandler,
         priceDiscoveryHandler,
       },
-      protocolConfig: [, ,protocolFeePercentage, ,buyerEscalationDepositPercentage],
+      protocolConfig: [, , protocolFeePercentage, , buyerEscalationDepositPercentage],
       diamondAddress: protocolDiamondAddress,
       extraReturnValues: { accessController },
     } = await setupTestEnvironment(contracts, {

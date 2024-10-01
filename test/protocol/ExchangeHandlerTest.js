@@ -173,7 +173,7 @@ describe("IBosonExchangeHandler", function () {
         pauseHandler,
         configHandler,
       },
-      protocolConfig: [, ,protocolFeePercentage],
+      protocolConfig: [, , protocolFeePercentage],
       extraReturnValues: { voucherImplementation, accessController },
       diamondAddress: protocolDiamondAddress,
     } = await setupTestEnvironment(contracts));
