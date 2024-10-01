@@ -130,24 +130,19 @@ interface IBosonConfigHandler is IBosonConfigEvents, BosonErrors {
     function setProtocolFeePercentage(uint256 _protocolFeePercentage) external;
 
     /**
-    * @notice Sets the price ranges for a specific token.
-    *
-    * Reverts if token is unsupported or ranges are invalid.
-    *
-    * @param _tokenAddress - the address of the token
-    * @param _priceRanges - array of price ranges for the token
-    */
-    function setTokenPriceRanges(address _tokenAddress, uint256[] calldata _priceRanges) external;
-
-    /**
-    * @notice Sets the fee percentages for a specific token and price ranges.
+    * @notice Sets the feeTable for a specific token given price ranges and fee tiers for
+    * the corresponding price ranges.
     *
     * Reverts if the number of fee percentages does not match the number of price ranges.
+    * Reverts if token is Zero address.
+    *
+    * @dev Caller must have ADMIN role.
     *
     * @param _tokenAddress - the address of the token
+    * @param _priceRanges - array of token price ranges
     * @param _feePercentages - array of fee percentages corresponding to each price range
     */
-    function setTokenFeePercentages( address _tokenAddress, uint256[] calldata _feePercentages ) external;
+    function setProtocolFeeTable(address _tokenAddress, uint256[] calldata _priceRanges,  uint256[] calldata _feePercentages) external;
     
     /**
      * @notice Gets the default protocol fee percentage.

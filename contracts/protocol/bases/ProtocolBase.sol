@@ -687,7 +687,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
     }
 
    /**
-    * @notice calculate the protocol fee for a given exchange
+    * @notice calculate the protocol fee amount for a given exchange
     *
     * @param _exchangeToken - the token used for the exchange
     * @param _price - the price of the exchange
@@ -700,20 +700,20 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
             return protocolFees().flatBoson;
         }
 
-        // Check if the token has a custom fee table
         uint256[] storage priceRanges = protocolFees().tokenPriceRanges[_exchangeToken];
+        uint256[] storage feePercentages =  protocolFees().tokenFeePercentages[_exchangeToken];
         
         // If the token has a custom fee table, calculate based on the price ranges
-        if (priceRanges.length > 0) {
+        if (priceRanges.length > 0 && feePercentages.length > 0 ) {
             for (uint256 i = 0; i < priceRanges.length; i++) {
                 if (_price <= priceRanges[i]) {
                     // Apply the fee percentage for the matching price range
-                    uint256 feePercentage = protocolFees().tokenFeePercentages[_exchangeToken][i];
+                    uint256 feePercentage = feePercentages[i];
                     return (feePercentage * _price) / HUNDRED_PERCENT;
                 }
             }
             // If price exceeds all ranges, use the highest fee percentage
-            uint256 highestFeePercentage = protocolFees().tokenFeePercentages[_exchangeToken][priceRanges.length - 1];
+            uint256 highestFeePercentage = feePercentages[priceRanges.length - 1];
             return (highestFeePercentage * _price) / HUNDRED_PERCENT;
         }
         

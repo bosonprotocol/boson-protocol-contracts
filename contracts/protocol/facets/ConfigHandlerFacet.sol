@@ -230,50 +230,30 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     }
 
     /**
-    * @notice Sets the price ranges for a specific token.
-    *
-    * Reverts if token is unsupported or ranges are invalid.
-    *
-    * @param _tokenAddress - the address of the token
-    * @param _priceRanges - array of price ranges for the token
-    */
-    function setTokenPriceRanges(address _tokenAddress, uint256[] calldata _priceRanges) external onlyRole(ADMIN) nonReentrant {
-        checkNonZeroAddress(_tokenAddress);
-        // Clear existing price ranges
-        delete protocolFees().tokenPriceRanges[_tokenAddress];
-
-        // Set new price ranges
-        for (uint256 i = 0; i < _priceRanges.length; i++) {
-            protocolFees().tokenPriceRanges[_tokenAddress].push(_priceRanges[i]);
-        }
-
-        emit TokenPriceRangesUpdated(_tokenAddress, _priceRanges);
-    }
-
-    /**
-    * @notice Sets the fee percentages for a specific token and price ranges.
+    * @notice Sets the feeTable for a specific token given price ranges and fee tiers for
+    * the corresponding price ranges.
     *
     * Reverts if the number of fee percentages does not match the number of price ranges.
+    * Reverts if token is Zero address.
+    *
+    * @dev Caller must have ADMIN role.
     *
     * @param _tokenAddress - the address of the token
+    * @param _priceRanges - array of token price ranges
     * @param _feePercentages - array of fee percentages corresponding to each price range
     */
-    function setTokenFeePercentages(
-        address _tokenAddress,
-        uint256[] calldata _feePercentages
-    ) external onlyRole(ADMIN) nonReentrant {
+    function setProtocolFeeTable(address _tokenAddress, uint256[] calldata _priceRanges,  uint256[] calldata _feePercentages) external override onlyRole(ADMIN) nonReentrant {
         checkNonZeroAddress(_tokenAddress);
+        if(_priceRanges.length != _feePercentages.length) revert ArrayLengthMismatch();
+        // Clear existing price ranges and percentage tiers
+        delete protocolFees().tokenPriceRanges[_tokenAddress];
+        delete protocolFees().tokenFeePercentages[_tokenAddress];
 
-        uint256[] storage priceRanges = protocolFees().tokenPriceRanges[_tokenAddress];
-        require(priceRanges.length == _feePercentages.length, "Mismatched price ranges and fee percentages");
-
-        // Set the fee percentages for the token
-        delete protocolFees().tokenFeePercentages[_tokenAddress];  // Clear existing data
-        for (uint256 i = 0; i < _feePercentages.length; i++) {
-            protocolFees().tokenFeePercentages[_tokenAddress].push(_feePercentages[i]);
+        if(_priceRanges.length != 0){
+            setTokenPriceRanges(_tokenAddress,_priceRanges);
+            setTokenFeePercentages(_tokenAddress,_feePercentages);
         }
-
-        emit TokenFeePercentagesUpdated(_tokenAddress, _feePercentages);
+        emit FeeTableUpdated(_tokenAddress, _priceRanges, _feePercentages);
     }
 
     /**
@@ -625,6 +605,33 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function getAccessControllerAddress() external view returns (address) {
         return address(DiamondLib.diamondStorage().accessController);
+    }
+
+    /**
+    * @notice Sets the price ranges for a specific token.
+    *
+    * @param _tokenAddress - the address of the token
+    * @param _priceRanges - array of price ranges for the token
+    */
+    function setTokenPriceRanges(address _tokenAddress, uint256[] calldata _priceRanges) internal {
+        // Set new price ranges
+        for (uint256 i = 0; i < _priceRanges.length; i++) {
+            protocolFees().tokenPriceRanges[_tokenAddress].push(_priceRanges[i]);
+        }
+    }
+
+    /**
+    * @notice Sets the fee percentages for a specific token and price ranges.
+    *
+    * @param _tokenAddress - the address of the token
+    * @param _feePercentages - array of fee percentages corresponding to each price range
+    */
+    function setTokenFeePercentages(address _tokenAddress, uint256[] calldata _feePercentages) internal {
+        // Set the fee percentages for the token
+        for (uint256 i = 0; i < _feePercentages.length; i++) {
+            checkMaxPercententage(_feePercentages[i]);
+            protocolFees().tokenFeePercentages[_tokenAddress].push(_feePercentages[i]);
+        }
     }
 
     /**
