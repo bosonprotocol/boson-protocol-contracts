@@ -960,7 +960,8 @@ describe("IBosonConfigHandler", function () {
           parseUnits("5", "ether").toString(),
         ];
         const feePercentages = [FIVE_PERCENT,TEN_PERCENT,TWENTY_PERCENT];
-
+        let exchangeAmount, feeTier;
+        let expectedFeeAmount;
         let usdcAddress;
         let bosonToken;
         beforeEach(async function () {
@@ -977,8 +978,6 @@ describe("IBosonConfigHandler", function () {
 
         it("should update state and return fee amount based on configured fee table", async function () {
           await configHandler.connect(deployer).setProtocolFeeTable(usdcAddress, feePriceRanges, feePercentages);
-          let exchangeAmount, feeTier;
-          let expectedFeeAmount;
           for(let i=0; i<feePriceRanges.length; i++){
             exchangeAmount = feePriceRanges[i];
             feeTier = feePercentages[i]
