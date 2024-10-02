@@ -618,7 +618,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function setTokenPriceRanges(address _tokenAddress, uint256[] calldata _priceRanges) internal {
         for (uint256 i = 1; i < _priceRanges.length; ++i) {
-            if(_priceRanges[i] < _priceRanges[i - 1]) revert NonAscendingOrder();
+            if (_priceRanges[i] < _priceRanges[i - 1]) revert NonAscendingOrder();
         }
         protocolFees().tokenPriceRanges[_tokenAddress] = _priceRanges;
     }

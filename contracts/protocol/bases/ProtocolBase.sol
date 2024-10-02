@@ -711,17 +711,15 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
             for (uint256 i; i < priceRangesLength; ++i) {
                 if (_price <= priceRanges[i]) {
                     // Apply the fee percentage for the matching price range
-                    return FundsLib.applyPercent(_price,feePercentages[i]);
-
+                    return FundsLib.applyPercent(_price, feePercentages[i]);
                 }
             }
             // If price exceeds all ranges, use the highest fee percentage
-            return FundsLib.applyPercent(_price,feePercentages[priceRangesLength - 1]);
+            return FundsLib.applyPercent(_price, feePercentages[priceRangesLength - 1]);
         }
 
         // If no custom fee table exists, fallback to using the default protocol percentage
-        return FundsLib.applyPercent(_price,fees.percentage);
-
+        return FundsLib.applyPercent(_price, fees.percentage);
     }
 
     /**
