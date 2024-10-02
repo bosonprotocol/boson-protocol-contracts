@@ -234,7 +234,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * the corresponding price ranges.
      *
      * Reverts if the number of fee percentages does not match the number of price ranges.
-     * Reverts if token is Zero address.
+     * Reverts if the price ranges are not in ascending order.
+     * Reverts if any of the fee percentages value is above 100%.
      *
      * @dev Caller must have ADMIN role.
      *
