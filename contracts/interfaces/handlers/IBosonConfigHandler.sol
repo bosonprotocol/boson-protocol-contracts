@@ -169,7 +169,7 @@ interface IBosonConfigHandler is IBosonConfigEvents, BosonErrors {
      *
      * @return The protocol fee amount based on the token and the price.
      */
-    function getProtocolFeePercentage(address _exchangeToken, uint256 _price) external view returns (uint256);
+    function getProtocolFee(address _exchangeToken, uint256 _price) external view returns (uint256);
 
     /**
      * @notice Sets the flat protocol fee for exchanges in $BOSON.

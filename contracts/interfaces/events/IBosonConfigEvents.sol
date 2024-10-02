@@ -30,5 +30,5 @@ interface IBosonConfigEvents {
     event MinDisputePeriodChanged(uint256 minDisputePeriod, address indexed executedBy);
     event MaxPremintedVouchersChanged(uint256 maxPremintedVouchers, address indexed executedBy);
     event AccessControllerAddressChanged(address indexed accessControllerAddress, address indexed executedBy);
-    event FeeTableUpdated(address indexed token, uint256[] priceRanges, uint256[] feePercentages);
+    event FeeTableUpdated(address indexed token, uint256[] priceRanges, uint256[] feePercentages, address indexed executedBy);
 }

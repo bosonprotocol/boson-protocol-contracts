@@ -17,6 +17,7 @@ exports.RevertReasons = {
   INVALID_STATE: "InvalidState",
   ARRAY_LENGTH_MISMATCH: "ArrayLengthMismatch",
   REENTRANCY_GUARD: "ReentrancyGuard",
+  NON_ASCENDING_ORDER: "NonAscendingOrder",
 
   // Facet initializer related
   ALREADY_INITIALIZED: "AlreadyInitialized",
