@@ -989,6 +989,7 @@ describe("IBosonConfigHandler", function () {
             feeTier = feePercentages[i];
             expectedFeeAmount = applyPercentage(exchangeAmount, feeTier);
             expect(await configHandler.getProtocolFee(usdcAddress, exchangeAmount)).to.equal(expectedFeeAmount);
+            expect(await configHandler.getProtocolFeePercentage(usdcAddress, exchangeAmount)).to.equal(feeTier);
           }
 
           // check for a way bigger value
@@ -996,6 +997,7 @@ describe("IBosonConfigHandler", function () {
           exchangeAmount = BigInt(feePriceRanges[feePriceRanges.length - 1]) * BigInt(2);
           expectedFeeAmount = applyPercentage(exchangeAmount, feeTier);
           expect(await configHandler.getProtocolFee(usdcAddress, exchangeAmount)).to.equal(expectedFeeAmount);
+          expect(await configHandler.getProtocolFeePercentage(usdcAddress, exchangeAmount)).to.equal(feeTier);
         });
 
         it("should update state and return boson flat fee if boson token used as exchange token", async function () {
@@ -1035,6 +1037,12 @@ describe("IBosonConfigHandler", function () {
             await expect(
               configHandler.connect(deployer).setProtocolFeeTable(usdcAddress, newPriceRanges, feePercentages)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.NON_ASCENDING_ORDER);
+          });
+          it("getProtocolFeePercentage should not accept BOSON token as parameter", async function () {
+            const randomPrice = 10000;
+            await expect(
+              configHandler.connect(rando).getProtocolFeePercentage(await token.getAddress(), randomPrice)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_EXCHANGE_TOKEN);
           });
         });
       });

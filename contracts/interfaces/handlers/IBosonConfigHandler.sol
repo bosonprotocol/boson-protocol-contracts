@@ -10,7 +10,7 @@ import { IBosonConfigEvents } from "../events/IBosonConfigEvents.sol";
  *
  * @notice Handles management of configuration within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xc040bf51
+ * The ERC-165 identifier for this interface is: 0x13fd085d
  */
 interface IBosonConfigHandler is IBosonConfigEvents, BosonErrors {
     /**
@@ -155,6 +155,23 @@ interface IBosonConfigHandler is IBosonConfigEvents, BosonErrors {
      * @return the default protocol fee percentage
      */
     function getProtocolFeePercentage() external view returns (uint256);
+
+    /**
+     * @notice Gets the protocol fee percentage based on protocol fee table
+     *
+     * @dev This function calculates the protocol fee percentage for specific token and price.
+     * If the token has a custom fee table configured, it returns the corresponding fee percentage
+     * for the price range. If the token does not have a custom fee table, it falls back
+     * to the default protocol fee percentage.
+     *
+     * Reverts if the exchange token is BOSON.
+     *
+     * @param _exchangeToken - The address of the token being used for the exchange.
+     * @param _price - The price of the item or service in the exchange.
+     *
+     * @return the protocol fee percentage for given price and exchange token
+     */
+    function getProtocolFeePercentage(address _exchangeToken, uint256 _price) external view returns (uint256);
 
     /**
      * @notice Retrieves the protocol fee percentage for a given exchange token and price.

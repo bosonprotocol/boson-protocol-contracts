@@ -695,31 +695,44 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
      * @return protocolFee - the protocol fee
      */
     function _getProtocolFee(address _exchangeToken, uint256 _price) internal view returns (uint256 protocolFee) {
-        ProtocolLib.ProtocolFees storage fees = protocolFees();
         // Check if the exchange token is the Boson token
         if (_exchangeToken == protocolAddresses().token) {
-            // Apply the flatBoson fee if the exchange token is the Boson token
-            return fees.flatBoson;
+            // Return the flatBoson fee percentage if the exchange token is the Boson token
+            return protocolFees().flatBoson;
         }
+        uint256 feePercentage = _getFeePercentage(_exchangeToken, _price);
+        return FundsLib.applyPercent(_price, feePercentage);
+    }
 
+    /**
+     * @notice calculate the protocol fee percentage for a given exchange
+     *
+     * @param _exchangeToken - the token used for the exchange
+     * @param _price - the price of the exchange
+     * @return feePercentage - the protocol fee percentage based on token price (using protocol fee table)
+     */
+    function _getFeePercentage(address _exchangeToken, uint256 _price) internal view returns (uint256 feePercentage) {
+        if (_exchangeToken == protocolAddresses().token) revert InvalidExchangeToken();
+
+        ProtocolLib.ProtocolFees storage fees = protocolFees();
         uint256[] storage priceRanges = fees.tokenPriceRanges[_exchangeToken];
         uint256[] storage feePercentages = fees.tokenFeePercentages[_exchangeToken];
 
-        // If the token has a custom fee table, calculate based on the price ranges
+        // If the token has a custom fee table, find the appropriate percentage
         uint256 priceRangesLength = priceRanges.length;
         if (priceRangesLength > 0) {
             for (uint256 i; i < priceRangesLength; ++i) {
                 if (_price <= priceRanges[i]) {
-                    // Apply the fee percentage for the matching price range
-                    return FundsLib.applyPercent(_price, feePercentages[i]);
+                    // Return the fee percentage for the matching price range
+                    return feePercentages[i];
                 }
             }
             // If price exceeds all ranges, use the highest fee percentage
-            return FundsLib.applyPercent(_price, feePercentages[priceRangesLength - 1]);
+            return feePercentages[priceRangesLength - 1];
         }
 
         // If no custom fee table exists, fallback to using the default protocol percentage
-        return FundsLib.applyPercent(_price, fees.percentage);
+        return fees.percentage;
     }
 
     /**

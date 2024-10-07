@@ -235,4 +235,7 @@ exports.RevertReasons = {
   TOKEN_ID_MANDATORY: "TokenIdMandatory",
   NEGATIVE_PRICE_NOT_ALLOWED: "NegativePriceNotAllowed",
   PRICE_DOES_NOT_COVER_PENALTY: "PriceDoesNotCoverPenalty",
+
+  //Fee Table related
+  INVALID_EXCHANGE_TOKEN: "InvalidExchangeToken",
 };
