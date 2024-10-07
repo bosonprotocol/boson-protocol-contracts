@@ -57,7 +57,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
       diamondAddress: protocolDiamondAddress,
       signers: [admin, treasury, buyer, adminDR, treasuryDR],
       contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler },
-      protocolConfig: [, , { buyerEscalationDepositPercentage }],
+      protocolConfig: [, , , , buyerEscalationDepositPercentage],
     } = await setupTestEnvironment(contracts));
 
     // make all account the same

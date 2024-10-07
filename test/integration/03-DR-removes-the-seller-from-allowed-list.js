@@ -51,7 +51,7 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
     ({
       signers: [admin, treasury, buyer, other1, adminDR, treasuryDR],
       contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler },
-      protocolConfig: [, , { buyerEscalationDepositPercentage }],
+      protocolConfig: [, , , , buyerEscalationDepositPercentage],
     } = await setupTestEnvironment(contracts));
 
     // make all account the same

@@ -1002,11 +1002,9 @@ async function setupCommonEnvironment() {
       maxPremintedVouchers: 100,
     },
     // Protocol fees
-    {
-      percentage: protocolFeePercentage,
-      flatBoson: protocolFeeFlatBoson,
-      buyerEscalationDepositPercentage,
-    },
+    protocolFeePercentage,
+    protocolFeeFlatBoson,
+    buyerEscalationDepositPercentage,
   ];
 
   const facetNames = [

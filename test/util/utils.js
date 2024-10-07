@@ -547,11 +547,9 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
       maxPremintedVouchers: 10000,
     },
     // Protocol fees
-    {
-      percentage: protocolFeePercentage,
-      flatBoson: protocolFeeFlatBoson,
-      buyerEscalationDepositPercentage,
-    },
+    protocolFeePercentage,
+    protocolFeeFlatBoson,
+    buyerEscalationDepositPercentage,
   ];
 
   const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);

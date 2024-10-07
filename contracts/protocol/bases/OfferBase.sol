@@ -235,7 +235,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                 if (_offer.buyerCancelPenalty > offerPrice) revert InvalidOfferPenalty();
                 if (_offer.priceType == PriceType.Static) {
                     // Calculate and set the protocol fee
-                    uint256 protocolFee = getProtocolFee(_offer.exchangeToken, offerPrice);
+                    uint256 protocolFee = _getProtocolFee(_offer.exchangeToken, offerPrice);
 
                     // Calculate the agent fee amount
                     uint256 agentFeeAmount = (agent.feePercentage * offerPrice) / HUNDRED_PERCENT;

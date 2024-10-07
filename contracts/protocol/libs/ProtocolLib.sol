@@ -70,12 +70,16 @@ library ProtocolLib {
 
     // Protocol fees storage
     struct ProtocolFees {
-        // Percentage that will be taken as a fee from the net of a Boson Protocol exchange
+        // Default percentage that will be taken as a fee from the net of a Boson Protocol exchange.
+        // This fee is returned if no fee ranges are configured in the fee table for the given asset.
         uint256 percentage; // 1.75% = 175, 100% = 10000
         // Flat fee taken for exchanges in $BOSON
         uint256 flatBoson;
         // buyer escalation deposit percentage
         uint256 buyerEscalationDepositPercentage;
+        // Token-specific fee tables
+        mapping(address => uint256[]) tokenPriceRanges; // Price ranges for each token
+        mapping(address => uint256[]) tokenFeePercentages; // Fee percentages for each price range
     }
 
     // Protocol entities storage

@@ -108,7 +108,7 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
 
         // Calculate fees
         address exchangeToken = offer.exchangeToken;
-        uint256 protocolFeeAmount = getProtocolFee(exchangeToken, actualPrice);
+        uint256 protocolFeeAmount = _getProtocolFee(exchangeToken, actualPrice);
 
         {
             // Calculate royalties
