@@ -998,6 +998,12 @@ describe("IBosonConfigHandler", function () {
           expectedFeeAmount = applyPercentage(exchangeAmount, feeTier);
           expect(await configHandler.getProtocolFee(usdcAddress, exchangeAmount)).to.equal(expectedFeeAmount);
           expect(await configHandler.getProtocolFeePercentage(usdcAddress, exchangeAmount)).to.equal(feeTier);
+
+          // validate fee table config
+          const [retrievedRanges, retrievedPercentages] = await configHandler.getProtocolFeeTable(usdc.address);
+
+          expect(retrievedRanges.map((r) => r.toString())).to.deep.equal(feePriceRanges, "Incorrect price ranges");
+          expect(retrievedPercentages.map((p) => Number(p))).to.deep.equal(feePercentages, "Incorrect fee percentages");
         });
 
         it("should update state and return boson flat fee if boson token used as exchange token", async function () {
@@ -1058,7 +1064,6 @@ describe("IBosonConfigHandler", function () {
     context("📋 Getters", async function () {
       // here we test only that after the deployments getters show correct values
       // otherwise getters are tested in the "should update state" test of setters
-
       it("Initial values are correct", async function () {
         // Verify that initial values matches those in constructor
         expect(await configHandler.connect(rando).getTreasuryAddress()).to.equal(
@@ -1132,24 +1137,6 @@ describe("IBosonConfigHandler", function () {
           minDisputePeriod,
           "Invalid min dispute period"
         );
-        it("Should return the correct fee table for a token", async function () {
-          const feePriceRanges = [
-            parseUnits("1", "ether").toString(),
-            parseUnits("2", "ether").toString(),
-            parseUnits("5", "ether").toString(),
-          ];
-          const feePercentages = [500, 1000, 2000]; // 5%, 10%, 20%
-
-          await configHandler.connect(deployer).setProtocolFeeTable(usdc.address, feePriceRanges, feePercentages);
-
-          const [retrievedRanges, retrievedPercentages] = await configHandler.getProtocolFeeTable(usdc.address);
-
-          expect(retrievedRanges.map((r) => r.toString())).to.deep.equal(feePriceRanges, "Incorrect price ranges");
-          expect(retrievedPercentages.map((p) => p.toNumber())).to.deep.equal(
-            feePercentages,
-            "Incorrect fee percentages"
-          );
-        });
       });
     });
   });
