@@ -237,5 +237,5 @@ exports.RevertReasons = {
   PRICE_DOES_NOT_COVER_PENALTY: "PriceDoesNotCoverPenalty",
 
   //Fee Table related
-  INVALID_EXCHANGE_TOKEN: "InvalidExchangeToken",
+  FEE_TABLE_ASSET_NOT_SUPOPRTED: "FeeTableAssetNotSupported",
 };

@@ -377,7 +377,7 @@ interface BosonErrors {
     // Price does not cover the cancellation penalty
     error PriceDoesNotCoverPenalty();
 
-    //Fee Table related
-    // Exchange token should be different than $BOSON when requesting feePercentage
-    error InvalidExchangeToken();
+    // Fee Table related
+    // Thrown if asset is not supported in feeTable feature.
+    error FeeTableAssetNotSupported();
 }

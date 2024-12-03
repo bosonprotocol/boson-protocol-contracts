@@ -10,7 +10,7 @@ import { IBosonConfigEvents } from "../events/IBosonConfigEvents.sol";
  *
  * @notice Handles management of configuration within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x13fd085d
+ * The ERC-165 identifier for this interface is: 0xe9aa49b6
  */
 interface IBosonConfigHandler is IBosonConfigEvents, BosonErrors {
     /**
@@ -148,6 +148,17 @@ interface IBosonConfigHandler is IBosonConfigEvents, BosonErrors {
         uint256[] calldata _priceRanges,
         uint256[] calldata _feePercentages
     ) external;
+
+    /**
+     * @notice Gets the current fee table for a given token.
+     *
+     * @param _tokenAddress - the address of the token
+     * @return priceRanges - array of token price ranges
+     * @return feePercentages - array of fee percentages corresponding to each price range
+     */
+    function getProtocolFeeTable(
+        address _tokenAddress
+    ) external view returns (uint256[] memory priceRanges, uint256[] memory feePercentages);
 
     /**
      * @notice Gets the default protocol fee percentage.

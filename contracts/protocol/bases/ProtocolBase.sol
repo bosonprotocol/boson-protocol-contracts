@@ -712,7 +712,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
      * @return feePercentage - the protocol fee percentage based on token price (using protocol fee table)
      */
     function _getFeePercentage(address _exchangeToken, uint256 _price) internal view returns (uint256 feePercentage) {
-        if (_exchangeToken == protocolAddresses().token) revert InvalidExchangeToken();
+        if (_exchangeToken == protocolAddresses().token) revert FeeTableAssetNotSupported();
 
         ProtocolLib.ProtocolFees storage fees = protocolFees();
         uint256[] storage priceRanges = fees.tokenPriceRanges[_exchangeToken];
@@ -721,7 +721,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
         // If the token has a custom fee table, find the appropriate percentage
         uint256 priceRangesLength = priceRanges.length;
         if (priceRangesLength > 0) {
-            for (uint256 i; i < priceRangesLength; ++i) {
+            for (uint256 i; i < priceRangesLength - 1; ++i) {
                 if (_price <= priceRanges[i]) {
                     // Return the fee percentage for the matching price range
                     return feePercentages[i];

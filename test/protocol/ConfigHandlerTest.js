@@ -1013,6 +1013,13 @@ describe("IBosonConfigHandler", function () {
               configHandler.connect(rando).setProtocolFeeTable(usdcAddress, feePriceRanges, feePercentages)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
           });
+          it("should revert if _tokenAddress is the BOSON token", async function () {
+            await expect(
+              configHandler
+                .connect(deployer)
+                .setProtocolFeeTable(await token.getAddress(), feePriceRanges, feePercentages)
+            ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.FEE_TABLE_ASSET_NOT_SUPOPRTED);
+          });
           it("price ranges count different from fee percents", async function () {
             const newPriceRanges = [...feePriceRanges, parseUnits("10", "ether").toString()];
             await expect(
@@ -1042,7 +1049,7 @@ describe("IBosonConfigHandler", function () {
             const randomPrice = 10000;
             await expect(
               configHandler.connect(rando).getProtocolFeePercentage(await token.getAddress(), randomPrice)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_EXCHANGE_TOKEN);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_TABLE_ASSET_NOT_SUPOPRTED);
           });
         });
       });
@@ -1125,6 +1132,24 @@ describe("IBosonConfigHandler", function () {
           minDisputePeriod,
           "Invalid min dispute period"
         );
+        it("Should return the correct fee table for a token", async function () {
+          const feePriceRanges = [
+            parseUnits("1", "ether").toString(),
+            parseUnits("2", "ether").toString(),
+            parseUnits("5", "ether").toString(),
+          ];
+          const feePercentages = [500, 1000, 2000]; // 5%, 10%, 20%
+
+          await configHandler.connect(deployer).setProtocolFeeTable(usdc.address, feePriceRanges, feePercentages);
+
+          const [retrievedRanges, retrievedPercentages] = await configHandler.getProtocolFeeTable(usdc.address);
+
+          expect(retrievedRanges.map((r) => r.toString())).to.deep.equal(feePriceRanges, "Incorrect price ranges");
+          expect(retrievedPercentages.map((p) => p.toNumber())).to.deep.equal(
+            feePercentages,
+            "Incorrect fee percentages"
+          );
+        });
       });
     });
   });
