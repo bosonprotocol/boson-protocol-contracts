@@ -17,7 +17,9 @@ function getConfigHandlerInitArgs() {
       priceDiscovery: protocolConfig.PRICE_DISCOVERY[network],
     },
     protocolConfig.limits,
-    protocolConfig.fees,
+    protocolConfig.protocolFeePercentage,
+    protocolConfig.protocolFeeFlatBoson,
+    protocolConfig.buyerEscalationDepositPercentage,
   ];
 }
 

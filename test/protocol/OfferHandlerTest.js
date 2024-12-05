@@ -142,11 +142,7 @@ describe("IBosonOfferHandler", function () {
         configHandler,
         pauseHandler,
       },
-      protocolConfig: [
-        ,
-        ,
-        { percentage: protocolFeePercentage, flatBoson: protocolFeeFlatBoson, buyerEscalationDepositPercentage },
-      ],
+      protocolConfig: [, , protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage],
     } = await setupTestEnvironment(contracts, { bosonTokenAddress: await bosonToken.getAddress() }));
 
     bosonErrors = await getContractAt("BosonErrors", await configHandler.getAddress());

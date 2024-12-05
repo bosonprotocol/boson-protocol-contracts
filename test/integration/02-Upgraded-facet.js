@@ -68,7 +68,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     ({
       signers: [admin, treasury, buyer, rando, adminDR, treasuryDR],
       contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler },
-      protocolConfig: [, , { buyerEscalationDepositPercentage }],
+      protocolConfig: [, , , , buyerEscalationDepositPercentage],
       diamondAddress: protocolDiamondAddress,
     } = await setupTestEnvironment(contracts));
 

@@ -17,6 +17,7 @@ exports.RevertReasons = {
   INVALID_STATE: "InvalidState",
   ARRAY_LENGTH_MISMATCH: "ArrayLengthMismatch",
   REENTRANCY_GUARD: "ReentrancyGuard",
+  NON_ASCENDING_ORDER: "NonAscendingOrder",
 
   // Facet initializer related
   ALREADY_INITIALIZED: "AlreadyInitialized",
@@ -199,6 +200,7 @@ exports.RevertReasons = {
   // Config related
   FEE_PERCENTAGE_INVALID: "InvalidFeePercentage",
   VALUE_ZERO_NOT_ALLOWED: "ValueZeroNotAllowed",
+  ARRAY_LENGTH_MISSMATCH: "ArrayLengthMissmatch",
 
   // ERC2981 related
   ROYALTY_FEE_INVALID: "InvalidRoyaltyFee",
@@ -233,4 +235,7 @@ exports.RevertReasons = {
   TOKEN_ID_MANDATORY: "TokenIdMandatory",
   NEGATIVE_PRICE_NOT_ALLOWED: "NegativePriceNotAllowed",
   PRICE_DOES_NOT_COVER_PENALTY: "PriceDoesNotCoverPenalty",
+
+  //Fee Table related
+  FEE_TABLE_ASSET_NOT_SUPOPRTED: "FeeTableAssetNotSupported",
 };

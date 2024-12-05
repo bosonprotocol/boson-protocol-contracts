@@ -116,7 +116,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
 
             {
                 // Calculate fees
-                thisExchangeCost.protocolFeeAmount = getProtocolFee(exchangeToken, thisExchangeCost.price);
+                thisExchangeCost.protocolFeeAmount = _getProtocolFee(exchangeToken, thisExchangeCost.price);
 
                 // Calculate royalties
                 {

@@ -148,11 +148,9 @@ describe("SnapshotGate", function () {
         maxPremintedVouchers: 10000,
       },
       // Protocol fees
-      {
-        percentage: protocolFeePercentage,
-        flatBoson: protocolFeeFlatBoson,
-        buyerEscalationDepositPercentage,
-      },
+      protocolFeePercentage,
+      protocolFeeFlatBoson,
+      buyerEscalationDepositPercentage,
     ];
 
     const facetNames = [

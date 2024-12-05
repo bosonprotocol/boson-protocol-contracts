@@ -116,7 +116,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
         pauseHandler,
         priceDiscoveryHandler,
       },
-      protocolConfig: [, , { percentage: protocolFeePercentage }],
+      protocolConfig: [, , protocolFeePercentage],
       diamondAddress: protocolDiamondAddress,
     } = await setupTestEnvironment(contracts, {
       wethAddress: await weth.getAddress(),
