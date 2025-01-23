@@ -105,4 +105,11 @@ module.exports = {
     keys: [process.env.DEPLOYER_POLYGON_KEY],
     adminAddress: process.env.ADMIN_ADDRESS_POLYGON,
   },
+
+  // Base testnet Sepolia
+  baseSepolia: {
+    txNode: process.env.DEPLOYER_BASE_SEPOLIA_TXNODE,
+    keys: [process.env.DEPLOYER_BASE_SEPOLIA_KEY],
+    adminAddress: process.env.ADMIN_ADDRESS_BASE_SEPOLIA,
+  },
 };

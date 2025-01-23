@@ -9,5 +9,6 @@ module.exports = {
     polygon: "0x86C80a8aa58e0A4fa09A69624c31Ab2a6CAD56b8",
     sepolia: "0xbdeA59c8801658561a16fF58D68FC2b198DE4E93",
     amoy: "0xd240234dacd7ffdca7e4effcf6c7190885d7e2f0",
+    baseSepolia: "0x000000000000000000000000000000000000dead",
   },
 };
