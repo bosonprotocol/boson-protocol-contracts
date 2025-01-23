@@ -41,6 +41,7 @@ module.exports = {
     polygon: "0x9b3b0703d392321ad24338ff1f846650437a43c9",
     sepolia: "0x791Bf9Da3DEF5D7Cd3A7a748e56720Cd119D53AC",
     amoy: "0x94e32c4bfcA1D3fe08B6F8252ABB47A5B14AC2bD",
+    baseSepolia: "0xd4857D5e326eee33d7bC5d2494524Dab65d55851",
   },
 
   // Treasury contract address
@@ -53,6 +54,7 @@ module.exports = {
     polygon: "0x11D0d293751E18FCC56c70E1FB264CeB9f7C3fE7",
     sepolia: "0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8",
     amoy: "0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8",
+    baseSepolia: "0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8",
   },
 
   // Boson voucher beacon contract address
@@ -65,6 +67,7 @@ module.exports = {
     polygon: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy,
     sepolia: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
     amoy: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
+    baseSepolia: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
   },
 
   // Beacon proxy contract address
@@ -77,6 +80,7 @@ module.exports = {
     polygon: "0x17CDD65bebDe68cd8A4045422Fcff825A0740Ef9", //dummy
     sepolia: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
     amoy: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
+    baseSepolia: "0x4102621Ac55e068e148Da09151ce92102c952aab", //dummy
   },
 
   EXCHANGE_ID_2_2_0: {
@@ -87,6 +91,7 @@ module.exports = {
     localhost: 1,
     sepolia: 1, // test: 1, staging: 1
     mainnet: 1,
+    baseSepolia: 1, // test: 1, staging: 1
   },
 
   WrappedNative: {

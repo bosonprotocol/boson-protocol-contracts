@@ -28,6 +28,11 @@ module.exports = {
     apiKey: process.env.DEPLOYER_POLYGONSCAN_API_KEY,
   },
 
+  // Needed for verifying contract code on Basescan
+  basescan: {
+    apiKey: process.env.DEPLOYER_BASESCAN_API_KEY,
+  },
+
   // Needed for verifying contract code on okLink
   okLink: {
     apiKey: process.env.DEPLOYER_OKLINK_API_KEY,
@@ -104,5 +109,12 @@ module.exports = {
     txNode: process.env.DEPLOYER_POLYGON_TXNODE,
     keys: [process.env.DEPLOYER_POLYGON_KEY],
     adminAddress: process.env.ADMIN_ADDRESS_POLYGON,
+  },
+
+  // Base testnet Sepolia
+  baseSepolia: {
+    txNode: process.env.DEPLOYER_BASE_SEPOLIA_TXNODE,
+    keys: [process.env.DEPLOYER_BASE_SEPOLIA_KEY],
+    adminAddress: process.env.ADMIN_ADDRESS_BASE_SEPOLIA,
   },
 };
