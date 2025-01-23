@@ -28,6 +28,11 @@ module.exports = {
     apiKey: process.env.DEPLOYER_POLYGONSCAN_API_KEY,
   },
 
+  // Needed for verifying contract code on Basescan
+  basescan: {
+    apiKey: process.env.DEPLOYER_BASESCAN_API_KEY,
+  },
+
   // Needed for verifying contract code on okLink
   okLink: {
     apiKey: process.env.DEPLOYER_OKLINK_API_KEY,
