@@ -177,6 +177,10 @@ module.exports = {
       url: environments.polygon.txNode,
       accounts: environments.polygon.keys,
     },
+    baseSepolia: {
+      url: environments.baseSepolia.txNode,
+      accounts: environments.baseSepolia.keys,
+    },
   },
   etherscan: {
     apiKey: {
