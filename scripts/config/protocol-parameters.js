@@ -7,9 +7,11 @@ const { oneWeek, ninetyDays } = require("../../test/util/constants");
 
 module.exports = {
   // Protocol configuration params
-  protocolFeePercentage: "50", // 0.5%  : 50
-  protocolFeeFlatBoson: "0",
-  buyerEscalationDepositPercentage: "1000", // 10%,
+  fees: {
+    percentage: "50", // 0.5%  : 50
+    flatBoson: "0",
+    buyerEscalationDepositPercentage: "1000", // 10%
+  },
   limits: {
     maxExchangesPerBatch: "140",
     maxOffersPerGroup: "95",
@@ -96,6 +98,7 @@ module.exports = {
     polygon: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
     sepolia: "0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9",
     amoy: "0x52eF3d68BaB452a294342DC3e5f464d7f610f72E",
+    baseSepolia: "0x4200000000000000000000000000000000000006",
   },
 
   PRICE_DISCOVERY: {
@@ -107,5 +110,6 @@ module.exports = {
     polygon: "0xb60cf39Fb18e5111174f346d0f39521ef6531fD4",
     sepolia: "0x789d8727b9ae0A8546489232EB55b6fBE86b21Ac",
     amoy: "0xFFcd4c407B60B0d4351945484F9354d2C9E34EA1",
+    baseSepolia: "0xFDD51a6DB1cE50d1C33b98782035f3cB1E7E1f14",
   },
 };
