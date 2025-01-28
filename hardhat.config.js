@@ -30,12 +30,11 @@ task("create-dispute-resolver", "Creates a dispute resolver")
   });
 
 task("verify-suite", "Verify contracts on the block explorer")
-  .addParam("chainId", "The chain id of the deployed contract address file")
   .addParam("env", "The environment of the contract address file")
-  .setAction(async ({ chainId, env }) => {
+  .setAction(async ({ env }) => {
     const { verifySuite } = await lazyImport("./scripts/verify-suite");
 
-    await verifySuite(chainId, env);
+    await verifySuite(env);
   });
 
 task(

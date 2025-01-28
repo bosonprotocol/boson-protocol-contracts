@@ -84,7 +84,7 @@ The script that deploys the authentication token mock contract also mints the au
 
 To deploy the authentication token mocks, then run
 
-`npm run deploy-mocks:local`
+`NETWORK=localhost npm run deploy-mocks`
 
 This script outputs the addresses of the deployed mock NFT contracts. Save them, as you will need them for the deployment of the protocol contracts.
 
@@ -97,7 +97,7 @@ Edit the file `scripts/config/auth-token-addresses.js` and replace the values fo
 
 To deploy the whole suite of the Boson protocol contract, execute
 
-`npm run deploy-suite:local`
+`NETWORK=localhost npm run deploy-suite`
 
 This deploys all contract on the local node and prints out all the information about the deployment. Besides that, ABIs of the contracts are generated and all contract addresses are stored so you can later use them if needed. You will find them in folders:
 
@@ -116,7 +116,7 @@ you need to set up the admin account. To do it
 
 - specify admin's address in the `.env` file (refer to the explanation of `ADMIN_ADDRESS_LOCAL` in section [Configure Environment](#configure-Environment)))
 - optionally, edit scripts/config/role-assignments.js. The defaults will suffice for enabling the above-mentioned functionality.
-- run `npm run manage-roles:local`. This grants the `ADMIN` and `UPGRADER` roles to the admin address specified in `.env` and the `PROTOCOL` role to the `ProtocolDiamond` contract The output of this command is saved to `logs/localhost.manage.roles.txt`
+- run `NETWORK=localhost npm run manage-roles`. This grants the `ADMIN` and `UPGRADER` roles to the admin address specified in `.env` and the `PROTOCOL` role to the `ProtocolDiamond` contract The output of this command is saved to `logs/localhost.manage.roles.txt`
 
 To get the examples how to use the admin to perform actions, refer to unit test in files:
 
@@ -139,7 +139,7 @@ To test the upgrade functionality, you first need to setup an upgrader account a
   - "facetsToInit": list of facets that will be initialized on ProtocolInitializationFacet.
     if facet initializer expects arguments, provide them here. For no-arg initializers pass an empty array.
     You don't have to provide ProtocolInitializationFacet args here because they are generated on cut function.
-- Run `npm run upgrade-facets:local -- --new-version <version>`. This will deploy new facets and make all necessary diamond cuts. It also updates the existing addresses file `addresses/<chain-id>-<environment>.json` (for example `addresses/31337-localhost.json` if you are using a default local hardhat node) and outputs the upgrade log to the console.
+- Run `npx hardhat upgrade-facets --network localhost --env '' --new-version <version>`. This will deploy new facets and make all necessary diamond cuts. It also updates the existing addresses file `addresses/<chain-id>-<environment>.json` (for example `addresses/31337-localhost.json` if you are using a default local hardhat node) and outputs the upgrade log to the console.
 
 Protocol initialization facet is explained in more detail on a separate page: [Protocol initialization handler facet](protocol-initialization-facet.md).
 
@@ -148,7 +148,7 @@ Protocol initialization facet is explained in more detail on a separate page: [P
 If you are testing an upgrade of official release, you can simply run
 
 ```
-npx hardhat migrate <version> --network localhost --env ""
+NETWORK=localhost VERSION=version npx hardhat migrate
 ```
 
 If you are testing an unreleased version (potentially including your changes), first prepare a migration script in [migrations](../scripts/migrations/) named `migrate_<version>.js` with all the logic needed for the migration. Then run the migration the same way as for the official releases.
@@ -160,7 +160,7 @@ To test the upgrade functionality, you first need to setup an upgrader account a
 To perform the upgrade you then
 
 - Update some of the existing clients
-- Run `npm run upgrade-clients:local -- --new-version <version>`. This will deploy new clients and set implementation address on beacon. It also updates the existing addresses file `addresses/<chain-id>-<environment>.json` (for example `addresses/31337-localhost.json` if you are using a default local hardhat node) and outputs the upgrade log to the console.
+- Run `npx hardhat upgrade-clients --network localhost --env '' --new-version <version>`. This will deploy new clients and set implementation address on beacon. It also updates the existing addresses file `addresses/<chain-id>-<environment>.json` (for example `addresses/31337-localhost.json` if you are using a default local hardhat node) and outputs the upgrade log to the console.
 
 ### Using the protocol
 
