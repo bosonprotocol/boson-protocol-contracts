@@ -181,6 +181,26 @@ module.exports = {
       url: environments.baseSepolia.txNode,
       accounts: environments.baseSepolia.keys,
     },
+    base: {
+      url: environments.base.txNode,
+      accounts: environments.base.keys,
+    },
+    optimismSepolia: {
+      url: environments.optimismSepolia.txNode,
+      accounts: environments.optimismSepolia.keys,
+    },
+    optimism: {
+      url: environments.optimism.txNode,
+      accounts: environments.optimism.keys,
+    },
+    arbitrumSepolia: {
+      url: environments.arbitrumSepolia.txNode,
+      accounts: environments.arbitrumSepolia.keys,
+    },
+    arbitrum: {
+      url: environments.arbitrum.txNode,
+      accounts: environments.arbitrum.keys,
+    },
   },
   etherscan: {
     apiKey: {
@@ -189,6 +209,7 @@ module.exports = {
       polygonMumbai: environments.polygonscan.apiKey,
       polygon: environments.polygonscan.apiKey,
       polygonAmoy: environments.okLink.apiKey,
+      base: environments.basescan.apiKey,
       "base-sepolia": environments.basescan.apiKey,
     },
     customChains: [
@@ -198,6 +219,14 @@ module.exports = {
         urls: {
           apiURL: "https://www.oklink.com/api/v5/explorer/contract/verify-source-code-plugin/AMOY_TESTNET",
           browserURL: "https://www.oklink.com/amoy/",
+        },
+      },
+      {
+        network: "base",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org",
         },
       },
       {

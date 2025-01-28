@@ -14,6 +14,11 @@ module.exports = {
     mumbai: "0x60Ae865ee4C725cd04353b5AAb364553f56ceF82",
     amoy: "", // not deployed
     baseSepolia: "", // not deployed
+    base: "", // not deployed
+    optimismSepolia: "", // not deployed
+    optimism: "", // not deployed
+    arbitrumSepolia: "", // not deployed
+    arbitrum: "", // not deployed
   },
 
   // ENS contract address
@@ -27,5 +32,10 @@ module.exports = {
     mumbai: "", // not deployed
     amoy: "", // not deployed
     baseSepolia: "", // not deployed
+    base: "", // not deployed
+    optimismSepolia: "", // not deployed
+    optimism: "", // not deployed
+    arbitrumSepolia: "", // not deployed
+    arbitrum: "", // not deployed
   },
 };
