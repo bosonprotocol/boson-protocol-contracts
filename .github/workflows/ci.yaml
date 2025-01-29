@@ -189,7 +189,7 @@ jobs:
         run: |
           cp .env.example .env
       - name: Deploy suite locally
-        run: npm run deploy-suite:hardhat
+        run: npm run deploy-suite
       - name: Cancelling tests in case of failure
         if: failure()
         uses: andymckay/cancel-action@0.2

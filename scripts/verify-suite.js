@@ -19,15 +19,16 @@ const { contractList } = require("./config/contract-verification");
  *      Use names of actual implementations, not interfaces.
  *  2. Run the appropriate npm script in package.json to verify contracts for a given network and environment.
  *
- * @param chainId - the chain id of the deployed contracts
  * @param env - the environment of the deployed contracts
  * @returns {Promise<void>}
  */
-const verifySuite = async (chainId, env) => {
+const verifySuite = async (env) => {
   const network = hre.network.name;
+  const chainId = Number((await hre.ethers.provider.getNetwork()).chainId);
   console.log(chainId, network, env, contractList.length ? contractList : "Verifying everything");
 
   // Read the contracts for the chain
+
   const { contracts } = await readContracts(chainId, network, env);
 
   console.log("🔍 Verifying contracts on block explorer...");

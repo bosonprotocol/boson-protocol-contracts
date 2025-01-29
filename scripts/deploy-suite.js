@@ -25,10 +25,10 @@ const { WrappedNative } = require("./config/protocol-parameters");
 /**
  * Deploy Boson Protocol V2 contract suite
  *
- * Running with the appropriate npm script in package.json:
- * `npm run deploy-suite:local`
+ * Running with the appropriate npm script in package.json (clean cache, compile, deploy, save logs):
+ * `NETWORK=hardhat ENV=test npm run deploy-suite`
  *
- * Running with hardhat
+ * Running with hardhat (deploy only):
  * `npx hardhat deploy-suite --network hardhat --env test`
  */
 

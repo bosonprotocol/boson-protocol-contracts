@@ -13,108 +13,47 @@ const Role = require("../domain/Role");
  *  2. Run the appropriate npm script in package.json to manage roles for a given network
  *  3. Save changes to the repo as a record of who has what roles
  */
-exports.RoleAssignments = {
-  mumbai: {
-    AdminAddress: {
-      // do not change name
-      roles: [Role.ADMIN, Role.UPGRADER, Role.PAUSER],
-    },
-
-    // For minting vouchers
-    ProtocolDiamond: {
-      // contract name must match name in /addresses/<chainId>-<network>.json
-      roles: [Role.PROTOCOL],
-    },
+const testnetConfiguration = {
+  AdminAddress: {
+    // do not change name
+    roles: [Role.ADMIN, Role.UPGRADER, Role.PAUSER],
   },
 
-  amoy: {
-    AdminAddress: {
-      // do not change name
-      roles: [Role.ADMIN, Role.UPGRADER, Role.PAUSER],
-    },
-
-    // For minting vouchers
-    ProtocolDiamond: {
-      // contract name must match name in /addresses/<chainId>-<network>.json
-      roles: [Role.PROTOCOL],
-    },
-  },
-
-  polygon: {
-    AdminAddress: {
-      // do not change name
-      roles: [Role.ADMIN, Role.UPGRADER],
-    },
-
-    // For minting vouchers
-    ProtocolDiamond: {
-      // contract name must match name in /addresses/<chainId>-<network>.json
-      roles: [Role.PROTOCOL],
-    },
-  },
-
-  mainnet: {
-    AdminAddress: {
-      // do not change name
-      roles: [Role.ADMIN, Role.UPGRADER],
-    },
-
-    // For minting vouchers
-    ProtocolDiamond: {
-      // contract name must match name in /addresses/<chainId>-<network>.json
-      roles: [Role.PROTOCOL],
-    },
-  },
-
-  sepolia: {
-    AdminAddress: {
-      // do not change name
-      roles: [Role.ADMIN, Role.UPGRADER, Role.PAUSER],
-    },
-
-    // For minting vouchers
-    ProtocolDiamond: {
-      // contract name must match name in /addresses/<chainId>-<network>.json
-      roles: [Role.PROTOCOL],
-    },
-  },
-
-  baseSepolia: {
-    AdminAddress: {
-      // do not change name
-      roles: [Role.ADMIN, Role.UPGRADER, Role.PAUSER],
-    },
-
-    // For minting vouchers
-    ProtocolDiamond: {
-      // contract name must match name in /addresses/<chainId>-<network>.json
-      roles: [Role.PROTOCOL],
-    },
-  },
-
-  test: {
-    AdminAddress: {
-      // do not change name
-      roles: [Role.ADMIN, Role.UPGRADER],
-    },
-
-    // For minting vouchers
-    ProtocolDiamond: {
-      // contract name must match name in /addresses/<chainId>-<network>.json
-      roles: [Role.PROTOCOL],
-    },
-  },
-
-  localhost: {
-    AdminAddress: {
-      // do not change name
-      roles: [Role.ADMIN, Role.UPGRADER, Role.PAUSER],
-    },
-
-    // For minting vouchers
-    ProtocolDiamond: {
-      // contract name must match name in /addresses/<chainId>-<network>.json
-      roles: [Role.PROTOCOL],
-    },
+  // For minting vouchers
+  ProtocolDiamond: {
+    // contract name must match name in /addresses/<chainId>-<network>.json
+    roles: [Role.PROTOCOL],
   },
 };
+
+const mainnetConfiguration = {
+  AdminAddress: {
+    // do not change name
+    roles: [Role.ADMIN, Role.UPGRADER],
+  },
+
+  // For minting vouchers
+  ProtocolDiamond: {
+    // contract name must match name in /addresses/<chainId>-<network>.json
+    roles: [Role.PROTOCOL],
+  },
+};
+
+const RoleAssignments = {
+  amoy: testnetConfiguration,
+  sepolia: testnetConfiguration,
+  baseSepolia: testnetConfiguration,
+  optimismSepolia: testnetConfiguration,
+  arbitrumSepolia: testnetConfiguration,
+
+  polygon: mainnetConfiguration,
+  mainnet: mainnetConfiguration,
+  base: mainnetConfiguration,
+  optimism: mainnetConfiguration,
+  arbitrum: mainnetConfiguration,
+
+  test: testnetConfiguration,
+  localhost: testnetConfiguration,
+};
+
+exports.RoleAssignments = RoleAssignments;

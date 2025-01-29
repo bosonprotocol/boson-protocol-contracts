@@ -90,13 +90,6 @@ module.exports = {
     adminAddress: process.env.ADMIN_ADDRESS_SEPOLIA,
   },
 
-  // Polygon Mumbai testnet
-  mumbai: {
-    txNode: process.env.DEPLOYER_MUMBAI_TXNODE,
-    keys: [process.env.DEPLOYER_MUMBAI_KEY],
-    adminAddress: process.env.ADMIN_ADDRESS_MUMBAI,
-  },
-
   // Polygon Amoy testnet
   amoy: {
     txNode: process.env.DEPLOYER_AMOY_TXNODE,
@@ -116,5 +109,40 @@ module.exports = {
     txNode: process.env.DEPLOYER_BASE_SEPOLIA_TXNODE,
     keys: [process.env.DEPLOYER_BASE_SEPOLIA_KEY],
     adminAddress: process.env.ADMIN_ADDRESS_BASE_SEPOLIA,
+  },
+
+  // Base
+  base: {
+    txNode: process.env.DEPLOYER_BASE_TXNODE,
+    keys: [process.env.DEPLOYER_BASE_KEY],
+    adminAddress: process.env.ADMIN_ADDRESS_BASE,
+  },
+
+  // Optimism testnet Sepolia
+  optimismSepolia: {
+    txNode: process.env.DEPLOYER_OPTIMISM_SEPOLIA_TXNODE,
+    keys: [process.env.DEPLOYER_OPTIMISM_SEPOLIA_KEY],
+    adminAddress: process.env.ADMIN_ADDRESS_OPTIMISM_SEPOLIA,
+  },
+
+  // Optimism
+  optimism: {
+    txNode: process.env.DEPLOYER_OPTIMISM_TXNODE,
+    keys: [process.env.DEPLOYER_OPTIMISM_KEY],
+    adminAddress: process.env.ADMIN_ADDRESS_OPTIMISM,
+  },
+
+  // Arbitrum testnet Sepolia
+  arbitrumSepolia: {
+    txNode: process.env.DEPLOYER_ARBITRUM_SEPOLIA_TXNODE,
+    keys: [process.env.DEPLOYER_ARBITRUM_SEPOLIA_KEY],
+    adminAddress: process.env.ADMIN_ADDRESS_ARBITRUM_SEPOLIA,
+  },
+
+  // Arbitrum
+  arbitrum: {
+    txNode: process.env.DEPLOYER_ARBITRUM_TXNODE,
+    keys: [process.env.DEPLOYER_ARBITRUM_KEY],
+    adminAddress: process.env.ADMIN_ADDRESS_ARBITRUM,
   },
 };

@@ -32,35 +32,27 @@ This builds the contracts and runs the code coverage. This is slower than testin
 
 ### Deploy suite
 
-Deploy suite deploys protocol diamond, all facets, client and beacon, and initializes protocol diamond. We provide different npm scripts for different use cases.
+Deploy suite deploys protocol diamond, all facets, client and beacon, and initializes protocol diamond. The script cleans the cache, compiles contracts, deploys them and store the logs into a text file.
 
-- **Hardhat network**. This deploys the built contracts to a local network (mainly to test the deployment script). Deployed contracts are discarded afterward.  
-  `npm run deploy-suite:hardhat`
-- **local network**. This deploys the built contracts to an independent instance of a local network (e.g. `npx hardhat node`), so the deployed contracts can be used with other contracts/dapps in development. A step-by-step manual to use it is available [here](local-development.md).  
-  `npm run deploy-suite:local`
-- **internal test node**. This deploys the built contracts to a custom test network. You need to modify `.env` with appropriate values for this to work.  
-  `npm run deploy-suite:test`
-- **Polygon Mumbai**. This deploys the built contracts to Polygon Mumbai. The Boson Protocol team uses separate sets of contracts on Polygon Mumbai for the test and staging environments.  
-  `npm run deploy-suite:polygon:mumbai-test`  
-  `npm run deploy-suite:polygon:mumbai-staging`
-- **Polygon Mainnet**. This deploys the built contracts to Polygon Mainnet.  
-  `npm run deploy-suite:polygon:mainnet`
-- **Ethereum Mainnet**. This deploys the built contracts to Ethereum Mainnet.  
-  `npm run deploy-suite:ethereum:mainnet`
+`NETWORK=network ENV=env npm run deploy-suite -- [--dry-run] [--create3]`
 
-To simulate the deployment on any of the public networks, add `-- --dry-run` at the end of the command (for example `npm run deploy-suite:ethereum:mainnet -- --dry-run`). This forks the network and simulates the deployment locally and gives the current cost estimate. It is suggested to run before an actual deployment to detect any possible issues.
+- `NETWORK` is the network to deploy the suite to. The parameter is required and can be one of the networks defined in `hardhat.config.js`.
+- `ENV` represents the deployment environment, needed especially if multiple instances are deployed to the same network. The parameter is optional.
+- `dry-run` simulates the deployment on any of the public networks. It forks the network and simulates the deployment locally and gives the current cost estimate. It is suggested to run before an actual deployment to detect any possible issues.
+- `create3` deploys the contracts through CREATE3 FACTORY smart contract, to eliminate the dependency on the deployer's nonce. To use it `CREATE3_FACTORY_ADDRESS` and `CREATE3_SALT` must be set in `.env` file.
+
+The logs are saved to `logs/NETWORK-ENV.deploy.contracts.txt`
 
 ### Verify suite
 
 After the protocol contracts are deployed, they should be verified on a block explorer. Verification provides a checkmark in the block explorer and makes the contract source code viewable in the block explorer. We have provided different npm scripts to verify the deployed protocol contracts on different environments. The scripts read a .json file containing contract addresses, which is produced by the deployment scripts. The default mode is to verify all contracts from that file, however if only a subset of contracts needs to be verified (e.g. after the upgrade), list them in `scripts/config/contract-verification.js`.
 
-- **Polygon Mumbai**. These scripts verify the deployed contracts on Polygon Mumbai. The Boson Protocol team uses separate sets of contracts on Polygon Mumbai for the test and staging environments.  
-  `npm run verify-suite:polygon:mumbai-test`  
-  `npm run verify-suite:polygon:mumbai-staging`
-- **Polygon Mainnet**. This verifies the deployed contracts on Polygon Mainnet.  
-  `npm run verify-suite:polygon:mainnet`
-- **Ethereum Mainnet**. This verifies the deployed contracts on Ethereum Mainnet.  
-  `npm run verify-suite:ethereum:mainnet`
+`NETWORK=network ENV=env npm run verify-suite`
+
+- `NETWORK` is the network to verify suite on. The parameter is required and can be one of the public networks defined in `hardhat.config.js`.
+- `ENV` represents the deployment environment, needed especially if multiple instances are deployed to the same network. The parameter is optional.
+
+The logs are saved to `logs/NETWORK-ENV.deploy.contracts.txt`
 
 ### Upgrade facets
 
@@ -70,17 +62,7 @@ Upgrade existing facets, add new facets or remove existing facets. We provide di
 
 For an upgrade to succeed you need an account with UPGRADER role. Refer to [Manage roles](#manage-roles) to see how to grant it.
 
-- **local network**. This upgrades the existing diamond on an independent instance of a local network (e.g. `npx hardhat node`). The upgrade process is described [here](local-development.md#upgrade-facets).  
-  `npm run upgrade-facets:local --new-version <version>`
-- **internal test node**. This upgrades the existing diamond on a custom test network. You need to modify `.env` with appropriate values for this to work.  
-  `npm run upgrade-facets:test -- --new-version <version>`
-- **Polygon Mumbai**. This upgrades the existing diamond on Polygon Mumbai. The Boson Protocol team uses separate sets of contracts on Polygon Mumbai for the test and staging environments.  
-  `npm run upgrade-facets:polygon:mumbai-test --new-version <version>`  
-  `npm run upgrade-facets:polygon:mumbai-staging --new-version <version>`
-- **Polygon Mainnet**. This upgrades the existing diamond on Polygon Mainnet.  
-  `npm run upgrade-facets:polygon:mainnet --new-version <version>`
-- **Ethereum Mainnet**. This upgrades the existing diamond on Ethereum Mainnet.  
-  `npm run upgrade-facets:ethereum:mainnet --new-version <version>`
+`npx hardhat upgrade-facets --network <network> --env <env> --new-version <version>`
 
 Each upgrade requires correct config parameters.
 
@@ -100,7 +82,7 @@ npx hardhat migrate <version> --network <network> --env <environment> [--dry-run
 ```
 
 - **version**: tag to which you want to migrate (e.g. v2.3.0). If the remote tag exists, it will overwrite the local one.
-- **network**: network where migration takes place. Must be defined in hardhat config. Current options are `localhost`, `test`, `mumbai`, `polygon`, `mainnet`.
+- **network**: network where migration takes place. Must be defined in hardhat config.
 - **environment**: custom name for the environment, used to distinguish if multiple instances are deployed on the same network. Typically one of `test`, `staging` and `prod`.
 - `--dry-run` is an optional flag. If added, the script locally simulates the migration process as it would happen on the actual network and environment, but none of the contracts is really deployed and upgraded. It's recommended to run it before the upgrade. This script forks the latest possible block, which can result in performance issues. If you experience them, modify `scripts/util/dry-run.js` to use hardhat's default value (~30 less than the actual block).
 - `--create3` is an optional flag. If added, AccessController and Diamond contracts will be deployed using a CREATE3 factory which enables easier address matching across different EVM chains. If this is used, environmental variables `CREATE3_FACTORY_ADDRESS` and `CREATE3_SALT` must be set as well and CREATE3 factory must already be deployed on `CREATE3_FACTORY_ADDRESS`. CREATE3 factory must accept the deployment parameters in format `salt.byteCode`, otherwise the deployment will fail. We suggest using the contract `0xa41b0e32c8f1e0f20fe57bffe64c32fdf5a03ad1`, which is [SKYBITLite](https://github.com/SKYBITDev3/SKYBIT-Keyless-Deployment/blob/588ac72827c871eddce60bb2f06c59c176518818/contracts/SKYBITCREATE3FactoryLite.yul) deployed via [the deterministic deployment proxy](https://github.com/Arachnid/deterministic-deployment-proxy) deployed at `0x4e59b44847b379578588920cA78FbF26c0B4956C`. If it's not present on the chain of your choice, you can deploy it yourself.
@@ -112,45 +94,25 @@ We provide different npm scripts for different use cases. A script for Hardhat n
 For the upgrade to succeed you need an account with UPGRADER role. Refer to [Manage roles](#manage-roles) to see how to grant it.  
 If you are not sure which contracts were changed since the last deployment/upgrade, refer to [Detect changed contract](#detect-changed-contract) to see how to get the list of changed contracts.
 
-- **local network**. This upgrades the clients on an independent instance of a local network (e.g. `npx hardhat node`). The upgrade process is described [here](local-development.md#upgrade-clients).  
-  `npm run upgrade-clients:local --new-version <version>`
-- **internal test node**. This upgrades the clients on a custom test network. You need to modify `.env` with appropriate values for this to work.  
-  `npm run upgrade-clients:test --new-version <version>`
-- **Polygon Mumbai**. This upgrades the clients on Polygon Mumbai. The Boson Protocol team uses separate sets of contracts on Polygon Mumbai for the test and staging environments.  
-  `npm run upgrade-clients:polygon:mumbai-test --new-version <version>`  
-  `npm run upgrade-clients:polygon:mumbai-staging --new-version <version>`
-- **Polygon Mainnet**. This upgrades the clients on Polygon Mainnet.  
-  `npm run upgrade-clients:polygon:mainnet --new-version <version>.`
-- **Ethereum Mainnet**. This upgrades the clients on Ethereum Mainnet.  
-  `npm run upgrade-clients:ethereum:mainnet --new-version <version>`
+`npx hardhat upgrade-clients --network <network> --env <env> --new-version <version>`
 
 ### Deploy mock authentication token
 
 Boson protocol supports LENS and ENS as authentication methods for the seller's admin account. Public networks have LENS and ENS already deployed, but to use that functionality on custom local or test nodes, you need to deploy the mock contract first. We provide the scripts for the following networks:
 
-- **Hardhat network**. This deploys the built contracts to a local network (mainly to test the deployment script). Deployed contracts are discarded afterward.  
-  `npm run deploy-mocks:hardhat`
-- **local network**. This deploys the built contracts to an independent instance of a local network (e.g. `npx hardhat node`), so the deployed contracts can be used with other contracts/dapps in development. Step-by-step manual to use it is available [here](local-development.md).  
-  `npm run deploy-mocks:local`
-- **internal test node**. This deploys the built contracts to a custom test network. You need to modify `.env` with appropriate values for this to work.  
-  `npm run deploy-mocks:test`
+`NETWORK=network npm run deploy-mocks:hardhat`
+
+- `NETWORK` is the network to deploy the mocks to. It should be one of test environments (`hardhat`,`localhost`,`test`).
 
 ### Manage Roles
 
 This runs the `scripts/manage-roles.js` script against the chosen network. It works in collaboration with `scripts/config/role-assignments.js` where you can specify which address should be granted or revoked for the specified role. Currently supported roles are `ADMIN`,`UPGRADER`,`PAUSER`,`PROTOCOL`,`CLIENT` and `FEE_COLLECTOR`.
 You cannot run this script against `hardhat` network, all other networks are supported.
 
-- **local network**. This deploys the built contracts to an independent instance of a local network (e.g. `npx hardhat node`), so the deployed contracts can be used with other contracts/dapps in development. Step-by-step manual to use it is available [here](local-development.md).  
-  `npm run manage-roles:local`
-- **internal test node**. This runs the management script against the custom test network. You need to modify `.env` with appropriate values for this to work.  
-  `npm run manage-roles:test`
-- **Polygon Mumbai**. This runs the management script against the Polygon Mumbai. You need to modify `.env` with appropriate values for this to work. The Boson Protocol team uses separate sets of contracts on Polygon Mumbai for the test and staging environments.  
-  `npm run manage-roles:polygon:mumbai-test`  
-  `npm run manage-roles:polygon:mumbai-staging`
-- **Polygon Mainnet**. This runs the management script against the Polygon Mainnet. You need to modify `.env` with appropriate values for this to work.  
-  `npm run manage-roles:polygon:mainnet`
-- **Ethereum Mainnet**. This runs the management script against the Ethereum Mainnet. You need to modify `.env` with appropriate values for this to work.  
-  `npm run manage-roles:ethereum:mainnet`
+`NETWORK=network ENV=env npm run manage-roles:local`
+
+- `NETWORK` is the network to manage the roles on. The parameter is required and can be one of the public networks defined in `hardhat.config.js`.
+- `ENV` represents the deployment environment, needed especially if multiple instances are deployed to the same network. The parameter is optional.
 
 ### Linting and tidying
 

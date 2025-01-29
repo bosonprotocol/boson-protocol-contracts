@@ -30,12 +30,11 @@ task("create-dispute-resolver", "Creates a dispute resolver")
   });
 
 task("verify-suite", "Verify contracts on the block explorer")
-  .addParam("chainId", "The chain id of the deployed contract address file")
   .addParam("env", "The environment of the contract address file")
-  .setAction(async ({ chainId, env }) => {
+  .setAction(async ({ env }) => {
     const { verifySuite } = await lazyImport("./scripts/verify-suite");
 
-    await verifySuite(chainId, env);
+    await verifySuite(env);
   });
 
 task(
@@ -165,10 +164,6 @@ module.exports = {
       url: environments.sepolia.txNode,
       accounts: environments.sepolia.keys,
     },
-    mumbai: {
-      url: environments.mumbai.txNode,
-      accounts: environments.mumbai.keys,
-    },
     amoy: {
       url: environments.amoy.txNode,
       accounts: environments.amoy.keys,
@@ -181,14 +176,34 @@ module.exports = {
       url: environments.baseSepolia.txNode,
       accounts: environments.baseSepolia.keys,
     },
+    base: {
+      url: environments.base.txNode,
+      accounts: environments.base.keys,
+    },
+    optimismSepolia: {
+      url: environments.optimismSepolia.txNode,
+      accounts: environments.optimismSepolia.keys,
+    },
+    optimism: {
+      url: environments.optimism.txNode,
+      accounts: environments.optimism.keys,
+    },
+    arbitrumSepolia: {
+      url: environments.arbitrumSepolia.txNode,
+      accounts: environments.arbitrumSepolia.keys,
+    },
+    arbitrum: {
+      url: environments.arbitrum.txNode,
+      accounts: environments.arbitrum.keys,
+    },
   },
   etherscan: {
     apiKey: {
       mainnet: environments.etherscan.apiKey,
       sepolia: environments.etherscan.apiKey,
-      polygonMumbai: environments.polygonscan.apiKey,
       polygon: environments.polygonscan.apiKey,
       polygonAmoy: environments.okLink.apiKey,
+      base: environments.basescan.apiKey,
       "base-sepolia": environments.basescan.apiKey,
     },
     customChains: [
@@ -198,6 +213,14 @@ module.exports = {
         urls: {
           apiURL: "https://www.oklink.com/api/v5/explorer/contract/verify-source-code-plugin/AMOY_TESTNET",
           browserURL: "https://www.oklink.com/amoy/",
+        },
+      },
+      {
+        network: "base",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org",
         },
       },
       {
