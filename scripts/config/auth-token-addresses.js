@@ -11,7 +11,6 @@ module.exports = {
     mainnet: "",
     sepolia: "", // not deployed
     polygon: "0xDb46d1Dc155634FbC732f92E853b10B288AD5a1d",
-    mumbai: "0x60Ae865ee4C725cd04353b5AAb364553f56ceF82",
     amoy: "", // not deployed
     baseSepolia: "", // not deployed
     base: "", // not deployed
@@ -29,7 +28,6 @@ module.exports = {
     mainnet: "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e",
     sepolia: "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e",
     polygon: "", // not deployed
-    mumbai: "", // not deployed
     amoy: "", // not deployed
     baseSepolia: "", // not deployed
     base: "", // not deployed

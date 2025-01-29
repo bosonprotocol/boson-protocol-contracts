@@ -164,10 +164,6 @@ module.exports = {
       url: environments.sepolia.txNode,
       accounts: environments.sepolia.keys,
     },
-    mumbai: {
-      url: environments.mumbai.txNode,
-      accounts: environments.mumbai.keys,
-    },
     amoy: {
       url: environments.amoy.txNode,
       accounts: environments.amoy.keys,
@@ -205,7 +201,6 @@ module.exports = {
     apiKey: {
       mainnet: environments.etherscan.apiKey,
       sepolia: environments.etherscan.apiKey,
-      polygonMumbai: environments.polygonscan.apiKey,
       polygon: environments.polygonscan.apiKey,
       polygonAmoy: environments.okLink.apiKey,
       base: environments.basescan.apiKey,

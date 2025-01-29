@@ -40,7 +40,6 @@ const mainnetConfiguration = {
 };
 
 const RoleAssignments = {
-  mumbai: testnetConfiguration,
   amoy: testnetConfiguration,
   sepolia: testnetConfiguration,
   baseSepolia: testnetConfiguration,

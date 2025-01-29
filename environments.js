@@ -90,13 +90,6 @@ module.exports = {
     adminAddress: process.env.ADMIN_ADDRESS_SEPOLIA,
   },
 
-  // Polygon Mumbai testnet
-  mumbai: {
-    txNode: process.env.DEPLOYER_MUMBAI_TXNODE,
-    keys: [process.env.DEPLOYER_MUMBAI_KEY],
-    adminAddress: process.env.ADMIN_ADDRESS_MUMBAI,
-  },
-
   // Polygon Amoy testnet
   amoy: {
     txNode: process.env.DEPLOYER_AMOY_TXNODE,
