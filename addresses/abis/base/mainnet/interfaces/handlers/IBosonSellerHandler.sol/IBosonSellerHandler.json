@@ -1,0 +1,752 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "IBosonSellerHandler",
+  "sourceName": "contracts/interfaces/handlers/IBosonSellerHandler.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_sellerId",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "address payable",
+              "name": "wallet",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "minRoyaltyPercentage",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.RoyaltyRecipientInfo[]",
+          "name": "_royaltyRecipients",
+          "type": "tuple[]"
+        }
+      ],
+      "name": "addRoyaltyRecipients",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_sellerId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_collectionSalt",
+          "type": "bytes32"
+        }
+      ],
+      "name": "calculateCollectionAddress",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "collectionAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "isAvailable",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "_externalId",
+          "type": "string"
+        },
+        {
+          "components": [
+            {
+              "internalType": "string",
+              "name": "contractURI",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "royaltyPercentage",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "collectionSalt",
+              "type": "bytes32"
+            }
+          ],
+          "internalType": "struct BosonTypes.VoucherInitValues",
+          "name": "_voucherInitValues",
+          "type": "tuple"
+        }
+      ],
+      "name": "createNewCollection",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "assistant",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "admin",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "clerk",
+              "type": "address"
+            },
+            {
+              "internalType": "address payable",
+              "name": "treasury",
+              "type": "address"
+            },
+            {
+              "internalType": "bool",
+              "name": "active",
+              "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
+            }
+          ],
+          "internalType": "struct BosonTypes.Seller",
+          "name": "_seller",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum BosonTypes.AuthTokenType",
+              "name": "tokenType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct BosonTypes.AuthToken",
+          "name": "_authToken",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "string",
+              "name": "contractURI",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "royaltyPercentage",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "collectionSalt",
+              "type": "bytes32"
+            }
+          ],
+          "internalType": "struct BosonTypes.VoucherInitValues",
+          "name": "_voucherInitValues",
+          "type": "tuple"
+        }
+      ],
+      "name": "createSeller",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_sellerId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getRoyaltyRecipients",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address payable",
+              "name": "wallet",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "minRoyaltyPercentage",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.RoyaltyRecipientInfo[]",
+          "name": "royaltyRecipients",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_sellerId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getSeller",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "exists",
+          "type": "bool"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "assistant",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "admin",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "clerk",
+              "type": "address"
+            },
+            {
+              "internalType": "address payable",
+              "name": "treasury",
+              "type": "address"
+            },
+            {
+              "internalType": "bool",
+              "name": "active",
+              "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
+            }
+          ],
+          "internalType": "struct BosonTypes.Seller",
+          "name": "seller",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum BosonTypes.AuthTokenType",
+              "name": "tokenType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct BosonTypes.AuthToken",
+          "name": "authToken",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_associatedAddress",
+          "type": "address"
+        }
+      ],
+      "name": "getSellerByAddress",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "exists",
+          "type": "bool"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "assistant",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "admin",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "clerk",
+              "type": "address"
+            },
+            {
+              "internalType": "address payable",
+              "name": "treasury",
+              "type": "address"
+            },
+            {
+              "internalType": "bool",
+              "name": "active",
+              "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
+            }
+          ],
+          "internalType": "struct BosonTypes.Seller",
+          "name": "seller",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum BosonTypes.AuthTokenType",
+              "name": "tokenType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct BosonTypes.AuthToken",
+          "name": "authToken",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum BosonTypes.AuthTokenType",
+              "name": "tokenType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct BosonTypes.AuthToken",
+          "name": "_associatedAuthToken",
+          "type": "tuple"
+        }
+      ],
+      "name": "getSellerByAuthToken",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "exists",
+          "type": "bool"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "assistant",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "admin",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "clerk",
+              "type": "address"
+            },
+            {
+              "internalType": "address payable",
+              "name": "treasury",
+              "type": "address"
+            },
+            {
+              "internalType": "bool",
+              "name": "active",
+              "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
+            }
+          ],
+          "internalType": "struct BosonTypes.Seller",
+          "name": "seller",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum BosonTypes.AuthTokenType",
+              "name": "tokenType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct BosonTypes.AuthToken",
+          "name": "authToken",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_sellerId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getSellersCollectionCount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "collectionCount",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_sellerId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getSellersCollections",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "defaultVoucherAddress",
+          "type": "address"
+        },
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "collectionAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "externalId",
+              "type": "string"
+            }
+          ],
+          "internalType": "struct BosonTypes.Collection[]",
+          "name": "additionalCollections",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_sellerId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_limit",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_offset",
+          "type": "uint256"
+        }
+      ],
+      "name": "getSellersCollectionsPaginated",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "defaultVoucherAddress",
+          "type": "address"
+        },
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "collectionAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "externalId",
+              "type": "string"
+            }
+          ],
+          "internalType": "struct BosonTypes.Collection[]",
+          "name": "additionalCollections",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_adminAddres",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_salt",
+          "type": "bytes32"
+        }
+      ],
+      "name": "isSellerSaltAvailable",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "isAvailable",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_sellerId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "enum BosonTypes.SellerUpdateFields[]",
+          "name": "_fieldsToUpdate",
+          "type": "uint8[]"
+        }
+      ],
+      "name": "optInToSellerUpdate",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_sellerId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "_royaltyRecipientIds",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "removeRoyaltyRecipients",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_sellerId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "_royaltyRecipientIds",
+          "type": "uint256[]"
+        },
+        {
+          "components": [
+            {
+              "internalType": "address payable",
+              "name": "wallet",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "minRoyaltyPercentage",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.RoyaltyRecipientInfo[]",
+          "name": "_royaltyRecipients",
+          "type": "tuple[]"
+        }
+      ],
+      "name": "updateRoyaltyRecipients",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "assistant",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "admin",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "clerk",
+              "type": "address"
+            },
+            {
+              "internalType": "address payable",
+              "name": "treasury",
+              "type": "address"
+            },
+            {
+              "internalType": "bool",
+              "name": "active",
+              "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
+            }
+          ],
+          "internalType": "struct BosonTypes.Seller",
+          "name": "_seller",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum BosonTypes.AuthTokenType",
+              "name": "tokenType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct BosonTypes.AuthToken",
+          "name": "_authToken",
+          "type": "tuple"
+        }
+      ],
+      "name": "updateSeller",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_sellerId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_newSalt",
+          "type": "bytes32"
+        }
+      ],
+      "name": "updateSellerSalt",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
