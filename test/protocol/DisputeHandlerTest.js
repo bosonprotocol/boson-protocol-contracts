@@ -1280,7 +1280,7 @@ describe("IBosonDisputeHandler", function () {
           blockNumber = tx.blockNumber;
           block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
-          timeout = BigInt(disputedDate) + resolutionPeriod.toString();
+          timeout = BigInt(disputedDate) + BigInt(resolutionPeriod);
         });
 
         it("should emit FundsEncumbered and DisputeEscalated events", async function () {
