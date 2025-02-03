@@ -54,13 +54,6 @@ contract Foreign20 is ERC20Pausable, MockNativeMetaTransaction {
     function pause() public {
         _pause();
     }
-
-    /**
-     * Deletes the contract code
-     */
-    function destruct() public {
-        selfdestruct(payable(msg.sender));
-    }
 }
 
 /**

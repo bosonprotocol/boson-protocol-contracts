@@ -61,7 +61,7 @@
     "ethers": "^6.9.0",
     "ethersv5": "npm:ethers@^5.7.2",
     "glob": "^10.3.10",
-    "hardhat": "^2.22.15",
+    "hardhat": "^2.22.18",
     "hardhat-contract-sizer": "^2.10.0",
     "hardhat-preprocessor": "^0.1.5",
     "husky": "^8.0.3",

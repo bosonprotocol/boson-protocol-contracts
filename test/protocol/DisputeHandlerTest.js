@@ -1474,19 +1474,6 @@ describe("IBosonDisputeHandler", function () {
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.NATIVE_NOT_ALLOWED);
           });
 
-          it.skip("Token address is not a contract", async function () {
-            // prepare a disputed exchange
-            const mockToken = await createDisputeExchangeWithToken();
-
-            // self destruct a contract
-            await mockToken.destruct();
-
-            // Attempt to commit to an offer, expecting revert
-            await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
-              RevertReasons.EOA_FUNCTION_CALL
-            );
-          });
-
           it.skip("Token contract reverts for another reason", async function () {
             // prepare a disputed exchange
             const mockToken = await createDisputeExchangeWithToken();

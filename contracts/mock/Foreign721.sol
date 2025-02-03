@@ -23,13 +23,6 @@ contract Foreign721 is ERC721Upgradeable {
             _tokenId++;
         }
     }
-
-    /**
-     * Deletes the contract code
-     */
-    function destruct() public {
-        selfdestruct(payable(msg.sender));
-    }
 }
 
 /*
