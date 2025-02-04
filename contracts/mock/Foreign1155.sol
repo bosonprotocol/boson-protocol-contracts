@@ -17,13 +17,6 @@ contract Foreign1155 is ERC1155Upgradeable {
     function mint(uint256 _tokenId, uint256 _supply) public {
         _mint(msg.sender, _tokenId, _supply, "");
     }
-
-    /**
-     * Deletes the contract code
-     */
-    function destruct() public {
-        selfdestruct(payable(msg.sender));
-    }
 }
 
 /*

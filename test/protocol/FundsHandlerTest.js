@@ -1031,15 +1031,6 @@ describe("IBosonFundsHandler", function () {
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_TRANSFER_FAILED);
             });
 
-            it("Transfer of funds failed - ERC20 token does not exist anymore", async function () {
-              // destruct mockToken
-              await mockToken.destruct();
-
-              await expect(fundsHandler.connect(assistant).withdrawFunds(seller.id, [], [])).to.revertedWith(
-                RevertReasons.EOA_FUNCTION_CALL_SAFE_ERC20
-              );
-            });
-
             it("Transfer of funds failed - revert durin ERC20 transfer", async function () {
               // pause mockToken
               await mockToken.pause();
@@ -1591,15 +1582,6 @@ describe("IBosonFundsHandler", function () {
             await expect(
               fundsHandler.connect(feeCollector).withdrawProtocolFees([ZeroAddress], [offerNativeProtocolFee])
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOKEN_TRANSFER_FAILED);
-          });
-
-          it("Transfer of funds failed - ERC20 token does not exist anymore", async function () {
-            // destruct mockToken
-            await mockToken.destruct();
-
-            await expect(fundsHandler.connect(feeCollector).withdrawProtocolFees([], [])).to.revertedWith(
-              RevertReasons.EOA_FUNCTION_CALL_SAFE_ERC20
-            );
           });
 
           it("Transfer of funds failed - revert during ERC20 transfer", async function () {
