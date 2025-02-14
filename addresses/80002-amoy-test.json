@@ -74,9 +74,9 @@
     },
     {
       "name": "BosonPriceDiscoveryClient",
-      "address": "0xFFcd4c407B60B0d4351945484F9354d2C9E34EA1",
+      "address": "0xF4f02BAE43cf66fca47eBaC58657586Aa951D135",
       "args": [
-        "0x52eF3d68BaB452a294342DC3e5f464d7f610f72E",
+        "0x113d6C5038832f567808677B4F0B89ffC62c18F7",
         "0x7de418a7ce94debd057c34ebac232e7027634ade"
       ],
       "interfaceId": ""
