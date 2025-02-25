@@ -38,6 +38,11 @@ module.exports = {
     apiKey: process.env.DEPLOYER_OKLINK_API_KEY,
   },
 
+  // Needed for verifying contract code on Optimistic Etherscan
+  optimisticEtherscan: {
+    apiKey: process.env.DEPLOYER_OPTIMISTIC_ETHERSCAN_API_KEY,
+  },
+
   // Needed for Gas Reporter
   coinmarketcap: {
     apiKey: process.env.GAS_REPORTER_COINMARKETCAP_API_KEY,

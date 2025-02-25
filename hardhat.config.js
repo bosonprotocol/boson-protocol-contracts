@@ -210,6 +210,8 @@ module.exports = {
       polygonAmoy: environments.okLink.apiKey,
       base: environments.basescan.apiKey,
       "base-sepolia": environments.basescan.apiKey,
+      optimism: environments.optimisticEtherscan.apiKey,
+      "optimism-sepolia": environments.optimisticEtherscan.apiKey,
     },
     customChains: [
       {
@@ -234,6 +236,22 @@ module.exports = {
         urls: {
           apiURL: "https://api-sepolia.basescan.org/api",
           browserURL: "https://sepolia.basescan.org",
+        },
+      },
+      {
+        network: "optimism",
+        chainId: 10,
+        urls: {
+          apiURL: "https://api-optimistic.etherscan.io/api",
+          browserURL: "https://optimistic.etherscan.io/",
+        },
+      },
+      {
+        network: "optimism-sepolia",
+        chainId: 11155420,
+        urls: {
+          apiURL: "https://api-sepolia-optimistic.etherscan.io/api",
+          browserURL: "https://sepolia-optimism.etherscan.io",
         },
       },
     ],
