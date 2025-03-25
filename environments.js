@@ -7,6 +7,9 @@
 
 require("dotenv").config();
 
+console.log("Loading environment variables...");
+console.log("DEPLOYER_ARBITRUM_ETHERSCAN_API_KEY:", process.env.DEPLOYER_ARBITRUM_ETHERSCAN_API_KEY);
+
 module.exports = {
   // Transaction controls
   confirmations: parseInt(process.env.CONFIRMATIONS),
@@ -41,6 +44,11 @@ module.exports = {
   // Needed for verifying contract code on Optimistic Etherscan
   optimisticEtherscan: {
     apiKey: process.env.DEPLOYER_OPTIMISTIC_ETHERSCAN_API_KEY,
+  },
+
+  // Needed for verifying contract code on Arbitrum Etherscan
+  arbiscan: {
+    apiKey: process.env.DEPLOYER_ARBITRUM_ETHERSCAN_API_KEY,
   },
 
   // Needed for Gas Reporter

@@ -1,7 +1,10 @@
 const dotEnvConfig = require("dotenv");
-dotEnvConfig.config();
+dotEnvConfig.config({ path: require("path").resolve(__dirname, ".env") });
 
+console.log("Loading environments...");
 const environments = require("./environments");
+console.log("Environments loaded:", environments.arbiscan);
+
 const { task } = require("hardhat/config");
 require("@nomicfoundation/hardhat-toolbox");
 require("@nomiclabs/hardhat-web3");
@@ -200,6 +203,10 @@ module.exports = {
       url: environments.arbitrum.txNode,
       accounts: environments.arbitrum.keys,
     },
+    "arbitrum-sepolia": {
+      url: environments.arbitrumSepolia.txNode,
+      accounts: environments.arbitrumSepolia.keys,
+    },
   },
   etherscan: {
     apiKey: {
@@ -212,6 +219,8 @@ module.exports = {
       "base-sepolia": environments.basescan.apiKey,
       optimism: environments.optimisticEtherscan.apiKey,
       "optimism-sepolia": environments.optimisticEtherscan.apiKey,
+      arbitrum: environments.arbiscan.apiKey,
+      "arbitrum-sepolia": environments.arbiscan.apiKey,
     },
     customChains: [
       {
@@ -252,6 +261,22 @@ module.exports = {
         urls: {
           apiURL: "https://api-sepolia-optimistic.etherscan.io/api",
           browserURL: "https://sepolia-optimism.etherscan.io",
+        },
+      },
+      {
+        network: "arbitrum",
+        chainId: 42161,
+        urls: {
+          apiURL: "https://api.arbiscan.io/api",
+          browserURL: "https://arbiscan.io",
+        },
+      },
+      {
+        network: "arbitrum-sepolia",
+        chainId: 421614,
+        urls: {
+          apiURL: "https://api-sepolia.arbiscan.io/api",
+          browserURL: "https://sepolia.arbiscan.io",
         },
       },
     ],
