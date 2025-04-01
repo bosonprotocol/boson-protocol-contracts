@@ -46,7 +46,7 @@ module.exports = {
     optimismSepolia: "0xe8637906721051d860af222e6021826887d9e358",
     optimism: "0x647fE0cCA3DF596ba414C8c600D441BB3D10d616", // TODO
     arbitrumSepolia: "0x9aa2be49567a2c86b30c703662e376146ded9b32",
-    arbitrum: "0x1111111111111111111111111111111111111111", // TODO
+    arbitrum: "0x54B334d68cf5382feE7FBBE496FCf1e76D9BA000",
   },
 
   // Treasury contract address
@@ -64,7 +64,7 @@ module.exports = {
     optimismSepolia: "0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8",
     optimism: "0x3B5F8C5B8112487239a51070141076e1b0eD7eeC",
     arbitrumSepolia: "0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8",
-    arbitrum: "0x1111111111111111111111111111111111111111", // TODO
+    arbitrum: "0x3B5F8C5B8112487239a51070141076e1b0eD7eeC",
   },
 
   // Boson voucher beacon contract address
@@ -150,6 +150,6 @@ module.exports = {
     optimismSepolia: "0x661A3e65CD3247c5EAb7f398e0617072C4Cdf19B",
     optimism: "0xd8C3B2232B3d597156148f757Bb2bd665843aABd",
     arbitrumSepolia: "0xFFcd4c407B60B0d4351945484F9354d2C9E34EA1",
-    arbitrum: "0x1111111111111111111111111111111111111111", // TODO
+    arbitrum: "0xd8C3B2232B3d597156148f757Bb2bd665843aABd",
   },
 };
