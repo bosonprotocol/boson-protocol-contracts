@@ -1,6 +1,6 @@
 {
-  "chainId": 80002,
-  "network": "amoy",
+  "chainId": 421614,
+  "network": "arbitrumSepolia",
   "env": "test",
   "protocolVersion": "2.4.1",
   "contracts": [
@@ -74,9 +74,9 @@
     },
     {
       "name": "BosonPriceDiscoveryClient",
-      "address": "0xF4f02BAE43cf66fca47eBaC58657586Aa951D135",
+      "address": "0xFFcd4c407B60B0d4351945484F9354d2C9E34EA1",
       "args": [
-        "0x113d6C5038832f567808677B4F0B89ffC62c18F7",
+        "0x980B62Da83eFf3D4576C647993b0c1D7faf17c73",
         "0x7de418a7ce94debd057c34ebac232e7027634ade"
       ],
       "interfaceId": ""
@@ -175,7 +175,7 @@
       "name": "SequentialCommitHandlerFacet",
       "address": "0x5d3bE51d529b6e82C9f3436C5Dce76c75dCbe7bf",
       "args": [
-        "0x52eF3d68BaB452a294342DC3e5f464d7f610f72E"
+        "0x980B62Da83eFf3D4576C647993b0c1D7faf17c73"
       ],
       "interfaceId": "0x34780cc6"
     },
@@ -183,7 +183,7 @@
       "name": "PriceDiscoveryHandlerFacet",
       "address": "0x2e8a01f35ff76d666aB04A1C11a2Da87947f582e",
       "args": [
-        "0x52eF3d68BaB452a294342DC3e5f464d7f610f72E"
+        "0x980B62Da83eFf3D4576C647993b0c1D7faf17c73"
       ],
       "interfaceId": "0xdec319c9"
     },
@@ -208,19 +208,19 @@
       "interfaceId": "0xb3e4e803"
     },
     {
+      "name": "BosonVoucher Logic",
+      "address": "0x8c25447AE830993eCeFAB50Bfe825D85DB69bcFC",
+      "args": [
+        "0x000000000000000000000000000000000000dead"
+      ],
+      "interfaceId": ""
+    },
+    {
       "name": "BosonVoucher Beacon",
       "address": "0x78163c984cE226fdbfBC671c74E9f32dc14ee930",
       "args": [
         "0x7de418a7ce94debd057c34ebac232e7027634ade",
         "0x8c25447AE830993eCeFAB50Bfe825D85DB69bcFC"
-      ],
-      "interfaceId": ""
-    },
-    {
-      "name": "BosonVoucher Logic",
-      "address": "0x9a86258B73Df1Dc92131E4db465236151387734d",
-      "args": [
-        "0xd240234dacd7ffdca7e4effcf6c7190885d7e2f0"
       ],
       "interfaceId": ""
     }
