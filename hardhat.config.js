@@ -1,5 +1,5 @@
 const dotEnvConfig = require("dotenv");
-dotEnvConfig.config();
+dotEnvConfig.config({ path: require("path").resolve(__dirname, ".env") });
 
 const environments = require("./environments");
 const { task } = require("hardhat/config");
@@ -211,6 +211,10 @@ module.exports = {
       url: environments.arbitrum.txNode,
       accounts: environments.arbitrum.keys,
     },
+    "arbitrum-sepolia": {
+      url: environments.arbitrumSepolia.txNode,
+      accounts: environments.arbitrumSepolia.keys,
+    },
   },
   etherscan: {
     apiKey: {
@@ -220,6 +224,10 @@ module.exports = {
       polygonAmoy: environments.okLink.apiKey,
       base: environments.basescan.apiKey,
       "base-sepolia": environments.basescan.apiKey,
+      optimism: environments.optimisticEtherscan.apiKey,
+      "optimism-sepolia": environments.optimisticEtherscan.apiKey,
+      arbitrum: environments.arbiscan.apiKey,
+      "arbitrum-sepolia": environments.arbiscan.apiKey,
     },
     customChains: [
       {
@@ -244,6 +252,38 @@ module.exports = {
         urls: {
           apiURL: "https://api-sepolia.basescan.org/api",
           browserURL: "https://sepolia.basescan.org",
+        },
+      },
+      {
+        network: "optimism",
+        chainId: 10,
+        urls: {
+          apiURL: "https://api-optimistic.etherscan.io/api",
+          browserURL: "https://optimistic.etherscan.io/",
+        },
+      },
+      {
+        network: "optimism-sepolia",
+        chainId: 11155420,
+        urls: {
+          apiURL: "https://api-sepolia-optimistic.etherscan.io/api",
+          browserURL: "https://sepolia-optimism.etherscan.io",
+        },
+      },
+      {
+        network: "arbitrum",
+        chainId: 42161,
+        urls: {
+          apiURL: "https://api.arbiscan.io/api",
+          browserURL: "https://arbiscan.io",
+        },
+      },
+      {
+        network: "arbitrum-sepolia",
+        chainId: 421614,
+        urls: {
+          apiURL: "https://api-sepolia.arbiscan.io/api",
+          browserURL: "https://sepolia.arbiscan.io",
         },
       },
     ],
