@@ -118,14 +118,18 @@ async function main(env, facetConfig, version, functionNamesToSelector) {
   }
 
   let facets;
-  // Try to load from upgrade directory
-  const upgradeConfigPath = path.join(__dirname, "config", "upgrade", `${version}.js`);
-  if (fs.existsSync(upgradeConfigPath)) {
-    const { getFacets: getVersionFacets } = require(upgradeConfigPath);
-    facets = await getVersionFacets();
+  if (facetConfig) {
+    facets = JSON.parse(facetConfig);
   } else {
-    // Get values from default config file
-    facets = await getFacets();
+    // Try to load from upgrade directory
+    const upgradeConfigPath = path.join(__dirname, "config", "upgrade", `${version}.js`);
+    if (fs.existsSync(upgradeConfigPath)) {
+      const { getFacets: getVersionFacets } = require(upgradeConfigPath);
+      facets = await getVersionFacets();
+    } else {
+      // Get values from default config file
+      facets = await getFacets();
+    }
   }
 
   let deployedFacets = [];

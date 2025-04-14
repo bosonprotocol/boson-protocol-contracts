@@ -69,8 +69,9 @@ task("upgrade-facets", "Upgrade existing facets, add new facets or remove existi
   .addParam("newVersion", "The version of the protocol to upgrade to")
   .addParam("env", "The deployment environment")
   .addParam("functionNamesToSelector", "JSON list of function names to selectors")
+  .addOptionalParam("facetConfig", "JSON list of facets to upgrade")
   .addFlag("dryRun", "Test the upgrade without actually performing it")
-  .setAction(async ({ env, newVersion, functionNamesToSelector, dryRun }) => {
+  .setAction(async ({ env, newVersion, functionNamesToSelector, facetConfig, dryRun }) => {
     let balanceBefore, getBalance;
     if (dryRun) {
       let setupDryRun;
@@ -79,7 +80,7 @@ task("upgrade-facets", "Upgrade existing facets, add new facets or remove existi
     }
 
     const { upgradeFacets } = await lazyImport("./scripts/upgrade-facets.js");
-    await upgradeFacets(env, null, newVersion, functionNamesToSelector);
+    await upgradeFacets(env, facetConfig, newVersion, functionNamesToSelector);
 
     if (dryRun) {
       const balanceAfter = await getBalance();
