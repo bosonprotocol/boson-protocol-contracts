@@ -519,7 +519,9 @@ describe("DisputeResolverHandler", function () {
           disputeResolver2Struct = disputeResolver2.toStruct();
 
           //Create dispute resolver 1
-          accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+          await accountHandler
+            .connect(admin)
+            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
           // Attempt to create another dispute resolver with same addresses
           await expect(

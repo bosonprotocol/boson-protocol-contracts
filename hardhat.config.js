@@ -211,10 +211,6 @@ module.exports = {
       url: environments.arbitrum.txNode,
       accounts: environments.arbitrum.keys,
     },
-    "arbitrum-sepolia": {
-      url: environments.arbitrumSepolia.txNode,
-      accounts: environments.arbitrumSepolia.keys,
-    },
   },
   etherscan: {
     apiKey: {
