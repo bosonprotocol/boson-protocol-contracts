@@ -27,6 +27,7 @@ const { getInterfaceIds, interfaceImplementers } = require("./config/supported-i
 const packageFile = require("../package.json");
 const readline = require("readline");
 const FacetCut = require("./domain/FacetCut");
+const path = require("path");
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -116,12 +117,12 @@ async function main(env, facetConfig, version, functionNamesToSelector) {
     return addressNotFound("ProtocolDiamond");
   }
 
-  // Get facets to upgrade
   let facets;
-
-  if (facetConfig) {
-    // facetConfig was passed in as a JSON object
-    facets = JSON.parse(facetConfig);
+  // Try to load from upgrade directory
+  const upgradeConfigPath = path.join(__dirname, "config", "upgrade", `${version}.js`);
+  if (fs.existsSync(upgradeConfigPath)) {
+    const { getFacets: getVersionFacets } = require(upgradeConfigPath);
+    facets = await getVersionFacets();
   } else {
     // Get values from default config file
     facets = await getFacets();
@@ -237,16 +238,14 @@ async function main(env, facetConfig, version, functionNamesToSelector) {
     newSelectors = newSelectors.remove([selector]);
 
     // Determine actions to be made
-    let selectorsToReplace = registeredSelectors.filter((value) => newSelectors.includes(value));
-    let selectorsToRemove = registeredSelectors.filter((value) => !selectorsToReplace.includes(value)); // unique old selectors
-    let selectorsToAdd = newSelectors.filter((value) => !selectorsToReplace.includes(value)); // unique new selectors
+    let selectorsToReplace = [...registeredSelectors.filter((value) => newSelectors.includes(value))];
+    let selectorsToRemove = [...registeredSelectors.filter((value) => !selectorsToReplace.includes(value))];
+    let selectorsToAdd = [...newSelectors.filter((value) => !selectorsToReplace.includes(value))];
 
     // Skip selectors if set in config
     let selectorsToSkip = facets.skipSelectors[newFacet.name] ? facets.skipSelectors[newFacet.name] : [];
     selectorsToReplace = removeSelectors(selectorsToReplace, selectorsToSkip);
-
     selectorsToRemove = removeSelectors(selectorsToRemove, selectorsToSkip);
-
     selectorsToAdd = removeSelectors(selectorsToAdd, selectorsToSkip);
 
     // Check if selectors that are being added are not registered yet on some other facet
@@ -254,12 +253,15 @@ async function main(env, facetConfig, version, functionNamesToSelector) {
     let skipAll, replaceAll;
 
     for (const selectorToAdd of selectorsToAdd) {
-      if (removedSelectors.flat().includes(selectorToAdd)) continue; // skip if selector is already marked for removal from another facet
+      if (removedSelectors.flat().includes(selectorToAdd)) {
+        continue;
+      }
 
       const existingFacetAddress = await diamondLoupe.facetAddress(selectorToAdd);
       if (existingFacetAddress != ZeroAddress) {
         // Selector exist on some other facet
         const selectorName = signatureToNameMapping[selectorToAdd];
+
         let answer;
         if (!(skipAll || replaceAll)) {
           const prompt = `Selector ${selectorName} is already registered on facet ${existingFacetAddress}. Do you want to (r)eplace or (s)kip it?\nUse "R" os "S" to apply the same choice to all remaining selectors in this facet. `;
@@ -273,12 +275,11 @@ async function main(env, facetConfig, version, functionNamesToSelector) {
         if (replaceAll || answer == "r") {
           // User chose to replace
           selectorsToReplace.push(selectorToAdd);
+          selectorsToAdd = selectorsToAdd.filter((s) => s !== selectorToAdd);
         } else {
           // User chose to skip
-          selectorsToSkip.push(selectorName);
+          selectorsToAdd = selectorsToAdd.filter((s) => s !== selectorToAdd);
         }
-        // In any case, remove it from selectorsToAdd
-        selectorsToAdd = removeSelectors(selectorsToAdd, [selectorName]);
       }
     }
 
