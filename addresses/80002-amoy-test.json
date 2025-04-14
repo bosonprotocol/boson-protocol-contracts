@@ -2,7 +2,7 @@
   "chainId": 80002,
   "network": "amoy",
   "env": "test",
-  "protocolVersion": "2.4.1",
+  "protocolVersion": "2.4.2",
   "contracts": [
     {
       "name": "AccessController",
@@ -188,12 +188,6 @@
       "interfaceId": "0xdec319c9"
     },
     {
-      "name": "ConfigHandlerFacet",
-      "address": "0x9a8dA0306645C7b5C9C0B75C36D8b072C0642b34",
-      "args": [],
-      "interfaceId": "0xe27f0773"
-    },
-    {
       "name": "ExchangeHandlerFacet",
       "address": "0x846F41DBb3660149d0Ff2F42817740133AaB3ac2",
       "args": [
@@ -223,6 +217,12 @@
         "0xd240234dacd7ffdca7e4effcf6c7190885d7e2f0"
       ],
       "interfaceId": ""
+    },
+    {
+      "name": "ConfigHandlerFacet",
+      "address": "0x90E0d238bc1966dE770F0c9459b6e63A73B93302",
+      "args": [],
+      "interfaceId": "0xe9aa49b6"
     }
   ]
 }
