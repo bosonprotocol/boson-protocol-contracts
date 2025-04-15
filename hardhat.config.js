@@ -217,7 +217,7 @@ module.exports = {
       mainnet: environments.etherscan.apiKey,
       sepolia: environments.etherscan.apiKey,
       polygon: environments.polygonscan.apiKey,
-      polygonAmoy: environments.okLink.apiKey,
+      amoy: environments.polygonscan.apiKey,
       base: environments.basescan.apiKey,
       "base-sepolia": environments.basescan.apiKey,
       optimism: environments.optimisticEtherscan.apiKey,
@@ -227,11 +227,11 @@ module.exports = {
     },
     customChains: [
       {
-        network: "polygonAmoy",
+        network: "amoy",
         chainId: 80002,
         urls: {
-          apiURL: "https://www.oklink.com/api/v5/explorer/contract/verify-source-code-plugin/AMOY_TESTNET",
-          browserURL: "https://www.oklink.com/amoy/",
+          apiURL: "https://api-amoy.polygonscan.com/api",
+          browserURL: "https://amoy.polygonscan.com",
         },
       },
       {
