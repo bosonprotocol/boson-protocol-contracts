@@ -38,6 +38,10 @@ async function setupDryRun(env) {
   const { chainId } = await ethers.provider.getNetwork();
   if (chainId != "31337") process.exit(1); // make sure network is hardhat
 
+  // Initialize fork state with a dummy transfer.
+  const deployer = (await getSigners())[0];
+  await deployer.sendTransaction({ to: deployer.address, value: 0 });
+
   // copy addresses file
   shell.cp(getAddressesFilePath(forkedChainId, network, forkedEnv), getAddressesFilePath(chainId, "hardhat", env));
 
