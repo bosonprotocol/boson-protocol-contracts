@@ -2,7 +2,7 @@
   "chainId": 11155420,
   "network": "optimismSepolia",
   "env": "test",
-  "protocolVersion": "2.4.1",
+  "protocolVersion": "2.4.2-rc.1",
   "contracts": [
     {
       "name": "AccessController",
@@ -118,12 +118,6 @@
       "interfaceId": "0x7b53dece"
     },
     {
-      "name": "DisputeHandlerFacet",
-      "address": "0x5eAF197764890e1dFBCB45CeD17ebe9A9BB8D18A",
-      "args": [],
-      "interfaceId": "0xd9ea8317"
-    },
-    {
       "name": "FundsHandlerFacet",
       "address": "0x904983c284EbC7c8e7bcDff6831C80B786dA62d2",
       "args": [],
@@ -134,18 +128,6 @@
       "address": "0xCF3167A8b4b7a33Fd5783fc721751c556B303CEf",
       "args": [],
       "interfaceId": "0x08ccdf47"
-    },
-    {
-      "name": "OfferHandlerFacet",
-      "address": "0x65714585eC5A371a441297b1f3458d308e375da4",
-      "args": [],
-      "interfaceId": "0x91b54fdc"
-    },
-    {
-      "name": "OrchestrationHandlerFacet1",
-      "address": "0x46b10a88872c47c8749574900571e168A7B4E2d6",
-      "args": [],
-      "interfaceId": "0x44eb95ca"
     },
     {
       "name": "OrchestrationHandlerFacet2",
@@ -172,36 +154,6 @@
       "interfaceId": "0x0d8e6e2c"
     },
     {
-      "name": "SequentialCommitHandlerFacet",
-      "address": "0x4dde9958bAA56203Ac877F8764CA28805a5f317b",
-      "args": [
-        "0x4200000000000000000000000000000000000006"
-      ],
-      "interfaceId": "0x34780cc6"
-    },
-    {
-      "name": "PriceDiscoveryHandlerFacet",
-      "address": "0xD5FDC575Cb1242D9A7C0a466eFd5A87a1E8e3CDF",
-      "args": [
-        "0x4200000000000000000000000000000000000006"
-      ],
-      "interfaceId": "0xdec319c9"
-    },
-    {
-      "name": "ConfigHandlerFacet",
-      "address": "0x8c25447AE830993eCeFAB50Bfe825D85DB69bcFC",
-      "args": [],
-      "interfaceId": "0xe27f0773"
-    },
-    {
-      "name": "ExchangeHandlerFacet",
-      "address": "0x78163c984cE226fdbfBC671c74E9f32dc14ee930",
-      "args": [
-        1
-      ],
-      "interfaceId": "0x66e9075a"
-    },
-    {
       "name": "MetaTransactionsHandlerFacet",
       "address": "0x828A9c59450BcE6F1Fdf58E2bE911fcA04259a9C",
       "args": [],
@@ -223,6 +175,54 @@
         "0x6ae1FCe8b0BcEe14d498C043D64b6a4a19c0E4A8"
       ],
       "interfaceId": ""
+    },
+    {
+      "name": "ConfigHandlerFacet",
+      "address": "0xd12EeE1D9C16fC989550cce58a572093581515d9",
+      "args": [],
+      "interfaceId": "0xe9aa49b6"
+    },
+    {
+      "name": "DisputeHandlerFacet",
+      "address": "0x1B151f3c384dcB29Ecd30E47c9e5351D0D6B4d16",
+      "args": [],
+      "interfaceId": "0xd9ea8317"
+    },
+    {
+      "name": "ExchangeHandlerFacet",
+      "address": "0xDA01E28EA66B4294EeE21013bC45a0114E976Da4",
+      "args": [
+        1
+      ],
+      "interfaceId": "0x66e9075a"
+    },
+    {
+      "name": "OfferHandlerFacet",
+      "address": "0x062707A99e2634Eb5305804d1DcC9FCDcc215366",
+      "args": [],
+      "interfaceId": "0x91b54fdc"
+    },
+    {
+      "name": "OrchestrationHandlerFacet1",
+      "address": "0x0b5C2082Ba720C70bCC01F16A0993B3C045ade74",
+      "args": [],
+      "interfaceId": "0x44eb95ca"
+    },
+    {
+      "name": "PriceDiscoveryHandlerFacet",
+      "address": "0x47fC326d98aB6b3033A8F321911356E9afB057dE",
+      "args": [
+        "0x4200000000000000000000000000000000000006"
+      ],
+      "interfaceId": "0xdec319c9"
+    },
+    {
+      "name": "SequentialCommitHandlerFacet",
+      "address": "0xf16521a00137F3ca220a80038f2a4A65606ef23c",
+      "args": [
+        "0x4200000000000000000000000000000000000006"
+      ],
+      "interfaceId": "0x34780cc6"
     }
   ]
 }
