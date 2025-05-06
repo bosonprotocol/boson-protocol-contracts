@@ -18,11 +18,10 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @notice Initializes Facet.
      * This function is callable only once.
      *
-     * N.B. InterfaceId did not change from v2.3.0 to v2.4.0, so input to modifier onlyUninitialized must be adjusted to allow initalization.
      */
     function initialize(
         bytes32[] calldata _functionNameHashes
-    ) public onlyUninitialized(type(IBosonMetaTransactionsHandler).interfaceId ^ bytes4("v240")) {
+    ) public onlyUninitialized(type(IBosonMetaTransactionsHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonMetaTransactionsHandler).interfaceId);
 
         // Set types for special metatxs

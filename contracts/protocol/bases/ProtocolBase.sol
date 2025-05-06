@@ -721,14 +721,18 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
         // If the token has a custom fee table, find the appropriate percentage
         uint256 priceRangesLength = priceRanges.length;
         if (priceRangesLength > 0) {
-            for (uint256 i; i < priceRangesLength - 1; ++i) {
-                if (_price <= priceRanges[i]) {
-                    // Return the fee percentage for the matching price range
-                    return feePercentages[i];
+            unchecked {
+                uint256 i;
+                for (; i < priceRangesLength - 1; ++i) {
+                    if (_price <= priceRanges[i]) {
+                        // Return the fee percentage for the matching price range
+                        return feePercentages[i];
+                    }
                 }
+
+                // If price exceeds all ranges, use the highest fee percentage
+                return feePercentages[i];
             }
-            // If price exceeds all ranges, use the highest fee percentage
-            return feePercentages[priceRangesLength - 1];
         }
 
         // If no custom fee table exists, fallback to using the default protocol percentage
