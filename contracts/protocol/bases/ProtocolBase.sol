@@ -723,7 +723,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
         if (priceRangesLength > 0) {
             unchecked {
                 uint256 i;
-                for (i; i < priceRangesLength - 1; ++i) {
+                for (; i < priceRangesLength - 1; ++i) {
                     if (_price <= priceRanges[i]) {
                         // Return the fee percentage for the matching price range
                         return feePercentages[i];
