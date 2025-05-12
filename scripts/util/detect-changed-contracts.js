@@ -62,7 +62,9 @@ async function detectChangedContract(referenceCommit, targetCommit = "HEAD") {
 
   // Compile old version
   await hre.run("clean");
-  await hre.run("compile");
+  try {
+    await hre.run("compile");
+  } catch (error) {}
 
   // Get reference bytecodes
   const referenceBytecodes = await getBytecodes();
