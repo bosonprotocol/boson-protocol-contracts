@@ -185,6 +185,11 @@
     },
     {
       "inputs": [],
+      "name": "FeeTableAssetNotSupported",
+      "type": "error"
+    },
+    {
+      "inputs": [],
       "name": "FunctionNotAllowlisted",
       "type": "error"
     },
@@ -531,6 +536,11 @@
     {
       "inputs": [],
       "name": "NoUpdateApplied",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NonAscendingOrder",
       "type": "error"
     },
     {
@@ -935,6 +945,37 @@
       "anonymous": false,
       "inputs": [
         {
+          "indexed": true,
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256[]",
+          "name": "priceRanges",
+          "type": "uint256[]"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256[]",
+          "name": "feePercentages",
+          "type": "uint256[]"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "FeeTableUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
           "indexed": false,
           "internalType": "uint256",
           "name": "maxEscalationResponsePeriod",
@@ -1328,6 +1369,30 @@
       "type": "function"
     },
     {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_exchangeToken",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_price",
+          "type": "uint256"
+        }
+      ],
+      "name": "getProtocolFee",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [],
       "name": "getProtocolFeeFlatBoson",
       "outputs": [
@@ -1348,6 +1413,54 @@
           "internalType": "uint256",
           "name": "",
           "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_exchangeToken",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_price",
+          "type": "uint256"
+        }
+      ],
+      "name": "getProtocolFeePercentage",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_tokenAddress",
+          "type": "address"
+        }
+      ],
+      "name": "getProtocolFeeTable",
+      "outputs": [
+        {
+          "internalType": "uint256[]",
+          "name": "priceRanges",
+          "type": "uint256[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "feePercentages",
+          "type": "uint256[]"
         }
       ],
       "stateMutability": "view",
@@ -1562,6 +1675,29 @@
         }
       ],
       "name": "setProtocolFeePercentage",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_tokenAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "_priceRanges",
+          "type": "uint256[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "_feePercentages",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "setProtocolFeeTable",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

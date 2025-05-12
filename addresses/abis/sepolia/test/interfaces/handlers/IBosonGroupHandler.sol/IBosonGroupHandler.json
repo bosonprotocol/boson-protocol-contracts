@@ -185,6 +185,11 @@
     },
     {
       "inputs": [],
+      "name": "FeeTableAssetNotSupported",
+      "type": "error"
+    },
+    {
+      "inputs": [],
       "name": "FunctionNotAllowlisted",
       "type": "error"
     },
@@ -531,6 +536,11 @@
     {
       "inputs": [],
       "name": "NoUpdateApplied",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NonAscendingOrder",
       "type": "error"
     },
     {

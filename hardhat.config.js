@@ -1,5 +1,5 @@
 const dotEnvConfig = require("dotenv");
-dotEnvConfig.config();
+dotEnvConfig.config({ path: require("path").resolve(__dirname, ".env") });
 
 const environments = require("./environments");
 const { task } = require("hardhat/config");
@@ -70,10 +70,25 @@ task("upgrade-facets", "Upgrade existing facets, add new facets or remove existi
   .addParam("env", "The deployment environment")
   .addParam("functionNamesToSelector", "JSON list of function names to selectors")
   .addOptionalParam("facetConfig", "JSON list of facets to upgrade")
-  .setAction(async ({ env, facetConfig, newVersion, functionNamesToSelector }) => {
-    const { upgradeFacets } = await lazyImport("./scripts/upgrade-facets.js");
+  .addFlag("dryRun", "Test the upgrade without actually performing it")
+  .setAction(async ({ env, newVersion, functionNamesToSelector, facetConfig, dryRun }) => {
+    let balanceBefore, getBalance;
+    if (dryRun) {
+      let setupDryRun;
+      ({ setupDryRun, getBalance } = await lazyImport(`./scripts/util/dry-run.js`));
+      ({ env, deployerBalance: balanceBefore } = await setupDryRun(env));
+    }
 
+    const { upgradeFacets } = await lazyImport("./scripts/upgrade-facets.js");
     await upgradeFacets(env, facetConfig, newVersion, functionNamesToSelector);
+
+    if (dryRun) {
+      const balanceAfter = await getBalance();
+      const etherSpent = balanceBefore - balanceAfter;
+
+      const { formatUnits } = require("ethers");
+      console.log("Ether spent: ", formatUnits(etherSpent, "ether"));
+    }
   });
 
 task("upgrade-clients", "Upgrade existing clients")
@@ -202,17 +217,21 @@ module.exports = {
       mainnet: environments.etherscan.apiKey,
       sepolia: environments.etherscan.apiKey,
       polygon: environments.polygonscan.apiKey,
-      polygonAmoy: environments.okLink.apiKey,
+      amoy: environments.polygonscan.apiKey,
       base: environments.basescan.apiKey,
       "base-sepolia": environments.basescan.apiKey,
+      optimism: environments.optimisticEtherscan.apiKey,
+      "optimism-sepolia": environments.optimisticEtherscan.apiKey,
+      arbitrum: environments.arbiscan.apiKey,
+      "arbitrum-sepolia": environments.arbiscan.apiKey,
     },
     customChains: [
       {
-        network: "polygonAmoy",
+        network: "amoy",
         chainId: 80002,
         urls: {
-          apiURL: "https://www.oklink.com/api/v5/explorer/contract/verify-source-code-plugin/AMOY_TESTNET",
-          browserURL: "https://www.oklink.com/amoy/",
+          apiURL: "https://api-amoy.polygonscan.com/api",
+          browserURL: "https://amoy.polygonscan.com",
         },
       },
       {
@@ -229,6 +248,38 @@ module.exports = {
         urls: {
           apiURL: "https://api-sepolia.basescan.org/api",
           browserURL: "https://sepolia.basescan.org",
+        },
+      },
+      {
+        network: "optimism",
+        chainId: 10,
+        urls: {
+          apiURL: "https://api-optimistic.etherscan.io/api",
+          browserURL: "https://optimistic.etherscan.io/",
+        },
+      },
+      {
+        network: "optimism-sepolia",
+        chainId: 11155420,
+        urls: {
+          apiURL: "https://api-sepolia-optimistic.etherscan.io/api",
+          browserURL: "https://sepolia-optimism.etherscan.io",
+        },
+      },
+      {
+        network: "arbitrum",
+        chainId: 42161,
+        urls: {
+          apiURL: "https://api.arbiscan.io/api",
+          browserURL: "https://arbiscan.io",
+        },
+      },
+      {
+        network: "arbitrum-sepolia",
+        chainId: 421614,
+        urls: {
+          apiURL: "https://api-sepolia.arbiscan.io/api",
+          browserURL: "https://sepolia.arbiscan.io",
         },
       },
     ],

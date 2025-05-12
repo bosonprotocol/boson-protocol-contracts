@@ -8,17 +8,43 @@
 This page provides correct configuration upgrades for all releases.  
 If you want to upgrade to any intermediate version (for example to a release candidate), you can use the same config as for the actual release, however it might result in interface clashes, which might prevent subsequent upgrades. Workaround for this problem is to temporary disable `onlyUninitialized` modifier on all contracts that clash. Since this is generally an unsafe operation, you should never do that in production environment. Production should always be upgraded only to actual releases.
 
-Replace contents of file `scripts/config/facet-upgrade.js` with a configuration below, corresponding to desired upgrade.
+For each version upgrade, create a JavaScript configuration file in `scripts/config/upgrade/` directory with the name matching the target version (e.g. `2.4.2.js`). The file should export a `getFacets` function that returns the upgrade configuration.
 
-### 2.0.0 -> 2.1.0
+A default configuration template is available at `scripts/config/upgrade/facet-upgrade.js`. This file contains a detailed explanation of all configuration options and can be used as a starting point for creating new upgrade configurations.
+
+### Configuration Format
+
+Each upgrade configuration file should export a `getFacets` function that returns an object with the following structure:
 
 ```javascript
-{
-  addOrUpgrade: ["ERC165Facet", "AccountHandlerFacet", "SellerHandlerFacet", "DisputeResolverHandlerFacet"],
-  remove: [],
-  skipSelectors: {},
-  initArgs: {},
-  skipInit: ["ERC165Facet"],
+async function getFacets() {
+  return {
+    addOrUpgrade: [],    // Array of facet names to be added or upgraded
+    remove: [],          // Array of facet names to be removed
+    skipSelectors: {},   // Object mapping facet names to arrays of selectors to skip
+    facetsToInit: {},    // Object mapping facet names to their initialization parameters
+    initializationData: "0x"  // Hex string containing initialization data
+  };
+}
+
+exports.getFacets = getFacets;
+```
+
+For detailed examples and explanations of each configuration field, refer to the default configuration file at `scripts/config/upgrade/facet-upgrade.js`.
+
+### Example Configurations
+
+#### 2.0.0 -> 2.1.0
+
+```javascript
+async function getFacets() {
+  return {
+    addOrUpgrade: ["ERC165Facet", "AccountHandlerFacet", "SellerHandlerFacet", "DisputeResolverHandlerFacet"],
+    remove: [],
+    skipSelectors: {},
+    facetsToInit: {},
+    initializationData: "0x",
+  };
 }
 ```
 Note: format to upgrade from `2.0.0` to `2.1.0` does not match the latest upgrade script format. When you are upgrading to this version, checkout the tag `v2.1.0-scripts` which is the latest version of old upgrade script that works with upgrades up to `2.1.0`.
