@@ -2,7 +2,7 @@
   "chainId": 80002,
   "network": "amoy",
   "env": "test",
-  "protocolVersion": "2.4.2-rc.1",
+  "protocolVersion": "2.4.2-rc.2.1",
   "contracts": [
     {
       "name": "AccessController",
@@ -178,19 +178,19 @@
     },
     {
       "name": "ConfigHandlerFacet",
-      "address": "0xA80202E0b859028268cE19f9B3338F67aF4fdA18",
+      "address": "0x63C7954f7cea33ae344C7d1bca6fcCCfa2719351",
       "args": [],
       "interfaceId": "0xe9aa49b6"
     },
     {
       "name": "DisputeHandlerFacet",
-      "address": "0x911e74a462D2608748D1EDa1Ab016E1368631d8c",
+      "address": "0x9491406d2d9CC99A984A9c34bb488Cf9c8862A39",
       "args": [],
       "interfaceId": "0xd9ea8317"
     },
     {
       "name": "ExchangeHandlerFacet",
-      "address": "0xB4239d3059C5E23feD8b3eBdef8d50847540A21F",
+      "address": "0x85a8d408c2700C3e05BB17B743b4ff699431Ce8D",
       "args": [
         1
       ],
@@ -198,19 +198,19 @@
     },
     {
       "name": "OfferHandlerFacet",
-      "address": "0xe04178C76950e6aB434f2c0208dF118C0c515b51",
+      "address": "0xb6071231C69914B0780B9380777F792263C35f68",
       "args": [],
       "interfaceId": "0x91b54fdc"
     },
     {
       "name": "OrchestrationHandlerFacet1",
-      "address": "0xe7A3840bbd02751d41ac95638D11b7E7A2c4aA48",
+      "address": "0x2F91C8b823Cf28e163246e81Cd9298A3A2beF209",
       "args": [],
       "interfaceId": "0x44eb95ca"
     },
     {
       "name": "PriceDiscoveryHandlerFacet",
-      "address": "0x4b48BF9aeC91A9C4B0d1dd4b46b63d976443127B",
+      "address": "0x77B0a10AeFf1Db71ef871d7E4Fde72BefD5f64cF",
       "args": [
         "0x113d6C5038832f567808677B4F0B89ffC62c18F7"
       ],
@@ -218,7 +218,7 @@
     },
     {
       "name": "SequentialCommitHandlerFacet",
-      "address": "0x7DB05c12C7b975E7282bD1542939Ec7cafEa6B5a",
+      "address": "0x599901d44a2612b8c20bBCe3801dfeaCa2506843",
       "args": [
         "0x113d6C5038832f567808677B4F0B89ffC62c18F7"
       ],
