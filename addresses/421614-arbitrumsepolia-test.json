@@ -2,7 +2,7 @@
   "chainId": 421614,
   "network": "arbitrumSepolia",
   "env": "test",
-  "protocolVersion": "2.4.2-rc.1",
+  "protocolVersion": "2.4.2-rc.2",
   "contracts": [
     {
       "name": "AccessController",
@@ -178,19 +178,19 @@
     },
     {
       "name": "ConfigHandlerFacet",
-      "address": "0x6359FA7AD022682799aBB1b772fAc0f48F652C7B",
+      "address": "0x4c3FDd64cfFB1b8bb78747055F893fcf6a97920c",
       "args": [],
       "interfaceId": "0xe9aa49b6"
     },
     {
       "name": "DisputeHandlerFacet",
-      "address": "0x70dbFcCd334E15Ed8d892636Ba97C6FDB13a394a",
+      "address": "0xc4B2Ae5F808E06114bA86587b7C204229Ac2a7c3",
       "args": [],
       "interfaceId": "0xd9ea8317"
     },
     {
       "name": "ExchangeHandlerFacet",
-      "address": "0x4Be7B31B914F532DAA1Ed3f0E8b891301a2eE61B",
+      "address": "0x8EF14375F65f9f7E49603Dd61955fA7ff67F0c38",
       "args": [
         1
       ],
@@ -198,19 +198,19 @@
     },
     {
       "name": "OfferHandlerFacet",
-      "address": "0x5CB319455264139ab1DdEc1019acCB63efBE85F6",
+      "address": "0xa5D64513D4D33310126A03Dde8E98FaCFBB42a83",
       "args": [],
       "interfaceId": "0x91b54fdc"
     },
     {
       "name": "OrchestrationHandlerFacet1",
-      "address": "0x522AFC30aD0D0865e13F08a8a8f64Ae050bC6494",
+      "address": "0xDeB27A18c8629E41d5BC60A025653624c36E9F90",
       "args": [],
       "interfaceId": "0x44eb95ca"
     },
     {
       "name": "PriceDiscoveryHandlerFacet",
-      "address": "0xd12EeE1D9C16fC989550cce58a572093581515d9",
+      "address": "0x4A8EB2112EDd68ed5E30C0C8B07366F545111a9D",
       "args": [
         "0x980B62Da83eFf3D4576C647993b0c1D7faf17c73"
       ],
@@ -218,7 +218,7 @@
     },
     {
       "name": "SequentialCommitHandlerFacet",
-      "address": "0x1B151f3c384dcB29Ecd30E47c9e5351D0D6B4d16",
+      "address": "0xA057af4564E140Bd17889429FA03ff2EC090B9F1",
       "args": [
         "0x980B62Da83eFf3D4576C647993b0c1D7faf17c73"
       ],
