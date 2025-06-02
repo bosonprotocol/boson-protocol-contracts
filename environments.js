@@ -18,29 +18,9 @@ module.exports = {
     salt: process.env.CREATE3_SALT,
   },
 
-  // Needed for verifying contract code on Etherscan
+  // Needed for verifying contract code on block explorers
   etherscan: {
-    apiKey: process.env.DEPLOYER_ETHERSCAN_API_KEY,
-  },
-
-  // Needed for verifying contract code on Polygonscan
-  polygonscan: {
-    apiKey: process.env.DEPLOYER_POLYGONSCAN_API_KEY,
-  },
-
-  // Needed for verifying contract code on Basescan
-  basescan: {
-    apiKey: process.env.DEPLOYER_BASESCAN_API_KEY,
-  },
-
-  // Needed for verifying contract code on Optimistic Etherscan
-  optimisticEtherscan: {
-    apiKey: process.env.DEPLOYER_OPTIMISTIC_ETHERSCAN_API_KEY,
-  },
-
-  // Needed for verifying contract code on Arbitrum Etherscan
-  arbiscan: {
-    apiKey: process.env.DEPLOYER_ARBITRUM_ETHERSCAN_API_KEY,
+    apiKey: process.env.ETHERSCAN_API_KEY,
   },
 
   // Needed for Gas Reporter

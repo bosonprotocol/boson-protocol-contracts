@@ -213,76 +213,7 @@ module.exports = {
     },
   },
   etherscan: {
-    apiKey: {
-      mainnet: environments.etherscan.apiKey,
-      sepolia: environments.etherscan.apiKey,
-      polygon: environments.polygonscan.apiKey,
-      amoy: environments.polygonscan.apiKey,
-      base: environments.basescan.apiKey,
-      "base-sepolia": environments.basescan.apiKey,
-      optimism: environments.optimisticEtherscan.apiKey,
-      "optimism-sepolia": environments.optimisticEtherscan.apiKey,
-      arbitrum: environments.arbiscan.apiKey,
-      "arbitrum-sepolia": environments.arbiscan.apiKey,
-    },
-    customChains: [
-      {
-        network: "amoy",
-        chainId: 80002,
-        urls: {
-          apiURL: "https://api-amoy.polygonscan.com/api",
-          browserURL: "https://amoy.polygonscan.com",
-        },
-      },
-      {
-        network: "base",
-        chainId: 8453,
-        urls: {
-          apiURL: "https://api.basescan.org/api",
-          browserURL: "https://basescan.org",
-        },
-      },
-      {
-        network: "base-sepolia",
-        chainId: 84532,
-        urls: {
-          apiURL: "https://api-sepolia.basescan.org/api",
-          browserURL: "https://sepolia.basescan.org",
-        },
-      },
-      {
-        network: "optimism",
-        chainId: 10,
-        urls: {
-          apiURL: "https://api-optimistic.etherscan.io/api",
-          browserURL: "https://optimistic.etherscan.io/",
-        },
-      },
-      {
-        network: "optimism-sepolia",
-        chainId: 11155420,
-        urls: {
-          apiURL: "https://api-sepolia-optimistic.etherscan.io/api",
-          browserURL: "https://sepolia-optimism.etherscan.io",
-        },
-      },
-      {
-        network: "arbitrum",
-        chainId: 42161,
-        urls: {
-          apiURL: "https://api.arbiscan.io/api",
-          browserURL: "https://arbiscan.io",
-        },
-      },
-      {
-        network: "arbitrum-sepolia",
-        chainId: 421614,
-        urls: {
-          apiURL: "https://api-sepolia.arbiscan.io/api",
-          browserURL: "https://sepolia.arbiscan.io",
-        },
-      },
-    ],
+    apiKey: environments.etherscan.apiKey,
   },
   solidity: {
     compilers: [
