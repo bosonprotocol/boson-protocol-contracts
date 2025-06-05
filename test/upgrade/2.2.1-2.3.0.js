@@ -488,9 +488,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // Extend offers validity
           const newValidUntilDate = (BigInt(offerDates.validUntil) + 10000n).toString();
           const offerIds = [...Array(offerCount).keys()].map((i) => startingOfferId + BigInt(i));
-          await expect(
-            offerHandler.connect(sellerWallet).extendOfferBatch(offerIds, newValidUntilDate)
-          ).to.not.be.reverted;
+          await expect(offerHandler.connect(sellerWallet).extendOfferBatch(offerIds, newValidUntilDate)).to.not.be
+            .reverted;
 
           // Void offers
           await expect(offerHandler.connect(sellerWallet).voidOfferBatch(offerIds)).to.not.be.reverted;
@@ -625,9 +624,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           // Withdraw more tokens than maxTokensPerWithdrawal
           const tokenAddresses = tokens.map(async (token) => await token.getAddress());
           const amounts = new Array(tokenCount).fill("1000");
-          await expect(
-            fundsHandler.connect(sellerWallet).withdrawFunds(sellerId, tokenAddresses, amounts)
-          ).to.not.be.reverted;
+          await expect(fundsHandler.connect(sellerWallet).withdrawFunds(sellerId, tokenAddresses, amounts)).to.not.be
+            .reverted;
         });
 
         it("can create a DR with more fees than maxFeesPerDisputeResolver", async function () {

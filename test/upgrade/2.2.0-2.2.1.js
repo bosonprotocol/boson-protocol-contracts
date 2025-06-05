@@ -243,18 +243,16 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       context("MetaTransactionHandlerfacet", async function () {
         it("Function hashes from removedFunctionsHashes list should not be allowlisted", async function () {
           for (const hash of removedFunctionHashes) {
-            const [isAllowed] = await contractsAfter.metaTransactionsHandler.functions[
-              "isFunctionAllowlisted(bytes32)"
-            ](hash);
+            const [isAllowed] =
+              await contractsAfter.metaTransactionsHandler.functions["isFunctionAllowlisted(bytes32)"](hash);
             expect(isAllowed).to.be.false;
           }
         });
 
         it("Function hashes from from addedFunctionsHashes list should be allowlisted", async function () {
           for (const hash of addedFunctionHashes) {
-            const [isAllowed] = await contractsAfter.metaTransactionsHandler.functions[
-              "isFunctionAllowlisted(bytes32)"
-            ](hash);
+            const [isAllowed] =
+              await contractsAfter.metaTransactionsHandler.functions["isFunctionAllowlisted(bytes32)"](hash);
             expect(isAllowed).to.be.true;
           }
         });
