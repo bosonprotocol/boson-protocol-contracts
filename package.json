@@ -69,7 +69,7 @@
     "lodash": "^4.17.21",
     "merkletreejs": "^0.5.2",
     "opensea-js": "^7.1.18",
-    "prettier": "^2.8.4",
+    "prettier": "^3.5.3",
     "prettier-plugin-solidity": "^1.2.0",
     "simple-statistics": "^7.8.8",
     "solhint": "^3.3.8",
