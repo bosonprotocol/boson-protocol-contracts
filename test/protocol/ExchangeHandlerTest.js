@@ -743,9 +743,8 @@ describe("IBosonExchangeHandler", function () {
         expect(group.isValid()).is.true;
         await groupHandler.connect(assistant).createGroup(group, condition);
 
-        await expect(
-          exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price })
-        ).to.not.reverted;
+        await expect(exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price }))
+          .to.not.reverted;
       });
 
       it("should work on an additional collection", async function () {

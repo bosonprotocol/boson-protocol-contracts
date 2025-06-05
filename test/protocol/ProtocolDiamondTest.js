@@ -60,9 +60,8 @@ describe("ProtocolDiamond", async function () {
     [deployer, admin, upgrader, rando] = await getSigners();
 
     // Deploy the Diamond
-    [protocolDiamond, diamondLoupe, diamondCut, erc165, accessController] = await deployProtocolDiamond(
-      maxPriorityFeePerGas
-    );
+    [protocolDiamond, diamondLoupe, diamondCut, erc165, accessController] =
+      await deployProtocolDiamond(maxPriorityFeePerGas);
 
     // Cast Diamond to DiamondLoupeFacet
     loupeFacetViaDiamond = await getContractAt("DiamondLoupeFacet", await protocolDiamond.getAddress());
@@ -804,9 +803,8 @@ describe("ProtocolDiamond", async function () {
       ];
 
       // Send the DiamondCut transaction
-      await expect(
-        cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit })
-      ).to.be.reverted;
+      await expect(cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ZeroAddress, "0x", { gasLimit })).to.be
+        .reverted;
     });
   });
 
