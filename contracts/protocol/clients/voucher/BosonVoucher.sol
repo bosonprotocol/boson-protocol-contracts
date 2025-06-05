@@ -838,4 +838,12 @@ contract BosonVoucher is BosonVoucherBase, ERC2771ContextUpgradeable {
     {
         return ERC2771ContextUpgradeable._msgSender();
     }
+
+    /**
+     * @notice This function specifies the context as being a single address (20 bytes).
+     * @dev It is an override of the ERC2771ContextUpgradeable._contextSuffixLength() function which allows meta transactions.
+     */
+    function _contextSuffixLength() internal view override(ContextUpgradeable, ERC2771ContextUpgradeable) returns (uint256) {
+        return ERC2771ContextUpgradeable._contextSuffixLength();
+    }
 }
