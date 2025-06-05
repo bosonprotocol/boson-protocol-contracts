@@ -3689,14 +3689,12 @@ describe("IBosonMetaTransactionsHandler", function () {
           expect(offerDurations.isValid()).is.true;
 
           // Create both offers
-          await Promise.all([
-            offerHandler
-              .connect(assistant)
-              .createOffer(offerNative, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit),
-            offerHandler
-              .connect(assistant)
-              .createOffer(offerToken, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit),
-          ]);
+          await offerHandler
+            .connect(assistant)
+            .createOffer(offerNative, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit);
+          await offerHandler
+            .connect(assistant)
+            .createOffer(offerToken, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit);
 
           // top up seller's and buyer's account
           await mockToken.mint(await assistant.getAddress(), sellerDeposit);

@@ -1369,11 +1369,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           await expect(
             foreign721
               .connect(rando)
-              ["safeTransferFrom(address,address,uint256)"](
-                rando.address,
-                await bosonPriceDiscovery.getAddress(),
-                tokenId
-              )
+              [
+                "safeTransferFrom(address,address,uint256)"
+              ](rando.address, await bosonPriceDiscovery.getAddress(), tokenId)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNEXPECTED_ERC721_RECEIVED);
         });
       });

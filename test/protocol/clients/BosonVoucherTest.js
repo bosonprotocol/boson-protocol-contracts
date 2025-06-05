@@ -1715,12 +1715,9 @@ describe("IBosonVoucher", function () {
                   await expect(
                     bosonVoucher
                       .connect(assistant)
-                      [selector](
-                        await assistant.getAddress(),
-                        await buyerContract2.getAddress(),
-                        tokenId,
-                        ...additionalArgs
-                      )
+                      [
+                        selector
+                      ](await assistant.getAddress(), await buyerContract2.getAddress(), tokenId, ...additionalArgs)
                   ).to.be.revertedWith(RevertReasons.ERC721_CALLER_NOT_OWNER_OR_APPROVED);
                 });
 
@@ -2442,9 +2439,8 @@ describe("IBosonVoucher", function () {
       });
 
       it("To address is not a contract", async function () {
-        await expect(
-          bosonVoucher.connect(assistant).callExternalContract(await rando.getAddress(), calldata)
-        ).to.be.reverted;
+        await expect(bosonVoucher.connect(assistant).callExternalContract(await rando.getAddress(), calldata)).to.be
+          .reverted;
       });
 
       it("Owner tries to interact with contract with assets", async function () {

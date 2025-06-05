@@ -52,34 +52,26 @@ describe("AccessController", function () {
 
     it("Deployer should not have PROTOCOL role", async function () {
       // Check role
-      expect(
-        await accessController.hasRole(Role.PROTOCOL, await deployer.getAddress()),
-        "Deployer has PROTOCOL role"
-      ).is.false;
+      expect(await accessController.hasRole(Role.PROTOCOL, await deployer.getAddress()), "Deployer has PROTOCOL role")
+        .is.false;
     });
 
     it("Deployer should not have UPGRADER role", async function () {
       // Check role
-      expect(
-        await accessController.hasRole(Role.UPGRADER, await deployer.getAddress()),
-        "Deployer has UPGRADER role"
-      ).is.false;
+      expect(await accessController.hasRole(Role.UPGRADER, await deployer.getAddress()), "Deployer has UPGRADER role")
+        .is.false;
     });
 
     it("Deployer should not have PAUSER role", async function () {
       // Check role
-      expect(
-        await accessController.hasRole(Role.PAUSER, await deployer.getAddress()),
-        "Deployer has PAUSER role"
-      ).is.false;
+      expect(await accessController.hasRole(Role.PAUSER, await deployer.getAddress()), "Deployer has PAUSER role").is
+        .false;
     });
 
     it("Deployer should not have CLIENT role", async function () {
       // Check role
-      expect(
-        await accessController.hasRole(Role.CLIENT, await deployer.getAddress()),
-        "Deployer has CLIENT role"
-      ).is.false;
+      expect(await accessController.hasRole(Role.CLIENT, await deployer.getAddress()), "Deployer has CLIENT role").is
+        .false;
     });
 
     it("Deployer should not have FEE_COLLECTOR role", async function () {
