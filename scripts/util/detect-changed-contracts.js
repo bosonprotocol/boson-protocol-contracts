@@ -53,11 +53,17 @@ async function detectChangedContract(referenceCommit, targetCommit = "HEAD") {
   shell.exec(`git checkout ${referenceCommit} contracts`);
 
   // Temporary target install reference version dependencies
-  // - Protocol versions < 2.3.0 use different OZ contracts
-  const isOldOZVersion = ["v2.0", "v2.1", "v2.2"].some((v) => referenceCommit.startsWith(v));
-  if (isOldOZVersion) {
+  // Old protocol versions use different OpenZeppelin contracts version, so we need to install them
+  let oldOZVersion;
+  if (["v2.0", "v2.1", "v2.2"].some((v) => referenceCommit.startsWith(v))) {
+    oldOZVersion = "4.7.1";
+  } else if (["v2.3", "v2.4"].some((v) => referenceCommit.startsWith(v))) {
+    oldOZVersion = "4.9.3";
+  }
+
+  if (oldOZVersion) {
     // Temporary install old OZ contracts
-    shell.exec("npm i @openzeppelin/contracts-upgradeable@4.7.1");
+    shell.exec(`npm i @openzeppelin/contracts-upgradeable@${oldOZVersion}`);
   }
 
   // Compile old version
@@ -77,7 +83,7 @@ async function detectChangedContract(referenceCommit, targetCommit = "HEAD") {
   shell.exec(`git checkout ${targetCommit} contracts`);
 
   // If reference commit is old version, we need to revert to target version dependencies
-  if (isOldOZVersion) {
+  if (oldOZVersion) {
     installDependencies(targetCommit);
   }
 
@@ -140,7 +146,7 @@ async function detectChangedContract(referenceCommit, targetCommit = "HEAD") {
 
 function installDependencies(commit) {
   shell.exec(`git checkout ${commit} package.json package-lock.json`);
-  shell.exec("npm i");
+  shell.exec("npm ci");
 }
 
 async function getBytecodes() {
