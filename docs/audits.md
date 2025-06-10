@@ -15,4 +15,5 @@ Version 2 of the Boson Protocol is an entirely new codebase and architecture fro
 * [View Report - v2.1](audits/Omniscia_Audit_Report_Boson_Protocol_V2.1.pdf)
 * [View Report - v2.2](audits/Omniscia_Audit_Report_Boson_Protocol_V2.2.pdf)
 * [View Report - v2.3](audits/Omniscia_Audit_Report_Boson_Protocol_v2.3.pdf)
-* [View Report - v2.4](audits/Omniscia_Audit_Report_Boson_Protocol_V2.4.pdf)
+* [View Report - v2.4](audits/Omniscia_Audit_Report_Boson_Protocol_V2.4.pdf) ([web version](https://omniscia.io/reports/boson-protocol-version-2.3-64c3b2cf1570d80014096fc3/))
+* [View Report - v2.4.2](audits/Omniscia_Audit_Report_Boson_Protocol_V2.4.2.pdf) ([web version](https://omniscia.io/reports/boson-protocol-v2.4.2-update-security-audit-680a42d97f648b0018ef30a3/))
