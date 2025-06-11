@@ -2,6 +2,7 @@
 pragma solidity 0.8.22;
 
 import "../../domain/BosonConstants.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { IDRFeeMutualizer } from "../../interfaces/IDRFeeMutualizer.sol";
@@ -247,18 +248,16 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
                     // Use mutualizer: request fee
                     (, Seller storage seller, ) = fetchSeller(_offer.sellerId);
 
-                    IDRFeeMutualizer.DRFeeRequest memory request = IDRFeeMutualizer.DRFeeRequest({
-                        seller: seller.admin,
-                        feeAmount: drFeeAmount,
-                        tokenAddress: _offer.exchangeToken,
-                        context: IDRFeeMutualizer.DRFeeContext({
-                            offerId: _offerId,
-                            exchangeId: _exchangeId,
-                            disputeResolverId: disputeTerms.disputeResolverId
-                        })
-                    });
+                    bool success = IDRFeeMutualizer(disputeTerms.mutualizerAddress).requestDRFee(
+                        seller.admin,
+                        drFeeAmount,
+                        _offer.exchangeToken,
+                        _exchangeId,
+                        disputeTerms.disputeResolverId
+                    );
 
-                    IDRFeeMutualizer(disputeTerms.mutualizerAddress).requestDRFee(request);
+                    // If mutualizer cannot cover the fee, revert
+                    if (!success) revert BosonErrors.DRFeeMutualizerCannotProvideCoverage();
                 }
 
                 // Emit event for DR fee request

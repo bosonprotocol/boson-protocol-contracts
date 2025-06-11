@@ -648,12 +648,48 @@ library FundsLib {
                     increaseAvailableFunds(_offer.sellerId, _exchangeToken, drFeeAmount);
                 }
             } else {
-                // Mutualizer: call returnDRFee with appropriate amount
-                try IDRFeeMutualizer(disputeTerms.mutualizerAddress).returnDRFee(bytes32(_exchangeId), returnAmount) {
-                    // Success
-                } catch {
-                    // Ignore mutualizer failures per requirements but track failure
-                    mutualizerCallFailed = true;
+                // Mutualizer: call returnDRFee with appropriate amount and handle token transfers
+                if (returnAmount > 0) {
+                    if (_exchangeToken == address(0)) {
+                        // For native currency, call with msg.value
+                        try
+                            IDRFeeMutualizer(disputeTerms.mutualizerAddress).returnDRFee{ value: returnAmount }(
+                                _exchangeId,
+                                returnAmount
+                            )
+                        {
+                            // Success
+                        } catch {
+                            // Ignore mutualizer failures per requirements but track failure
+                            mutualizerCallFailed = true;
+                        }
+                    } else {
+                        // For ERC20 tokens, approve mutualizer to spend tokens, then call returnDRFee
+                        try IERC20(_exchangeToken).approve(disputeTerms.mutualizerAddress, returnAmount) {
+                            // Approval successful, now call returnDRFee
+                            try
+                                IDRFeeMutualizer(disputeTerms.mutualizerAddress).returnDRFee(_exchangeId, returnAmount)
+                            {
+                                // Success - reset approval to 0 for security
+                                IERC20(_exchangeToken).approve(disputeTerms.mutualizerAddress, 0);
+                            } catch {
+                                // Mutualizer call failed, reset approval to 0 for security
+                                IERC20(_exchangeToken).approve(disputeTerms.mutualizerAddress, 0);
+                                mutualizerCallFailed = true;
+                            }
+                        } catch {
+                            // Approval failed
+                            mutualizerCallFailed = true;
+                        }
+                    }
+                } else {
+                    // Return amount is 0 (DR keeps the fee), just notify mutualizer
+                    try IDRFeeMutualizer(disputeTerms.mutualizerAddress).returnDRFee(_exchangeId, 0) {
+                        // Success
+                    } catch {
+                        // Ignore mutualizer failures per requirements but track failure
+                        mutualizerCallFailed = true;
+                    }
                 }
             }
 
