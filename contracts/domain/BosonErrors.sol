@@ -90,8 +90,6 @@ interface BosonErrors {
     error InexistentDisputeResolverFees();
     // Trying to add a fee that already exists
     error DuplicateDisputeResolverFees();
-    // Trying to add a fee with non-zero amount
-    error FeeAmountNotYetSupported();
     // Trying to remove a fee that does not exist
     error DisputeResolverFeeNotFound();
     // Trying to approve a seller that is already approved (list of sellers that DR will handle disputes for)

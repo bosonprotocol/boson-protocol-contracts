@@ -150,6 +150,7 @@ contract BosonTypes {
         uint256 escalationResponsePeriod;
         uint256 feeAmount;
         uint256 buyerEscalationDeposit;
+        address mutualizerAddress; // Address of the DR fee mutualizer
     }
 
     struct Offer {

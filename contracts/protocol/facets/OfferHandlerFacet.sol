@@ -313,6 +313,27 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     }
 
     /**
+     * @notice Updates the mutualizer address for an offer.
+     *
+     * Emits an OfferMutualizerUpdated event if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - Offer does not exist
+     * - Caller is not the assistant of the offer
+     * - Offer has already been voided
+     *
+     * @param _offerId - the id of the offer to update
+     * @param _newMutualizer - the new mutualizer address (can be zero for self-mutualization)
+     */
+    function updateOfferMutualizer(
+        uint256 _offerId,
+        address _newMutualizer
+    ) external override offersNotPaused nonReentrant {
+        updateOfferMutualizerInternal(_offerId, _newMutualizer);
+    }
+
+    /**
      * @notice Internal function to void a given offer, used by both single and batch void functions.
      * Existing exchanges are not affected.
      * No further vouchers can be issued against a voided offer.
@@ -400,6 +421,30 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
 
         // Notify watchers of state change
         emit OfferRoyaltyInfoUpdated(_offerId, offer.sellerId, _royaltyInfo, msgSender());
+    }
+
+    /**
+     * @notice Internal function to update the mutualizer address for an offer.
+     *
+     * Emits an OfferMutualizerUpdated event if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - Offer does not exist
+     * - Caller is not the assistant of the offer
+     * - Offer has already been voided
+     *
+     * @param _offerId - the id of the offer to update
+     * @param _newMutualizer - the new mutualizer address (can be zero for self-mutualization)
+     */
+    function updateOfferMutualizerInternal(uint256 _offerId, address _newMutualizer) internal {
+        // Make sure the caller is the assistant, offer exists and is not voided
+        Offer storage offer = getValidOfferWithSellerCheck(_offerId);
+
+        DisputeResolutionTerms storage disputeResolutionTerms = fetchDisputeResolutionTerms(_offerId);
+        disputeResolutionTerms.mutualizerAddress = _newMutualizer;
+
+        emit OfferMutualizerUpdated(_offerId, offer.sellerId, _newMutualizer);
     }
 
     /**

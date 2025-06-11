@@ -41,4 +41,5 @@ interface IBosonOfferEvents {
         BosonTypes.RoyaltyInfo royaltyInfo,
         address indexed executedBy
     );
+    event OfferMutualizerUpdated(uint256 indexed offerId, uint256 indexed sellerId, address indexed newMutualizer);
 }
