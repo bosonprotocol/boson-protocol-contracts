@@ -2,9 +2,11 @@
 pragma solidity 0.8.22;
 
 import "../../domain/BosonConstants.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
-import { ITwinToken } from "../../interfaces/ITwinToken.sol";
+import { IDRFeeMutualizer } from "../../interfaces/IDRFeeMutualizer.sol";
+import { IBosonFundsLibEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BuyerBase } from "../bases/BuyerBase.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
@@ -216,6 +218,57 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
 
         // Encumber funds
         FundsLib.encumberFunds(_offerId, buyerId, _offer.price, _isPreminted, _offer.priceType);
+
+        // Handle DR fee collection
+        {
+            // Get dispute resolution terms to get the dispute resolver ID
+            DisputeResolutionTerms storage disputeTerms = fetchDisputeResolutionTerms(_offerId);
+
+            // Get dispute resolver fees
+            (, , DisputeResolverFee[] storage drFees) = fetchDisputeResolver(disputeTerms.disputeResolverId);
+
+            // Find DR fee amount for the exchange token
+            uint256 drFeeAmount = 0;
+            for (uint256 i = 0; i < drFees.length; i++) {
+                if (drFees[i].tokenAddress == _offer.exchangeToken) {
+                    drFeeAmount = drFees[i].feeAmount;
+                    break;
+                }
+            }
+
+            // Handle DR fee collection if fee exists
+            if (drFeeAmount > 0) {
+                // Store fee amount for later finalization
+                protocolLookups().drFeeAmountByExchange[_exchangeId] = drFeeAmount;
+
+                if (disputeTerms.mutualizerAddress == address(0)) {
+                    // Self-mutualize: take fee from seller's pool
+                    FundsLib.decreaseAvailableFunds(_offer.sellerId, _offer.exchangeToken, drFeeAmount);
+                } else {
+                    // Use mutualizer: request fee
+                    (, Seller storage seller, ) = fetchSeller(_offer.sellerId);
+
+                    bool success = IDRFeeMutualizer(disputeTerms.mutualizerAddress).requestDRFee(
+                        seller.admin,
+                        drFeeAmount,
+                        _offer.exchangeToken,
+                        _exchangeId,
+                        disputeTerms.disputeResolverId
+                    );
+
+                    // If mutualizer cannot cover the fee, revert
+                    if (!success) revert BosonErrors.DRFeeMutualizerCannotProvideCoverage();
+                }
+
+                // Emit event for DR fee request
+                emit IBosonFundsLibEvents.DRFeeRequested(
+                    _exchangeId,
+                    _offer.exchangeToken,
+                    drFeeAmount,
+                    disputeTerms.mutualizerAddress
+                );
+            }
+        }
 
         // Create and store a new exchange
         Exchange storage exchange = protocolEntities().exchanges[_exchangeId];

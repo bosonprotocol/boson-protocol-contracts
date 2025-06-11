@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.22;
 
-import { BosonTypes } from "../../domain/BosonTypes.sol";
-
 /**
  * @title IBosonFundsEvents
  *
@@ -43,5 +41,23 @@ interface IBosonFundsLibEvents {
         address indexed tokenAddress,
         uint256 amount,
         address executedBy
+    );
+    event DRFeeRequested(
+        uint256 indexed exchangeId,
+        address indexed tokenAddress,
+        uint256 feeAmount,
+        address indexed mutualizerAddress
+    );
+    event DRFeeReturned(
+        uint256 indexed exchangeId,
+        address indexed tokenAddress,
+        uint256 returnAmount,
+        address indexed mutualizerAddress
+    );
+    event DRFeeReturnFailed(
+        uint256 indexed exchangeId,
+        address indexed tokenAddress,
+        uint256 returnAmount,
+        address indexed mutualizerAddress
     );
 }
