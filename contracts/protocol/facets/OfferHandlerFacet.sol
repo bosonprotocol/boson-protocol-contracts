@@ -442,7 +442,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         Offer storage offer = getValidOfferWithSellerCheck(_offerId);
 
         DisputeResolutionTerms storage disputeResolutionTerms = fetchDisputeResolutionTerms(_offerId);
-        disputeResolutionTerms.mutualizerAddress = _newMutualizer;
+        disputeResolutionTerms.mutualizerAddress = payable(_newMutualizer);
 
         emit OfferMutualizerUpdated(_offerId, offer.sellerId, _newMutualizer);
     }

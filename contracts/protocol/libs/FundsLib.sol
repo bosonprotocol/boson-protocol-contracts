@@ -6,7 +6,6 @@ import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
-import { IDRFeeMutualizer } from "../../interfaces/IDRFeeMutualizer.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IBosonFundsLibEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
@@ -106,7 +105,7 @@ library FundsLib {
     }
 
     /**
-     * @notice Takes in the exchange id and releases the funds to buyer and seller, depending on the state of the exchange.
+     * @notice Takes in the exchange id and releases the funds to buyer, seller and dispute resolver depending on the state of the exchange.
      * It is called only from finalizeExchange and finalizeDispute.
      *
      * Emits FundsReleased and/or ProtocolFeeCollected event if payoffs are warranted and transaction is successful.
@@ -187,6 +186,9 @@ library FundsLib {
 
                     payoff.buyer = payoff.buyer + applyPercent(lastPrice, dispute.buyerPercent);
                     payoff.seller = payoff.seller + offerPrice - applyPercent(offerPrice, dispute.buyerPercent);
+
+                    // DR keeps the fee if dispute was resolved/decided
+                    payoff.disputeResolver = pe.disputeResolutionTerms[exchange.offerId].feeAmount;
                 }
             }
         }
@@ -208,8 +210,6 @@ library FundsLib {
             payoff.protocol += sequentialProtocolFee;
         }
 
-        handleDRFeeReturn(_exchangeId, exchange, offer, exchangeToken);
-
         // Store payoffs to availablefunds and notify the external observers
         address sender = EIP712Lib.msgSender();
         if (payoff.seller > 0) {
@@ -227,6 +227,25 @@ library FundsLib {
             // Get the agent for offer
             uint256 agentId = ProtocolLib.protocolLookups().agentIdByOffer[exchange.offerId];
             increaseAvailableFundsAndEmitEvent(_exchangeId, agentId, exchangeToken, payoff.agent, sender);
+        }
+        BosonTypes.DisputeResolutionTerms storage drTerms = pe.disputeResolutionTerms[offer.id];
+        if (payoff.disputeResolver > 0) {
+            increaseAvailableFundsAndEmitEvent(
+                _exchangeId,
+                drTerms.disputeResolverId,
+                exchangeToken,
+                payoff.disputeResolver,
+                sender
+            );
+        } else {
+            // DR doesn't keep the fee, return it to the mutualizer
+            transferFundsFromProtocol(0, exchangeToken, drTerms.mutualizerAddress, payoff.disputeResolver);
+            emit IBosonFundsLibEvents.DRFeeReturned(
+                _exchangeId,
+                exchangeToken,
+                payoff.disputeResolver,
+                drTerms.mutualizerAddress
+            );
         }
     }
 
@@ -603,115 +622,6 @@ library FundsLib {
             sellerRoyalties +
             applyPercent(_secondaryCommit.royaltyAmount, _effectivePriceMultiplier) -
             totalAmount;
-    }
-
-    /**
-     * @notice Handles the return of DR fee to mutualizer.
-     *
-     * @param _exchangeId - exchange id
-     * @param _exchange - exchange struct
-     * @param _offer - offer struct
-     * @param _exchangeToken - address of the token used for the exchange
-     */
-    function handleDRFeeReturn(
-        uint256 _exchangeId,
-        BosonTypes.Exchange storage _exchange,
-        BosonTypes.Offer storage _offer,
-        address _exchangeToken
-    ) internal {
-        ProtocolLib.ProtocolLookups storage pl = ProtocolLib.protocolLookups();
-        uint256 drFeeAmount = pl.drFeeAmountByExchange[_exchangeId];
-
-        if (drFeeAmount > 0) {
-            ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
-            BosonTypes.DisputeResolutionTerms storage disputeTerms = pe.disputeResolutionTerms[_offer.id];
-
-            bool drKeepsFee;
-
-            if (_exchange.state == BosonTypes.ExchangeState.Disputed) {
-                // Check if dispute was escalated and resolved
-                if (pe.disputeDates[_exchangeId].escalated > 0) {
-                    BosonTypes.DisputeState disputeState = pe.disputes[_exchangeId].state;
-                    drKeepsFee = (disputeState == BosonTypes.DisputeState.Resolved ||
-                        disputeState == BosonTypes.DisputeState.Decided ||
-                        disputeState == BosonTypes.DisputeState.Retracted);
-                }
-            }
-
-            // Calculate return amount
-            uint256 returnAmount = drKeepsFee ? 0 : drFeeAmount;
-            bool mutualizerCallFailed;
-
-            if (disputeTerms.mutualizerAddress == address(0)) {
-                // Self-mutualized: return fee to seller if DR doesn't keep it
-                if (!drKeepsFee) {
-                    increaseAvailableFunds(_offer.sellerId, _exchangeToken, drFeeAmount);
-                }
-            } else {
-                // Mutualizer: call returnDRFee with appropriate amount and handle token transfers
-                if (returnAmount > 0) {
-                    if (_exchangeToken == address(0)) {
-                        // For native currency, call with msg.value
-                        try
-                            IDRFeeMutualizer(disputeTerms.mutualizerAddress).returnDRFee{ value: returnAmount }(
-                                _exchangeId,
-                                returnAmount
-                            )
-                        {
-                            // Success
-                        } catch {
-                            // Ignore mutualizer failures per requirements but track failure
-                            mutualizerCallFailed = true;
-                        }
-                    } else {
-                        // For ERC20 tokens, approve mutualizer to spend tokens, then call returnDRFee
-                        try IERC20(_exchangeToken).approve(disputeTerms.mutualizerAddress, returnAmount) {
-                            // Approval successful, now call returnDRFee
-                            try
-                                IDRFeeMutualizer(disputeTerms.mutualizerAddress).returnDRFee(_exchangeId, returnAmount)
-                            {
-                                // Success - reset approval to 0 for security
-                                IERC20(_exchangeToken).approve(disputeTerms.mutualizerAddress, 0);
-                            } catch {
-                                // Mutualizer call failed, reset approval to 0 for security
-                                IERC20(_exchangeToken).approve(disputeTerms.mutualizerAddress, 0);
-                                mutualizerCallFailed = true;
-                            }
-                        } catch {
-                            // Approval failed
-                            mutualizerCallFailed = true;
-                        }
-                    }
-                } else {
-                    // Return amount is 0 (DR keeps the fee), just notify mutualizer
-                    try IDRFeeMutualizer(disputeTerms.mutualizerAddress).returnDRFee(_exchangeId, 0) {
-                        // Success
-                    } catch {
-                        // Ignore mutualizer failures per requirements but track failure
-                        mutualizerCallFailed = true;
-                    }
-                }
-            }
-
-            // Emit appropriate event based on outcome
-            if (disputeTerms.mutualizerAddress != address(0) && mutualizerCallFailed) {
-                emit IBosonFundsLibEvents.DRFeeReturnFailed(
-                    _exchangeId,
-                    _exchangeToken,
-                    returnAmount,
-                    disputeTerms.mutualizerAddress
-                );
-            } else {
-                emit IBosonFundsLibEvents.DRFeeReturned(
-                    _exchangeId,
-                    _exchangeToken,
-                    returnAmount,
-                    disputeTerms.mutualizerAddress
-                );
-            }
-
-            delete pl.drFeeAmountByExchange[_exchangeId];
-        }
     }
 
     /**

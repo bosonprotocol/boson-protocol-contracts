@@ -6,6 +6,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { FundsLib } from "../libs/FundsLib.sol";
 
 /**
  * @title DRFeeMutualizer
@@ -35,6 +36,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
     error MustSendNativeCurrency();
     error DepositsRestrictedToOwner();
     error AccessDenied();
+    error TokenTransferFailed();
 
     struct Agreement {
         uint256 maxAmountPerTx; // Maximum mutualized amount per transaction
@@ -45,7 +47,6 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
         address tokenAddress; // Token address for the agreement (address(0) for native)
         uint256 startTime; // When the agreement becomes active (0 if not activated)
         uint256 totalMutualized; // Total amount mutualized so far
-        bool isActive; // Whether the agreement is currently active
         bool isVoided; // Whether the agreement has been voided
     }
 
@@ -103,15 +104,19 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
         uint256 feeAmount,
         address tokenAddress,
         uint256 disputeResolverId
-    ) external view override returns (bool) {
+    ) public view override returns (bool) {
         // Check if agreement exists and is valid
         uint256 agreementId = sellerToDisputeResolverToAgreement[seller][disputeResolverId];
+        if (agreementId == 0 && disputeResolverId != 0) {
+            // If no specific agreement exists, check for "any dispute resolver" agreement
+            agreementId = sellerToDisputeResolverToAgreement[seller][0];
+        }
         if (agreementId == 0) return false;
 
         Agreement storage agreement = agreements[agreementId];
 
         // Basic agreement validation
-        if (!agreement.isActive || agreement.isVoided) return false;
+        if (agreement.startTime == 0 || agreement.isVoided) return false;
         if (block.timestamp > agreement.startTime + agreement.timePeriod) return false;
         if (agreement.tokenAddress != tokenAddress) return false;
         if (feeAmount > agreement.maxAmountPerTx) return false;
@@ -137,8 +142,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
         uint256 exchangeId,
         uint256 disputeResolverId
     ) external override onlyProtocol nonReentrant returns (bool success) {
-        // Check if seller is covered
-        if (!this.isSellerCovered(seller, feeAmount, tokenAddress, disputeResolverId)) {
+        if (isSellerCovered(seller, feeAmount, tokenAddress, disputeResolverId)) {
             return false;
         }
 
@@ -266,7 +270,19 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
         if (maxAmountPerTx == 0) revert MaxAmountPerTxMustBeGreaterThanZero();
         if (maxAmountTotal < maxAmountPerTx) revert MaxTotalMustBeGreaterThanOrEqualToMaxPerTx();
         if (timePeriod == 0) revert TimePeriodMustBeGreaterThanZero();
-        if (sellerToDisputeResolverToAgreement[seller][disputeResolverId] != 0) revert AgreementAlreadyExists();
+
+        // Check if there's an existing active agreement
+        uint256 existingAgreementId = sellerToDisputeResolverToAgreement[seller][disputeResolverId];
+        if (existingAgreementId != 0) {
+            Agreement storage existingAgreement = agreements[existingAgreementId];
+            if (
+                existingAgreement.startTime > 0 &&
+                !existingAgreement.isVoided &&
+                block.timestamp <= existingAgreement.startTime + existingAgreement.timePeriod
+            ) {
+                revert AgreementAlreadyExists();
+            }
+        }
 
         agreementId = nextAgreementId++;
 
@@ -279,7 +295,6 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
             tokenAddress: tokenAddress,
             startTime: 0,
             totalMutualized: 0,
-            isActive: false,
             isVoided: false
         });
 
@@ -301,19 +316,33 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
 
         address seller = agreementSeller[agreementId];
 
-        // Check authorization: either owner or the seller (if refundOnCancel is true)
-        if (msg.sender != owner() && !(msg.sender == seller && agreement.refundOnCancel)) {
+        // Check authorization: either owner (if refundOnCancel is true) or the seller
+        if (msg.sender != owner() && msg.sender != seller) {
+            revert AccessDenied();
+        }
+        if (msg.sender == owner() && !agreement.refundOnCancel) {
             revert AccessDenied();
         }
 
         agreement.isVoided = true;
 
         bool premiumRefunded = false;
-        if (agreement.isActive && agreement.refundOnCancel) {
-            // Simple refund logic - could be enhanced with usage-based calculation
-            uint256 refundAmount = agreement.premium;
+        if (agreement.startTime > 0 && agreement.refundOnCancel) {
+            // Calculate time-based refund
+            uint256 elapsedTime = block.timestamp - agreement.startTime;
+            // Calculate refund as: premium * (remaining time / total time)
+            // Example: If premium is 100, timePeriod is 12 months, and 9 months have passed:
+            // refund = 100 * (12 - 9) / 12 = 100 * 3/12 = 25
+            uint256 refundAmount = (agreement.premium * (agreement.timePeriod - elapsedTime)) / agreement.timePeriod;
+
             if (refundAmount > 0) {
-                poolBalances[agreement.tokenAddress] += refundAmount;
+                // Transfer refund to seller
+                if (agreement.tokenAddress == address(0)) {
+                    (bool success, ) = payable(seller).call{ value: refundAmount }("");
+                    if (!success) revert TokenTransferFailed();
+                } else {
+                    IERC20(agreement.tokenAddress).safeTransfer(seller, refundAmount);
+                }
                 premiumRefunded = true;
             }
         }
@@ -329,19 +358,19 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
         if (agreementId == 0 || agreementId >= nextAgreementId) revert InvalidAgreementId();
 
         Agreement storage agreement = agreements[agreementId];
-        if (agreement.isActive) revert AgreementAlreadyActive();
+        if (agreement.startTime > 0) revert AgreementAlreadyActive();
         if (agreement.isVoided) revert AgreementIsVoided();
 
         if (agreement.tokenAddress == address(0)) {
             if (msg.value != agreement.premium) revert IncorrectPremiumAmount();
+            FundsLib.validateIncomingPayment(address(0), agreement.premium);
             poolBalances[address(0)] += agreement.premium;
         } else {
             if (msg.value != 0) revert NativeCurrencyNotAllowed();
-            IERC20(agreement.tokenAddress).safeTransferFrom(msg.sender, address(this), agreement.premium);
+            FundsLib.validateIncomingPayment(agreement.tokenAddress, agreement.premium);
             poolBalances[agreement.tokenAddress] += agreement.premium;
         }
 
-        agreement.isActive = true;
         agreement.startTime = block.timestamp;
 
         emit AgreementActivated(agreementId, msg.sender);
