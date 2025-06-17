@@ -63,7 +63,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
 
     event AgreementVoided(uint256 indexed agreementId, bool premiumRefunded);
 
-    address public immutable bosonProtocol;
+    address public immutable BOSON_PROTOCOL;
 
     // Storage
     mapping(address => uint256) public poolBalances; // tokenAddress => balance
@@ -78,14 +78,14 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
     bool public depositRestrictedToOwner = false;
 
     constructor(address _bosonProtocol) {
-        bosonProtocol = _bosonProtocol;
+        BOSON_PROTOCOL = _bosonProtocol;
     }
 
     /**
      * @notice Modifier to restrict access to boson protocol only
      */
     modifier onlyProtocol() {
-        if (msg.sender != bosonProtocol) revert OnlyProtocol();
+        if (msg.sender != BOSON_PROTOCOL) revert OnlyProtocol();
         _;
     }
 
@@ -156,6 +156,14 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
         // Store tracking info
         feeAmountByExchange[exchangeId] = feeAmount;
         tokenAddressByExchange[exchangeId] = tokenAddress;
+
+        // Transfer funds to protocol
+        if (tokenAddress == address(0)) {
+            (bool transferSuccess, ) = payable(BOSON_PROTOCOL).call{ value: feeAmount }("");
+            if (!transferSuccess) revert TokenTransferFailed();
+        } else {
+            IERC20(tokenAddress).safeTransfer(BOSON_PROTOCOL, feeAmount);
+        }
 
         emit DRFeeProvided(exchangeId, seller, feeAmount);
         return true;
