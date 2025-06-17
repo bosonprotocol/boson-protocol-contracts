@@ -13,7 +13,7 @@ const ethers = hre.ethers;
 const { getContractAt, getSigners, ZeroAddress, getDefaultProvider, Wallet } = ethers;
 const network = hre.network.name;
 const abiCoder = new ethers.AbiCoder();
-const tag = "HEAD";
+const tag = "v2.4.0";
 const version = "2.4.0";
 const { EXCHANGE_ID_2_2_0, WrappedNative } = require("../config/protocol-parameters");
 const { META_TRANSACTION_FORWARDER } = require("../config/client-upgrade");
@@ -197,7 +197,8 @@ async function migrate(env, params) {
 
     const metaTransactionHandlerFacet = await getContractAt("MetaTransactionsHandlerFacet", protocolAddress);
     console.log("Removing selectors", selectorsToRemove.join(","));
-    await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToRemove, false);
+    const tx = await metaTransactionHandlerFacet.setAllowlistedFunctions(selectorsToRemove, false);
+    await tx.wait(confirmations); // wait, so the next check is accurate
 
     // check if functions were removed
     for (const selector of selectorsToRemove) {

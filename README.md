@@ -25,6 +25,7 @@ Done or in progress are:
 - ✅ Protocol facet contracts and interfaces
 - ✅ Remediated audits
 - ✅ Generated contract documentation
+- ✅ JavaScript-based upgrade configuration system
 
 ## Developers
 
@@ -36,6 +37,7 @@ Done or in progress are:
 - [State Machines](docs/state-machines.md) - State Machines in the Core Exchange Mechanism
 - [Sequences](docs/sequences.md) - Timeline of the simplest exchange
 - [Examples](docs/examples.md) - Enhancing the capabilities of the protocol with external contracts
+- [Upgrade Configurations](docs/upgrade-configs.md) - Configuration files for protocol upgrades
 - [Contributing](#contributing) - Guidelines for contributing to this repo
 - [License](#license) - License information
 

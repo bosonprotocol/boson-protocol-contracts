@@ -115,7 +115,7 @@ describe("IBosonDisputeHandler", function () {
         disputeHandler,
         pauseHandler,
       },
-      protocolConfig: [, , { buyerEscalationDepositPercentage }],
+      protocolConfig: [, , , , buyerEscalationDepositPercentage],
     } = await setupTestEnvironment(contracts));
 
     bosonErrors = await getContractAt("BosonErrors", await accountHandler.getAddress());
@@ -1280,7 +1280,7 @@ describe("IBosonDisputeHandler", function () {
           blockNumber = tx.blockNumber;
           block = await provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
-          timeout = BigInt(disputedDate) + resolutionPeriod.toString();
+          timeout = BigInt(disputedDate) + BigInt(resolutionPeriod);
         });
 
         it("should emit FundsEncumbered and DisputeEscalated events", async function () {
@@ -1472,19 +1472,6 @@ describe("IBosonDisputeHandler", function () {
                 value: 1n,
               })
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.NATIVE_NOT_ALLOWED);
-          });
-
-          it.skip("Token address is not a contract", async function () {
-            // prepare a disputed exchange
-            const mockToken = await createDisputeExchangeWithToken();
-
-            // self destruct a contract
-            await mockToken.destruct();
-
-            // Attempt to commit to an offer, expecting revert
-            await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
-              RevertReasons.EOA_FUNCTION_CALL
-            );
           });
 
           it.skip("Token contract reverts for another reason", async function () {

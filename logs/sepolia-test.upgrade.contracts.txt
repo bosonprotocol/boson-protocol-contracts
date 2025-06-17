@@ -1,0 +1,58 @@
+Migration HEAD started
+Removing any local changes before upgrading
+Unstaged changes after reset:
+M	package-lock.json
+Checking out contracts on version HEAD
+Installing dependencies
+
+up to date, audited 1757 packages in 3s
+
+151 packages are looking for funding
+  run `npm fund` for details
+
+39 vulnerabilities (4 low, 30 moderate, 4 high, 1 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+Compiling contracts
+Compiled 190 Solidity files successfully (evm targets: istanbul, london, unknown evm version for solc version 0.4.17).
+Update protocol version
+
+📋 New version: 2.4.1
+✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/11155111-sepolia-test.json
+Executing upgrade clients script
+--------------------------------------------------------------------------------
+Boson Protocol Client Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: sepolia
+📅 Fri Apr 05 2024 10:18:49 GMT+0200 (Srednjeevropski poletni čas)
+🔱 Admin account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+
+📋 Deploying new logic contract
+
+📋 Updating implementation address on beacon
+✅ BosonVoucher Logic deployed to: 0x5FF36Ee3a85883b3b6A1CCA081565814c838c41A
+--------------------------------------------------------------------------------
+✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/11155111-sepolia-test.json
+--------------------------------------------------------------------------------
+
+📋 Client upgraded.
+
+
+M	addresses/11155111-sepolia-test.json
+M	package-lock.json
+M	submodules/royalty-registry-solidity
+Your branch is up to date with 'origin/release-2_4_1'.
+Unstaged changes after reset:
+M	addresses/11155111-sepolia-test.json
+M	package-lock.json
+Migration HEAD completed

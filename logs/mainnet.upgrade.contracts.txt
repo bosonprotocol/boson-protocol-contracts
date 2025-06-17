@@ -1,0 +1,527 @@
+Migration HEAD started
+Removing any local changes before upgrading
+Unstaged changes after reset:
+M	logs/amoy-test.deploy.contracts.txt
+M	logs/polygon.deploy.contracts.txt
+M	package-lock.json
+Compiled 190 Solidity files successfully (evm targets: istanbul, london, unknown evm version for solc version 0.4.17).
+Checking out contracts on version 2.3.0
+Installing dependencies
+
+added 212 packages, removed 355 packages, changed 95 packages, and audited 1615 packages in 24s
+
+204 packages are looking for funding
+  run `npm fund` for details
+
+44 vulnerabilities (6 low, 33 moderate, 2 high, 3 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+Compiling old contracts
+Compiled 163 Solidity files successfully (evm targets: london, unknown evm version for solc version 0.4.17).
+Pausing the Seller, Offer and Exchanges region...
+Preparing initialization data...
+Number of accounts 3n
+10%
+20%
+30%
+Number of offers 22n
+10%
+20%
+30%
+40%
+50%
+60%
+70%
+Checking out contracts on version HEAD
+Installing dependencies
+
+added 355 packages, removed 213 packages, changed 95 packages, and audited 1757 packages in 11s
+
+151 packages are looking for funding
+  run `npm fund` for details
+
+39 vulnerabilities (4 low, 30 moderate, 4 high, 1 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+Compiling contracts
+Compiled 190 Solidity files successfully (evm targets: istanbul, london, unknown evm version for solc version 0.4.17).
+Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0xb60cf39Fb18e5111174f346d0f39521ef6531fD4
+Executing upgrade facets script
+--------------------------------------------------------------------------------
+Boson Protocol Contract Suite Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: mainnet
+📅 Mon Apr 08 2024 11:06:47 GMT+0200 (Srednjeevropski poletni čas)
+🔱 Admin account:  0x19f66ac022Df0D9aa7E5D0AE7ed66D0c8BBE9668
+--------------------------------------------------------------------------------
+
+📋Running pre-upgrade script...
+Backfilling sellers and offers...
+royaltyPercentages [ '0', '700' ]
+sellerIds [ [ 2n ], [ 3n ] ]
+offerIds [
+  [
+     1n,  2n,  3n,  4n,  5n,  6n,
+     7n,  8n,  9n, 10n, 11n, 12n,
+    13n, 14n, 15n, 16n, 17n, 18n,
+    19n, 20n, 21n, 22n
+  ],
+  []
+]
+remaining data
+[
+  [ '0', '700' ],
+  [ [ 2n ], [ 3n ] ],
+  [
+    [
+       1n,  2n,  3n,  4n,  5n,  6n,
+       7n,  8n,  9n, 10n, 11n, 12n,
+      13n, 14n, 15n, 16n, 17n, 18n,
+      19n, 20n, 21n, 22n
+    ],
+    []
+  ],
+  '0xb60cf39Fb18e5111174f346d0f39521ef6531fD4'
+]
+✅ AccountHandlerFacet deployed to: 0x789A38c305374079d9D64A1f42ff8E5698565345
+✅ AgentHandlerFacet deployed to: 0xf1b62E1C04DE5c23CE7c5e4376A99e1221d1ac5A
+✅ BundleHandlerFacet deployed to: 0x67328F5e3C198BA960bd5FACeCE32557F94578da
+✅ BuyerHandlerFacet deployed to: 0xCE25D57AEc0CC4fB5D42CF3D8675CeC8c8431179
+✅ ConfigHandlerFacet deployed to: 0x05e2390eBeb0e4A172c27601F77a3779D0F36870
+✅ DisputeHandlerFacet deployed to: 0xC4b124A58060d1FaA71456F94854C09Ac6DCeDF7
+✅ DisputeResolverHandlerFacet deployed to: 0x6B2456Ee1aeD375264DD75Ad3b1baF8b1434DB25
+✅ ExchangeHandlerFacet deployed to: 0x7652d880551Fe8E8c76CC980E98510B8849CC05A
+✅ FundsHandlerFacet deployed to: 0x181405E00eFA3e9AA62E89f2e3C67531F0853034
+✅ GroupHandlerFacet deployed to: 0xaA5aC73F57A14C6261f29B5C5e2068D57EEAbB78
+✅ MetaTransactionsHandlerFacet deployed to: 0xB9EE8DA3B5B5D838d9BE8D9C55e50AC40492cFd9
+✅ OfferHandlerFacet deployed to: 0x42e10f7D768B0954bDc74BEe71F699C82503bedB
+✅ OrchestrationHandlerFacet1 deployed to: 0x25Cf68dc99cec00DBC76af872066206a13313fb9
+✅ OrchestrationHandlerFacet2 deployed to: 0x1a8d6Fe8f16572fade97Fba67e722Df50BEaeCF4
+✅ PauseHandlerFacet deployed to: 0xA8c6aEdb04060f197CE3e318e034A55A98b8d003
+✅ ProtocolInitializationHandlerFacet deployed to: 0x8Fb0211f98B553aB1157506e6C4ED324F7bdE859
+✅ SellerHandlerFacet deployed to: 0xd4447521a7cc7bAE8e264f27fAb2Ad9Aa9D85bbE
+✅ TwinHandlerFacet deployed to: 0xD97557273b41752644162D7C5bf26d6A7Aff0cb1
+✅ PriceDiscoveryHandlerFacet deployed to: 0xEbe97F9b9A2Fa636115fEc000f6Ceceb5979ca68
+✅ SequentialCommitHandlerFacet deployed to: 0xc938879658A28dC85d43Cc67C689800831BBdc1a
+
+📋 Facet: AccountHandlerFacet
+💎 Replace selectors:
+	getNextAccountId: 0xab00c0da
+
+📋 Facet: AgentHandlerFacet
+💎 Replace selectors:
+	createAgent: 0xda14451c
+	getAgent: 0x2de5aaf7
+	updateAgent: 0x0eb1de1c
+
+📋 Facet: BundleHandlerFacet
+💎 Replace selectors:
+	createBundle: 0x7c016ad5
+	getBundle: 0x2d0821b7
+	getBundleIdByOffer: 0xa8e31107
+	getBundleIdByTwin: 0xc6cce096
+	getNextBundleId: 0x4475643d
+
+📋 Facet: BuyerHandlerFacet
+💎 Replace selectors:
+	createBuyer: 0x6adb0d9c
+	getBuyer: 0x5bf608b8
+	updateBuyer: 0x0ae2126d
+
+📋 Facet: ConfigHandlerFacet
+💎 Add selectors:
+	getMaxRoyaltyPercentage: 0x43024f0c
+	getPriceDiscoveryAddress: 0x9d273d67
+	setMaxRoyaltyPercentage: 0xa4fbc18b
+	setPriceDiscoveryAddress: 0x07c1fdad
+💎 Replace selectors:
+	getAccessControllerAddress: 0x694ca8ab
+	getAuthTokenContract: 0x6c2c13c2
+	getBeaconProxyAddress: 0xc2f73795
+	getBuyerEscalationDepositPercentage: 0x36ee008c
+	getMaxEscalationResponsePeriod: 0xeb04d54b
+	getMaxResolutionPeriod: 0x32cf96ff
+	getMaxTotalOfferFeePercentage: 0xd3ab3d25
+	getMinDisputePeriod: 0xbe620a41
+	getMinResolutionPeriod: 0x1b57b63d
+	getProtocolFeeFlatBoson: 0x23bbe5d5
+	getProtocolFeePercentage: 0x706d9f78
+	getTokenAddress: 0x10fe9ae8
+	getTreasuryAddress: 0xe0024604
+	getVoucherBeaconAddress: 0xf8aaad60
+	setAccessControllerAddress: 0x6cb84158
+	setAuthTokenContract: 0x250664d4
+	setBeaconProxyAddress: 0x31cd131e
+	setBuyerEscalationDepositPercentage: 0x6ba0f545
+	setMaxEscalationResponsePeriod: 0x37987b52
+	setMaxResolutionPeriod: 0xf920fc17
+	setMaxTotalOfferFeePercentage: 0x589e4e58
+	setMinDisputePeriod: 0x84a91ce6
+	setMinResolutionPeriod: 0xdda575c9
+	setProtocolFeeFlatBoson: 0x4dbcca7e
+	setProtocolFeePercentage: 0xd8a5e936
+	setTokenAddress: 0x26a4e8d2
+	setTreasuryAddress: 0x6605bfda
+	setVoucherBeaconAddress: 0x938d1b27
+💎 Remove selectors:
+	getMaxRoyaltyPecentage: 0xa7f7801a
+	setMaxRoyaltyPecentage: 0x84bf1ac2
+
+📋 Facet: DisputeHandlerFacet
+💎 Replace selectors:
+	decideDispute: 0x04f63e12
+	escalateDispute: 0x20a68d25
+	expireDispute: 0x42443efd
+	expireDisputeBatch: 0xae707f1e
+	expireEscalatedDispute: 0xf7d95f3b
+	extendDisputeTimeout: 0xfb50e235
+	getDispute: 0xe3a96cbd
+	getDisputeState: 0xc6a470e2
+	getDisputeTimeout: 0x50f5e643
+	isDisputeFinalized: 0xc3c834b7
+	raiseDispute: 0xa5c1674e
+	refuseEscalatedDispute: 0xdfdcd613
+	resolveDispute: 0xb4dcefaf
+	retractDispute: 0x65f65c94
+
+📋 Facet: DisputeResolverHandlerFacet
+💎 Replace selectors:
+	addFeesToDisputeResolver: 0xa880fd89
+	addSellersToAllowList: 0x1227dbbb
+	areSellersAllowed: 0x8236d3c0
+	createDisputeResolver: 0x1843b3a9
+	getDisputeResolver: 0x9b646e88
+	getDisputeResolverByAddress: 0x6f4fbc16
+	optInToDisputeResolverUpdate: 0x2230dd12
+	removeFeesFromDisputeResolver: 0x4e534c96
+	removeSellersFromAllowList: 0xfa92792a
+	updateDisputeResolver: 0x125e35ec
+
+📋 Facet: ExchangeHandlerFacet
+💎 Add selectors:
+	getEIP2981Royalties: 0xd3cd4747
+	getRoyalties: 0xbb3bafd6
+	onPremintedVoucherTransferred: 0xa2443b71
+💎 Replace selectors:
+	cancelVoucher: 0xbed3ac50
+	commitToConditionalOffer: 0x2334fd56
+	commitToOffer: 0x1f317d1c
+	completeExchange: 0x58477db8
+	completeExchangeBatch: 0x492edd28
+	expireVoucher: 0x18170b73
+	extendVoucher: 0x229f6943
+	getExchange: 0x0b9d5847
+	getExchangeState: 0xe0cdab47
+	getNextExchangeId: 0x452ddd66
+	getReceipt: 0xb63e6ac3
+	isEligibleToCommit: 0x337e6a6d
+	isExchangeFinalized: 0x309bb762
+	onVoucherTransferred: 0x7b02365d
+	redeemVoucher: 0x1c6d6b5e
+	revokeVoucher: 0x79a5fea9
+💎 Remove selectors:
+	commitToPreMintedOffer: 0x5f119c40
+
+📋 Facet: FundsHandlerFacet
+💎 Replace selectors:
+	depositFunds: 0xa07fcc70
+	getAllAvailableFunds: 0x573f625a
+	getAvailableFunds: 0x6c48b1fa
+	getTokenList: 0x41b63bd8
+	getTokenListPaginated: 0x8c46317f
+	withdrawFunds: 0x685ef733
+	withdrawProtocolFees: 0x11ec8693
+
+📋 Facet: GroupHandlerFacet
+💎 Replace selectors:
+	addOffersToGroup: 0x4ff2e056
+	createGroup: 0x73acab43
+	getGroup: 0xceb60654
+	getNextGroupId: 0x49b3cccf
+	removeOffersFromGroup: 0x20dead55
+	setGroupCondition: 0x9349f39c
+
+📋 Facet: MetaTransactionsHandlerFacet
+💎 Replace selectors:
+	executeMetaTransaction: 0xdcb9c266
+	isFunctionAllowlisted: 0x6759b8f1
+	isFunctionAllowlisted: 0xbc4d3dd0
+	isUsedNonce: 0x0ee60fa7
+	setAllowlistedFunctions: 0xbaafa0e3
+
+📋 Facet: OfferHandlerFacet
+💎 Add selectors:
+	createOffer: 0xc0f1cff5
+	createOfferBatch: 0x113753aa
+	updateOfferRoyaltyRecipients: 0x0cf9c2e7
+	updateOfferRoyaltyRecipientsBatch: 0x7629327e
+💎 Replace selectors:
+	extendOffer: 0xcc00c061
+	extendOfferBatch: 0xdb7af92f
+	getAgentIdByOffer: 0x1ac3e64a
+	getNextOfferId: 0x1d73add8
+	getOffer: 0x4579268a
+	isOfferVoided: 0x4bec59f4
+	reserveRange: 0x7f5c9236
+	voidOffer: 0x4915907b
+	voidOfferBatch: 0x12b52cf5
+💎 Remove selectors:
+	createOffer: 0xbd0e4b3c
+	createOfferBatch: 0x264ed13a
+
+📋 Facet: OrchestrationHandlerFacet1
+💎 Add selectors:
+	createOfferAddToGroup: 0x2835d0cd
+	createOfferAndTwinWithBundle: 0xea78b8b0
+	createOfferWithCondition: 0x6c361572
+	createOfferWithConditionAndTwinAndBundle: 0xc2afd172
+	createPremintedOfferAddToGroup: 0x99ba294a
+	createPremintedOfferAndTwinWithBundle: 0xeb6fbd51
+	createPremintedOfferWithCondition: 0xdb42d039
+	createPremintedOfferWithConditionAndTwinAndBundle: 0xbde43f02
+	createSellerAndOffer: 0x5908f3c3
+	createSellerAndOfferAndTwinWithBundle: 0xe12b8056
+	createSellerAndOfferWithCondition: 0x6986189d
+	createSellerAndOfferWithConditionAndTwinAndBundle: 0xf6d4dcda
+	createSellerAndPremintedOffer: 0xc1f4bab1
+	createSellerAndPremintedOfferAndTwinWithBundle: 0xa409e3b2
+	createSellerAndPremintedOfferWithCondition: 0x13685c72
+	createSellerAndPremintedOfferWithConditionAndTwinAndBundle: 0x95b78674
+💎 Remove selectors:
+	createOfferAddToGroup: 0x707d33af
+	createOfferAndTwinWithBundle: 0xc6c9d615
+	createOfferWithCondition: 0x30fcdede
+	createOfferWithConditionAndTwinAndBundle: 0xcd4ce199
+	createPremintedOfferAddToGroup: 0x041d740b
+	createPremintedOfferAndTwinWithBundle: 0x5cace001
+	createPremintedOfferWithCondition: 0xf6917165
+	createPremintedOfferWithConditionAndTwinAndBundle: 0xf52fbdce
+	createSellerAndOffer: 0xf6b902e5
+	createSellerAndOfferAndTwinWithBundle: 0x316cee94
+	createSellerAndOfferWithCondition: 0xaaba8d63
+	createSellerAndOfferWithConditionAndTwinAndBundle: 0x2c8cd044
+	createSellerAndPremintedOffer: 0xc30df7f0
+	createSellerAndPremintedOfferAndTwinWithBundle: 0x041dc9b6
+	createSellerAndPremintedOfferWithCondition: 0x78a497f7
+	createSellerAndPremintedOfferWithConditionAndTwinAndBundle: 0x68628c7f
+
+📋 Facet: OrchestrationHandlerFacet2
+💎 Replace selectors:
+	raiseAndEscalateDispute: 0xf81f7640
+
+📋 Facet: PauseHandlerFacet
+💎 Replace selectors:
+	getPausedRegions: 0x5e086f2f
+	pause: 0xa290249c
+	unpause: 0x8b93dd63
+
+📋 Facet: ProtocolInitializationHandlerFacet
+💎 Add selectors:
+	initV2_4_0External: 0xc90423da
+💎 Replace selectors:
+	getVersion: 0x0d8e6e2c
+
+📋 Facet: SellerHandlerFacet
+💎 Add selectors:
+	addRoyaltyRecipients: 0xca5e34c5
+	getRoyaltyRecipients: 0xf0c40cf9
+	getSellersCollectionCount: 0xbbccbc71
+	getSellersCollectionsPaginated: 0x355b7c6a
+	removeRoyaltyRecipients: 0xd993f833
+	updateRoyaltyRecipients: 0xd6d47579
+💎 Replace selectors:
+	calculateCollectionAddress: 0x5737c566
+	createNewCollection: 0xa34084af
+	createSeller: 0x8854063a
+	getSeller: 0xd6a9de51
+	getSellerByAddress: 0x2e1528ae
+	getSellerByAuthToken: 0x135bdebd
+	getSellersCollections: 0x1058e0c6
+	isSellerSaltAvailable: 0x39e3adf2
+	optInToSellerUpdate: 0xf7e469fd
+	updateSeller: 0x695ac7c9
+	updateSellerSalt: 0xa5055733
+
+📋 Facet: TwinHandlerFacet
+💎 Replace selectors:
+	createTwin: 0xb44d17eb
+	getNextTwinId: 0xa7c078d6
+	getTwin: 0x164a82f7
+	removeTwin: 0x6574e3ba
+
+📋 Facet: PriceDiscoveryHandlerFacet
+💎 Add selectors:
+	commitToPriceDiscoveryOffer: 0xdec319c9
+
+📋 Facet: SequentialCommitHandlerFacet
+💎 Add selectors:
+	sequentialCommitToOffer: 0x34780cc6
+
+💀 Removed facets:
+	
+📋 Added interfaces:
+	0xe27f0773 (ConfigHandlerFacet)
+	0x66e9075a (ExchangeHandlerFacet)
+	0x91b54fdc (OfferHandlerFacet)
+	0x44eb95ca (OrchestrationHandlerFacet1)
+	0x0757010c (SellerHandlerFacet)
+💀 Removed interfaces:
+	0xbc28d3e6 (ConfigHandlerFacet)
+	0xf34a48fa (ExchangeHandlerFacet)
+	0xa1e3b91c (OfferHandlerFacet)
+	0x7e216084 (OrchestrationHandlerFacet1)
+	0xbc1d7461 (SellerHandlerFacet)
+--------------------------------------------------------------------------------
+
+📋 New version: 2.4.0
+--------------------------------------------------------------------------------
+✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/1-mainnet-prod.json
+--------------------------------------------------------------------------------
+
+📋 Diamond upgraded.
+
+
+Removing selectors 0x84bf1ac2bf98039ebc45cb4a3b5ab2af1891d6d0687e8e5797b8c4b76851f154,0x5f119c40938c3ae05dcadcac680748ccc14f460b341454412abc3329b6751bc9,0xbd0e4b3ca96bfe7d7c028498fe528902d696f09580c032f7792d2ed450fe60a5,0x264ed13a1ee4bde6beca80843165a845c53ebc1f7ff0a9d4bda6f33392efc848,0x707d33af04d7f029de0fe3eaf65fda22ec27c241a62bcd8239df84ff6d59010e,0xc6c9d61561df4f5cb050c847c564d0e70f99a37fdf35d0fc4cf2b6d6e3a9ef45,0x30fcdede06e0b9ccb13008e58a5186dda2adbedc641773693673131954324079,0xcd4ce199ed4786a477676afd86459adbb763301dc8312196535758f7a518dc92,0x041d740bc5e6e8d6255ca844d13c30ed58a3ee7ee1be3f0fbf7b516cc68c73e7,0x5cace0016db70007238743a6aa35521b897e6c2dcc4f9e67cac4b578ec37a3ca,0xf69171653192b8df1c3359a4747469459f16027b3b9ff0cecec0e62b62fae818,0xf52fbdce5c3bfcf610fbd64b22e181befb4958b9e4c52bde5a2d9bc4d34ae5af,0xf6b902e5811b33a65d04fb8398d175001e7fbc48f040b3a0e977be5fa350ae20,0x316cee9473a0f71d5765ece0ad5d741a3f5873ad3e7c1100b7453e3010288f5d,0xaaba8d63075cd13f81d94bffd6dbdb832d6c0fd1ad36372c9519cd65e9728c7c,0x2c8cd04413100a4363199cead605c903890571cd1eaa3b8cf6fac5eaadeb34a4,0xc30df7f0925e66e6c10178a164baacbef163657f6b2eb7c14cc847acba5ed4cd,0x041dc9b6a8c2f4972ab5d66c6dcf0a44d8c491604677883edca4cea5066af4f8,0x78a497f7dc8f458f9fcc6b24ae5cd0db62ca40ed77d9b6af41e0bf5d09ebb96f,0x68628c7f229ef7bf31e5fd142ea38594f06bec5ec3f35ff22b19b89e26b637e8
+Adding selectors 0xa4fbc18bba1ab1e6b7a9ddecaa601f687713f7bdf255b87274d2c91a1cfb2221,0x07c1fdad76111217827c89f4daba712586a2ee7f26e55d8319a21faf52000887,0xa2443b717b5e138b0763132d06732265630160a661bfe610cd7fbe1f998cf608,0xc0f1cff5dc7957b73ed0d3407579ab2458c58bb5102971a9b7be4ab7174398b8,0x113753aa50af83d7f4dfbb86e18230403b33e33a356523278c49a182903920b5,0x0cf9c2e728da8cb9fcd03e4e66254cfca23c0dc67d7db690c349997d9cadf522,0x7629327e267b4dfff4ddc54e9deb62e536b09380ed5de3564e435edba323f702,0x2835d0cd92dcac953cb12d9b71a1ed659be1fe79470d05bdca828a6dfae536bb,0xea78b8b0d8a12ab060b9a406c29144fc47af0fff21148600d51a876f94cdff7f,0x6c3615729e02edcdb17b439170a2b2205bd2d3ba29c187aba2ce5816253dc145,0xc2afd172650f2a1914d6e05253f9c3d453e7a014e53e871f56a869e5b4040acd,0x99ba294ae16a8512b55e012d58c7343889589cab4d1a2fd215bd632df7d37224,0xeb6fbd51df298378797fa6e12fdccd86928b4f9de203d0f40551ddd4646fd4ef,0xdb42d039b4db9999994f79ad02209b1fc33b3ad2b07fb18c3cf575e09ba92532,0xbde43f028d4955d1ddbaa1118e3b94f15f3e9a9a915d5f5e6869b2f4f272a2b4,0x5908f3c301ddb99e604aa71f530fe4fa858840933fac5a05b00999e709e46b3e,0xe12b80562a1f52de34ed9777f1cb1c034333c3191d891b16f2ec6a0f73998a1f,0x6986189d6c96351f08a0631b4802588591416b3e42785a49ef2ebec9093c3e5e,0xf6d4dcdae2e6a1ec7b8ff2bc54e0cd2d77180b18037f5af0e0ef9a16ff761559,0xc1f4bab1fa15265ac3f727ba5c2958abc589dcd08e40f202874604b0c71681b4,0xa409e3b26e6ed6832f36eec359a523c9110b4f7582a23d47d3dd6504a56c34ba,0x13685c725d6407286ceda977a416b0a4b8e393ac890fb3bcda87b380eaf23a84,0x95b78674243f55a9327328ab448467d8c31ecbeade72da5ddda9ed5c80f547a1,0xc90423da4e45e8bb75ce8b81cf93f9f2054981cc4eb78b1e61bfb5834973d0f7,0xca5e34c5fd4990baddde44729feed0a205d7b03eb9bbb3a5f3a415d314c987ab,0xd993f833f3570473c8de7a5adf8045e86d2455318441b2103270da50f4d1e66b,0xd6d475797ac1911b90699019509138e01ac8ce3e85ba212f80a03ddafd413ef9,0xdec319c9b67a0290e6cbc3aa62dce408f7a0b9a1624cbda6fec1ba3d913b3cde,0x34780cc6290f571ba7f1271c2100ad037d8a21a21190f85b0e82aed9eed0c2d7
+Executing upgrade clients script
+--------------------------------------------------------------------------------
+Boson Protocol Client Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: mainnet
+📅 Mon Apr 08 2024 11:11:30 GMT+0200 (Srednjeevropski poletni čas)
+🔱 Admin account:  0x19f66ac022Df0D9aa7E5D0AE7ed66D0c8BBE9668
+--------------------------------------------------------------------------------
+
+📋 Deploying new logic contract
+
+📋 Updating implementation address on beacon
+✅ BosonVoucher Logic deployed to: 0x501081D252b265fDaAe4aAfA07dB80BEe09818f9
+--------------------------------------------------------------------------------
+✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/1-mainnet-prod.json
+--------------------------------------------------------------------------------
+
+📋 Client upgraded.
+
+
+Unpausing all regions...
+M	addresses/1-mainnet-prod.json
+M	logs/amoy-test.deploy.contracts.txt
+M	logs/polygon.deploy.contracts.txt
+M	package-lock.json
+M	submodules/royalty-registry-solidity
+Your branch is up to date with 'origin/release-2_4_0'.
+Unstaged changes after reset:
+M	addresses/1-mainnet-prod.json
+M	logs/amoy-test.deploy.contracts.txt
+M	logs/polygon.deploy.contracts.txt
+M	package-lock.json
+Migration HEAD completed
+Migration HEAD started
+Removing any local changes before upgrading
+Unstaged changes after reset:
+M	package-lock.json
+Checking out contracts on version HEAD
+Installing dependencies
+
+up to date, audited 1757 packages in 20s
+
+151 packages are looking for funding
+  run `npm fund` for details
+
+39 vulnerabilities (4 low, 30 moderate, 4 high, 1 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+Compiling contracts
+Compiled 190 Solidity files successfully (evm targets: istanbul, london, unknown evm version for solc version 0.4.17).
+Update protocol version
+
+📋 New version: 2.4.1
+✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/1-mainnet-prod.json
+Executing upgrade clients script
+--------------------------------------------------------------------------------
+Boson Protocol Client Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: mainnet
+📅 Mon Apr 08 2024 15:03:27 GMT+0200 (Srednjeevropski poletni čas)
+🔱 Admin account:  0x19f66ac022Df0D9aa7E5D0AE7ed66D0c8BBE9668
+--------------------------------------------------------------------------------
+
+📋 Deploying new logic contract
+M	addresses/1-mainnet-prod.json
+M	submodules/royalty-registry-solidity
+Your branch is up to date with 'origin/release-2_4_1'.
+Unstaged changes after reset:
+M	addresses/1-mainnet-prod.json
+
+Migration HEAD started
+Removing any local changes before upgrading
+Unstaged changes after reset:
+M	package-lock.json
+Checking out contracts on version HEAD
+Installing dependencies
+
+up to date, audited 1757 packages in 4s
+
+151 packages are looking for funding
+  run `npm fund` for details
+
+39 vulnerabilities (4 low, 30 moderate, 4 high, 1 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+Compiling contracts
+Compiled 190 Solidity files successfully (evm targets: istanbul, london, unknown evm version for solc version 0.4.17).
+Executing upgrade clients script
+--------------------------------------------------------------------------------
+Boson Protocol Client Upgrader
+--------------------------------------------------------------------------------
+⛓  Network: mainnet
+📅 Mon Apr 08 2024 15:11:34 GMT+0200 (Srednjeevropski poletni čas)
+🔱 Admin account:  0x19f66ac022Df0D9aa7E5D0AE7ed66D0c8BBE9668
+--------------------------------------------------------------------------------
+
+📋 Deploying new logic contract
+
+📋 Updating implementation address on beacon
+M	package-lock.json
+M	submodules/royalty-registry-solidity
+Your branch is up to date with 'origin/release-2_4_1'.
+Unstaged changes after reset:
+M	package-lock.json
+

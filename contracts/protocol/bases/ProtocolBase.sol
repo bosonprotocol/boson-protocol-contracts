@@ -9,6 +9,7 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { PausableBase } from "./PausableBase.sol";
 import { ReentrancyGuardBase } from "./ReentrancyGuardBase.sol";
+import { FundsLib } from "../libs/FundsLib.sol";
 
 /**
  * @title ProtocolBase
@@ -687,18 +688,55 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
     }
 
     /**
-     * @notice calculate the protocol fee for a given exchange
+     * @notice calculate the protocol fee amount for a given exchange
      *
      * @param _exchangeToken - the token used for the exchange
      * @param _price - the price of the exchange
      * @return protocolFee - the protocol fee
      */
-    function getProtocolFee(address _exchangeToken, uint256 _price) internal view returns (uint256 protocolFee) {
-        // Calculate and set the protocol fee
-        return
-            _exchangeToken == protocolAddresses().token
-                ? protocolFees().flatBoson
-                : (protocolFees().percentage * _price) / HUNDRED_PERCENT;
+    function _getProtocolFee(address _exchangeToken, uint256 _price) internal view returns (uint256 protocolFee) {
+        // Check if the exchange token is the Boson token
+        if (_exchangeToken == protocolAddresses().token) {
+            // Return the flatBoson fee percentage if the exchange token is the Boson token
+            return protocolFees().flatBoson;
+        }
+        uint256 feePercentage = _getFeePercentage(_exchangeToken, _price);
+        return FundsLib.applyPercent(_price, feePercentage);
+    }
+
+    /**
+     * @notice calculate the protocol fee percentage for a given exchange
+     *
+     * @param _exchangeToken - the token used for the exchange
+     * @param _price - the price of the exchange
+     * @return feePercentage - the protocol fee percentage based on token price (using protocol fee table)
+     */
+    function _getFeePercentage(address _exchangeToken, uint256 _price) internal view returns (uint256 feePercentage) {
+        if (_exchangeToken == protocolAddresses().token) revert FeeTableAssetNotSupported();
+
+        ProtocolLib.ProtocolFees storage fees = protocolFees();
+        uint256[] storage priceRanges = fees.tokenPriceRanges[_exchangeToken];
+        uint256[] storage feePercentages = fees.tokenFeePercentages[_exchangeToken];
+
+        // If the token has a custom fee table, find the appropriate percentage
+        uint256 priceRangesLength = priceRanges.length;
+        if (priceRangesLength > 0) {
+            unchecked {
+                uint256 i;
+                for (; i < priceRangesLength - 1; ++i) {
+                    if (_price <= priceRanges[i]) {
+                        // Return the fee percentage for the matching price range
+                        return feePercentages[i];
+                    }
+                }
+
+                // If price exceeds all ranges, use the highest fee percentage
+                return feePercentages[i];
+            }
+        }
+
+        // If no custom fee table exists, fallback to using the default protocol percentage
+        return fees.percentage;
     }
 
     /**

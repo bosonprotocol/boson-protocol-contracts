@@ -68,7 +68,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     ({
       signers: [admin, treasury, buyer, rando, adminDR, treasuryDR],
       contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler },
-      protocolConfig: [, , { buyerEscalationDepositPercentage }],
+      protocolConfig: [, , , , buyerEscalationDepositPercentage],
       diamondAddress: protocolDiamondAddress,
     } = await setupTestEnvironment(contracts));
 
@@ -820,7 +820,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             // buyer withdrawal
             const tx2 = await fundsHandler.connect(buyer).withdrawFunds(buyerId, tokenListBuyer, tokenAmountsBuyer);
             await expect(tx2)
-              .to.emit(fundsHandler, "FundsWithdrawn", await buyer.getAddress())
+              .to.emit(fundsHandler, "FundsWithdrawn")
               .withArgs(
                 buyerId,
                 await buyer.getAddress(),

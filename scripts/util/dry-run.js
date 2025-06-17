@@ -2,8 +2,9 @@ const shell = require("shelljs");
 const { getAddressesFilePath } = require("./utils.js");
 const hre = require("hardhat");
 const { ethers } = hre;
-const { getSigners, parseEther } = hre.ethers;
+const { getSigners, parseEther, getContractAt } = hre.ethers;
 const network = hre.network.name;
+const environments = require("../../environments");
 
 async function setupDryRun(env) {
   let forkedChainId;
@@ -13,11 +14,12 @@ async function setupDryRun(env) {
   ({ chainId: forkedChainId } = await ethers.provider.getNetwork());
 
   forkedEnv = env;
+
   let deployerBalance = await getBalance();
   // const blockNumber = await ethers.provider.getBlockNumber();
 
-  // if deployerBalance is 0, set it to 10 ether
-  if (deployerBalance == 0n) deployerBalance = parseEther("10", "ether");
+  // if deployerBalance is 0, set it to 100 ether
+  if (deployerBalance == 0n) deployerBalance = parseEther("100", "ether");
 
   // change network to hardhat with forking enabled
   hre.config.networks["hardhat"].forking = {
@@ -36,8 +38,42 @@ async function setupDryRun(env) {
   const { chainId } = await ethers.provider.getNetwork();
   if (chainId != "31337") process.exit(1); // make sure network is hardhat
 
+  // Initialize fork state with a dummy transfer.
+  const deployer = (await getSigners())[0];
+  await deployer.sendTransaction({ to: deployer.address, value: 0 });
+
   // copy addresses file
   shell.cp(getAddressesFilePath(forkedChainId, network, forkedEnv), getAddressesFilePath(chainId, "hardhat", env));
+
+  const adminAddressConfig = environments[network].adminAddress;
+  const upgraderAddress = (await getSigners())[0].address;
+  if (adminAddressConfig != upgraderAddress) {
+    console.log("Sending 1 ether to the admin");
+    const upgrader = await ethers.getSigner(upgraderAddress);
+    await upgrader.sendTransaction({ to: adminAddressConfig, value: parseEther("1", "ether") });
+    deployerBalance -= parseEther("1", "ether");
+
+    await hre.network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [adminAddressConfig],
+    });
+
+    const admin = await ethers.getSigner(adminAddressConfig);
+
+    // give roles to upgrader
+    const { readContracts } = require("./../util/utils");
+    const contractsFile = readContracts(chainId, "hardhat", env);
+    const accessControllerInfo = contractsFile.contracts.find((i) => i.name === "AccessController");
+
+    // Get AccessController abstraction
+    const accessController = await getContractAt("AccessController", accessControllerInfo.address, admin);
+
+    const Role = require("./../domain/Role");
+    console.log("Granting roles to upgrader");
+    await accessController.grantRole(Role.ADMIN, upgraderAddress);
+    await accessController.grantRole(Role.PAUSER, upgraderAddress);
+    await accessController.grantRole(Role.UPGRADER, upgraderAddress);
+  }
 
   return { env, deployerBalance };
 }

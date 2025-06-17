@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { getContractFactory, getSigners, keccak256, toUtf8Bytes } = ethers;
+const { getContractFactory, getSigners, keccak256, toUtf8Bytes, ZeroAddress } = ethers;
 const { expect } = require("chai");
 const Role = require("../../scripts/domain/Role");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
@@ -25,7 +25,7 @@ describe("AccessController", function () {
 
     // Deploy the contract
     AccessController = await getContractFactory("AccessController");
-    accessController = await AccessController.deploy();
+    accessController = await AccessController.deploy(deployer.address);
     await accessController.waitForDeployment();
   });
 
@@ -52,34 +52,26 @@ describe("AccessController", function () {
 
     it("Deployer should not have PROTOCOL role", async function () {
       // Check role
-      expect(
-        await accessController.hasRole(Role.PROTOCOL, await deployer.getAddress()),
-        "Deployer has PROTOCOL role"
-      ).is.false;
+      expect(await accessController.hasRole(Role.PROTOCOL, await deployer.getAddress()), "Deployer has PROTOCOL role")
+        .is.false;
     });
 
     it("Deployer should not have UPGRADER role", async function () {
       // Check role
-      expect(
-        await accessController.hasRole(Role.UPGRADER, await deployer.getAddress()),
-        "Deployer has UPGRADER role"
-      ).is.false;
+      expect(await accessController.hasRole(Role.UPGRADER, await deployer.getAddress()), "Deployer has UPGRADER role")
+        .is.false;
     });
 
     it("Deployer should not have PAUSER role", async function () {
       // Check role
-      expect(
-        await accessController.hasRole(Role.PAUSER, await deployer.getAddress()),
-        "Deployer has PAUSER role"
-      ).is.false;
+      expect(await accessController.hasRole(Role.PAUSER, await deployer.getAddress()), "Deployer has PAUSER role").is
+        .false;
     });
 
     it("Deployer should not have CLIENT role", async function () {
       // Check role
-      expect(
-        await accessController.hasRole(Role.CLIENT, await deployer.getAddress()),
-        "Deployer has CLIENT role"
-      ).is.false;
+      expect(await accessController.hasRole(Role.CLIENT, await deployer.getAddress()), "Deployer has CLIENT role").is
+        .false;
     });
 
     it("Deployer should not have FEE_COLLECTOR role", async function () {
@@ -491,6 +483,14 @@ describe("AccessController", function () {
       ).to.be.revertedWith(
         `AccessControl: account ${(await rando.getAddress()).toLowerCase()} is missing role ${Role.ADMIN}`
       );
+    });
+
+    it("Should revert if default admin is a zero address", async function () {
+      // Grant role
+      await accessController.connect(deployer).grantRole(Role.PAUSER, await pauser.getAddress());
+
+      // Revoke Role, expecting revert
+      await expect(AccessController.deploy(ZeroAddress)).to.be.revertedWith(`Invalid address`);
     });
   });
 });

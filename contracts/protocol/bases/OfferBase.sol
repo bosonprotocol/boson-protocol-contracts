@@ -30,7 +30,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Resolution period is not between the minimum and the maximum resolution period
      * - Voided is set to true
      * - Available quantity is set to zero
-     * - Offer type is discovery and the price is not set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      * - Seller is not on dispute resolver's seller allow list
@@ -97,7 +96,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Resolution period is not between the minimum and the maximum resolution period
      * - Voided is set to true
      * - Available quantity is set to zero
-     * - Offer type is discovery and the price is not set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      * - Seller is not on dispute resolver's seller allow list
@@ -148,9 +146,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
 
         // quantity must be greater than zero
         if (_offer.quantityAvailable == 0) revert InvalidQuantityAvailable();
-
-        // If offer is of the discovery type, price must be zero
-        if (_offer.priceType == PriceType.Discovery && _offer.price != 0) revert InvalidPriceDiscoveryPrice();
 
         DisputeResolutionTerms memory disputeResolutionTerms;
         OfferFees storage offerFees = fetchOfferFees(_offer.id);
@@ -236,23 +231,24 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
 
                 // condition for successful payout when exchange final state is canceled
                 if (_offer.buyerCancelPenalty > offerPrice) revert InvalidOfferPenalty();
+                if (_offer.priceType == PriceType.Static) {
+                    // Calculate and set the protocol fee
+                    uint256 protocolFee = _getProtocolFee(_offer.exchangeToken, offerPrice);
 
-                // Calculate and set the protocol fee
-                uint256 protocolFee = getProtocolFee(_offer.exchangeToken, offerPrice);
+                    // Calculate the agent fee amount
+                    uint256 agentFeeAmount = (agent.feePercentage * offerPrice) / HUNDRED_PERCENT;
 
-                // Calculate the agent fee amount
-                uint256 agentFeeAmount = (agent.feePercentage * offerPrice) / HUNDRED_PERCENT;
+                    uint256 totalOfferFeeLimit = (limits.maxTotalOfferFeePercentage * offerPrice) / HUNDRED_PERCENT;
 
-                uint256 totalOfferFeeLimit = (limits.maxTotalOfferFeePercentage * offerPrice) / HUNDRED_PERCENT;
+                    // Sum of agent fee amount and protocol fee amount should be <= offer fee limit and less that fee limit set by seller
+                    uint256 totalFeeAmount = agentFeeAmount + protocolFee;
+                    if (totalFeeAmount > totalOfferFeeLimit) revert AgentFeeAmountTooHigh();
+                    if (totalFeeAmount > _feeLimit) revert TotalFeeExceedsLimit();
 
-                // Sum of agent fee amount and protocol fee amount should be <= offer fee limit and less that fee limit set by seller
-                uint256 totalFeeAmount = agentFeeAmount + protocolFee;
-                if (totalFeeAmount > totalOfferFeeLimit) revert AgentFeeAmountTooHigh();
-                if (totalFeeAmount > _feeLimit) revert TotalFeeExceedsLimit();
-
-                // Set offer fees props individually since calldata structs can't be copied to storage
-                offerFees.protocolFee = protocolFee;
-                offerFees.agentFee = agentFeeAmount;
+                    // Set offer fees props individually since calldata structs can't be copied to storage
+                    offerFees.protocolFee = protocolFee;
+                    offerFees.agentFee = agentFeeAmount;
+                }
             }
 
             // Store the agent id for the offer

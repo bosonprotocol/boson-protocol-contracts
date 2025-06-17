@@ -625,6 +625,43 @@
         {
           "components": [
             {
+              "internalType": "address payable",
+              "name": "wallet",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "minRoyaltyPercentage",
+              "type": "uint256"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.RoyaltyRecipientInfo[]",
+          "name": "royaltyRecipients",
+          "type": "tuple[]"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "RoyaltyRecipientsChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "sellerId",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
               "internalType": "uint256",
               "name": "id",
               "type": "uint256"

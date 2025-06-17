@@ -239,12 +239,14 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
             // _msgSender==address(0) represents the wrapper, where it's not allowed to return the surplus
             if (_msgSender == address(0)) revert NativeNotAllowed();
 
-            // Return the surplus to the sender
-            FundsLib.transferFundsFromProtocol(
-                address(0),
-                payable(_msgSender),
-                thisNativeBalanceAfter - thisNativeBalanceBefore
-            );
+            unchecked {
+                // Return the surplus to the sender
+                FundsLib.transferFundsFromProtocol(
+                    address(0),
+                    payable(_msgSender),
+                    thisNativeBalanceAfter - thisNativeBalanceBefore
+                );
+            }
         }
     }
 

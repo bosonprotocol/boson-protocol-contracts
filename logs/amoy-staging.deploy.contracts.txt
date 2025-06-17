@@ -1,0 +1,50 @@
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: amoy
+📅 Tue Apr 09 2024 07:21:59 GMT+0200 (Srednjeevropski poletni čas)
+🔱 Deployer account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0x92c45979a38aa16daced5470d7f976e9e7ba6b58
+✅ DiamondLoupeFacet deployed to: 0xb517a2aee8bbfbf038d27d4451c46469b229a1e6
+✅ DiamondCutFacet deployed to: 0x3751e1dfbe3ed4ae595d80f4138aaee7337a78f2
+✅ ERC165Facet deployed to: 0x77cd8a9ad93a5a95ce746e104ebf1710f8beb993
+✅ ProtocolDiamond deployed to: 0x26f643746cbc918b46c2d47edca68c4a6c98ebe6
+
+💎 Granting UPGRADER role...
+
+💸 Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0xbDD129B5034a65bd1F2872Df3F62C6dE1308352E
+
+💎 Deploying and initializing protocol handler facets...
+✅ AccountHandlerFacet deployed to: 0x2683f042ee72367648E8Fdb194C49B01B112B8cB
+✅ SellerHandlerFacet deployed to: 0x94588Ba858c7F67B60a0a079FE2131c4C0351fB9
+✅ BuyerHandlerFacet deployed to: 0x72ed3a45303D5102B92b6F837162684673c40477
+✅ DisputeResolverHandlerFacet deployed to: 0x5aF8E92541Ce126d2BfF69A03F301a7E16943A9c
+✅ AgentHandlerFacet deployed to: 0x6D7f06CC2F2583A44226A9077Bea8C5f646B5095
+✅ BundleHandlerFacet deployed to: 0x513C1320215Eba0AD85fea5a426bdb4527cC03C2
+✅ DisputeHandlerFacet deployed to: 0x02d35866eC073249dD804fB3E79aCe081474b9C5
+✅ FundsHandlerFacet deployed to: 0x861E78400791C969Ccb6DB87eA21b5B07df677BA
+✅ GroupHandlerFacet deployed to: 0xE9846de8F8c4C0eceCB7FE6627D9288E5ecFaAB7
+✅ OfferHandlerFacet deployed to: 0x364FB877D596764fA5D5BdC2CAdE4B25aa73f64F
+✅ OrchestrationHandlerFacet1 deployed to: 0x7d632e816a983E9aA07cebBB84D5b3aE6B6CB1DB
+✅ OrchestrationHandlerFacet2 deployed to: 0x84f7Bc784458080e58309C518d6B8c0A6C0bdECc
+✅ TwinHandlerFacet deployed to: 0xED5d75A2b9Ba8f42662407BDE7020fd57733585a
+✅ PauseHandlerFacet deployed to: 0x4d827187dD0df5bF02575d24E5586e765511596e
+✅ ProtocolInitializationHandlerFacet deployed to: 0x654FA4C10C0F66c4D94B4AD458236A260888AB5a
+✅ SequentialCommitHandlerFacet deployed to: 0x82a33733c2f8696F7fd61D0874351cbb8Ea61EBc
+✅ PriceDiscoveryHandlerFacet deployed to: 0x0bfF7B7A04C1eB19DeA63f0FF4D884914edB61E8
+✅ ConfigHandlerFacet deployed to: 0x29C9361920785F4B2175Ba61c177cEdC6A99542A
+✅ ExchangeHandlerFacet deployed to: 0x0b1d46Eac69b67bA0e74Cb272834268aE2eC6c36
+✅ MetaTransactionsHandlerFacet deployed to: 0xbd589F66861FBe854F2f6e98aC09db65cbcA17Fc
+
+⧉ Deploying Protocol Client implementation/proxy pairs...
+✅ BosonVoucher Logic deployed to: 0xedB5F09d3FCF9DdBa83Bca24111Ab8D96e978d13
+✅ BosonVoucher Beacon deployed to: 0xEc7464518335c40b1fCDeFF07F38808CBDCEb3e4
+
+🌐️Configuring and granting roles...
+✅ ConfigHandlerFacet updated with remaining post-initialization config.
+✅ Granted roles to appropriate contract and addresses.
+✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/80002-amoy-staging.json

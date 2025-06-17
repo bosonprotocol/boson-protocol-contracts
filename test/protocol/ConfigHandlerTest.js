@@ -7,7 +7,13 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { oneWeek, oneMonth, maxPriorityFeePerGas } = require("../util/constants");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
-const { getFacetsWithArgs, getSnapshot, revertToSnapshot, calculateBosonProxyAddress } = require("../util/utils");
+const {
+  getFacetsWithArgs,
+  getSnapshot,
+  revertToSnapshot,
+  calculateBosonProxyAddress,
+  applyPercentage,
+} = require("../util/utils");
 const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 
 /**
@@ -16,7 +22,7 @@ const { deployAndCutFacets } = require("../../scripts/util/deploy-protocol-handl
 describe("IBosonConfigHandler", function () {
   // Common vars
   let InterfaceIds, support;
-  let accounts, deployer, rando, token, treasury, beacon, priceDiscovery;
+  let accounts, deployer, rando, token, treasury, beacon, priceDiscovery, usdc;
   let maxOffersPerGroup,
     maxTwinsPerBundle,
     maxOffersPerBundle,
@@ -45,7 +51,7 @@ describe("IBosonConfigHandler", function () {
 
     // Make accounts available
     accounts = await getSigners();
-    [deployer, rando, token, treasury, beacon, priceDiscovery] = accounts;
+    [deployer, rando, token, treasury, beacon, priceDiscovery, usdc] = accounts;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond(maxPriorityFeePerGas);
@@ -126,11 +132,9 @@ describe("IBosonConfigHandler", function () {
             maxPremintedVouchers,
           },
           //Protocol fees
-          {
-            percentage: protocolFeePercentage,
-            flatBoson: protocolFeeFlatBoson,
-            buyerEscalationDepositPercentage,
-          },
+          protocolFeePercentage,
+          protocolFeeFlatBoson,
+          buyerEscalationDepositPercentage,
         ];
 
         const facetNames = ["ProtocolInitializationHandlerFacet", "ConfigHandlerFacet"];
@@ -227,12 +231,11 @@ describe("IBosonConfigHandler", function () {
           maxPremintedVouchers,
         },
         // Protocol fees
-        {
-          percentage: protocolFeePercentage,
-          flatBoson: protocolFeeFlatBoson,
-          buyerEscalationDepositPercentage,
-        },
+        protocolFeePercentage,
+        protocolFeeFlatBoson,
+        buyerEscalationDepositPercentage,
       ];
+
       const facetNames = ["ProtocolInitializationHandlerFacet", "ConfigHandlerFacet"];
 
       const facetsToDeploy = await getFacetsWithArgs(facetNames, protocolConfig);
@@ -951,12 +954,116 @@ describe("IBosonConfigHandler", function () {
           });
         });
       });
+
+      context("👉 setProtocolFeeTable()", async function () {
+        const FIVE_PERCENT = 500;
+        const TEN_PERCENT = 1000;
+        const TWENTY_PERCENT = 2000;
+
+        const feePriceRanges = [
+          parseUnits("1", "ether").toString(),
+          parseUnits("2", "ether").toString(),
+          parseUnits("5", "ether").toString(),
+        ];
+        const feePercentages = [FIVE_PERCENT, TEN_PERCENT, TWENTY_PERCENT];
+        let exchangeAmount, feeTier;
+        let expectedFeeAmount;
+        let usdcAddress;
+        let bosonToken;
+        beforeEach(async function () {
+          usdcAddress = await usdc.getAddress();
+          bosonToken = await token.getAddress();
+        });
+
+        it("should emit a FeeTableUpdated event", async function () {
+          // Set new protocol fee precentage address, testing for the event
+          await expect(configHandler.connect(deployer).setProtocolFeeTable(usdcAddress, feePriceRanges, feePercentages))
+            .to.emit(configHandler, "FeeTableUpdated")
+            .withArgs(usdcAddress, feePriceRanges, feePercentages, await deployer.getAddress());
+        });
+
+        it("should update state and return fee amount based on configured fee table", async function () {
+          await configHandler.connect(deployer).setProtocolFeeTable(usdcAddress, feePriceRanges, feePercentages);
+          for (let i = 0; i < feePriceRanges.length; i++) {
+            exchangeAmount = feePriceRanges[i];
+            feeTier = feePercentages[i];
+            expectedFeeAmount = applyPercentage(exchangeAmount, feeTier);
+            expect(await configHandler.getProtocolFee(usdcAddress, exchangeAmount)).to.equal(expectedFeeAmount);
+            expect(await configHandler.getProtocolFeePercentage(usdcAddress, exchangeAmount)).to.equal(feeTier);
+          }
+
+          // check for a way bigger value
+          feeTier = feePercentages[feePercentages.length - 1];
+          exchangeAmount = BigInt(feePriceRanges[feePriceRanges.length - 1]) * BigInt(2);
+          expectedFeeAmount = applyPercentage(exchangeAmount, feeTier);
+          expect(await configHandler.getProtocolFee(usdcAddress, exchangeAmount)).to.equal(expectedFeeAmount);
+          expect(await configHandler.getProtocolFeePercentage(usdcAddress, exchangeAmount)).to.equal(feeTier);
+
+          // validate fee table config
+          const [retrievedRanges, retrievedPercentages] = await configHandler.getProtocolFeeTable(usdc.address);
+
+          expect(retrievedRanges.map((r) => r.toString())).to.deep.equal(feePriceRanges, "Incorrect price ranges");
+          expect(retrievedPercentages.map((p) => Number(p))).to.deep.equal(feePercentages, "Incorrect fee percentages");
+        });
+
+        it("should update state and return boson flat fee if boson token used as exchange token", async function () {
+          await configHandler.connect(deployer).setProtocolFeeTable(usdcAddress, feePriceRanges, feePercentages);
+          exchangeAmount = feePriceRanges[0];
+          expect(await configHandler.getProtocolFee(bosonToken, exchangeAmount)).to.equal(protocolFeeFlatBoson);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new protocol fee precentage, expecting revert
+            await expect(
+              configHandler.connect(rando).setProtocolFeeTable(usdcAddress, feePriceRanges, feePercentages)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
+          });
+          it("should revert if _tokenAddress is the BOSON token", async function () {
+            await expect(
+              configHandler
+                .connect(deployer)
+                .setProtocolFeeTable(await token.getAddress(), feePriceRanges, feePercentages)
+            ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.FEE_TABLE_ASSET_NOT_SUPOPRTED);
+          });
+          it("price ranges count different from fee percents", async function () {
+            const newPriceRanges = [...feePriceRanges, parseUnits("10", "ether").toString()];
+            await expect(
+              configHandler.connect(deployer).setProtocolFeeTable(usdcAddress, newPriceRanges, feePercentages)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ARRAY_LENGTH_MISMATCH);
+          });
+          it("percentage value is > 100%", async function () {
+            const invalidPercent = 10001; // 101%
+            const newFeePercentages = [FIVE_PERCENT, TEN_PERCENT, invalidPercent];
+
+            await expect(
+              configHandler.connect(deployer).setProtocolFeeTable(usdcAddress, feePriceRanges, newFeePercentages)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_PERCENTAGE_INVALID);
+          });
+          it("price ranges are not in ascending order", async function () {
+            const newPriceRanges = [
+              parseUnits("1", "ether").toString(),
+              parseUnits("3", "ether").toString(),
+              parseUnits("2", "ether").toString(),
+            ];
+
+            await expect(
+              configHandler.connect(deployer).setProtocolFeeTable(usdcAddress, newPriceRanges, feePercentages)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NON_ASCENDING_ORDER);
+          });
+          it("getProtocolFeePercentage should not accept BOSON token as parameter", async function () {
+            const randomPrice = 10000;
+            await expect(
+              configHandler.connect(rando).getProtocolFeePercentage(await token.getAddress(), randomPrice)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_TABLE_ASSET_NOT_SUPOPRTED);
+          });
+        });
+      });
     });
 
     context("📋 Getters", async function () {
       // here we test only that after the deployments getters show correct values
       // otherwise getters are tested in the "should update state" test of setters
-
       it("Initial values are correct", async function () {
         // Verify that initial values matches those in constructor
         expect(await configHandler.connect(rando).getTreasuryAddress()).to.equal(

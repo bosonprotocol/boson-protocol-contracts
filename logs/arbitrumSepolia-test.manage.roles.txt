@@ -1,0 +1,29 @@
+--------------------------------------------------------------------------------
+Boson Protocol Contract Suite Role Manager
+--------------------------------------------------------------------------------
+⛓  Network: arbitrumSepolia
+📅 Tue Apr 15 2025 11:40:41 GMT+0300 (Eastern European Summer Time)
+🔱 Admin account:  0x2a91a0148ee62fa638be38c7ee05c29a3e568dd8
+--------------------------------------------------------------------------------
+🔑 Confirming roles...
+
+🔍 AdminAddress
+   👉 0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+   ✅ ADMIN - No change
+   ✅ UPGRADER - Granted
+   ✅ PAUSER - Granted
+   ❌ PROTOCOL - No change
+   ❌ CLIENT - No change
+   ❌ FEE_COLLECTOR - No change
+
+🔍 ProtocolDiamond
+   👉 0x7de418a7ce94debd057c34ebac232e7027634ade
+   ✅ PROTOCOL - No change
+   ❌ ADMIN - No change
+   ❌ PAUSER - No change
+   ❌ CLIENT - No change
+   ❌ UPGRADER - No change
+   ❌ FEE_COLLECTOR - No change
+
+📋 Roles confirmed.
+

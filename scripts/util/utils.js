@@ -48,12 +48,16 @@ function readContracts(chainId, network, env) {
   return JSON.parse(fs.readFileSync(getAddressesFilePath(chainId, network, env), "utf-8"));
 }
 
-async function getFees(maxPriorityFeePerGas) {
-  const { baseFeePerGas } = await provider.getBlock();
+async function getFees() {
+  // const { baseFeePerGas } = await provider.getBlock();
+  // TEMP: use gasPrice from provider instead of baseFeePerGas
+  let { gasPrice } = await provider.getFeeData();
+  gasPrice = (gasPrice * 3n) / 2n;
 
   // Set maxFeePerGas so it's likely to be accepted by the network
   // maxFeePerGas = maxPriorityFeePerGas + 2 * lastBaseFeePerGas
-  return { maxPriorityFeePerGas, maxFeePerGas: maxPriorityFeePerGas + BigInt(baseFeePerGas) * 2n };
+  // return { maxPriorityFeePerGas, maxFeePerGas: maxPriorityFeePerGas + BigInt(baseFeePerGas) * 2n };
+  return { gasPrice };
 }
 
 // Check if account has a role

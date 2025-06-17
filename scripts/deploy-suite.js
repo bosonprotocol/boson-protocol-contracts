@@ -1,6 +1,6 @@
 const environments = require("../environments");
 const hre = require("hardhat");
-const { ZeroAddress, getContractAt, getSigners } = hre.ethers;
+const { ZeroAddress, getContractAt, getSigners, getContractFactory, provider } = hre.ethers;
 const network = hre.network.name;
 const confirmations = network == "hardhat" ? 1 : environments.confirmations;
 const tipMultiplier = BigInt(environments.tipMultiplier);
@@ -20,14 +20,15 @@ const { getInterfaceIds, interfaceImplementers } = require("./config/supported-i
 const { deploymentComplete, getFees, writeContracts } = require("./util/utils");
 const AuthTokenType = require("../scripts/domain/AuthTokenType");
 const clientConfig = require("./config/client-upgrade");
+const { WrappedNative } = require("./config/protocol-parameters");
 
 /**
  * Deploy Boson Protocol V2 contract suite
  *
- * Running with the appropriate npm script in package.json:
- * `npm run deploy-suite:local`
+ * Running with the appropriate npm script in package.json (clean cache, compile, deploy, save logs):
+ * `NETWORK=hardhat ENV=test npm run deploy-suite`
  *
- * Running with hardhat
+ * Running with hardhat (deploy only):
  * `npx hardhat deploy-suite --network hardhat --env test`
  */
 
@@ -42,7 +43,15 @@ function getAuthTokenContracts() {
   };
 }
 
-async function main(env, facetConfig) {
+async function main(env, facetConfig, create3) {
+  if (create3) {
+    const code = await provider.getCode(environments.create3.address);
+    if (code === "0x") {
+      console.log("CREATE3 factory contract is not deployed on this network.");
+      process.exit(1);
+    }
+  }
+
   // Compile everything (in case run by node)
   await hre.run("compile");
 
@@ -80,9 +89,10 @@ async function main(env, facetConfig) {
 
   // Deploy the Diamond
   const [protocolDiamond, dlf, dcf, erc165f, accessController, diamondArgs] = await deployProtocolDiamond(
-    maxPriorityFeePerGas
+    maxPriorityFeePerGas,
+    create3 ? environments.create3 : null
   );
-  deploymentComplete("AccessController", await accessController.getAddress(), [], "", contracts);
+  deploymentComplete("AccessController", await accessController.getAddress(), [deployer.address], "", contracts);
   deploymentComplete(
     "DiamondLoupeFacet",
     await dlf.getAddress(),
@@ -110,6 +120,21 @@ async function main(env, facetConfig) {
   );
   await transactionResponse.wait(confirmations);
 
+  // Deploy Boson Price Discovery Client
+  console.log("\n💸 Deploying Boson Price Discovery Client...");
+  const constructorArgs = [WrappedNative[network], await protocolDiamond.getAddress()];
+  const bosonPriceDiscoveryFactory = await getContractFactory("BosonPriceDiscovery");
+  const bosonPriceDiscovery = await bosonPriceDiscoveryFactory.deploy(...constructorArgs);
+  await bosonPriceDiscovery.waitForDeployment();
+
+  deploymentComplete(
+    "BosonPriceDiscoveryClient",
+    await bosonPriceDiscovery.getAddress(),
+    constructorArgs,
+    "",
+    contracts
+  );
+
   console.log(`\n💎 Deploying and initializing protocol handler facets...`);
 
   // Deploy and cut facets
@@ -123,6 +148,9 @@ async function main(env, facetConfig) {
     // Get values from default config file
     facetData = await getFacets();
   }
+
+  // Update boson price discovery address in config init
+  facetData["ConfigHandlerFacet"].init[0].priceDiscovery = await bosonPriceDiscovery.getAddress();
 
   const { version } = packageFile;
   let { deployedFacets } = await deployAndCutFacets(
@@ -184,8 +212,8 @@ async function main(env, facetConfig) {
 
   // Add NFT auth token addresses to protocol config
   // LENS
-  // Skip the step for ethereum networks, since LENS is not present there
-  if (!(network === "mainnet" || network === "goerli")) {
+  // Skip the step if the LENS is not available on the network
+  if (authTokenContracts.lensAddress && authTokenContracts.lensAddress != "") {
     transactionResponse = await bosonConfigHandler.setAuthTokenContract(
       AuthTokenType.Lens,
       authTokenContracts.lensAddress,
@@ -195,8 +223,8 @@ async function main(env, facetConfig) {
   }
 
   // ENS
-  // Skip the step for polygon networks, since ENS is not present there
-  if (!(network === "polygon" || network === "mumbai")) {
+  // Skip the step if the LENS is not available on the network
+  if (authTokenContracts.ensAddress && authTokenContracts.ensAddress != "") {
     transactionResponse = await bosonConfigHandler.setAuthTokenContract(
       AuthTokenType.ENS,
       authTokenContracts.ensAddress,

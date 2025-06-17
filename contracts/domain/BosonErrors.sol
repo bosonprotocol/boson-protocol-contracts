@@ -17,6 +17,8 @@ interface BosonErrors {
     error InvalidState();
     // Two or more array parameters with different lengths
     error ArrayLengthMismatch();
+    // Array elements that are not in ascending order (i.e arr[i-1] > arr[i])
+    error NonAscendingOrder();
 
     // Reentrancy guard
     // Reentrancy guard is active and second call to protocol is made
@@ -374,4 +376,8 @@ interface BosonErrors {
     error FeeAmountTooHigh();
     // Price does not cover the cancellation penalty
     error PriceDoesNotCoverPenalty();
+
+    // Fee Table related
+    // Thrown if asset is not supported in feeTable feature.
+    error FeeTableAssetNotSupported();
 }

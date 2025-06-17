@@ -744,11 +744,9 @@ describe("IPriceDiscovery", function () {
       await expect(
         bosonVoucher
           .connect(protocol)
-          ["safeTransferFrom(address,address,uint256)"](
-            protocol.address,
-            await bosonPriceDiscovery.getAddress(),
-            tokenId
-          )
+          [
+            "safeTransferFrom(address,address,uint256)"
+          ](protocol.address, await bosonPriceDiscovery.getAddress(), tokenId)
       ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNEXPECTED_ERC721_RECEIVED);
     });
   });

@@ -10,7 +10,7 @@ import { IBosonConfigEvents } from "../events/IBosonConfigEvents.sol";
  *
  * @notice Handles management of configuration within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xe27f0773
+ * The ERC-165 identifier for this interface is: 0xe9aa49b6
  */
 interface IBosonConfigHandler is IBosonConfigEvents, BosonErrors {
     /**
@@ -130,11 +130,75 @@ interface IBosonConfigHandler is IBosonConfigEvents, BosonErrors {
     function setProtocolFeePercentage(uint256 _protocolFeePercentage) external;
 
     /**
-     * @notice Gets the protocol fee percentage.
+     * @notice Sets the feeTable for a specific token given price ranges and fee tiers for
+     * the corresponding price ranges.
      *
-     * @return the protocol fee percentage
+     * Reverts if the number of fee percentages does not match the number of price ranges.
+     * Reverts if the price ranges are not in ascending order
+     * Reverts if any of the fee percentages value is above 100%
+     *
+     * @dev Caller must have ADMIN role.
+     *
+     * @param _tokenAddress - the address of the token
+     * @param _priceRanges - array of token price ranges
+     * @param _feePercentages - array of fee percentages corresponding to each price range
+     */
+    function setProtocolFeeTable(
+        address _tokenAddress,
+        uint256[] calldata _priceRanges,
+        uint256[] calldata _feePercentages
+    ) external;
+
+    /**
+     * @notice Gets the current fee table for a given token.
+     *
+     * @param _tokenAddress - the address of the token
+     * @return priceRanges - array of token price ranges
+     * @return feePercentages - array of fee percentages corresponding to each price range
+     */
+    function getProtocolFeeTable(
+        address _tokenAddress
+    ) external view returns (uint256[] memory priceRanges, uint256[] memory feePercentages);
+
+    /**
+     * @notice Gets the default protocol fee percentage.
+     *
+     * @return the default protocol fee percentage
      */
     function getProtocolFeePercentage() external view returns (uint256);
+
+    /**
+     * @notice Gets the protocol fee percentage based on protocol fee table
+     *
+     * @dev This function calculates the protocol fee percentage for specific token and price.
+     * If the token has a custom fee table configured, it returns the corresponding fee percentage
+     * for the price range. If the token does not have a custom fee table, it falls back
+     * to the default protocol fee percentage.
+     *
+     * Reverts if the exchange token is BOSON.
+     *
+     * @param _exchangeToken - The address of the token being used for the exchange.
+     * @param _price - The price of the item or service in the exchange.
+     *
+     * @return the protocol fee percentage for given price and exchange token
+     */
+    function getProtocolFeePercentage(address _exchangeToken, uint256 _price) external view returns (uint256);
+
+    /**
+     * @notice Retrieves the protocol fee percentage for a given exchange token and price.
+     *
+     * @dev This function calculates the protocol fee based on the token and price.
+     * If the token has a custom fee table, it applies the corresponding fee percentage
+     * for the price range. If the token does not have a custom fee table, it falls back
+     * to the default protocol fee percentage. If the exchange token is $BOSON,
+     * this function returns the flatBoson fee
+     *
+     * @param _exchangeToken - The address of the token being used for the exchange.
+     * @param _price - The price of the item or service in the exchange.
+     *
+     * @return The protocol fee amount based on the token and the price.
+     */
+    function getProtocolFee(address _exchangeToken, uint256 _price) external view returns (uint256);
 
     /**
      * @notice Sets the flat protocol fee for exchanges in $BOSON.

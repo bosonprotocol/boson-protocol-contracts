@@ -89,6 +89,37 @@
       "anonymous": false,
       "inputs": [
         {
+          "indexed": true,
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256[]",
+          "name": "priceRanges",
+          "type": "uint256[]"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256[]",
+          "name": "feePercentages",
+          "type": "uint256[]"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "FeeTableUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
           "indexed": false,
           "internalType": "uint256",
           "name": "maxEscalationResponsePeriod",
@@ -148,7 +179,7 @@
         {
           "indexed": false,
           "internalType": "uint16",
-          "name": "maxRoyaltyPecentage",
+          "name": "maxRoyaltyPercentage",
           "type": "uint16"
         },
         {
@@ -216,6 +247,25 @@
         }
       ],
       "name": "MinResolutionPeriodChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "priceDiscoveryAddress",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "PriceDiscoveryAddressChanged",
       "type": "event"
     },
     {

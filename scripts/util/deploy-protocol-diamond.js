@@ -1,7 +1,7 @@
 const { getFacetAddCut } = require("./diamond-utils.js");
 const { getInterfaceIds } = require("../config/supported-interfaces.js");
 const hre = require("hardhat");
-const { getContractFactory } = hre.ethers;
+const { getContractFactory, id, getContractAt } = hre.ethers;
 const environments = require("../../environments");
 const confirmations = hre.network.name === "hardhat" ? 1 : environments.confirmations;
 const { getFees } = require("./utils");
@@ -12,9 +12,10 @@ const { getFees } = require("./utils");
  * Reused between deployment script and unit tests for consistency
  *
  * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
+ * @param create3 - CREATE3 deployment configuration (factory address and salt)
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployProtocolDiamond(maxPriorityFeePerGas) {
+async function deployProtocolDiamond(maxPriorityFeePerGas, create3) {
   // Get interface Ids
   const InterfaceIds = await getInterfaceIds();
 
@@ -27,24 +28,23 @@ async function deployProtocolDiamond(maxPriorityFeePerGas) {
   ];
 
   // Deploy the AccessController contract
-  const AccessController = await getContractFactory("AccessController");
-  const accessController = await AccessController.deploy(await getFees(maxPriorityFeePerGas));
-  await accessController.deploymentTransaction().wait(confirmations);
+  const [deployer] = await hre.ethers.getSigners();
+  const accessController = await deployContract(
+    "AccessController",
+    maxPriorityFeePerGas,
+    create3,
+    [deployer.address],
+    ["address"]
+  );
 
   // Diamond Loupe Facet
-  const DiamondLoupeFacet = await getContractFactory("DiamondLoupeFacet");
-  const dlf = await DiamondLoupeFacet.deploy(await getFees(maxPriorityFeePerGas));
-  await dlf.deploymentTransaction().wait(confirmations);
+  const dlf = await deployContract("DiamondLoupeFacet", maxPriorityFeePerGas, create3);
 
   // Diamond Cut Facet
-  const DiamondCutFacet = await getContractFactory("DiamondCutFacet");
-  const dcf = await DiamondCutFacet.deploy(await getFees(maxPriorityFeePerGas));
-  await dcf.deploymentTransaction().wait(confirmations);
+  const dcf = await deployContract("DiamondCutFacet", maxPriorityFeePerGas, create3);
 
   // ERC165 Facet
-  const ERC165Facet = await getContractFactory("ERC165Facet");
-  const erc165f = await ERC165Facet.deploy(await getFees(maxPriorityFeePerGas));
-  await erc165f.deploymentTransaction().wait(confirmations);
+  const erc165f = await deployContract("ERC165Facet", maxPriorityFeePerGas, create3);
 
   // Arguments for Diamond constructor
   const diamondArgs = [
@@ -53,12 +53,77 @@ async function deployProtocolDiamond(maxPriorityFeePerGas) {
     interfaces,
   ];
 
+  const diamondArgsTypes = ["address", "(address,uint8,bytes4[])[]", "bytes4[]"];
+
   // Deploy Protocol Diamond
-  const ProtocolDiamond = await getContractFactory("ProtocolDiamond");
-  const protocolDiamond = await ProtocolDiamond.deploy(...diamondArgs, await getFees(maxPriorityFeePerGas));
-  await protocolDiamond.deploymentTransaction().wait(confirmations);
+  const protocolDiamond = await deployContract(
+    "ProtocolDiamond",
+    maxPriorityFeePerGas,
+    create3,
+    diamondArgs,
+    diamondArgsTypes
+  );
 
   return [protocolDiamond, dlf, dcf, erc165f, accessController, diamondArgs];
+}
+
+/**
+ * Deploy a contract, either using CREATE or CREATE3
+ *
+ * @param contractName - name of the contract to deploy
+ * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
+ * @param create3 - CREATE3 deployment configuration (factory address and salt)
+ * @param constructorArgs - constructor arguments
+ * @param constructorArgsTypes - constructor argument types
+ */
+async function deployContract(
+  contractName,
+  maxPriorityFeePerGas,
+  create3,
+  constructorArgs = [],
+  constructorArgsTypes = []
+) {
+  const contractFactory = await getContractFactory(contractName);
+
+  if (create3) {
+    //Deploy using CREATE3
+
+    const salt = id(create3.salt + contractName);
+    const byteCode = contractFactory.bytecode;
+    let creationData = salt + byteCode.slice(2);
+    if (constructorArgs.length > 0) {
+      const abiCoder = new hre.ethers.AbiCoder();
+      const encodedConstructorArgs = abiCoder.encode(constructorArgsTypes, constructorArgs);
+      creationData += encodedConstructorArgs.slice(2);
+    }
+
+    const [deployer] = await hre.ethers.getSigners();
+
+    const transaction = {
+      to: create3.address,
+      data: creationData,
+    };
+
+    // get the contract address. If it exists, it cannot be deployed again
+    let contractAddress;
+    try {
+      contractAddress = await deployer.call(transaction);
+    } catch (e) {
+      console.log(`${contractName} cannot be deployed.`);
+    }
+
+    // deploy the contract
+    const tx = await deployer.sendTransaction(transaction);
+    await tx.wait(confirmations);
+    const contract = await getContractAt(contractName, contractAddress);
+
+    return contract;
+  }
+
+  // Deploy using CREATE
+  const contract = await contractFactory.deploy(...constructorArgs, await getFees(maxPriorityFeePerGas));
+  await contract.deploymentTransaction().wait(confirmations);
+  return contract;
 }
 
 exports.deployProtocolDiamond = deployProtocolDiamond;

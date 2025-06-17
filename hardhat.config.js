@@ -1,5 +1,5 @@
 const dotEnvConfig = require("dotenv");
-dotEnvConfig.config();
+dotEnvConfig.config({ path: require("path").resolve(__dirname, ".env") });
 
 const environments = require("./environments");
 const { task } = require("hardhat/config");
@@ -30,12 +30,11 @@ task("create-dispute-resolver", "Creates a dispute resolver")
   });
 
 task("verify-suite", "Verify contracts on the block explorer")
-  .addParam("chainId", "The chain id of the deployed contract address file")
   .addParam("env", "The environment of the contract address file")
-  .setAction(async ({ chainId, env }) => {
+  .setAction(async ({ env }) => {
     const { verifySuite } = await lazyImport("./scripts/verify-suite");
 
-    await verifySuite(chainId, env);
+    await verifySuite(env);
   });
 
 task(
@@ -45,7 +44,8 @@ task(
   .addOptionalParam("env", "The deployment environment")
   .addOptionalParam("facetConfig", "JSON list of facets to deploy")
   .addFlag("dryRun", "Test the deployment without deploying")
-  .setAction(async ({ env, facetConfig, dryRun }) => {
+  .addFlag("create3", "Use CREATE3 for deployment")
+  .setAction(async ({ env, facetConfig, dryRun, create3 }) => {
     let balanceBefore, getBalance;
     if (dryRun) {
       let setupDryRun;
@@ -54,7 +54,7 @@ task(
     }
 
     const { deploySuite } = await lazyImport("./scripts/deploy-suite.js");
-    await deploySuite(env, facetConfig);
+    await deploySuite(env, facetConfig, create3);
 
     if (dryRun) {
       const balanceAfter = await getBalance();
@@ -70,10 +70,25 @@ task("upgrade-facets", "Upgrade existing facets, add new facets or remove existi
   .addParam("env", "The deployment environment")
   .addParam("functionNamesToSelector", "JSON list of function names to selectors")
   .addOptionalParam("facetConfig", "JSON list of facets to upgrade")
-  .setAction(async ({ env, facetConfig, newVersion, functionNamesToSelector }) => {
-    const { upgradeFacets } = await lazyImport("./scripts/upgrade-facets.js");
+  .addFlag("dryRun", "Test the upgrade without actually performing it")
+  .setAction(async ({ env, newVersion, functionNamesToSelector, facetConfig, dryRun }) => {
+    let balanceBefore, getBalance;
+    if (dryRun) {
+      let setupDryRun;
+      ({ setupDryRun, getBalance } = await lazyImport(`./scripts/util/dry-run.js`));
+      ({ env, deployerBalance: balanceBefore } = await setupDryRun(env));
+    }
 
+    const { upgradeFacets } = await lazyImport("./scripts/upgrade-facets.js");
     await upgradeFacets(env, facetConfig, newVersion, functionNamesToSelector);
+
+    if (dryRun) {
+      const balanceAfter = await getBalance();
+      const etherSpent = balanceBefore - balanceAfter;
+
+      const { formatUnits } = require("ethers");
+      console.log("Ether spent: ", formatUnits(etherSpent, "ether"));
+    }
   });
 
 task("upgrade-clients", "Upgrade existing clients")
@@ -160,26 +175,45 @@ module.exports = {
       url: environments.mainnet.txNode,
       accounts: environments.mainnet.keys,
     },
-    goerli: {
-      url: environments.goerli.txNode,
-      accounts: environments.goerli.keys,
+    sepolia: {
+      url: environments.sepolia.txNode,
+      accounts: environments.sepolia.keys,
     },
-    mumbai: {
-      url: environments.mumbai.txNode,
-      accounts: environments.mumbai.keys,
+    amoy: {
+      url: environments.amoy.txNode,
+      accounts: environments.amoy.keys,
     },
     polygon: {
       url: environments.polygon.txNode,
       accounts: environments.polygon.keys,
     },
+    baseSepolia: {
+      url: environments.baseSepolia.txNode,
+      accounts: environments.baseSepolia.keys,
+    },
+    base: {
+      url: environments.base.txNode,
+      accounts: environments.base.keys,
+    },
+    optimismSepolia: {
+      url: environments.optimismSepolia.txNode,
+      accounts: environments.optimismSepolia.keys,
+    },
+    optimism: {
+      url: environments.optimism.txNode,
+      accounts: environments.optimism.keys,
+    },
+    arbitrumSepolia: {
+      url: environments.arbitrumSepolia.txNode,
+      accounts: environments.arbitrumSepolia.keys,
+    },
+    arbitrum: {
+      url: environments.arbitrum.txNode,
+      accounts: environments.arbitrum.keys,
+    },
   },
   etherscan: {
-    apiKey: {
-      mainnet: environments.etherscan.apiKey,
-      goerli: environments.etherscan.apiKey,
-      polygonMumbai: environments.polygonscan.apiKey,
-      polygon: environments.polygonscan.apiKey,
-    },
+    apiKey: environments.etherscan.apiKey,
   },
   solidity: {
     compilers: [
