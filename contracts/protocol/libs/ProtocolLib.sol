@@ -213,8 +213,6 @@ library ProtocolLib {
         mapping(uint256 => mapping(address => uint256)) royaltyRecipientIndexBySellerAndRecipient;
         // royalty recipient wallet address => agentId
         mapping(address => uint256) royaltyRecipientIdByWallet;
-        // exchange id => DR fee amount collected during commit
-        mapping(uint256 => uint256) drFeeAmountByExchange;
     }
 
     // Incrementing id counters
