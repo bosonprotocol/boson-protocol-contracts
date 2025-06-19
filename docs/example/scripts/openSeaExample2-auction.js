@@ -1,5 +1,5 @@
 // Start the node
-// npx hardhat console --network mumbai
+// npx hardhat console --network amoy
 
 // DEPENDENCIES
 const { ethers: ethersv5 } = require("ethersv5");
@@ -12,27 +12,28 @@ const Side = require("./scripts/domain/Side.js");
 const PriceDiscovery = require("./scripts/domain/PriceDiscovery.js");
 
 // CONFIG
-const RPC_URL = "https://polygon-mumbai.g.alchemy.com/v2/Lh0tB9SSPhJh8f6BCMmlDJ7WrmApb_X_";
-const CHAIN = Chain.Mumbai;
-const PRIVATE_KEY = "###"; // seller
-const WETH_ADDRESS = "0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa";
-const PROTOCOL_ADDRESS = "0x76051FC05Ab42D912a737d59a8711f1446712630";
-const PRICE_DISCOVERY_CLIENT = "0x74874fF29597b6e01E16475b7BB9D6dC954d0411";
+const RPC_URL = "https://polygon-amoy.g.alchemy.com/v2/cnfviRYteDvsidvvGh7WwNqzTB3wsUlM";
+const CHAIN = Chain.Amoy;
+const PRIVATE_KEY = "0x56d0d07e8b54c1e91e9ab40a8a396b8f665dda811e8b8bb226b2525c7f7e72cd"; // seller
+const WETH_ADDRESS = "0x52eF3d68BaB452a294342DC3e5f464d7f610f72E";
+const PROTOCOL_ADDRESS = "0x7de418a7ce94debd057c34ebac232e7027634ade";
+const PRICE_DISCOVERY_CLIENT = "0xF4f02BAE43cf66fca47eBaC58657586Aa951D135";
+const sellerAddress = "0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8";
 
-const CONTRACT_ADDRESS = "0x7889dB3b4B605c7Dc3Bc5A47286b7BB20Fac331F"; // voucher, <change
-let TOKEN_ID = "245683868916917570620556466565736648671527"; // <change
+const CONTRACT_ADDRESS = "0x8ADa73881c4bE5Acd482658d9090753806328175"; // voucher, <change
+let TOKEN_ID = "108890357414700308308279874378165827667747"; // <change
 
 // INIT
 const provider = new ethersv5.providers.JsonRpcProvider(RPC_URL);
 const seller = new ethersv5.Wallet(PRIVATE_KEY, provider);
 const openseaSDK = new OpenSeaSDK(
-  provider,
+  seller,
   {
     chain: CHAIN,
     apiKey: "",
   },
   undefined,
-  seller
+  
 );
 const bosonVoucher = await getContractAt("BosonVoucher", CONTRACT_ADDRESS);
 const [assistant] = await ethers.getSigners();
@@ -65,7 +66,7 @@ const offerHandler = await getContractAt("IBosonOfferHandler", PROTOCOL_ADDRESS)
 const { mockOffer } = require("./test/util/mock.js");
 const PriceType = require("./scripts/domain/PriceType.js");
 const { offer, offerDates, offerDurations } = await mockOffer();
-const disputeResolverId = 177; // <change accordingly
+const disputeResolverId2 = 85; // <change accordingly
 offer.quantityAvailable = 100;
 offer.priceType = PriceType.Discovery;
 offer.sellerDeposit="0";
@@ -73,8 +74,8 @@ offer.exchangeToken = WETH_ADDRESS;
 offer.price = "0";
 offer.buyerCancelPenalty="0";
 offer.royaltyInfo = [new RoyaltyInfo([],[])];
-await offerHandler.connect(assistant).createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, "0", MaxUint256);
-offer.id = "722"; // <change accordingly
+await offerHandler.connect(assistant).createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId2, "0", MaxUint256);
+offer.id = "320"; // <change accordingly
 
 // 2. RESERVE RANGE
 await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
@@ -90,11 +91,11 @@ await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable)
 // create wrapper (if it does not exist yet)
 
 const bosonWrapperFactory = await getContractFactory("OpenSeaWrapper");
-const bosonWrapper = await bosonWrapperFactory.deploy(CONTRACT_ADDRESS, PROTOCOL_ADDRESS, WETH_ADDRESS, PRICE_DISCOVERY_CLIENT);
+const bosonWrapper = await bosonWrapperFactory.deploy(CONTRACT_ADDRESS, PROTOCOL_ADDRESS, WRAPPED_NATIVE, PRICE_DISCOVERY_CLIENT);
 await bosonWrapper.waitForDeployment();
 
 // if already exists
-const WRAPPER_ADDRESS = "0xD12E9291475bAC889A1386F079D625854bE94D02";
+const WRAPPER_ADDRESS = "0x21631eC6DB0042d06e992dae7c7aAC0EaF627B60";
 const bosonWrapper = await getContractAt("OpenSeaWrapper", WRAPPER_ADDRESS);
 
 
@@ -103,6 +104,20 @@ const bosonWrapper = await getContractAt("OpenSeaWrapper", WRAPPER_ADDRESS);
 await bosonVoucher.connect(assistant).setApprovalForAll(WRAPPER_ADDRESS, true);
 await bosonWrapper.connect(assistant).wrapForAuction([TOKEN_ID]);
 // list manually on opensea
+listing = await openseaSDK.createListing({
+    asset: {
+        tokenId: TOKEN_ID,
+        tokenAddress: WRAPPER_ADDRESS,
+    },
+    accountAddress: assistant.address,
+    startAmount: "0.01", // <change accordingly
+    endAmount: "0.01", // <change accordingly
+    expirationTime: Math.floor(Date.now() / 1000) + 60 * 60 * 24, // 1 day
+    quantity: "1",
+    listingTime: Math.floor(Date.now() / 1000),
+    paymentTokenAddress: "0x52eF3d68BaB452a294342DC3e5f464d7f610f72E"
+});
+
 
 // 5. AUCTION <- buyers place bids on opensea
 
