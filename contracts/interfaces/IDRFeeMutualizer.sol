@@ -4,6 +4,7 @@ pragma solidity 0.8.22;
 /**
  * @title IDRFeeMutualizer
  * @notice Interface for dispute resolver fee mutualization
+ * @dev This interface defines the core functionality for mutualizing dispute resolver fees
  */
 interface IDRFeeMutualizer {
     /**
@@ -11,8 +12,9 @@ interface IDRFeeMutualizer {
      * @param seller The seller address
      * @param feeAmount The fee amount to cover
      * @param tokenAddress The token address (address(0) for native currency)
-     * @param disputeResolverId The dispute resolver ID
+     * @param disputeResolverId The dispute resolver ID (0 for universal agreement covering all dispute resolvers)
      * @return bool True if the seller is covered, false otherwise
+     * @dev Checks for both specific dispute resolver agreements and universal agreements (disputeResolverId = 0)
      */
     function isSellerCovered(
         address seller,
@@ -27,8 +29,13 @@ interface IDRFeeMutualizer {
      * @param feeAmount The fee amount to cover
      * @param tokenAddress The token address (address(0) for native currency)
      * @param exchangeId The exchange ID
-     * @param disputeResolverId The dispute resolver ID
+     * @param disputeResolverId The dispute resolver ID (0 for universal agreement)
      * @return success True if the request was successful, false otherwise
+     * @dev Only callable by the Boson protocol. Returns false if seller is not covered.
+     *
+     * Reverts if:
+     * - Caller is not the Boson protocol
+     * - Native currency transfer fails
      */
     function requestDRFee(
         address seller,
@@ -41,7 +48,15 @@ interface IDRFeeMutualizer {
     /**
      * @notice Returns a DR fee to the mutualizer
      * @param exchangeId The exchange ID
-     * @param feeAmount The amount being returned (0 = fee was used, >0 = fee returned)
+     * @param feeAmount The amount being returned (must be > 0)
+     * @dev Only callable by the Boson protocol. For native currency, feeAmount must equal msg.value.
+     *
+     * Reverts if:
+     * - Caller is not the Boson protocol
+     * - feeAmount is 0
+     * - exchangeId is not found
+     * - msg.value != feeAmount for native currency
+     * - msg.value > 0 for ERC20 tokens
      */
     function returnDRFee(uint256 exchangeId, uint256 feeAmount) external payable;
 }
