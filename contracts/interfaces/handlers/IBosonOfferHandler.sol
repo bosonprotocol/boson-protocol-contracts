@@ -10,7 +10,7 @@ import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x91b54fdc
+ * The ERC-165 identifier for this interface is: 0x8d33bd5b
  */
 interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
     /**
@@ -236,6 +236,22 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
         uint256[] calldata _offerIds,
         BosonTypes.RoyaltyInfo calldata _royaltyInfo
     ) external;
+
+    /**
+     * @notice Updates the mutualizer address for an offer.
+     *
+     * Emits an OfferMutualizerUpdated event if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - Offer does not exist
+     * - Caller is not the assistant of the offer
+     * - Offer has already been voided
+     *
+     * @param _offerId - the id of the offer to update
+     * @param _newMutualizer - the new mutualizer address (can be zero for self-mutualization)
+     */
+    function updateOfferMutualizer(uint256 _offerId, address _newMutualizer) external;
 
     /**
      * @notice Gets the details about a given offer.

@@ -2,9 +2,11 @@
 pragma solidity 0.8.22;
 
 import "../../domain/BosonConstants.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
-import { ITwinToken } from "../../interfaces/ITwinToken.sol";
+import { IDRFeeMutualizer } from "../../interfaces/IDRFeeMutualizer.sol";
+import { IBosonFundsLibEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BuyerBase } from "../bases/BuyerBase.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
@@ -216,6 +218,19 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
 
         // Encumber funds
         FundsLib.encumberFunds(_offerId, buyerId, _offer.price, _isPreminted, _offer.priceType);
+
+        // Handle DR fee collection
+        {
+            // Get dispute resolution terms to get the dispute resolver ID
+            DisputeResolutionTerms storage disputeTerms = fetchDisputeResolutionTerms(_offerId);
+
+            uint256 drFeeAmount = disputeTerms.feeAmount;
+
+            // Handle DR fee collection if fee exists
+            if (drFeeAmount > 0) {
+                handleDRFeeCollection(_exchangeId, _offer, disputeTerms, drFeeAmount);
+            }
+        }
 
         // Create and store a new exchange
         Exchange storage exchange = protocolEntities().exchanges[_exchangeId];
@@ -1459,5 +1474,62 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
         if (method == EvaluationMethod.Threshold && !isMultitoken) {
             if (_tokenId != 0) revert InvalidTokenId();
         }
+    }
+
+    /**
+     * @notice Handles DR fee collection from mutualizer or seller's pool
+     *
+     * @param _exchangeId - exchange id
+     * @param _offer - offer struct
+     * @param _disputeTerms - dispute resolution terms
+     * @param _drFeeAmount - amount of DR fee to collect
+     */
+    function handleDRFeeCollection(
+        uint256 _exchangeId,
+        Offer storage _offer,
+        DisputeResolutionTerms storage _disputeTerms,
+        uint256 _drFeeAmount
+    ) internal {
+        address mutualizer = _disputeTerms.mutualizerAddress;
+        if (mutualizer == address(0)) {
+            // Self-mutualize: take fee from seller's pool
+            FundsLib.decreaseAvailableFunds(_offer.sellerId, _offer.exchangeToken, _drFeeAmount);
+        } else {
+            // Use mutualizer: request fee
+            (, Seller storage seller, ) = fetchSeller(_offer.sellerId);
+
+            bool isNative = _offer.exchangeToken == address(0);
+            address exchangeToken = _offer.exchangeToken;
+
+            uint256 balanceBefore = isNative ? address(this).balance : IERC20(exchangeToken).balanceOf(address(this));
+
+            // Request DR fee from mutualizer
+            bool success = IDRFeeMutualizer(mutualizer).requestDRFee(
+                seller.admin,
+                _drFeeAmount,
+                exchangeToken,
+                _exchangeId,
+                _disputeTerms.disputeResolverId
+            );
+
+            uint256 balanceAfter = isNative ? address(this).balance : IERC20(exchangeToken).balanceOf(address(this));
+
+            uint256 feeTransferred = balanceAfter - balanceBefore;
+
+            if (!success || feeTransferred < _drFeeAmount) {
+                revert BosonErrors.DRFeeMutualizerCannotProvideCoverage();
+            } else {
+                FundsLib.increaseAvailableFundsAndEmitEvent(_exchangeId, 0, exchangeToken, feeTransferred, mutualizer);
+                emit IBosonFundsLibEvents.DRFeeRequested(_exchangeId, exchangeToken, feeTransferred, mutualizer);
+            }
+        }
+
+        // Emit event for DR fee request
+        emit IBosonFundsLibEvents.DRFeeRequested(
+            _exchangeId,
+            _offer.exchangeToken,
+            _drFeeAmount,
+            _disputeTerms.mutualizerAddress
+        );
     }
 }

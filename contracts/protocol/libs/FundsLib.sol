@@ -105,7 +105,7 @@ library FundsLib {
     }
 
     /**
-     * @notice Takes in the exchange id and releases the funds to buyer and seller, depending on the state of the exchange.
+     * @notice Takes in the exchange id and releases the funds to buyer, seller and dispute resolver depending on the state of the exchange.
      * It is called only from finalizeExchange and finalizeDispute.
      *
      * Emits FundsReleased and/or ProtocolFeeCollected event if payoffs are warranted and transaction is successful.
@@ -186,6 +186,9 @@ library FundsLib {
 
                     payoff.buyer = payoff.buyer + applyPercent(lastPrice, dispute.buyerPercent);
                     payoff.seller = payoff.seller + offerPrice - applyPercent(offerPrice, dispute.buyerPercent);
+
+                    // DR keeps the fee if dispute was resolved/decided
+                    payoff.disputeResolver = pe.disputeResolutionTerms[exchange.offerId].feeAmount;
                 }
             }
         }
@@ -224,6 +227,25 @@ library FundsLib {
             // Get the agent for offer
             uint256 agentId = ProtocolLib.protocolLookups().agentIdByOffer[exchange.offerId];
             increaseAvailableFundsAndEmitEvent(_exchangeId, agentId, exchangeToken, payoff.agent, sender);
+        }
+        BosonTypes.DisputeResolutionTerms storage drTerms = pe.disputeResolutionTerms[offer.id];
+        if (payoff.disputeResolver > 0) {
+            increaseAvailableFundsAndEmitEvent(
+                _exchangeId,
+                drTerms.disputeResolverId,
+                exchangeToken,
+                payoff.disputeResolver,
+                sender
+            );
+        } else {
+            // DR doesn't keep the fee, return it to the mutualizer
+            transferFundsFromProtocol(0, exchangeToken, drTerms.mutualizerAddress, payoff.disputeResolver);
+            emit IBosonFundsLibEvents.DRFeeReturned(
+                _exchangeId,
+                exchangeToken,
+                payoff.disputeResolver,
+                drTerms.mutualizerAddress
+            );
         }
     }
 
