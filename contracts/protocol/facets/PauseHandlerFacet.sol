@@ -70,7 +70,7 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
     function getPausedRegions() external view returns (BosonTypes.PausableRegion[] memory regions) {
         // Cache protocol status for reference
         ProtocolLib.ProtocolStatus storage status = protocolStatus();
-        uint256 totalRegions = uint256(type(BosonTypes.PausableRegion).max);
+        uint256 totalRegions = uint256(type(BosonTypes.PausableRegion).max) + 1;
 
         regions = new BosonTypes.PausableRegion[](totalRegions);
 
