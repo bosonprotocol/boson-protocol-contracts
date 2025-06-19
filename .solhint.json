@@ -17,6 +17,8 @@
     "reason-string": "off",
     "no-complex-fallback": "off",
     "no-empty-blocks": "off",
-    "no-global-import": "off"
+    "no-global-import": "off",
+    "one-contract-per-file": "off",
+    "immutable-vars-naming": "off"
   }
 }
