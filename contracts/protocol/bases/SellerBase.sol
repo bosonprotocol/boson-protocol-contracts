@@ -5,7 +5,6 @@ import "./../../domain/BosonConstants.sol";
 import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents.sol";
 import { ProtocolBase } from "./ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
-import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IInitializableVoucherClone } from "../../interfaces/IInitializableVoucherClone.sol";
 import { IERC721 } from "../../interfaces/IERC721.sol";
 

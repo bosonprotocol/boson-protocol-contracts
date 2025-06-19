@@ -4,7 +4,6 @@ pragma solidity 0.8.22;
 import { IBosonDisputeEvents } from "../../interfaces/events/IBosonDisputeEvents.sol";
 import { IBosonFundsLibEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
-import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 import { FundsLib } from "./../libs/FundsLib.sol";
 import "../../domain/BosonConstants.sol";
 

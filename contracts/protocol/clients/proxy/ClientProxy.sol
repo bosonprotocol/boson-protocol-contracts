@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
-import { IAccessControl } from "../../../interfaces/IAccessControl.sol";
-import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHandler.sol";
 import { ClientLib } from "../../libs/ClientLib.sol";
-import { EIP712Lib } from "../../libs/EIP712Lib.sol";
 import { Proxy } from "./Proxy.sol";
 import { ClientExternalAddressesBase } from "./../../bases/ClientExternalAddressesBase.sol";
 

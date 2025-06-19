@@ -8,7 +8,6 @@ import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { IERC2981Upgradeable } from "@openzeppelin/contracts-upgradeable/interfaces/IERC2981Upgradeable.sol";
 import { IERC165Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import { IERC721ReceiverUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import { ERC2771ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/metatx/ERC2771ContextUpgradeable.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
@@ -464,7 +463,8 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             }
         }
 
-        require(exists, ERC721_INVALID_TOKEN_ID);
+        // solhint-disable-next-line custom-errors 
+        require(exists, ERC721_INVALID_TOKEN_ID); // not using Custom Errors here to match OZ 4.9.* errors
         return offer.metadataUri;
     }
 
@@ -492,7 +492,8 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
     function transferOwnership(
         address _newOwner
     ) public override(IBosonVoucher, OwnableUpgradeable) onlyRole(PROTOCOL) {
-        require(_newOwner != address(0), OWNABLE_ZERO_ADDRESS);
+        // solhint-disable-next-line custom-errors 
+        require(_newOwner != address(0), OWNABLE_ZERO_ADDRESS);  // not using Custom Errors here to match OZ 4.9.* errors
 
         _transferOwnership(_newOwner);
     }
@@ -790,7 +791,8 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         // If token is committable, it is a pre-minted token
         bool committable = isTokenCommittable(_tokenId);
 
-        require(_exists(_tokenId) || committable, "ERC721: invalid token ID");
+        // solhint-disable-next-line custom-errors 
+        require(_exists(_tokenId) || committable, "ERC721: invalid token ID");  // not using Custom Errors here to match OZ 4.9.* errors
     }
 }
 
