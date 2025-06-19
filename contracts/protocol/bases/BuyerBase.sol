@@ -4,7 +4,6 @@ pragma solidity 0.8.22;
 import "./../../domain/BosonConstants.sol";
 import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents.sol";
 import { ProtocolBase } from "./ProtocolBase.sol";
-import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 
 /**
  * @title BuyerBase
