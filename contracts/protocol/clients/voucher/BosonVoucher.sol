@@ -463,7 +463,8 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             }
         }
 
-        require(exists, ERC721_INVALID_TOKEN_ID);
+        // solhint-disable-next-line custom-errors 
+        require(exists, ERC721_INVALID_TOKEN_ID); // not using Custom Errors here to match OZ 4.9.* errors
         return offer.metadataUri;
     }
 
@@ -491,7 +492,8 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
     function transferOwnership(
         address _newOwner
     ) public override(IBosonVoucher, OwnableUpgradeable) onlyRole(PROTOCOL) {
-        require(_newOwner != address(0), OWNABLE_ZERO_ADDRESS);
+        // solhint-disable-next-line custom-errors 
+        require(_newOwner != address(0), OWNABLE_ZERO_ADDRESS);  // not using Custom Errors here to match OZ 4.9.* errors
 
         _transferOwnership(_newOwner);
     }
@@ -789,7 +791,8 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         // If token is committable, it is a pre-minted token
         bool committable = isTokenCommittable(_tokenId);
 
-        require(_exists(_tokenId) || committable, "ERC721: invalid token ID");
+        // solhint-disable-next-line custom-errors 
+        require(_exists(_tokenId) || committable, "ERC721: invalid token ID");  // not using Custom Errors here to match OZ 4.9.* errors
     }
 }
 
