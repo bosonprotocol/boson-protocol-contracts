@@ -10,7 +10,6 @@ import { OfferBase } from "../bases/OfferBase.sol";
 import { TwinBase } from "../bases/TwinBase.sol";
 import { BundleBase } from "../bases/BundleBase.sol";
 import { PausableBase } from "../bases/PausableBase.sol";
-import { DisputeBase } from "../bases/DisputeBase.sol";
 
 /**
  * @title OrchestrationHandlerFacet1
