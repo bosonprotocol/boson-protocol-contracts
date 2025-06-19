@@ -230,7 +230,6 @@ describe("IBosonPauseHandler", function () {
       it("should return the correct pause status", async function () {
         // Regions to paused
         const lastRegion = PausableRegion.Regions[PausableRegion.Regions.length - 1];
-        console.log("Last region:", lastRegion);
         regions = [PausableRegion.Offers, PausableRegion.Buyers, PausableRegion.Orchestration, lastRegion];
 
         await pauseHandler.connect(pauser).pause(regions);
