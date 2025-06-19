@@ -72,7 +72,7 @@ describe("IBosonPauseHandler", function () {
     function scenarioToRegions(scenario) {
       const regions = [];
       let region = 0;
-      while (scenario > 1) {
+      while (scenario > 0) {
         if (scenario % 2 === 1) {
           regions.push(region);
         }
