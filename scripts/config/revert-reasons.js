@@ -18,6 +18,7 @@ exports.RevertReasons = {
   ARRAY_LENGTH_MISMATCH: "ArrayLengthMismatch",
   REENTRANCY_GUARD: "ReentrancyGuard",
   NON_ASCENDING_ORDER: "NonAscendingOrder",
+  UNEXPECTED_DATA_RETURNED: "UnexpectedDataReturned",
 
   // Facet initializer related
   ALREADY_INITIALIZED: "AlreadyInitialized",
@@ -184,7 +185,7 @@ exports.RevertReasons = {
   NONCE_USED_ALREADY: "NonceUsedAlready",
   FUNCTION_CALL_NOT_SUCCESSFUL: "Function call not successful",
   INVALID_SIGNATURE: "InvalidSignature",
-  SIGNER_AND_SIGNATURE_DO_NOT_MATCH: "SignerAndSignatureDoNotMatch",
+  SIGNATURE_VALIDATION_FAILED: "SignatureValidationFailed",
   INVALID_FUNCTION_NAME: "InvalidFunctionName",
   FUNCTION_NOT_ALLOWLISTED: "FunctionNotAllowlisted",
 

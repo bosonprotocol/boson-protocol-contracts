@@ -23,7 +23,7 @@ const {
 const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
 const {
   calculateContractAddress,
-  prepareDataSignatureParameters,
+  prepareDataSignature,
   getSnapshot,
   revertToSnapshot,
   deriveTokenId,
@@ -288,7 +288,7 @@ describe("[@skip-on-coverage] After client upgrade, everything is still operatio
           data: functionSignature,
         };
 
-        const { signature } = await prepareDataSignatureParameters(
+        const { signature } = await prepareDataSignature(
           assistant,
           types,
           "ForwardRequest",

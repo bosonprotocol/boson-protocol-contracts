@@ -165,11 +165,12 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @return the hashed representation of the dispute resolution details struct
      */
     function hashDisputeResolutionDetails(bytes memory _disputeResolutionDetails) internal pure returns (bytes32) {
-        (uint256 exchangeId, uint256 buyerPercent, bytes32 sigR, bytes32 sigS, uint8 sigV) = abi.decode(
+        (uint256 exchangeId, uint256 buyerPercent, bytes memory signature) = abi.decode(
             _disputeResolutionDetails,
-            (uint256, uint256, bytes32, bytes32, uint8)
+            (uint256, uint256, bytes)
         );
-        return keccak256(abi.encode(DISPUTE_RESOLUTION_DETAILS_TYPEHASH, exchangeId, buyerPercent, sigR, sigS, sigV));
+        return
+            keccak256(abi.encode(DISPUTE_RESOLUTION_DETAILS_TYPEHASH, exchangeId, buyerPercent, keccak256(signature)));
     }
 
     /**

@@ -78,10 +78,10 @@ bytes32 constant META_TX_FUNDS_TYPEHASH = keccak256(
     "MetaTxFund(uint256 nonce,address from,address contractAddress,string functionName,MetaTxFundDetails fundDetails)MetaTxFundDetails(uint256 entityId,address[] tokenList,uint256[] tokenAmounts)"
 );
 bytes32 constant DISPUTE_RESOLUTION_DETAILS_TYPEHASH = keccak256(
-    "MetaTxDisputeResolutionDetails(uint256 exchangeId,uint256 buyerPercentBasisPoints,bytes32 sigR,bytes32 sigS,uint8 sigV)"
+    "MetaTxDisputeResolutionDetails(uint256 exchangeId,uint256 buyerPercentBasisPoints,bytes signature)"
 );
 bytes32 constant META_TX_DISPUTE_RESOLUTIONS_TYPEHASH = keccak256(
-    "MetaTxDisputeResolution(uint256 nonce,address from,address contractAddress,string functionName,MetaTxDisputeResolutionDetails disputeResolutionDetails)MetaTxDisputeResolutionDetails(uint256 exchangeId,uint256 buyerPercentBasisPoints,bytes32 sigR,bytes32 sigS,uint8 sigV)"
+    "MetaTxDisputeResolution(uint256 nonce,address from,address contractAddress,string functionName,MetaTxDisputeResolutionDetails disputeResolutionDetails)MetaTxDisputeResolutionDetails(uint256 exchangeId,uint256 buyerPercentBasisPoints,bytes signature)"
 );
 
 // Function names
@@ -94,4 +94,4 @@ string constant WITHDRAW_FUNDS = "withdrawFunds(uint256,address[],uint256[])";
 string constant RETRACT_DISPUTE = "retractDispute(uint256)";
 string constant RAISE_DISPUTE = "raiseDispute(uint256)";
 string constant ESCALATE_DISPUTE = "escalateDispute(uint256)";
-string constant RESOLVE_DISPUTE = "resolveDispute(uint256,uint256,bytes32,bytes32,uint8)";
+string constant RESOLVE_DISPUTE = "resolveDispute(uint256,uint256,bytes)";

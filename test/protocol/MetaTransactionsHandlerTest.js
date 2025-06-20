@@ -25,7 +25,7 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { toHexString } = require("../../scripts/util/utils.js");
 const {
-  prepareDataSignatureParameters,
+  prepareDataSignature,
   setNextBlockTimestamp,
   setupTestEnvironment,
   getSnapshot,
@@ -101,7 +101,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     expectedBuyerAvailableFunds,
     tokenListBuyer,
     tokenAmountsBuyer;
-  let buyerPercentBasisPoints, validDisputeResolutionDetails, signatureSplits;
+  let buyerPercentBasisPoints, validDisputeResolutionDetails;
   let sellerAllowList;
   let voucherInitValues;
   let emptyAuthToken;
@@ -308,7 +308,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         message.functionSignature = functionSignature;
 
         // Collect the signature components
-        let { r, s, v } = await prepareDataSignatureParameters(
+        let signature = await prepareDataSignature(
           assistant,
           customTransactionType,
           "MetaTransaction",
@@ -322,9 +322,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.functionName,
           functionSignature,
           nonce,
-          r,
-          s,
-          v
+          signature
         );
 
         // We expect that the nonce is used now. Hence expecting to return true.
@@ -566,7 +564,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.functionSignature = functionSignature;
 
           // Collect the signature components
-          let { r, s, v } = await prepareDataSignatureParameters(
+          let signature = await prepareDataSignature(
             assistant,
             customTransactionType,
             "MetaTransaction",
@@ -583,9 +581,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
           )
             .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
@@ -613,7 +609,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.functionSignature = functionSignature;
 
           // Collect the signature components
-          let { r, s, v } = await prepareDataSignatureParameters(
+          let signature = await prepareDataSignature(
             assistant,
             customTransactionType,
             "MetaTransaction",
@@ -630,9 +626,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
           )
             .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
@@ -658,7 +652,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.functionSignature = functionSignature;
 
           // Collect the signature components
-          let { r, s, v } = await prepareDataSignatureParameters(
+          let signature = await prepareDataSignature(
             assistant,
             customTransactionType,
             "MetaTransaction",
@@ -673,16 +667,12 @@ describe("IBosonMetaTransactionsHandler", function () {
               message.functionName,
               functionSignature,
               nonce,
-              r,
-              s,
-              v
+              signature
             )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.MUST_BE_ACTIVE);
         });
 
         it("Should allow different signers to use same nonce", async () => {
-          let r, s, v;
-
           // Prepare the function signature for the facet function.
           functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
             seller,
@@ -693,13 +683,13 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.functionSignature = functionSignature;
 
           // Collect the signature components
-          ({ r, s, v } = await prepareDataSignatureParameters(
+          let signature = await prepareDataSignature(
             assistant,
             customTransactionType,
             "MetaTransaction",
             message,
             await metaTransactionsHandler.getAddress()
-          ));
+          );
 
           // send a meta transaction, check for event
           await expect(
@@ -710,9 +700,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
           )
             .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
@@ -741,13 +729,13 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.functionSignature = functionSignature;
 
           // Collect the signature components
-          ({ r, s, v } = await prepareDataSignatureParameters(
+          signature = await prepareDataSignature(
             adminDR,
             customTransactionType,
             "MetaTransaction",
             message,
             await metaTransactionsHandler.getAddress()
-          ));
+          );
 
           await expect(
             metaTransactionsHandler
@@ -757,9 +745,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
           )
             .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
@@ -787,7 +773,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           it("The meta transactions region of protocol is paused", async function () {
             // Collect the signature components
-            let { r, s, v } = await prepareDataSignatureParameters(
+            let signature = await prepareDataSignature(
               assistant,
               customTransactionType,
               "MetaTransaction",
@@ -807,9 +793,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 )
             )
               .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
@@ -834,7 +818,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             message.functionSignature = functionSignature;
 
             // Collect the signature components
-            let { r, s, v } = await prepareDataSignatureParameters(
+            let signature = await prepareDataSignature(
               assistant,
               customTransactionType,
               "MetaTransaction",
@@ -849,9 +833,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.FUNCTION_NOT_ALLOWLISTED);
           });
@@ -871,7 +853,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             message.functionSignature = functionSignature;
 
             // Collect the signature components
-            let { r, s, v } = await prepareDataSignatureParameters(
+            let signature = await prepareDataSignature(
               assistant,
               customTransactionType,
               "MetaTransaction",
@@ -886,9 +868,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.FUNCTION_NOT_ALLOWLISTED);
           });
@@ -908,7 +888,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             message.functionSignature = functionSignature;
 
             // Collect the signature components
-            let { r, s, v } = await prepareDataSignatureParameters(
+            let signature = await prepareDataSignature(
               assistant,
               customTransactionType,
               "MetaTransaction",
@@ -923,9 +903,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_FUNCTION_NAME);
           });
@@ -951,7 +929,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             message.functionSignature = functionSignature; // true function signature
 
             // Collect the signature components
-            let { r, s, v } = await prepareDataSignatureParameters(
+            let signature = await prepareDataSignature(
               assistant,
               customTransactionType,
               "MetaTransaction",
@@ -966,9 +944,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.FUNCTION_NOT_ALLOWLISTED);
           });
@@ -984,7 +960,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             message.functionSignature = functionSignature;
 
             // Collect the signature components
-            let { r, s, v } = await prepareDataSignatureParameters(
+            let signature = await prepareDataSignature(
               assistant,
               customTransactionType,
               "MetaTransaction",
@@ -998,9 +974,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               message.functionName,
               functionSignature,
               nonce,
-              r,
-              s,
-              v
+              signature
             );
 
             // Execute meta transaction again with the same nonce, expecting revert.
@@ -1010,9 +984,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
           });
@@ -1030,7 +1002,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             message.functionSignature = functionSignature;
 
             // Collect the signature components
-            let { r, s, v } = await prepareDataSignatureParameters(
+            let signature = await prepareDataSignature(
               rando, // Different user, not assistant.
               customTransactionType,
               "MetaTransaction",
@@ -1045,11 +1017,9 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNATURE_VALIDATION_FAILED);
           });
 
           it("Should fail if signature is invalid", async function () {
@@ -1064,13 +1034,17 @@ describe("IBosonMetaTransactionsHandler", function () {
             message.functionSignature = functionSignature;
 
             // Collect the signature components
-            let { r, s, v } = await prepareDataSignatureParameters(
+            let signature = await prepareDataSignature(
               assistant,
               customTransactionType,
               "MetaTransaction",
               message,
               await metaTransactionsHandler.getAddress()
             );
+            signature = signature.substring(2);
+            const r = "0x" + signature.substring(0, 64);
+            const s = signature.substring(64, 128);
+            const v = parseInt(signature.substring(128, 130), 16);
 
             // Execute meta transaction, expecting revert.
             await expect(
@@ -1079,9 +1053,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                "0" // invalid v signature component
+                r + s + "aa" // invalid v signature component
               )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
 
@@ -1092,9 +1064,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                toHexString(MaxUint256), // invalid s signature component
-                v
+                r + toHexString(MaxUint256).slice(2) + v // invalid s signature component
               )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
 
@@ -1105,9 +1075,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                zeroPadBytes("0x", 32), // invalid s signature component
-                v
+                r + zeroPadBytes("0x", 32).slice(2) + v // invalid s signature component
               )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
 
@@ -1118,9 +1086,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                zeroPadBytes("0x", 32), // invalid r signature component
-                s,
-                v
+                zeroPadBytes("0x", 32) + s + v // invalid r signature component
               )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
           });
@@ -1180,7 +1146,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.functionSignature = functionSignature;
 
           // Collect the signature components
-          let { r, s, v } = await prepareDataSignatureParameters(
+          let signature = await prepareDataSignature(
             assistant,
             customTransactionType,
             "MetaTransaction",
@@ -1194,9 +1160,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             message.functionName,
             functionSignature,
             nonce,
-            r,
-            s,
-            v
+            signature
           );
 
           // Expect twin to be not found.
@@ -1221,9 +1185,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             "executeMetaTransaction",
             ZeroHash, // hash of zero
             nonce,
-            randomBytes(32), // random bytes32
-            randomBytes(32), // random bytes32
-            parseInt(randomBytes(8)), // random uint8
+            ZeroHash,
           ]);
 
           // Prepare the message
@@ -1232,7 +1194,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.functionSignature = functionSignature;
 
           // Collect the signature components
-          let { r, s, v } = await prepareDataSignatureParameters(
+          let signature = await prepareDataSignature(
             assistant,
             customTransactionType,
             "MetaTransaction",
@@ -1247,9 +1209,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               message.functionName,
               functionSignature,
               nonce,
-              r,
-              s,
-              v
+              signature
             )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.FUNCTION_NOT_ALLOWLISTED);
         });
@@ -1278,7 +1238,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.functionSignature = functionSignature;
 
           // Collect the signature components
-          let { r, s, v } = await prepareDataSignatureParameters(
+          let signature = await prepareDataSignature(
             assistant,
             customTransactionType,
             "MetaTransaction",
@@ -1293,9 +1253,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               message.functionName,
               functionSignature,
               nonce,
-              r,
-              s,
-              v
+              signature
             )
           ).to.revertedWith(RevertReasons.FUNCTION_CALL_NOT_SUCCESSFUL);
         });
@@ -1441,7 +1399,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             ]);
 
             // Collect the signature components
-            let { r, s, v } = await prepareDataSignatureParameters(
+            let signature = await prepareDataSignature(
               buyer,
               customTransactionType,
               "MetaTxFund",
@@ -1459,9 +1417,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.REENTRANCY_GUARD);
 
@@ -1491,7 +1447,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             message.functionSignature = functionSignature;
 
             // Collect the signature components
-            let { r, s, v } = await prepareDataSignatureParameters(
+            let signature = await prepareDataSignature(
               rando,
               customTransactionType,
               "MetaTransaction",
@@ -1499,7 +1455,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               await metaTransactionsHandler.getAddress()
             );
 
-            await maliciousToken.setMetaTxBytes(await rando.getAddress(), functionSignature, r, s, v);
+            await maliciousToken.setMetaTxBytes(await rando.getAddress(), functionSignature, signature);
 
             // Prepare the function signature for the facet function.
             functionSignature = fundsHandler.interface.encodeFunctionData("depositFunds", [
@@ -1516,13 +1472,13 @@ describe("IBosonMetaTransactionsHandler", function () {
             message.functionSignature = functionSignature;
 
             // Collect the signature components
-            ({ r, s, v } = await prepareDataSignatureParameters(
+            signature = await prepareDataSignature(
               rando,
               customTransactionType,
               "MetaTransaction",
               message,
               await metaTransactionsHandler.getAddress()
-            ));
+            );
 
             // send a meta transaction, expect revert
             await expect(
@@ -1533,9 +1489,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.REENTRANCY_GUARD);
           });
@@ -1689,7 +1643,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           it("Should emit MetaTransactionExecuted event and update state", async () => {
             // Collect the signature components
-            let { r, s, v } = await prepareDataSignatureParameters(
+            let signature = await prepareDataSignature(
               buyer,
               customTransactionType,
               "MetaTxCommitToOffer",
@@ -1714,9 +1668,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
             )
               .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
@@ -1743,7 +1695,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             message.offerDetails = validOfferDetails;
 
             // Collect the signature components
-            let { r, s, v } = await prepareDataSignatureParameters(
+            let signature = await prepareDataSignature(
               buyer,
               customTransactionType,
               "MetaTxCommitToOffer",
@@ -1764,9 +1716,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_OFFER);
           });
@@ -1782,7 +1732,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             it("Should fail when replay transaction", async function () {
               // Collect the signature components
-              let { r, s, v } = await prepareDataSignatureParameters(
+              let signature = await prepareDataSignature(
                 buyer,
                 customTransactionType,
                 "MetaTxCommitToOffer",
@@ -1796,9 +1746,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               );
 
               // Execute meta transaction again with the same nonce, expecting revert.
@@ -1808,9 +1756,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 )
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
             });
@@ -1820,7 +1766,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               message.from = await rando.getAddress();
 
               // Collect the signature components
-              let { r, s, v } = await prepareDataSignatureParameters(
+              let signature = await prepareDataSignature(
                 rando, // Different user, not buyer.
                 customTransactionType,
                 "MetaTxCommitToOffer",
@@ -1835,11 +1781,9 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 )
-              ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNATURE_VALIDATION_FAILED);
             });
           });
         });
@@ -1924,7 +1868,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           it("Should emit MetaTransactionExecuted event and update state", async () => {
             // Collect the signature components
-            let { r, s, v } = await prepareDataSignatureParameters(
+            let signature = await prepareDataSignature(
               buyer,
               customTransactionType,
               "MetaTxCommitToConditionalOffer",
@@ -1949,9 +1893,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
             )
               .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
@@ -1978,7 +1920,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             message.offerDetails = validOfferDetails;
 
             // Collect the signature components
-            let { r, s, v } = await prepareDataSignatureParameters(
+            let signature = await prepareDataSignature(
               buyer,
               customTransactionType,
               "MetaTxCommitToConditionalOffer",
@@ -1999,9 +1941,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_OFFER);
           });
@@ -2017,7 +1957,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             message.offerDetails = validOfferDetails;
 
             // Collect the signature components
-            let { r, s, v } = await prepareDataSignatureParameters(
+            let signature = await prepareDataSignature(
               buyer,
               customTransactionType,
               "MetaTxCommitToConditionalOffer",
@@ -2038,9 +1978,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_TOKEN_ID);
           });
@@ -2056,7 +1994,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             it("Should fail when replay transaction", async function () {
               // Collect the signature components
-              let { r, s, v } = await prepareDataSignatureParameters(
+              let signature = await prepareDataSignature(
                 buyer,
                 customTransactionType,
                 "MetaTxCommitToConditionalOffer",
@@ -2070,9 +2008,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               );
 
               // Execute meta transaction again with the same nonce, expecting revert.
@@ -2082,9 +2018,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 )
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
             });
@@ -2094,7 +2028,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               message.from = await rando.getAddress();
 
               // Collect the signature components
-              let { r, s, v } = await prepareDataSignatureParameters(
+              let signature = await prepareDataSignature(
                 rando, // Different user, not buyer.
                 customTransactionType,
                 "MetaTxCommitToConditionalOffer",
@@ -2109,11 +2043,9 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 )
-              ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNATURE_VALIDATION_FAILED);
             });
           });
         });
@@ -2156,7 +2088,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             it("Should emit MetaTransactionExecuted event and update state", async () => {
               // Collect the signature components
-              let { r, s, v } = await prepareDataSignatureParameters(
+              let signature = await prepareDataSignature(
                 buyer,
                 customTransactionType,
                 "MetaTxExchange",
@@ -2176,9 +2108,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 )
               )
                 .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
@@ -2200,7 +2130,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               message.exchangeDetails = validExchangeDetails;
 
               // Collect the signature components
-              let { r, s, v } = await prepareDataSignatureParameters(
+              let signature = await prepareDataSignature(
                 buyer,
                 customTransactionType,
                 "MetaTxExchange",
@@ -2220,9 +2150,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 )
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
             });
@@ -2237,7 +2165,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               it("Should fail when replay transaction", async function () {
                 // Collect the signature components
-                let { r, s, v } = await prepareDataSignatureParameters(
+                let signature = await prepareDataSignature(
                   buyer,
                   customTransactionType,
                   "MetaTxExchange",
@@ -2251,9 +2179,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 );
 
                 // Execute meta transaction again with the same nonce, expecting revert.
@@ -2263,9 +2189,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                     message.functionName,
                     functionSignature,
                     nonce,
-                    r,
-                    s,
-                    v
+                    signature
                   )
                 ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
               });
@@ -2275,7 +2199,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.from = await rando.getAddress();
 
                 // Collect the signature components
-                let { r, s, v } = await prepareDataSignatureParameters(
+                let signature = await prepareDataSignature(
                   rando, // Different user, not buyer.
                   customTransactionType,
                   "MetaTxExchange",
@@ -2290,11 +2214,9 @@ describe("IBosonMetaTransactionsHandler", function () {
                     message.functionName,
                     functionSignature,
                     nonce,
-                    r,
-                    s,
-                    v
+                    signature
                   )
-                ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNATURE_VALIDATION_FAILED);
               });
             });
           });
@@ -2310,7 +2232,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             it("Should emit MetaTransactionExecuted event and update state", async () => {
               // Collect the signature components
-              let { r, s, v } = await prepareDataSignatureParameters(
+              let signature = await prepareDataSignature(
                 buyer,
                 customTransactionType,
                 "MetaTxExchange",
@@ -2330,9 +2252,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 )
               )
                 .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
@@ -2354,7 +2274,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               message.exchangeDetails = validExchangeDetails;
 
               // Collect the signature components
-              let { r, s, v } = await prepareDataSignatureParameters(
+              let signature = await prepareDataSignature(
                 buyer,
                 customTransactionType,
                 "MetaTxExchange",
@@ -2374,9 +2294,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 )
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
             });
@@ -2391,7 +2309,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               it("Should fail when replay transaction", async function () {
                 // Collect the signature components
-                let { r, s, v } = await prepareDataSignatureParameters(
+                let signature = await prepareDataSignature(
                   buyer,
                   customTransactionType,
                   "MetaTxExchange",
@@ -2405,9 +2323,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 );
 
                 // Execute meta transaction again with the same nonce, expecting revert.
@@ -2417,9 +2333,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                     message.functionName,
                     functionSignature,
                     nonce,
-                    r,
-                    s,
-                    v
+                    signature
                   )
                 ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
               });
@@ -2429,7 +2343,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.from = await rando.getAddress();
 
                 // Collect the signature components
-                let { r, s, v } = await prepareDataSignatureParameters(
+                let signature = await prepareDataSignature(
                   rando, // Different user, not buyer.
                   customTransactionType,
                   "MetaTxExchange",
@@ -2444,11 +2358,9 @@ describe("IBosonMetaTransactionsHandler", function () {
                     message.functionName,
                     functionSignature,
                     nonce,
-                    r,
-                    s,
-                    v
+                    signature
                   )
-                ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNATURE_VALIDATION_FAILED);
               });
             });
           });
@@ -2467,7 +2379,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             it("Should emit MetaTransactionExecuted event and update state", async () => {
               // Collect the signature components
-              let { r, s, v } = await prepareDataSignatureParameters(
+              let signature = await prepareDataSignature(
                 buyer,
                 customTransactionType,
                 "MetaTxExchange",
@@ -2487,9 +2399,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 )
               )
                 .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
@@ -2517,7 +2427,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               message.exchangeDetails = validExchangeDetails;
 
               // Collect the signature components
-              let { r, s, v } = await prepareDataSignatureParameters(
+              let signature = await prepareDataSignature(
                 buyer,
                 customTransactionType,
                 "MetaTxExchange",
@@ -2537,9 +2447,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 )
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
             });
@@ -2554,7 +2462,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               it("Should fail when replay transaction", async function () {
                 // Collect the signature components
-                let { r, s, v } = await prepareDataSignatureParameters(
+                let signature = await prepareDataSignature(
                   buyer,
                   customTransactionType,
                   "MetaTxExchange",
@@ -2568,9 +2476,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 );
 
                 // Execute meta transaction again with the same nonce, expecting revert.
@@ -2580,9 +2486,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                     message.functionName,
                     functionSignature,
                     nonce,
-                    r,
-                    s,
-                    v
+                    signature
                   )
                 ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
               });
@@ -2592,7 +2496,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.from = await rando.getAddress();
 
                 // Collect the signature components
-                let { r, s, v } = await prepareDataSignatureParameters(
+                let signature = await prepareDataSignature(
                   rando, // Different user, not buyer.
                   customTransactionType,
                   "MetaTxExchange",
@@ -2607,11 +2511,9 @@ describe("IBosonMetaTransactionsHandler", function () {
                     message.functionName,
                     functionSignature,
                     nonce,
-                    r,
-                    s,
-                    v
+                    signature
                   )
-                ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNATURE_VALIDATION_FAILED);
               });
             });
           });
@@ -2632,7 +2534,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             it("Should emit MetaTransactionExecuted event and update state", async () => {
               // Collect the signature components
-              let { r, s, v } = await prepareDataSignatureParameters(
+              let signature = await prepareDataSignature(
                 buyer,
                 customTransactionType,
                 "MetaTxExchange",
@@ -2652,9 +2554,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 )
               )
                 .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
@@ -2682,7 +2582,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               message.exchangeDetails = validExchangeDetails;
 
               // Collect the signature components
-              let { r, s, v } = await prepareDataSignatureParameters(
+              let signature = await prepareDataSignature(
                 buyer,
                 customTransactionType,
                 "MetaTxExchange",
@@ -2702,9 +2602,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 )
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
             });
@@ -2719,7 +2617,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               it("Should fail when replay transaction", async function () {
                 // Collect the signature components
-                let { r, s, v } = await prepareDataSignatureParameters(
+                let signature = await prepareDataSignature(
                   buyer,
                   customTransactionType,
                   "MetaTxExchange",
@@ -2733,9 +2631,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 );
 
                 // Execute meta transaction again with the same nonce, expecting revert.
@@ -2745,9 +2641,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                     message.functionName,
                     functionSignature,
                     nonce,
-                    r,
-                    s,
-                    v
+                    signature
                   )
                 ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
               });
@@ -2757,7 +2651,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.from = await rando.getAddress();
 
                 // Collect the signature components
-                let { r, s, v } = await prepareDataSignatureParameters(
+                let signature = await prepareDataSignature(
                   rando, // Different user, not buyer.
                   customTransactionType,
                   "MetaTxExchange",
@@ -2772,11 +2666,9 @@ describe("IBosonMetaTransactionsHandler", function () {
                     message.functionName,
                     functionSignature,
                     nonce,
-                    r,
-                    s,
-                    v
+                    signature
                   )
-                ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNATURE_VALIDATION_FAILED);
               });
             });
           });
@@ -2819,7 +2711,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             it("Should emit MetaTransactionExecuted event and update state", async () => {
               // Collect the signature components
-              let { r, s, v } = await prepareDataSignatureParameters(
+              let signature = await prepareDataSignature(
                 buyer,
                 customTransactionType,
                 "MetaTxExchange",
@@ -2839,9 +2731,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 )
               )
                 .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
@@ -2869,7 +2759,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               message.exchangeDetails = validExchangeDetails;
 
               // Collect the signature components
-              let { r, s, v } = await prepareDataSignatureParameters(
+              let signature = await prepareDataSignature(
                 buyer,
                 customTransactionType,
                 "MetaTxExchange",
@@ -2889,9 +2779,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 )
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
             });
@@ -2906,7 +2794,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               it("Should fail when replay transaction", async function () {
                 // Collect the signature components
-                let { r, s, v } = await prepareDataSignatureParameters(
+                let signature = await prepareDataSignature(
                   buyer,
                   customTransactionType,
                   "MetaTxExchange",
@@ -2920,9 +2808,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 );
 
                 // Execute meta transaction again with the same nonce, expecting revert.
@@ -2932,9 +2818,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                     message.functionName,
                     functionSignature,
                     nonce,
-                    r,
-                    s,
-                    v
+                    signature
                   )
                 ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
               });
@@ -2944,7 +2828,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.from = await rando.getAddress();
 
                 // Collect the signature components
-                let { r, s, v } = await prepareDataSignatureParameters(
+                let signature = await prepareDataSignature(
                   rando, // Different user, not buyer.
                   customTransactionType,
                   "MetaTxExchange",
@@ -2959,11 +2843,9 @@ describe("IBosonMetaTransactionsHandler", function () {
                     message.functionName,
                     functionSignature,
                     nonce,
-                    r,
-                    s,
-                    v
+                    signature
                   )
-                ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNATURE_VALIDATION_FAILED);
               });
             });
           });
@@ -2984,7 +2866,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             it("Should emit MetaTransactionExecuted event and update state", async () => {
               // Collect the signature components
-              let { r, s, v } = await prepareDataSignatureParameters(
+              let signature = await prepareDataSignature(
                 buyer,
                 customTransactionType,
                 "MetaTxExchange",
@@ -3004,9 +2886,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 )
               )
                 .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
@@ -3034,7 +2914,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               message.exchangeDetails = validExchangeDetails;
 
               // Collect the signature components
-              let { r, s, v } = await prepareDataSignatureParameters(
+              let signature = await prepareDataSignature(
                 buyer,
                 customTransactionType,
                 "MetaTxExchange",
@@ -3054,9 +2934,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 )
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
             });
@@ -3071,7 +2949,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               it("Should fail when replay transaction", async function () {
                 // Collect the signature components
-                let { r, s, v } = await prepareDataSignatureParameters(
+                let signature = await prepareDataSignature(
                   buyer,
                   customTransactionType,
                   "MetaTxExchange",
@@ -3085,9 +2963,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 );
 
                 // Execute meta transaction again with the same nonce, expecting revert.
@@ -3097,9 +2973,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                     message.functionName,
                     functionSignature,
                     nonce,
-                    r,
-                    s,
-                    v
+                    signature
                   )
                 ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
               });
@@ -3109,7 +2983,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.from = await rando.getAddress();
 
                 // Collect the signature components
-                let { r, s, v } = await prepareDataSignatureParameters(
+                let signature = await prepareDataSignature(
                   rando, // Different user, not buyer.
                   customTransactionType,
                   "MetaTxExchange",
@@ -3124,16 +2998,16 @@ describe("IBosonMetaTransactionsHandler", function () {
                     message.functionName,
                     functionSignature,
                     nonce,
-                    r,
-                    s,
-                    v
+                    signature
                   )
-                ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNATURE_VALIDATION_FAILED);
               });
             });
           });
 
           context("👉 DisputeHandlerFacet 👉 resolveDispute()", async function () {
+            let DRsignature;
+
             beforeEach(async function () {
               // Set time forward to the offer's voucherRedeemableFrom
               await setNextBlockTimestamp(Number(voucherRedeemableFrom));
@@ -3161,7 +3035,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               };
 
               // Collect the signature components
-              signatureSplits = await prepareDataSignatureParameters(
+              DRsignature = await prepareDataSignature(
                 assistant, // When buyer is the caller, seller should be the signer.
                 customSignatureType2,
                 "Resolution",
@@ -3173,18 +3047,14 @@ describe("IBosonMetaTransactionsHandler", function () {
               validDisputeResolutionDetails = {
                 exchangeId: exchange.id,
                 buyerPercentBasisPoints,
-                sigR: signatureSplits.r,
-                sigS: signatureSplits.s,
-                sigV: signatureSplits.v.toString(),
+                signature: DRsignature,
               };
 
               // Set the Dispute Resolution Type
               let disputeResolutionType = [
                 { name: "exchangeId", type: "uint256" },
                 { name: "buyerPercentBasisPoints", type: "uint256" },
-                { name: "sigR", type: "bytes32" },
-                { name: "sigS", type: "bytes32" },
-                { name: "sigV", type: "uint8" },
+                { name: "signature", type: "bytes" },
               ];
 
               // Set the message Type
@@ -3202,14 +3072,14 @@ describe("IBosonMetaTransactionsHandler", function () {
               };
 
               // Prepare the message
-              message.functionName = "resolveDispute(uint256,uint256,bytes32,bytes32,uint8)";
+              message.functionName = "resolveDispute(uint256,uint256,bytes)";
               message.disputeResolutionDetails = validDisputeResolutionDetails;
               message.from = await buyer.getAddress();
             });
 
             it("Should emit MetaTransactionExecuted event and update state", async () => {
               // Collect the signature components
-              let { r, s, v } = await prepareDataSignatureParameters(
+              let signature = await prepareDataSignature(
                 buyer,
                 customTransactionType,
                 "MetaTxDisputeResolution",
@@ -3221,9 +3091,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               functionSignature = disputeHandler.interface.encodeFunctionData("resolveDispute", [
                 validDisputeResolutionDetails.exchangeId,
                 validDisputeResolutionDetails.buyerPercentBasisPoints,
-                validDisputeResolutionDetails.sigR,
-                validDisputeResolutionDetails.sigS,
-                validDisputeResolutionDetails.sigV,
+                validDisputeResolutionDetails.signature,
               ]);
 
               // send a meta transaction, check for event
@@ -3233,9 +3101,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 )
               )
                 .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
@@ -3261,16 +3127,14 @@ describe("IBosonMetaTransactionsHandler", function () {
               validDisputeResolutionDetails = {
                 exchangeId: exchange.id,
                 buyerPercentBasisPoints,
-                sigR: signatureSplits.r,
-                sigS: signatureSplits.s,
-                sigV: signatureSplits.v.toString(),
+                signature: DRsignature,
               };
 
               // Prepare the message
               message.disputeResolutionDetails = validDisputeResolutionDetails;
 
               // Collect the signature components
-              let { r, s, v } = await prepareDataSignatureParameters(
+              let signature = await prepareDataSignature(
                 buyer,
                 customTransactionType,
                 "MetaTxDisputeResolution",
@@ -3282,9 +3146,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               functionSignature = disputeHandler.interface.encodeFunctionData("resolveDispute", [
                 validDisputeResolutionDetails.exchangeId,
                 validDisputeResolutionDetails.buyerPercentBasisPoints,
-                validDisputeResolutionDetails.sigR,
-                validDisputeResolutionDetails.sigS,
-                validDisputeResolutionDetails.sigV,
+                validDisputeResolutionDetails.signature,
               ]);
 
               // Execute meta transaction, expecting revert.
@@ -3294,9 +3156,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 )
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_BUYER_PERCENT);
             });
@@ -3307,15 +3167,13 @@ describe("IBosonMetaTransactionsHandler", function () {
                 functionSignature = disputeHandler.interface.encodeFunctionData("resolveDispute", [
                   validDisputeResolutionDetails.exchangeId,
                   validDisputeResolutionDetails.buyerPercentBasisPoints,
-                  validDisputeResolutionDetails.sigR,
-                  validDisputeResolutionDetails.sigS,
-                  validDisputeResolutionDetails.sigV,
+                  validDisputeResolutionDetails.signature,
                 ]);
               });
 
               it("Should fail when replay transaction", async function () {
                 // Collect the signature components
-                let { r, s, v } = await prepareDataSignatureParameters(
+                let signature = await prepareDataSignature(
                   buyer,
                   customTransactionType,
                   "MetaTxDisputeResolution",
@@ -3329,9 +3187,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                   message.functionName,
                   functionSignature,
                   nonce,
-                  r,
-                  s,
-                  v
+                  signature
                 );
 
                 // Execute meta transaction again with the same nonce, expecting revert.
@@ -3341,9 +3197,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                     message.functionName,
                     functionSignature,
                     nonce,
-                    r,
-                    s,
-                    v
+                    signature
                   )
                 ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
               });
@@ -3353,7 +3207,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.from = await rando.getAddress();
 
                 // Collect the signature components
-                let { r, s, v } = await prepareDataSignatureParameters(
+                let signature = await prepareDataSignature(
                   rando, // Different user, not buyer.
                   customTransactionType,
                   "MetaTxDisputeResolution",
@@ -3368,11 +3222,9 @@ describe("IBosonMetaTransactionsHandler", function () {
                     message.functionName,
                     functionSignature,
                     nonce,
-                    r,
-                    s,
-                    v
+                    signature
                   )
-                ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+                ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNATURE_VALIDATION_FAILED);
               });
             });
           });
@@ -3489,7 +3341,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         it("Should emit MetaTransactionExecuted event and update state", async () => {
           // Collect the signature components
-          let { r, s, v } = await prepareDataSignatureParameters(
+          let signature = await prepareDataSignature(
             assistant,
             customTransactionType,
             "MetaTransaction",
@@ -3504,9 +3356,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               message.functionName,
               functionSignature,
               nonce,
-              r,
-              s,
-              v
+              signature
             )
           )
             .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
@@ -3537,7 +3387,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.functionSignature = functionSignature;
 
           // Collect the signature components
-          let { r, s, v } = await prepareDataSignatureParameters(
+          let signature = await prepareDataSignature(
             assistant,
             customTransactionType,
             "MetaTransaction",
@@ -3552,9 +3402,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               message.functionName,
               functionSignature,
               nonce,
-              r,
-              s,
-              v
+              signature
             )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_PERIOD_INVALID);
         });
@@ -3562,7 +3410,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("Should fail when replay transaction", async function () {
             // Collect the signature components
-            let { r, s, v } = await prepareDataSignatureParameters(
+            let signature = await prepareDataSignature(
               assistant,
               customTransactionType,
               "MetaTransaction",
@@ -3576,9 +3424,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               message.functionName,
               functionSignature,
               nonce,
-              r,
-              s,
-              v
+              signature
             );
 
             // Execute meta transaction again with the same nonce, expecting revert.
@@ -3588,9 +3434,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
           });
@@ -3600,7 +3444,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             message.from = await rando.getAddress();
 
             // Collect the signature components
-            let { r, s, v } = await prepareDataSignatureParameters(
+            let signature = await prepareDataSignature(
               rando, // Different user, not seller's assistant.
               customTransactionType,
               "MetaTransaction",
@@ -3615,11 +3459,9 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNATURE_VALIDATION_FAILED);
           });
         });
       });
@@ -3792,7 +3634,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           it("Withdraws multiple tokens", async () => {
             // Collect the signature components
-            let { r, s, v } = await prepareDataSignatureParameters(
+            let signature = await prepareDataSignature(
               buyer,
               customTransactionType,
               "MetaTxFund",
@@ -3814,9 +3656,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
             )
               .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
@@ -3859,7 +3699,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             message.fundDetails = validFundDetails;
 
             // Collect the signature components
-            let { r, s, v } = await prepareDataSignatureParameters(
+            let signature = await prepareDataSignature(
               buyer,
               customTransactionType,
               "MetaTxFund",
@@ -3881,9 +3721,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
             )
               .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
@@ -3928,7 +3766,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             message.fundDetails = validFundDetails;
 
             // Collect the signature components
-            let { r, s, v } = await prepareDataSignatureParameters(
+            let signature = await prepareDataSignature(
               buyer,
               customTransactionType,
               "MetaTxFund",
@@ -3950,9 +3788,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
           });
@@ -3970,7 +3806,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           it("Should fail when replay transaction", async function () {
             // Collect the signature components
-            let { r, s, v } = await prepareDataSignatureParameters(
+            let signature = await prepareDataSignature(
               buyer,
               customTransactionType,
               "MetaTxFund",
@@ -3984,9 +3820,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               message.functionName,
               functionSignature,
               nonce,
-              r,
-              s,
-              v
+              signature
             );
 
             // Execute meta transaction again with the same nonce, expecting revert.
@@ -3996,9 +3830,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
           });
@@ -4008,7 +3840,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             message.from = await rando.getAddress();
 
             // Collect the signature components
-            let { r, s, v } = await prepareDataSignatureParameters(
+            let signature = await prepareDataSignature(
               rando, // Different user, not buyer.
               customTransactionType,
               "MetaTxFund",
@@ -4023,11 +3855,9 @@ describe("IBosonMetaTransactionsHandler", function () {
                 message.functionName,
                 functionSignature,
                 nonce,
-                r,
-                s,
-                v
+                signature
               )
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNATURE_VALIDATION_FAILED);
           });
         });
       });

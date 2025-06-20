@@ -13,7 +13,7 @@ const { toHexString } = require("../../scripts/util/utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   setNextBlockTimestamp,
-  prepareDataSignatureParameters,
+  prepareDataSignature,
   applyPercentage,
   setupTestEnvironment,
   getSnapshot,
@@ -77,7 +77,7 @@ describe("IBosonDisputeHandler", function () {
   let exists, response;
   let disputeResolver, disputeResolverFees, disputeResolverId;
   let buyerPercentBasisPoints;
-  let resolutionType, customSignatureType, message, r, s, v;
+  let resolutionType, customSignatureType, message, signature;
   let returnedDispute, returnedDisputeDates;
   let DRFeeNative, DRFeeToken, buyerEscalationDepositNative, buyerEscalationDepositToken;
   let voucherInitValues;
@@ -834,25 +834,25 @@ describe("IBosonDisputeHandler", function () {
         context("👉 buyer is the caller", async function () {
           beforeEach(async function () {
             // Collect the signature components
-            ({ r, s, v } = await prepareDataSignatureParameters(
+            signature = await prepareDataSignature(
               assistant, // When buyer is the caller, seller should be the signer.
               customSignatureType,
               "Resolution",
               message,
               await disputeHandler.getAddress()
-            ));
+            );
           });
 
           it("should emit a DisputeResolved event", async function () {
             // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
+            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, signature))
               .to.emit(disputeHandler, "DisputeResolved")
               .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
           });
 
           it("should update state", async function () {
             // Resolve the dispute
-            tx = await disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+            tx = await disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, signature);
 
             // Get the block timestamp of the confirmed tx and set finalizedDate
             blockNumber = tx.blockNumber;
@@ -907,7 +907,7 @@ describe("IBosonDisputeHandler", function () {
             await accountHandler.connect(buyer).createSeller(seller, emptyAuthToken, voucherInitValues);
 
             // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
+            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, signature))
               .to.emit(disputeHandler, "DisputeResolved")
               .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
           });
@@ -917,7 +917,7 @@ describe("IBosonDisputeHandler", function () {
             await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
 
             // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
+            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, signature))
               .to.emit(disputeHandler, "DisputeResolved")
               .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
           });
@@ -933,7 +933,7 @@ describe("IBosonDisputeHandler", function () {
             await setNextBlockTimestamp(Number(timeout) + 10);
 
             // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
+            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, signature))
               .to.emit(disputeHandler, "DisputeResolved")
               .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
           });
@@ -948,7 +948,7 @@ describe("IBosonDisputeHandler", function () {
             await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
             // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
+            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, signature))
               .to.emit(disputeHandler, "DisputeResolved")
               .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
           });
@@ -957,25 +957,27 @@ describe("IBosonDisputeHandler", function () {
         context("👉 seller is the caller", async function () {
           beforeEach(async function () {
             // Collect the signature components
-            ({ r, s, v } = await prepareDataSignatureParameters(
+            signature = await prepareDataSignature(
               buyer, // When seller is the caller, buyer should be the signer.
               customSignatureType,
               "Resolution",
               message,
               await disputeHandler.getAddress()
-            ));
+            );
           });
 
           it("should emit a DisputeResolved event", async function () {
             // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
+            await expect(
+              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+            )
               .to.emit(disputeHandler, "DisputeResolved")
               .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
           });
 
           it("should update state", async function () {
             // Resolve the dispute
-            tx = await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+            tx = await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature);
 
             // Get the block timestamp of the confirmed tx and set finalizedDate
             blockNumber = tx.blockNumber;
@@ -1024,7 +1026,9 @@ describe("IBosonDisputeHandler", function () {
             await accountHandler.connect(assistant).createBuyer(buyer);
 
             // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
+            await expect(
+              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+            )
               .to.emit(disputeHandler, "DisputeResolved")
               .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
           });
@@ -1034,7 +1038,9 @@ describe("IBosonDisputeHandler", function () {
             await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
 
             // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
+            await expect(
+              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+            )
               .to.emit(disputeHandler, "DisputeResolved")
               .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
           });
@@ -1050,7 +1056,9 @@ describe("IBosonDisputeHandler", function () {
             await setNextBlockTimestamp(Number(timeout) + 10);
 
             // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
+            await expect(
+              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+            )
               .to.emit(disputeHandler, "DisputeResolved")
               .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
           });
@@ -1065,7 +1073,9 @@ describe("IBosonDisputeHandler", function () {
             await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
             // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
+            await expect(
+              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+            )
               .to.emit(disputeHandler, "DisputeResolved")
               .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
           });
@@ -1074,13 +1084,13 @@ describe("IBosonDisputeHandler", function () {
         context("💔 Revert Reasons", async function () {
           beforeEach(async function () {
             // Collect the signature components
-            ({ r, s, v } = await prepareDataSignatureParameters(
+            signature = await prepareDataSignature(
               buyer, // When seller is the caller, buyer should be the signer.
               customSignatureType,
               "Resolution",
               message,
               await disputeHandler.getAddress()
-            ));
+            );
           });
 
           it("The disputes region of protocol is paused", async function () {
@@ -1088,7 +1098,9 @@ describe("IBosonDisputeHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to resolve a dispute, expecting revert
-            await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
+            await expect(
+              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+            )
               .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
               .withArgs(PausableRegion.Disputes);
           });
@@ -1099,7 +1111,7 @@ describe("IBosonDisputeHandler", function () {
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
+              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_BUYER_PERCENT);
           });
 
@@ -1109,7 +1121,7 @@ describe("IBosonDisputeHandler", function () {
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
+              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.DISPUTE_HAS_EXPIRED);
           });
 
@@ -1119,7 +1131,7 @@ describe("IBosonDisputeHandler", function () {
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
+              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
           });
 
@@ -1131,7 +1143,7 @@ describe("IBosonDisputeHandler", function () {
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
+              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_STATE);
           });
 
@@ -1139,7 +1151,7 @@ describe("IBosonDisputeHandler", function () {
             // Wallet without any account
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(rando).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
+              disputeHandler.connect(rando).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_BUYER_OR_SELLER);
 
             // Wallet with seller account, but not the seller in this exchange
@@ -1155,7 +1167,7 @@ describe("IBosonDisputeHandler", function () {
             await accountHandler.connect(other1).createSeller(seller, emptyAuthToken, voucherInitValues);
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(other1).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
+              disputeHandler.connect(other1).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_BUYER_OR_SELLER);
 
             // Wallet with buyer account, but not the buyer in this exchange
@@ -1166,29 +1178,29 @@ describe("IBosonDisputeHandler", function () {
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(other2).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
+              disputeHandler.connect(other2).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_BUYER_OR_SELLER);
           });
 
           it("signature does not belong to the address of the other party", async function () {
             // Collect the signature components
-            ({ r, s, v } = await prepareDataSignatureParameters(
+            signature = await prepareDataSignature(
               rando,
               customSignatureType,
               "Resolution",
               message,
               await disputeHandler.getAddress()
-            ));
+            );
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNATURE_VALIDATION_FAILED);
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+              disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNATURE_VALIDATION_FAILED);
           });
 
           it("signature resolution does not match input buyerPercentBasisPoints ", async function () {
@@ -1197,29 +1209,34 @@ describe("IBosonDisputeHandler", function () {
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNATURE_VALIDATION_FAILED);
           });
 
           it("signature has invalid field", async function () {
+            signature = signature.substring(2);
+            const r = "0x" + signature.substring(0, 64);
+            const s = signature.substring(64, 128);
+            const v = parseInt(signature.substring(128, 130), 16);
+
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, "0")
+              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r + s + "aa")
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
             await expect(
               disputeHandler
                 .connect(assistant)
-                .resolveDispute(exchangeId, buyerPercentBasisPoints, r, zeroPadBytes("0x", 32), v)
+                .resolveDispute(exchangeId, buyerPercentBasisPoints, r + zeroPadBytes("0x", 32).slice(2) + v)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
             await expect(
               disputeHandler
                 .connect(assistant)
-                .resolveDispute(exchangeId, buyerPercentBasisPoints, zeroPadBytes("0x", 32), s, v)
+                .resolveDispute(exchangeId, buyerPercentBasisPoints, zeroPadBytes("0x", 32) + s + v)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
             await expect(
               disputeHandler
                 .connect(assistant)
-                .resolveDispute(exchangeId, buyerPercentBasisPoints, r, toHexString(MaxUint256), v)
+                .resolveDispute(exchangeId, buyerPercentBasisPoints, r + toHexString(MaxUint256).slice(2) + v)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
           });
 
@@ -1229,7 +1246,7 @@ describe("IBosonDisputeHandler", function () {
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
+              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_STATE);
           });
         });
@@ -2163,16 +2180,16 @@ describe("IBosonDisputeHandler", function () {
           };
 
           // Collect the signature components
-          ({ r, s, v } = await prepareDataSignatureParameters(
+          signature = await prepareDataSignature(
             assistant, // When buyer is the caller, seller should be the signer.
             customSignatureType,
             "Resolution",
             message,
             await disputeHandler.getAddress()
-          ));
+          );
 
           // Buyer resolves dispute
-          await disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+          await disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, signature);
 
           // Get the dispute state
           [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchangeId);
@@ -2332,16 +2349,16 @@ describe("IBosonDisputeHandler", function () {
             };
 
             // Collect the signature components
-            ({ r, s, v } = await prepareDataSignatureParameters(
+            signature = await prepareDataSignature(
               buyer, // When seller is the caller, buyer should be the signer.
               customSignatureType,
               "Resolution",
               message,
               await disputeHandler.getAddress()
-            ));
+            );
 
             // Retract dispute
-            await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+            await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature);
 
             // Dispute in resolved state, ask if exchange is finalized
             [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchangeId);

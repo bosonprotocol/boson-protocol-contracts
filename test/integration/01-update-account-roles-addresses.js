@@ -20,7 +20,7 @@ const {
   setNextBlockTimestamp,
   calculateCloneAddress,
   calculateBosonProxyAddress,
-  prepareDataSignatureParameters,
+  prepareDataSignature,
   applyPercentage,
   setupTestEnvironment,
   getSnapshot,
@@ -442,7 +442,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
             );
 
           // Collect the signature components
-          const { r, s, v } = await prepareDataSignatureParameters(
+          const signature = await prepareDataSignature(
             buyer, // When seller is the caller, buyer should be the signer.
             customSignatureType,
             "Resolution",
@@ -452,11 +452,11 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
 
           // Attempt to resolve a dispute with old seller assistant, should fail
           await expect(
-            disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercent, r, s, v)
+            disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercent, signature)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_BUYER_OR_SELLER);
 
           // Attempt to resolve a dispute with new seller assistant, should succeed
-          await expect(disputeHandler.connect(rando).resolveDispute(exchangeId, buyerPercent, r, s, v))
+          await expect(disputeHandler.connect(rando).resolveDispute(exchangeId, buyerPercent, signature))
             .to.emit(disputeHandler, "DisputeResolved")
             .withArgs(exchangeId, buyerPercent, await rando.getAddress());
         });
@@ -471,7 +471,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
             .withArgs(buyerAccount.id, buyerAccount.toStruct(), await buyer.getAddress());
 
           // Collect the signature components
-          const { r, s, v } = await prepareDataSignatureParameters(
+          const signature = await prepareDataSignature(
             assistant, // When buyer is the caller, seller should be the signer
             customSignatureType,
             "Resolution",
@@ -481,11 +481,11 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
 
           // Attempt to resolve a dispute with old buyer wallet, should fail
           await expect(
-            disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, r, s, v)
+            disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, signature)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_BUYER_OR_SELLER);
 
           // Attempt to resolve a dispute with new buyer wallet, should succeed
-          await expect(disputeHandler.connect(rando).resolveDispute(exchangeId, buyerPercent, r, s, v))
+          await expect(disputeHandler.connect(rando).resolveDispute(exchangeId, buyerPercent, signature))
             .to.emit(disputeHandler, "DisputeResolved")
             .withArgs(exchangeId, buyerPercent, await rando.getAddress());
         });
@@ -500,7 +500,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
             .withArgs(buyerAccount.id, buyerAccount.toStruct(), await buyer.getAddress());
 
           // Collect the signature components
-          const { r, s, v } = await prepareDataSignatureParameters(
+          const signature = await prepareDataSignature(
             buyer, // When buyer is the caller, seller should be the signer
             customSignatureType,
             "Resolution",
@@ -510,8 +510,8 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
 
           // Attempt to resolve a dispute with old buyer wallet, should fail
           await expect(
-            disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercent, r, s, v)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+            disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercent, signature)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNATURE_VALIDATION_FAILED);
         });
 
         it("If the seller assistant address was changed, the buyer should not be able to resolve a dispute with the old signature", async function () {
@@ -539,7 +539,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
             );
 
           // Collect the signature components
-          const { r, s, v } = await prepareDataSignatureParameters(
+          const signature = await prepareDataSignature(
             assistant, // When buyer is the caller, seller should be the signer
             customSignatureType,
             "Resolution",
@@ -549,8 +549,8 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
 
           // Attempt to resolve a dispute with old buyer wallet, should fail
           await expect(
-            disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, r, s, v)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+            disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, signature)
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNATURE_VALIDATION_FAILED);
         });
 
         it("Buyer should be able to retract dispute after updating wallet address", async function () {
