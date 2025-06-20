@@ -11,7 +11,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles disputes associated with exchanges within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xd9ea8317
+ * The ERC-165 identifier for this interface is: 0x712f4b28
  */
 interface IBosonDisputeHandler is BosonErrors, IBosonDisputeEvents, IBosonFundsLibEvents {
     /**
@@ -117,17 +117,10 @@ interface IBosonDisputeHandler is BosonErrors, IBosonDisputeEvents, IBosonFundsL
      *
      * @param _exchangeId  - the id of the associated exchange
      * @param _buyerPercent - percentage of the pot that goes to the buyer
-     * @param _sigR - r part of the signer's signature
-     * @param _sigS - s part of the signer's signature
-     * @param _sigV - v part of the signer's signature
+     * @param _signature - signature of the other party. If the signer is EOA, it must be ECDSA signature in the format of (r,s,v) struct, otherwise, it must be a valid ERC1271 signature.
+
      */
-    function resolveDispute(
-        uint256 _exchangeId,
-        uint256 _buyerPercent,
-        bytes32 _sigR,
-        bytes32 _sigS,
-        uint8 _sigV
-    ) external;
+    function resolveDispute(uint256 _exchangeId, uint256 _buyerPercent, bytes calldata _signature) external;
 
     /**
      * @notice Puts the dispute into the Escalated state.

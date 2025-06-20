@@ -4,6 +4,7 @@ pragma solidity 0.8.22;
 import "../../domain/BosonConstants.sol";
 import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
+import { IERC1271 } from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
 /**
  * @title EIP712Lib
@@ -11,6 +12,12 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
  * @dev Provides the domain separator and chain id.
  */
 library EIP712Lib {
+    struct ECDSASignature {
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+    }
+
     /**
      * @notice Generates the domain separator hash.
      * @dev Using the chainId as the salt enables the client to be active on one chain
@@ -35,35 +42,82 @@ library EIP712Lib {
     }
 
     /**
-     * @notice Recovers the Signer from the Signature components.
+     * @notice Verifies that the signer really signed the message.
+     * It works for both ECDSA signatures and ERC1271 signatures.
      *
      * Reverts if:
      * - Signer is the zero address
+     * - Signer is a contract that does not implement ERC1271
+     * - Signer is a contract that implements ERC1271 but returns an unexpected value
+     * - Signer is a contract that reverts when called with the signature
+     * - Signer is an EOA but the signature is not a valid ECDSA signature
+     * - Recovered signer does not match the user address
      *
-     * @param _user  - the sender of the transaction
-     * @param _hashedMetaTx - hashed meta transaction
-     * @param _sigR - r part of the signer's signature
-     * @param _sigS - s part of the signer's signature
-     * @param _sigV - v part of the signer's signature
-     * @return true if signer is same as _user parameter
+     * @param _user  - the message signer
+     * @param _hashedMessage - hashed message
+     * @param _signature - signature. If the signer is EOA, it must be ECDSA signature in the format of (r,s,v) struct, otherwise, it must be a valid ERC1271 signature.
      */
-    function verify(
-        address _user,
-        bytes32 _hashedMetaTx,
-        bytes32 _sigR,
-        bytes32 _sigS,
-        uint8 _sigV
-    ) internal returns (bool) {
-        // Ensure signature is unique
-        // See https://github.com/OpenZeppelin/openzeppelin-contracts/blob/04695aecbd4d17dddfd55de766d10e3805d6f42f/contracts/cryptography/ECDSA.sol#63
-        if (
-            uint256(_sigS) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0 ||
-            (_sigV != 27 && _sigV != 28)
-        ) revert BosonErrors.InvalidSignature();
+    function verify(address _user, bytes32 _hashedMessage, bytes calldata _signature) internal {
+        if (_user == address(0)) revert BosonErrors.InvalidAddress();
 
-        address signer = ecrecover(toTypedMessageHash(_hashedMetaTx), _sigV, _sigR, _sigS);
-        if (signer == address(0)) revert BosonErrors.InvalidSignature();
-        return signer == _user;
+        bytes32 typedMessageHash = toTypedMessageHash(_hashedMessage);
+
+        // Check if user is a contract implementing ERC1271
+        bytes memory returnData; // Make this available for later if needed
+        if (_user.code.length > 0) {
+            bool success;
+            (success, returnData) = _user.staticcall(
+                abi.encodeCall(IERC1271.isValidSignature, (typedMessageHash, _signature))
+            );
+            if (success) {
+                if (returnData.length != SLOT_SIZE) {
+                    revert BosonErrors.UnexpectedDataReturned(returnData);
+                } else {
+                    // Make sure that the lowest 224 bits (28 bytes) are not set
+                    if (uint256(bytes32(returnData)) & type(uint224).max != 0) {
+                        revert BosonErrors.UnexpectedDataReturned(returnData);
+                    }
+
+                    if (abi.decode(returnData, (bytes4)) != IERC1271.isValidSignature.selector)
+                        revert BosonErrors.SignatureValidationFailed();
+
+                    return;
+                }
+            }
+        }
+
+        address signer;
+        // If the user is not a contract or the call to ERC1271 failed, we assume it's an ECDSA signature
+        if (_signature.length == 65) {
+            ECDSASignature memory ecdsaSig = ECDSASignature({
+                r: bytes32(_signature[0:32]),
+                s: bytes32(_signature[32:64]),
+                v: uint8(_signature[64])
+            });
+
+            // Ensure signature is unique
+            // See https://github.com/OpenZeppelin/openzeppelin-contracts/blob/04695aecbd4d17dddfd55de766d10e3805d6f42f/contracts/cryptography/ECDSA.sol#63
+            if (
+                uint256(ecdsaSig.s) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0 ||
+                (ecdsaSig.v != 27 && ecdsaSig.v != 28)
+            ) revert BosonErrors.InvalidSignature();
+
+            signer = ecrecover(typedMessageHash, ecdsaSig.v, ecdsaSig.r, ecdsaSig.s);
+            if (signer == address(0)) revert BosonErrors.InvalidSignature();
+        }
+
+        if (signer != _user) {
+            if (returnData.length > 0) {
+                // In case 1271 verification failed with a revert reason, bubble it up
+
+                /// @solidity memory-safe-assembly
+                assembly {
+                    revert(add(SLOT_SIZE, returnData), mload(returnData))
+                }
+            }
+
+            revert BosonErrors.SignatureValidationFailed();
+        }
     }
 
     /**

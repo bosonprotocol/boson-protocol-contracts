@@ -116,9 +116,7 @@ contract Foreign20Malicious2 is Foreign20 {
     address private protocolAddress;
     address private owner;
     bytes private metaTxBytes;
-    bytes32 private sigR;
-    bytes32 private sigS;
-    uint8 private sigV;
+    bytes private signature;
     address private attacker;
 
     constructor() {
@@ -129,17 +127,9 @@ contract Foreign20Malicious2 is Foreign20 {
         protocolAddress = _newProtocolAddress;
     }
 
-    function setMetaTxBytes(
-        address _attacker,
-        bytes calldata _metaTxBytes,
-        bytes32 _sigR,
-        bytes32 _sigS,
-        uint8 _sigV
-    ) external {
+    function setMetaTxBytes(address _attacker, bytes calldata _metaTxBytes, bytes calldata _signature) external {
         metaTxBytes = _metaTxBytes;
-        sigR = _sigR;
-        sigS = _sigS;
-        sigV = _sigV;
+        signature = _signature;
         attacker = _attacker;
     }
 
@@ -154,9 +144,7 @@ contract Foreign20Malicious2 is Foreign20 {
                 "getNextExchangeId()",
                 metaTxBytes,
                 0,
-                sigR,
-                sigS,
-                sigV
+                signature
             );
         }
     }

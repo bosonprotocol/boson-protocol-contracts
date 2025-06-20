@@ -463,7 +463,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             }
         }
 
-        // solhint-disable-next-line custom-errors 
+        // solhint-disable-next-line custom-errors
         require(exists, ERC721_INVALID_TOKEN_ID); // not using Custom Errors here to match OZ 4.9.* errors
         return offer.metadataUri;
     }
@@ -492,8 +492,8 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
     function transferOwnership(
         address _newOwner
     ) public override(IBosonVoucher, OwnableUpgradeable) onlyRole(PROTOCOL) {
-        // solhint-disable-next-line custom-errors 
-        require(_newOwner != address(0), OWNABLE_ZERO_ADDRESS);  // not using Custom Errors here to match OZ 4.9.* errors
+        // solhint-disable-next-line custom-errors
+        require(_newOwner != address(0), OWNABLE_ZERO_ADDRESS); // not using Custom Errors here to match OZ 4.9.* errors
 
         _transferOwnership(_newOwner);
     }
@@ -791,8 +791,8 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         // If token is committable, it is a pre-minted token
         bool committable = isTokenCommittable(_tokenId);
 
-        // solhint-disable-next-line custom-errors 
-        require(_exists(_tokenId) || committable, "ERC721: invalid token ID");  // not using Custom Errors here to match OZ 4.9.* errors
+        // solhint-disable-next-line custom-errors
+        require(_exists(_tokenId) || committable, "ERC721: invalid token ID"); // not using Custom Errors here to match OZ 4.9.* errors
     }
 }
 
@@ -845,7 +845,12 @@ contract BosonVoucher is BosonVoucherBase, ERC2771ContextUpgradeable {
      * @notice This function specifies the context as being a single address (20 bytes).
      * @dev It is an override of the ERC2771ContextUpgradeable._contextSuffixLength() function which allows meta transactions.
      */
-    function _contextSuffixLength() internal view override(ContextUpgradeable, ERC2771ContextUpgradeable) returns (uint256) {
+    function _contextSuffixLength()
+        internal
+        view
+        override(ContextUpgradeable, ERC2771ContextUpgradeable)
+        returns (uint256)
+    {
         return ERC2771ContextUpgradeable._contextSuffixLength();
     }
 }

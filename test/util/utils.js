@@ -8,7 +8,6 @@ const {
   parseUnits,
   getContractAt,
   toBeArray,
-  isHexString,
   zeroPadValue,
   Interface,
   toUtf8Bytes,
@@ -197,24 +196,7 @@ async function getCurrentBlockAndSetTimeForward(seconds) {
   await setNextBlockTimestamp(newTime);
 }
 
-function getSignatureParameters(signature) {
-  if (!isHexString(signature)) {
-    throw new Error('Given value "'.concat(signature, '" is not a valid hex string.'));
-  }
-
-  signature = signature.substring(2);
-  const r = "0x" + signature.substring(0, 64);
-  const s = "0x" + signature.substring(64, 128);
-  const v = parseInt(signature.substring(128, 130), 16);
-
-  return {
-    r: r,
-    s: s,
-    v: v,
-  };
-}
-
-async function prepareDataSignatureParameters(
+async function prepareDataSignature(
   user,
   customTransactionTypes,
   primaryType,
@@ -271,15 +253,7 @@ async function prepareDataSignatureParameters(
   // Sign the data
   const signature = await provider.send("eth_signTypedData_v4", [await user.getAddress(), dataToSign]);
 
-  // Collect the Signature components
-  const { r, s, v } = getSignatureParameters(signature);
-
-  return {
-    r: r,
-    s: s,
-    v: v,
-    signature,
-  };
+  return signature;
 }
 
 function calculateVoucherExpiry(block, voucherRedeemableFromDate, voucherValidDuration) {
@@ -606,7 +580,7 @@ function* incrementer() {
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
 exports.getEvent = getEvent;
 exports.eventEmittedWithArgs = eventEmittedWithArgs;
-exports.prepareDataSignatureParameters = prepareDataSignatureParameters;
+exports.prepareDataSignature = prepareDataSignature;
 exports.calculateVoucherExpiry = calculateVoucherExpiry;
 exports.calculateContractAddress = calculateContractAddress;
 exports.calculateCloneAddress = calculateCloneAddress;

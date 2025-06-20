@@ -23,12 +23,7 @@ const {
 const { getGenericContext } = require("./01_generic");
 const TokenType = require("../../scripts/domain/TokenType");
 const Twin = require("../../scripts/domain/Twin");
-const {
-  prepareDataSignatureParameters,
-  applyPercentage,
-  calculateContractAddress,
-  deriveTokenId,
-} = require("../util/utils");
+const { prepareDataSignature, applyPercentage, calculateContractAddress, deriveTokenId } = require("../util/utils");
 const { RevertReasons } = require("../../scripts/config/revert-reasons");
 const { readContracts } = require("../../scripts/util/utils.js");
 const { VOUCHER_NAME, VOUCHER_SYMBOL } = require("../util/constants");
@@ -481,7 +476,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         it("Meta transaction should work with allowlisted function", async function () {
           // Collect the signature components
-          let { r, s, v } = await prepareDataSignatureParameters(
+          let { r, s, v } = await prepareDataSignature(
             assistant,
             customTransactionType,
             "MetaTransaction",
@@ -511,7 +506,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           message.functionName = "createSeller"; // function with this name does not exist (argument types are missing)
 
           // Collect the signature components
-          let { r, s, v } = await prepareDataSignatureParameters(
+          let { r, s, v } = await prepareDataSignature(
             assistant,
             customTransactionType,
             "MetaTransaction",

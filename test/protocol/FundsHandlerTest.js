@@ -16,7 +16,7 @@ const {
   setNextBlockTimestamp,
   getEvent,
   eventEmittedWithArgs,
-  prepareDataSignatureParameters,
+  prepareDataSignature,
   applyPercentage,
   calculateCloneAddress,
   calculateBosonProxyAddress,
@@ -93,7 +93,7 @@ describe("IBosonFundsHandler", function () {
   let tx, txReceipt, txCost, event;
   let disputeResolverFees, disputeResolver, disputeResolverId;
   let buyerPercentBasisPoints;
-  let resolutionType, customSignatureType, message, r, s, v;
+  let resolutionType, customSignatureType, message, signature;
   let disputedDate, escalatedDate, timeout;
   let voucherInitValues;
   let emptyAuthToken;
@@ -3466,20 +3466,20 @@ describe("IBosonFundsHandler", function () {
             };
 
             // Collect the signature components
-            ({ r, s, v } = await prepareDataSignatureParameters(
+            signature = await prepareDataSignature(
               buyer, // Assistant is the caller, seller should be the signer.
               customSignatureType,
               "Resolution",
               message,
               await disputeHandler.getAddress()
-            ));
+            );
           });
 
           it("should emit a FundsReleased event", async function () {
             // Resolve the dispute, expecting event
             const tx = await disputeHandler
               .connect(assistant)
-              .resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+              .resolveDispute(exchangeId, buyerPercentBasisPoints, signature);
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
               .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, await assistant.getAddress());
@@ -3513,7 +3513,7 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
             // Resolve the dispute, so the funds are released
-            await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+            await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature);
 
             // Available funds should be increased for
             // buyer: (price + sellerDeposit)*buyerPercentage
@@ -3596,13 +3596,13 @@ describe("IBosonFundsHandler", function () {
               };
 
               // Collect the signature components
-              ({ r, s, v } = await prepareDataSignatureParameters(
+              signature = await prepareDataSignature(
                 buyer, // Assistant is the caller, seller should be the signer.
                 customSignatureType,
                 "Resolution",
                 message,
                 await disputeHandler.getAddress()
-              ));
+              );
             });
 
             it("should update state", async function () {
@@ -3627,7 +3627,7 @@ describe("IBosonFundsHandler", function () {
               expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
               // Resolve the dispute, so the funds are released
-              await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+              await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature);
 
               // Available funds should be increased for
               // buyer: (price + sellerDeposit)*buyerPercentage
@@ -3883,13 +3883,13 @@ describe("IBosonFundsHandler", function () {
             };
 
             // Collect the signature components
-            ({ r, s, v } = await prepareDataSignatureParameters(
+            signature = await prepareDataSignature(
               buyer, // Assistant is the caller, seller should be the signer.
               customSignatureType,
               "Resolution",
               message,
               await disputeHandler.getAddress()
-            ));
+            );
 
             // Escalate the dispute
             await disputeHandler.connect(buyer).escalateDispute(exchangeId);
@@ -3899,7 +3899,7 @@ describe("IBosonFundsHandler", function () {
             // Resolve the dispute, expecting event
             const tx = await disputeHandler
               .connect(assistant)
-              .resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+              .resolveDispute(exchangeId, buyerPercentBasisPoints, signature);
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
               .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, await assistant.getAddress());
@@ -3932,7 +3932,7 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
             // Resolve the dispute, so the funds are released
-            await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+            await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature);
 
             // Available funds should be increased for
             // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
@@ -4020,13 +4020,13 @@ describe("IBosonFundsHandler", function () {
               };
 
               // Collect the signature components
-              ({ r, s, v } = await prepareDataSignatureParameters(
+              signature = await prepareDataSignature(
                 buyer, // Assistant is the caller, seller should be the signer.
                 customSignatureType,
                 "Resolution",
                 message,
                 await disputeHandler.getAddress()
-              ));
+              );
 
               // escalate the dispute
               await mockToken.mint(await buyer.getAddress(), buyerEscalationDeposit);
@@ -4056,7 +4056,7 @@ describe("IBosonFundsHandler", function () {
               expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
               // Resolve the dispute, so the funds are released
-              await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+              await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature);
 
               // Available funds should be increased for
               // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
@@ -5087,13 +5087,13 @@ describe("IBosonFundsHandler", function () {
                   };
 
                   // Collect the signature components
-                  ({ r, s, v } = await prepareDataSignatureParameters(
+                  signature = await prepareDataSignature(
                     voucherOwner, // Assistant is the caller, seller should be the signer.
                     customSignatureType,
                     "Resolution",
                     message,
                     await disputeHandler.getAddress()
-                  ));
+                  );
                 },
                 "DISPUTED-ESCALATED": async function () {
                   // Not a final state, but a separate setup to avoid code duplication
@@ -5457,7 +5457,7 @@ describe("IBosonFundsHandler", function () {
                     wallet: assistant,
                     handler: disputeHandler,
                     method: "resolveDispute",
-                    args: [exchangeId, buyerPercentBasisPoints, r, s, v],
+                    args: [exchangeId, buyerPercentBasisPoints, signature],
                   };
                 },
                 "DISPUTED-ESCALATED-RETRACTED": async () => {
@@ -6500,20 +6500,20 @@ describe("IBosonFundsHandler", function () {
             };
 
             // Collect the signature components
-            ({ r, s, v } = await prepareDataSignatureParameters(
+            signature = await prepareDataSignature(
               buyer, // Assistant is the caller, seller should be the signer.
               customSignatureType,
               "Resolution",
               message,
               await disputeHandler.getAddress()
-            ));
+            );
           });
 
           it("should emit a FundsReleased event", async function () {
             // Resolve the dispute, expecting event
             const tx = await disputeHandler
               .connect(assistant)
-              .resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+              .resolveDispute(exchangeId, buyerPercentBasisPoints, signature);
 
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
@@ -6572,7 +6572,7 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
             // Resolve the dispute, so the funds are released
-            await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+            await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature);
 
             // Available funds should be increased for
             // buyer: (price + sellerDeposit)*buyerPercentage
@@ -6746,13 +6746,13 @@ describe("IBosonFundsHandler", function () {
             };
 
             // Collect the signature components
-            ({ r, s, v } = await prepareDataSignatureParameters(
+            signature = await prepareDataSignature(
               buyer, // Assistant is the caller, seller should be the signer.
               customSignatureType,
               "Resolution",
               message,
               await disputeHandler.getAddress()
-            ));
+            );
 
             // Escalate the dispute
             await disputeHandler.connect(buyer).escalateDispute(exchangeId);
@@ -6761,7 +6761,7 @@ describe("IBosonFundsHandler", function () {
             // Resolve the dispute, expecting event
             const tx = await disputeHandler
               .connect(assistant)
-              .resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+              .resolveDispute(exchangeId, buyerPercentBasisPoints, signature);
 
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
@@ -6819,7 +6819,7 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
             // Resolve the dispute, so the funds are released
-            await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+            await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature);
 
             expectedSellerAvailableFunds.funds[0] = new Funds(
               await mockToken.getAddress(),
