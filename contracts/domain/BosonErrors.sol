@@ -19,6 +19,8 @@ interface BosonErrors {
     error ArrayLengthMismatch();
     // Array elements that are not in ascending order (i.e arr[i-1] > arr[i])
     error NonAscendingOrder();
+    // Called contract returned an unexpected value
+    error UnexpectedDataReturned(bytes data);
 
     // Reentrancy guard
     // Reentrancy guard is active and second call to protocol is made
@@ -286,14 +288,14 @@ interface BosonErrors {
     // Meta-Transactions related
     // Meta-transaction nonce is invalid
     error NonceUsedAlready();
-    // Signature does not match the signer
-    error SignerAndSignatureDoNotMatch();
     // Function signature does not match it's name
     error InvalidFunctionName();
     // Signature has invalid parameters
     error InvalidSignature();
     // Function is not allowed to be executed as a meta-transaction
     error FunctionNotAllowlisted();
+    // Signer does not match the expected one or ERC1271 signature is not valid
+    error SignatureValidationFailed();
 
     // Dispute related
     // Dispute cannot be raised since the period to do it has elapsed

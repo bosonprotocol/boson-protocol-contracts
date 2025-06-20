@@ -302,18 +302,14 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @param _functionName - the name of the function to be executed
      * @param _functionSignature - the function signature
      * @param _nonce - the nonce value of the transaction
-     * @param _sigR - r part of the signer's signature
-     * @param _sigS - s part of the signer's signature
-     * @param _sigV - v part of the signer's signature
+     * @param _signature - meta transaction signature. If the signer is EOA, it must be ECDSA signature in the format of (r,s,v) struct, otherwise, it must be a valid ERC1271 signature.
      */
     function executeMetaTransaction(
         address _userAddress,
         string calldata _functionName,
         bytes calldata _functionSignature,
         uint256 _nonce,
-        bytes32 _sigR,
-        bytes32 _sigS,
-        uint8 _sigV
+        bytes calldata _signature
     ) external payable override metaTransactionsNotPaused returns (bytes memory) {
         // Make sure that protocol is not reentered through meta transactions
         // Cannot use modifier `nonReentrant` since it also changes reentrancyStatus to `ENTERED`,
@@ -331,8 +327,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
             ? bytes(_functionSignature[4:])
             : _functionSignature;
 
-        if (!EIP712Lib.verify(_userAddress, hashMetaTransaction(metaTx), _sigR, _sigS, _sigV))
-            revert SignerAndSignatureDoNotMatch();
+        EIP712Lib.verify(_userAddress, hashMetaTransaction(metaTx), _signature);
 
         return executeTx(_userAddress, _functionName, _functionSignature, _nonce);
     }

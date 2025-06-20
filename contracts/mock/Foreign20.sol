@@ -154,9 +154,7 @@ contract Foreign20Malicious2 is Foreign20 {
                 "getNextExchangeId()",
                 metaTxBytes,
                 0,
-                sigR,
-                sigS,
-                sigV
+                abi.encodePacked(sigR, sigS, sigV)
             );
         }
     }

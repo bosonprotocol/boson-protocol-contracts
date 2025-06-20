@@ -38,6 +38,7 @@ string constant PROTOCOL_VERSION = "V2";
 bytes32 constant EIP712_DOMAIN_TYPEHASH = keccak256(
     bytes("EIP712Domain(string name,string version,address verifyingContract,bytes32 salt)")
 );
+uint256 constant SLOT_SIZE = 32; // Size of a slot in bytes, used for encoding and decoding
 
 // BosonVoucher
 string constant VOUCHER_NAME = "Boson Voucher (rNFT)";
