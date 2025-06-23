@@ -49,6 +49,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function createOfferInternal(
         Offer memory _offer,
@@ -56,7 +57,8 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _agentId,
-        uint256 _feeLimit
+        uint256 _feeLimit,
+        address _mutualizerAddress
     ) internal {
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByAssistant(msgSender());
@@ -67,7 +69,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         _offer.id = offerId;
 
         // Store the offer
-        storeOffer(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId, _feeLimit);
+        storeOffer(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId, _feeLimit, _mutualizerAddress);
     }
 
     /**
@@ -115,6 +117,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function storeOffer(
         Offer memory _offer,
@@ -122,7 +125,8 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _agentId,
-        uint256 _feeLimit
+        uint256 _feeLimit,
+        address _mutualizerAddress
     ) internal {
         // validFrom date must be less than validUntil date
         if (_offerDates.validFrom >= _offerDates.validUntil) revert InvalidOfferPeriod();
@@ -192,6 +196,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                         disputeResolutionTerms.buyerEscalationDeposit =
                             (feeAmount * fees.buyerEscalationDepositPercentage) /
                             HUNDRED_PERCENT;
+                        disputeResolutionTerms.mutualizerAddress = payable(_mutualizerAddress);
                     }
                     protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
                 }

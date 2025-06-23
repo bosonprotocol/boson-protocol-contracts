@@ -1491,43 +1491,44 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
         uint256 _drFeeAmount
     ) internal {
         address mutualizer = _disputeTerms.mutualizerAddress;
+        address exchangeToken = _offer.exchangeToken;
         if (mutualizer == address(0)) {
             // Self-mutualize: take fee from seller's pool
             FundsLib.decreaseAvailableFunds(_offer.sellerId, _offer.exchangeToken, _drFeeAmount);
         } else {
             // Use mutualizer: request fee
-            (, Seller storage seller, ) = fetchSeller(_offer.sellerId);
-
-            bool isNative = _offer.exchangeToken == address(0);
-            address exchangeToken = _offer.exchangeToken;
-
-            uint256 balanceBefore = isNative ? address(this).balance : IERC20(exchangeToken).balanceOf(address(this));
+            uint256 balanceBefore = FundsLib.getBalance(exchangeToken);
 
             // Request DR fee from mutualizer
             bool success = IDRFeeMutualizer(mutualizer).requestDRFee(
-                seller.admin,
+                _offer.sellerId,
                 _drFeeAmount,
                 exchangeToken,
                 _exchangeId,
                 _disputeTerms.disputeResolverId
             );
 
-            uint256 balanceAfter = isNative ? address(this).balance : IERC20(exchangeToken).balanceOf(address(this));
+            uint256 balanceAfter = FundsLib.getBalance(exchangeToken);
 
             uint256 feeTransferred = balanceAfter - balanceBefore;
 
-            if (!success || feeTransferred < _drFeeAmount) {
+            if (!success || feeTransferred != _drFeeAmount) {
                 revert BosonErrors.DRFeeMutualizerCannotProvideCoverage();
             } else {
-                FundsLib.increaseAvailableFundsAndEmitEvent(_exchangeId, 0, exchangeToken, feeTransferred, mutualizer);
-                emit IBosonFundsLibEvents.DRFeeRequested(_exchangeId, exchangeToken, feeTransferred, mutualizer);
+                FundsLib.increaseAvailableFundsAndEmitEvent(
+                    _exchangeId,
+                    PROTOCOL_ENTITY_ID,
+                    exchangeToken,
+                    feeTransferred,
+                    mutualizer
+                );
             }
         }
 
         // Emit event for DR fee request
         emit IBosonFundsLibEvents.DRFeeRequested(
             _exchangeId,
-            _offer.exchangeToken,
+            exchangeToken,
             _drFeeAmount,
             _disputeTerms.mutualizerAddress
         );

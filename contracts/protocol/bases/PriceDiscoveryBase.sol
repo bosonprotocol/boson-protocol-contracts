@@ -127,7 +127,7 @@ contract PriceDiscoveryBase is ProtocolBase {
         // Transfer buyers funds to protocol and forward them to price discovery contract
         if (_exchangeToken == address(0)) _exchangeToken = address(wNative);
         FundsLib.validateIncomingPayment(_exchangeToken, _priceDiscovery.price);
-        FundsLib.transferFundsFromProtocol(_exchangeToken, payable(bosonPriceDiscovery), _priceDiscovery.price);
+        FundsLib.transferFundsOut(_exchangeToken, payable(bosonPriceDiscovery), _priceDiscovery.price);
 
         actualPrice = IBosonPriceDiscovery(bosonPriceDiscovery).fulfilAskOrder(
             _exchangeToken,
@@ -149,7 +149,7 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         // Price discovery should send funds to the seller.
         // The seller must approve the protocol to transfer the funds before the order is fulfilled.
-        FundsLib.transferFundsToProtocol(_exchangeToken, _seller, actualPrice);
+        FundsLib.transferFundsIn(_exchangeToken, _seller, actualPrice);
     }
 
     /**

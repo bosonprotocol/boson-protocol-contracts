@@ -87,6 +87,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function createSellerAndOffer(
         Seller memory _seller,
@@ -97,10 +98,19 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId,
-        uint256 _feeLimit
+        uint256 _feeLimit,
+        address _mutualizerAddress
     ) public sellersNotPaused offersNotPaused orchestrationNotPaused nonReentrant {
         createSellerInternal(_seller, _authToken, _voucherInitValues);
-        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId, _feeLimit);
+        createOfferInternal(
+            _offer,
+            _offerDates,
+            _offerDurations,
+            _disputeResolverId,
+            _agentId,
+            _feeLimit,
+            _mutualizerAddress
+        );
     }
 
     /**
@@ -171,6 +181,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function createSellerAndPremintedOffer(
         Seller memory _seller,
@@ -182,7 +193,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId,
-        uint256 _feeLimit
+        uint256 _feeLimit,
+        address _mutualizerAddress
     ) external {
         createSellerAndOffer(
             _seller,
@@ -193,7 +205,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
             _authToken,
             _voucherInitValues,
             _agentId,
-            _feeLimit
+            _feeLimit,
+            _mutualizerAddress
         );
         reserveRangeInternal(_offer.id, _premintParameters.reservedRangeLength, _premintParameters.to);
     }
@@ -241,6 +254,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _condition - the fully populated condition struct
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function createOfferWithCondition(
         Offer memory _offer,
@@ -249,10 +263,19 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         uint256 _disputeResolverId,
         Condition calldata _condition,
         uint256 _agentId,
-        uint256 _feeLimit
+        uint256 _feeLimit,
+        address _mutualizerAddress
     ) public offersNotPaused groupsNotPaused orchestrationNotPaused nonReentrant {
         // Create offer and update structs values to represent true state
-        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId, _feeLimit);
+        createOfferInternal(
+            _offer,
+            _offerDates,
+            _offerDurations,
+            _disputeResolverId,
+            _agentId,
+            _feeLimit,
+            _mutualizerAddress
+        );
 
         // Construct new group
         // - group id is 0, and it is ignored
@@ -316,6 +339,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _condition - the fully populated condition struct
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function createPremintedOfferWithCondition(
         Offer memory _offer,
@@ -325,7 +349,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         PremintParameters calldata _premintParameters,
         Condition calldata _condition,
         uint256 _agentId,
-        uint256 _feeLimit
+        uint256 _feeLimit,
+        address _mutualizerAddress
     ) public {
         createOfferWithCondition(
             _offer,
@@ -334,7 +359,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
             _disputeResolverId,
             _condition,
             _agentId,
-            _feeLimit
+            _feeLimit,
+            _mutualizerAddress
         );
         reserveRangeInternal(_offer.id, _premintParameters.reservedRangeLength, _premintParameters.to);
     }
@@ -384,6 +410,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _groupId - id of the group, to which offer will be added
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function createOfferAddToGroup(
         Offer memory _offer,
@@ -392,10 +419,19 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         uint256 _disputeResolverId,
         uint256 _groupId,
         uint256 _agentId,
-        uint256 _feeLimit
+        uint256 _feeLimit,
+        address _mutualizerAddress
     ) public offersNotPaused groupsNotPaused orchestrationNotPaused nonReentrant {
         // Create offer and update structs values to represent true state
-        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId, _feeLimit);
+        createOfferInternal(
+            _offer,
+            _offerDates,
+            _offerDurations,
+            _disputeResolverId,
+            _agentId,
+            _feeLimit,
+            _mutualizerAddress
+        );
 
         // Create an array with offer ids and add it to the group
         uint256[] memory _offerIds = new uint256[](1);
@@ -456,6 +492,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _groupId - id of the group, to which offer will be added
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function createPremintedOfferAddToGroup(
         Offer memory _offer,
@@ -465,9 +502,19 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         PremintParameters calldata _premintParameters,
         uint256 _groupId,
         uint256 _agentId,
-        uint256 _feeLimit
+        uint256 _feeLimit,
+        address _mutualizerAddress
     ) external {
-        createOfferAddToGroup(_offer, _offerDates, _offerDurations, _disputeResolverId, _groupId, _agentId, _feeLimit);
+        createOfferAddToGroup(
+            _offer,
+            _offerDates,
+            _offerDurations,
+            _disputeResolverId,
+            _groupId,
+            _agentId,
+            _feeLimit,
+            _mutualizerAddress
+        );
         reserveRangeInternal(_offer.id, _premintParameters.reservedRangeLength, _premintParameters.to);
     }
 
@@ -522,6 +569,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _twin - the fully populated twin struct
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function createOfferAndTwinWithBundle(
         Offer memory _offer,
@@ -530,10 +578,19 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         uint256 _disputeResolverId,
         Twin memory _twin,
         uint256 _agentId,
-        uint256 _feeLimit
+        uint256 _feeLimit,
+        address _mutualizerAddress
     ) public offersNotPaused twinsNotPaused bundlesNotPaused orchestrationNotPaused nonReentrant {
         // Create offer and update structs values to represent true state
-        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId, _feeLimit);
+        createOfferInternal(
+            _offer,
+            _offerDates,
+            _offerDurations,
+            _disputeResolverId,
+            _agentId,
+            _feeLimit,
+            _mutualizerAddress
+        );
 
         // Create twin and pack everything into a bundle
         createTwinAndBundleAfterOffer(_twin, _offer.id, _offer.sellerId);
@@ -598,6 +655,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _twin - the fully populated twin struct
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function createPremintedOfferAndTwinWithBundle(
         Offer memory _offer,
@@ -607,7 +665,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         PremintParameters calldata _premintParameters,
         Twin memory _twin,
         uint256 _agentId,
-        uint256 _feeLimit
+        uint256 _feeLimit,
+        address _mutualizerAddress
     ) public {
         createOfferAndTwinWithBundle(
             _offer,
@@ -616,7 +675,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
             _disputeResolverId,
             _twin,
             _agentId,
-            _feeLimit
+            _feeLimit,
+            _mutualizerAddress
         );
         reserveRangeInternal(_offer.id, _premintParameters.reservedRangeLength, _premintParameters.to);
     }
@@ -678,6 +738,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _twin - the fully populated twin struct
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function createOfferWithConditionAndTwinAndBundle(
         Offer memory _offer,
@@ -687,7 +748,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         Condition calldata _condition,
         Twin memory _twin,
         uint256 _agentId,
-        uint256 _feeLimit
+        uint256 _feeLimit,
+        address _mutualizerAddress
     ) public twinsNotPaused bundlesNotPaused {
         // Create offer with condition first
         createOfferWithCondition(
@@ -697,7 +759,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
             _disputeResolverId,
             _condition,
             _agentId,
-            _feeLimit
+            _feeLimit,
+            _mutualizerAddress
         );
         // Create twin and pack everything into a bundle
         createTwinAndBundleAfterOffer(_twin, _offer.id, _offer.sellerId);
@@ -766,6 +829,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _twin - the fully populated twin struct
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function createPremintedOfferWithConditionAndTwinAndBundle(
         Offer memory _offer,
@@ -776,7 +840,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         Condition calldata _condition,
         Twin memory _twin,
         uint256 _agentId,
-        uint256 _feeLimit
+        uint256 _feeLimit,
+        address _mutualizerAddress
     ) public {
         createOfferWithConditionAndTwinAndBundle(
             _offer,
@@ -786,7 +851,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
             _condition,
             _twin,
             _agentId,
-            _feeLimit
+            _feeLimit,
+            _mutualizerAddress
         );
         reserveRangeInternal(_offer.id, _premintParameters.reservedRangeLength, _premintParameters.to);
     }
@@ -858,6 +924,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function createSellerAndOfferWithCondition(
         Seller memory _seller,
@@ -869,7 +936,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId,
-        uint256 _feeLimit
+        uint256 _feeLimit,
+        address _mutualizerAddress
     ) public sellersNotPaused {
         createSellerInternal(_seller, _authToken, _voucherInitValues);
         createOfferWithCondition(
@@ -879,7 +947,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
             _disputeResolverId,
             _condition,
             _agentId,
-            _feeLimit
+            _feeLimit,
+            _mutualizerAddress
         );
     }
 
@@ -956,6 +1025,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function createSellerAndPremintedOfferWithCondition(
         Seller memory _seller,
@@ -968,7 +1038,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId,
-        uint256 _feeLimit
+        uint256 _feeLimit,
+        address _mutualizerAddress
     ) external {
         createSellerAndOfferWithCondition(
             _seller,
@@ -980,7 +1051,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
             _authToken,
             _voucherInitValues,
             _agentId,
-            _feeLimit
+            _feeLimit,
+            _mutualizerAddress
         );
         reserveRangeInternal(_offer.id, _premintParameters.reservedRangeLength, _premintParameters.to);
     }
@@ -1060,6 +1132,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function createSellerAndOfferAndTwinWithBundle(
         Seller memory _seller,
@@ -1071,7 +1144,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId,
-        uint256 _feeLimit
+        uint256 _feeLimit,
+        address _mutualizerAddress
     ) public sellersNotPaused {
         createSellerInternal(_seller, _authToken, _voucherInitValues);
         createOfferAndTwinWithBundle(
@@ -1081,7 +1155,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
             _disputeResolverId,
             _twin,
             _agentId,
-            _feeLimit
+            _feeLimit,
+            _mutualizerAddress
         );
     }
 
@@ -1166,6 +1241,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function createSellerAndPremintedOfferAndTwinWithBundle(
         Seller memory _seller,
@@ -1178,7 +1254,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId,
-        uint256 _feeLimit
+        uint256 _feeLimit,
+        address _mutualizerAddress
     ) external {
         createSellerAndOfferAndTwinWithBundle(
             _seller,
@@ -1190,7 +1267,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
             _authToken,
             _voucherInitValues,
             _agentId,
-            _feeLimit
+            _feeLimit,
+            _mutualizerAddress
         );
         reserveRangeInternal(_offer.id, _premintParameters.reservedRangeLength, _premintParameters.to);
     }
@@ -1273,6 +1351,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function createSellerAndOfferWithConditionAndTwinAndBundle(
         Seller memory _seller,
@@ -1285,7 +1364,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId,
-        uint256 _feeLimit
+        uint256 _feeLimit,
+        address _mutualizerAddress
     ) public sellersNotPaused {
         createSellerInternal(_seller, _authToken, _voucherInitValues);
         createOfferWithConditionAndTwinAndBundle(
@@ -1296,7 +1376,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
             _condition,
             _twin,
             _agentId,
-            _feeLimit
+            _feeLimit,
+            _mutualizerAddress
         );
     }
 
@@ -1385,6 +1466,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function createSellerAndPremintedOfferWithConditionAndTwinAndBundle(
         Seller memory _seller,
@@ -1398,7 +1480,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId,
-        uint256 _feeLimit
+        uint256 _feeLimit,
+        address _mutualizerAddress
     ) external {
         createSellerAndOfferWithConditionAndTwinAndBundle(
             _seller,
@@ -1411,7 +1494,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
             _authToken,
             _voucherInitValues,
             _agentId,
-            _feeLimit
+            _feeLimit,
+            _mutualizerAddress
         );
         reserveRangeInternal(_offer.id, _premintParameters.reservedRangeLength, _premintParameters.to);
     }

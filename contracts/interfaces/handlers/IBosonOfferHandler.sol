@@ -51,6 +51,7 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function createOffer(
         BosonTypes.Offer memory _offer,
@@ -58,7 +59,8 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _agentId,
-        uint256 _feeLimit
+        uint256 _feeLimit,
+        address _mutualizerAddress
     ) external;
 
     /**
@@ -68,7 +70,7 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      *
      * Reverts if:
      * - The offers region of protocol is paused
-     * - Number of elements in offers, offerDates, offerDurations, disputeResolverIds, agentIds and feeLimits do not match
+     * - Number of elements in offers, offerDates, offerDurations, disputeResolverIds, agentIds, feeLimits and mutualizerAddresses do not match
      * - For any offer:
      *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
@@ -94,21 +96,16 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
      *
-     * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
-     * @param _offerDates - the array of fully populated offer dates structs
-     * @param _offerDurations - the array of fully populated offer durations structs
-     * @param _disputeResolverIds - the array of ids of chosen dispute resolvers (can be 0)
-     * @param _agentIds - the array of ids of agents
-     * @param _feeLimits - the array of maximum fees that seller is willing to pay per exchange (for static offers)
+     * @param batchOffer struct containing all batch offer arrays:
+     *   - offers: array of fully populated Offer structs
+     *   - offerDates: array of fully populated OfferDates structs
+     *   - offerDurations: array of fully populated OfferDurations structs
+     *   - disputeResolverIds: array of ids of chosen dispute resolvers (can be 0)
+     *   - agentIds: array of ids of agents
+     *   - feeLimits: array of maximum fees that seller is willing to pay per exchange (for static offers)
+     *   - mutualizerAddresses: array of addresses of DR fee mutualizers (can be zero for self-mutualization)
      */
-    function createOfferBatch(
-        BosonTypes.Offer[] calldata _offers,
-        BosonTypes.OfferDates[] calldata _offerDates,
-        BosonTypes.OfferDurations[] calldata _offerDurations,
-        uint256[] calldata _disputeResolverIds,
-        uint256[] calldata _agentIds,
-        uint256[] calldata _feeLimits
-    ) external;
+    function createOfferBatch(BosonTypes.BatchOffer calldata batchOffer) external;
 
     /**
      * @notice Reserves a range of vouchers to be associated with an offer

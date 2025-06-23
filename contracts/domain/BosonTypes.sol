@@ -360,4 +360,14 @@ contract BosonTypes {
         uint256 agent;
         uint256 disputeResolver;
     }
+
+    struct BatchOffer {
+        Offer[] offers;
+        OfferDates[] offerDates;
+        OfferDurations[] offerDurations;
+        uint256[] disputeResolverIds;
+        uint256[] agentIds;
+        uint256[] feeLimits;
+        address[] mutualizerAddresses;
+    }
 }
