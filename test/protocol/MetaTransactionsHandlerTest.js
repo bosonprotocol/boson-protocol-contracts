@@ -3874,7 +3874,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
       });
 
-      context("EContract wallet (EOA) Signer", async function () {
+      context("Contract wallet signer", async function () {
         let contractWallet;
         beforeEach(async function () {
           // Deploy contract wallet
@@ -4063,6 +4063,9 @@ describe("IBosonMetaTransactionsHandler", function () {
           });
 
           context("💔 Revert Reasons", async function () {
+            const randomValidECDSASignature =
+              "0x84ddd3eaf623d5beffc2a66af9525f5cebbe080046f772e1b70df2b7eae63daa791058df09489d531c6bff71091b3a8a5f22488aa2812366e3b063732747033c1c"; // for test where other revert reasons are tested
+
             it("The meta transactions region of protocol is paused", async function () {
               // Pause the metatx region of the protocol
               await pauseHandler.connect(pauser).pause([PausableRegion.MetaTransaction]);
@@ -4190,6 +4193,208 @@ describe("IBosonMetaTransactionsHandler", function () {
                   contractWalletSignature
                 )
               ).to.revertedWithCustomError(bosonErrors, RevertReasons.NONCE_USED_ALREADY);
+            });
+
+            it("Nonce is already used by the msg sender for another transaction", async function () {
+              // First transaction should succeed
+              await metaTransactionsHandler
+                .connect(deployer)
+                .executeMetaTransaction(
+                  await contractWallet.getAddress(),
+                  message.functionName,
+                  functionSignature,
+                  nonce,
+                  contractWalletSignature
+                );
+
+              // Prepare the function signature for the facet function.
+              message.functionSignature = accountHandler.interface.encodeFunctionData("updateSeller", [
+                seller,
+                emptyAuthToken,
+              ]);
+              message.functionName =
+                "createSeller((uint256,address,address,address,address,bool,string),(uint256,uint8))";
+
+              // Second transaction should fail
+              await expect(
+                metaTransactionsHandler
+                  .connect(deployer)
+                  .executeMetaTransaction(
+                    await contractWallet.getAddress(),
+                    message.functionName,
+                    functionSignature,
+                    nonce,
+                    contractWalletSignature
+                  )
+              ).to.be.revertedWithCustomError(metaTransactionsHandler, "NonceUsedAlready");
+            });
+
+            it("Signature is invalid", async function () {
+              await contractWallet.setValidity(1); // 1=invalid, returns wrong magic value
+
+              // Contract wallet returns wrong magic value
+              await expect(
+                metaTransactionsHandler
+                  .connect(deployer)
+                  .executeMetaTransaction(
+                    await contractWallet.getAddress(),
+                    message.functionName,
+                    functionSignature,
+                    nonce,
+                    contractWalletSignature
+                  )
+              ).to.be.revertedWithCustomError(metaTransactionsHandler, "SignatureValidationFailed");
+            });
+
+            it("Contract reverts", async function () {
+              // Contract wallet reverts
+              await contractWallet.setValidity(2); // 2=revert
+
+              await expect(
+                metaTransactionsHandler
+                  .connect(deployer)
+                  .executeMetaTransaction(
+                    await contractWallet.getAddress(),
+                    message.functionName,
+                    functionSignature,
+                    nonce,
+                    randomValidECDSASignature
+                  )
+              ).to.be.revertedWithCustomError(contractWallet, "UnknownValidity");
+
+              // Error string
+              await contractWallet.setRevertReason(1); // 1=error string
+
+              await expect(
+                metaTransactionsHandler
+                  .connect(deployer)
+                  .executeMetaTransaction(
+                    await contractWallet.getAddress(),
+                    message.functionName,
+                    functionSignature,
+                    nonce,
+                    randomValidECDSASignature
+                  )
+              ).to.be.revertedWith("Error string");
+
+              // Arbitrary bytes
+              await contractWallet.setRevertReason(2); // 2=arbitrary bytes
+
+              await expect(
+                metaTransactionsHandler
+                  .connect(deployer)
+                  .executeMetaTransaction(
+                    await contractWallet.getAddress(),
+                    message.functionName,
+                    functionSignature,
+                    nonce,
+                    contractWalletSignature
+                  )
+              ).to.be.reverted;
+
+              // Divide by zero
+              await contractWallet.setRevertReason(3); // 3=divide by zero
+
+              await expect(
+                metaTransactionsHandler
+                  .connect(deployer)
+                  .executeMetaTransaction(
+                    await contractWallet.getAddress(),
+                    message.functionName,
+                    functionSignature,
+                    nonce,
+                    contractWalletSignature
+                  )
+              ).to.be.revertedWithPanic("0x12");
+
+              // Out of bounds
+              await contractWallet.setRevertReason(4); // 4=out of bounds
+
+              await expect(
+                metaTransactionsHandler
+                  .connect(deployer)
+                  .executeMetaTransaction(
+                    await contractWallet.getAddress(),
+                    message.functionName,
+                    functionSignature,
+                    nonce,
+                    contractWalletSignature
+                  )
+              ).to.be.revertedWithPanic("0x32");
+            });
+
+            it("Contract returns invalid data", async function () {
+              // Contract wallet returns invalid data
+              await contractWallet.setValidity(2); // 2=revert
+              await contractWallet.setRevertReason(5); // 5=return too short
+
+              await expect(
+                metaTransactionsHandler
+                  .connect(deployer)
+                  .executeMetaTransaction(
+                    await contractWallet.getAddress(),
+                    message.functionName,
+                    functionSignature,
+                    nonce,
+                    randomValidECDSASignature
+                  )
+              )
+                .to.be.revertedWithCustomError(metaTransactionsHandler, "UnexpectedDataReturned")
+                .withArgs("0x00");
+
+              // Too long return
+              await contractWallet.setRevertReason(6); // 6=return too long
+
+              await expect(
+                metaTransactionsHandler
+                  .connect(deployer)
+                  .executeMetaTransaction(
+                    await contractWallet.getAddress(),
+                    message.functionName,
+                    functionSignature,
+                    nonce,
+                    randomValidECDSASignature
+                  )
+              )
+                .to.be.revertedWithCustomError(metaTransactionsHandler, "UnexpectedDataReturned")
+                .withArgs("0x1626ba7e0000000000000000000000000000000000000000000000000000000000");
+
+              // Polluted return
+              await contractWallet.setRevertReason(7); // 7=more data than bytes4
+
+              await expect(
+                metaTransactionsHandler
+                  .connect(deployer)
+                  .executeMetaTransaction(
+                    await contractWallet.getAddress(),
+                    message.functionName,
+                    functionSignature,
+                    nonce,
+                    randomValidECDSASignature
+                  )
+              )
+                .to.be.revertedWithCustomError(metaTransactionsHandler, "UnexpectedDataReturned")
+                .withArgs("0x1626ba7e000000000000000abcde000000000000000000000000000000000000");
+            });
+
+            it("Contract does not implement `isValidSignature`", async function () {
+              // Deploy a contract that does not implement `isValidSignature`
+              const test2FacetFactory = await getContractFactory("Test2Facet");
+              const test2Facet = await test2FacetFactory.deploy();
+              await test2Facet.waitForDeployment();
+
+              // Contract wallet returns wrong magic value
+              await expect(
+                metaTransactionsHandler
+                  .connect(deployer)
+                  .executeMetaTransaction(
+                    await test2Facet.getAddress(),
+                    message.functionName,
+                    functionSignature,
+                    nonce,
+                    randomValidECDSASignature
+                  )
+              ).to.be.revertedWithCustomError(metaTransactionsHandler, "SignatureValidationFailed");
             });
           });
         });

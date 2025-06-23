@@ -78,35 +78,14 @@ contract ContractWallet is IERC1271 {
             }
         }
     }
-}
 
-contract ContractWalletWithReceive is ContractWallet, IERC721Receiver {
-    error NotAcceptingMoney();
-
-    event FundsReceived(address indexed sender, uint256 value);
-    event PhygitalReceived(address tokenContract, uint256 tokenId);
-
-    bool private acceptingMoney = true;
-
-    function setAcceptingMoney(bool _acceptingMoney) external {
-        acceptingMoney = _acceptingMoney;
-    }
-
-    receive() external payable {
-        if (!acceptingMoney) {
-            revert NotAcceptingMoney();
+    function forwardCall(address target, bytes calldata data) external payable returns (bytes memory) {
+        (bool success, bytes memory returnData) = target.call{ value: msg.value }(data);
+        if (!success) {
+            assembly {
+                revert(add(returnData, 0x20), mload(returnData))
+            }
         }
-
-        emit FundsReceived(msg.sender, msg.value);
-    }
-
-    function onERC721Received(address, address, uint256 tokenId, bytes calldata) external override returns (bytes4) {
-        if (!acceptingMoney) {
-            revert NotAcceptingMoney();
-        }
-
-        emit PhygitalReceived(msg.sender, tokenId);
-
-        return IERC721Receiver.onERC721Received.selector;
+        return returnData;
     }
 }
