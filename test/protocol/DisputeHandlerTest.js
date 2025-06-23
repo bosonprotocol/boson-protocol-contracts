@@ -1,5 +1,15 @@
 const { ethers } = require("hardhat");
-const { ZeroAddress, provider, zeroPadBytes, MaxUint256, parseUnits, getContractAt, id } = ethers;
+const {
+  ZeroAddress,
+  provider,
+  zeroPadBytes,
+  MaxUint256,
+  parseUnits,
+  getContractAt,
+  id,
+  randomBytes,
+  getContractFactory,
+} = ethers;
 const { expect, assert } = require("chai");
 const Exchange = require("../../scripts/domain/Exchange");
 const Dispute = require("../../scripts/domain/Dispute");
@@ -7,13 +17,14 @@ const DisputeState = require("../../scripts/domain/DisputeState");
 const DisputeDates = require("../../scripts/domain/DisputeDates");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
+const SellerUpdateFields = require("../../scripts/domain/SellerUpdateFields.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { toHexString } = require("../../scripts/util/utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   setNextBlockTimestamp,
-  prepareDataSignatureParameters,
+  prepareDataSignature,
   applyPercentage,
   setupTestEnvironment,
   getSnapshot,
@@ -77,7 +88,7 @@ describe("IBosonDisputeHandler", function () {
   let exists, response;
   let disputeResolver, disputeResolverFees, disputeResolverId;
   let buyerPercentBasisPoints;
-  let resolutionType, customSignatureType, message, r, s, v;
+  let resolutionType, customSignatureType, message, signature;
   let returnedDispute, returnedDisputeDates;
   let DRFeeNative, DRFeeToken, buyerEscalationDepositNative, buyerEscalationDepositToken;
   let voucherInitValues;
@@ -831,406 +842,948 @@ describe("IBosonDisputeHandler", function () {
           };
         });
 
-        context("👉 buyer is the caller", async function () {
-          beforeEach(async function () {
-            // Collect the signature components
-            ({ r, s, v } = await prepareDataSignatureParameters(
-              assistant, // When buyer is the caller, seller should be the signer.
-              customSignatureType,
-              "Resolution",
-              message,
-              await disputeHandler.getAddress()
-            ));
+        context("Externally Owned Account (EOA) Signer", async function () {
+          context("👉 buyer is the caller", async function () {
+            beforeEach(async function () {
+              // Collect the signature components
+              signature = await prepareDataSignature(
+                assistant, // When buyer is the caller, seller should be the signer.
+                customSignatureType,
+                "Resolution",
+                message,
+                await disputeHandler.getAddress()
+              );
+            });
+
+            it("should emit a DisputeResolved event", async function () {
+              // Resolve the dispute, testing for the event
+              await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, signature))
+                .to.emit(disputeHandler, "DisputeResolved")
+                .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
+            });
+
+            it("should update state", async function () {
+              // Resolve the dispute
+              tx = await disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, signature);
+
+              // Get the block timestamp of the confirmed tx and set finalizedDate
+              blockNumber = tx.blockNumber;
+              block = await provider.getBlock(blockNumber);
+              finalizedDate = block.timestamp.toString();
+
+              dispute = new Dispute(exchangeId, DisputeState.Resolved, buyerPercentBasisPoints);
+              disputeDates = new DisputeDates(disputedDate, "0", finalizedDate, timeout);
+
+              // Get the dispute as a struct
+              [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchangeId);
+
+              // Parse into entities
+              returnedDispute = Dispute.fromStruct(disputeStruct);
+              returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
+
+              // Returned values should match the expected dispute and dispute dates
+              for (const [key, value] of Object.entries(dispute)) {
+                expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
+              }
+              for (const [key, value] of Object.entries(disputeDates)) {
+                expect(JSON.stringify(returnedDisputeDates[key]) === JSON.stringify(value)).is.true;
+              }
+
+              // Get the dispute state
+              [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchangeId);
+
+              // It should match DisputeState.Resolved
+              assert.equal(response, DisputeState.Resolved, "Dispute state is incorrect");
+
+              // exchange should also be finalized
+              // Get the exchange as a struct
+              [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchangeId);
+
+              // Parse into entity
+              let returnedExchange = Exchange.fromStruct(exchangeStruct);
+
+              // FinalizeDate should be set correctly
+              assert.equal(returnedExchange.finalizedDate, finalizedDate, "Exchange finalizeDate is incorect");
+            });
+
+            it("Buyer can also have a seller account and this will work", async function () {
+              // Create a valid seller with buyer's wallet
+              seller = mockSeller(
+                await buyer.getAddress(),
+                await buyer.getAddress(),
+                ZeroAddress,
+                await buyer.getAddress()
+              );
+              expect(seller.isValid()).is.true;
+
+              await accountHandler.connect(buyer).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+              // Resolve the dispute, testing for the event
+              await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, signature))
+                .to.emit(disputeHandler, "DisputeResolved")
+                .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
+            });
+
+            it("Dispute can be mutually resolved even if it's in escalated state", async function () {
+              // escalate dispute
+              await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
+
+              // Resolve the dispute, testing for the event
+              await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, signature))
+                .to.emit(disputeHandler, "DisputeResolved")
+                .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
+            });
+
+            it("Dispute can be mutually resolved even if it's in escalated state and past the resolution period", async function () {
+              // Set time forward before the dispute original expiration date
+              await setNextBlockTimestamp(Number(BigInt(disputedDate) + BigInt(resolutionPeriod) / 2n));
+
+              // escalate dispute
+              await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
+
+              // Set time forward to the dispute original expiration date
+              await setNextBlockTimestamp(Number(timeout) + 10);
+
+              // Resolve the dispute, testing for the event
+              await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, signature))
+                .to.emit(disputeHandler, "DisputeResolved")
+                .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
+            });
+
+            it("Dispute can be mutually resolved if it's past original timeout, but it was extended", async function () {
+              // Extend the dispute timeout
+              await disputeHandler
+                .connect(assistant)
+                .extendDisputeTimeout(exchangeId, Number(timeout) + 2 * Number(oneWeek));
+
+              // put past original timeout where normally it would not revert
+              await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
+
+              // Resolve the dispute, testing for the event
+              await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, signature))
+                .to.emit(disputeHandler, "DisputeResolved")
+                .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
+            });
           });
 
-          it("should emit a DisputeResolved event", async function () {
-            // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
-              .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
+          context("👉 seller is the caller", async function () {
+            beforeEach(async function () {
+              // Collect the signature components
+              signature = await prepareDataSignature(
+                buyer, // When seller is the caller, buyer should be the signer.
+                customSignatureType,
+                "Resolution",
+                message,
+                await disputeHandler.getAddress()
+              );
+            });
+
+            it("should emit a DisputeResolved event", async function () {
+              // Resolve the dispute, testing for the event
+              await expect(
+                disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+              )
+                .to.emit(disputeHandler, "DisputeResolved")
+                .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
+            });
+
+            it("should update state", async function () {
+              // Resolve the dispute
+              tx = await disputeHandler
+                .connect(assistant)
+                .resolveDispute(exchangeId, buyerPercentBasisPoints, signature);
+
+              // Get the block timestamp of the confirmed tx and set finalizedDate
+              blockNumber = tx.blockNumber;
+              block = await provider.getBlock(blockNumber);
+              finalizedDate = block.timestamp.toString();
+
+              dispute = new Dispute(exchangeId, DisputeState.Resolved, buyerPercentBasisPoints);
+              disputeDates = new DisputeDates(disputedDate, "0", finalizedDate, timeout);
+
+              // Get the dispute as a struct
+              [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchangeId);
+
+              // Parse into entities
+              returnedDispute = Dispute.fromStruct(disputeStruct);
+              returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
+
+              // Returned values should match the expected dispute and dispute dates
+              for (const [key, value] of Object.entries(dispute)) {
+                expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
+              }
+              for (const [key, value] of Object.entries(disputeDates)) {
+                expect(JSON.stringify(returnedDisputeDates[key]) === JSON.stringify(value)).is.true;
+              }
+
+              // Get the dispute state
+              [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchangeId);
+
+              // It should match DisputeState.Resolved
+              assert.equal(response, DisputeState.Resolved, "Dispute state is incorrect");
+
+              // exchange should also be finalized
+              // Get the exchange as a struct
+              [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchangeId);
+
+              // Parse into entity
+              let returnedExchange = Exchange.fromStruct(exchangeStruct);
+
+              // FinalizeDate should be set correctly
+              assert.equal(returnedExchange.finalizedDate, finalizedDate, "Exchange finalizeDate is incorect");
+            });
+
+            it("Assistant can also have a buyer account and this will work", async function () {
+              // Create a valid buyer with assistant's wallet
+              let buyer = mockBuyer(await assistant.getAddress());
+              expect(buyer.isValid()).is.true;
+              await accountHandler.connect(assistant).createBuyer(buyer);
+
+              // Resolve the dispute, testing for the event
+              await expect(
+                disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+              )
+                .to.emit(disputeHandler, "DisputeResolved")
+                .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
+            });
+
+            it("Dispute can be mutually resolved even if it's in escalated state", async function () {
+              // escalate dispute
+              await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
+
+              // Resolve the dispute, testing for the event
+              await expect(
+                disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+              )
+                .to.emit(disputeHandler, "DisputeResolved")
+                .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
+            });
+
+            it("Dispute can be mutually resolved even if it's in escalated state and past the resolution period", async function () {
+              // Set time forward before the dispute original expiration date
+              await setNextBlockTimestamp(Number(BigInt(disputedDate) + BigInt(resolutionPeriod) / 2n));
+
+              // escalate dispute
+              await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
+
+              // Set time forward to the dispute original expiration date
+              await setNextBlockTimestamp(Number(timeout) + 10);
+
+              // Resolve the dispute, testing for the event
+              await expect(
+                disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+              )
+                .to.emit(disputeHandler, "DisputeResolved")
+                .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
+            });
+
+            it("Dispute can be mutually resolved if it's past original timeout, but it was extended", async function () {
+              // Extend the dispute timeout
+              await disputeHandler
+                .connect(assistant)
+                .extendDisputeTimeout(exchangeId, Number(timeout) + 2 * Number(oneWeek));
+
+              // put past original timeout where normally it would not revert
+              await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
+
+              // Resolve the dispute, testing for the event
+              await expect(
+                disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+              )
+                .to.emit(disputeHandler, "DisputeResolved")
+                .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
+            });
           });
 
-          it("should update state", async function () {
-            // Resolve the dispute
-            tx = await disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+          context("💔 Revert Reasons", async function () {
+            beforeEach(async function () {
+              // Collect the signature components
+              signature = await prepareDataSignature(
+                buyer, // When seller is the caller, buyer should be the signer.
+                customSignatureType,
+                "Resolution",
+                message,
+                await disputeHandler.getAddress()
+              );
+            });
 
-            // Get the block timestamp of the confirmed tx and set finalizedDate
-            blockNumber = tx.blockNumber;
-            block = await provider.getBlock(blockNumber);
-            finalizedDate = block.timestamp.toString();
+            it("The disputes region of protocol is paused", async function () {
+              // Pause the disputes region of the protocol
+              await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
-            dispute = new Dispute(exchangeId, DisputeState.Resolved, buyerPercentBasisPoints);
-            disputeDates = new DisputeDates(disputedDate, "0", finalizedDate, timeout);
+              // Attempt to resolve a dispute, expecting revert
+              await expect(
+                disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+              )
+                .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+                .withArgs(PausableRegion.Disputes);
+            });
 
-            // Get the dispute as a struct
-            [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchangeId);
+            it("Specified buyer percent exceeds 100%", async function () {
+              // Set buyer percent above 100%
+              buyerPercentBasisPoints = "12000"; // 120%
 
-            // Parse into entities
-            returnedDispute = Dispute.fromStruct(disputeStruct);
-            returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
+              // Attempt to resolve the dispute, expecting revert
+              await expect(
+                disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_BUYER_PERCENT);
+            });
 
-            // Returned values should match the expected dispute and dispute dates
-            for (const [key, value] of Object.entries(dispute)) {
-              expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
-            }
-            for (const [key, value] of Object.entries(disputeDates)) {
-              expect(JSON.stringify(returnedDisputeDates[key]) === JSON.stringify(value)).is.true;
-            }
+            it("Dispute has expired", async function () {
+              // Set time forward to the dispute expiration date
+              await setNextBlockTimestamp(Number(timeout) + 1);
 
-            // Get the dispute state
-            [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchangeId);
+              // Attempt to resolve the dispute, expecting revert
+              await expect(
+                disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.DISPUTE_HAS_EXPIRED);
+            });
 
-            // It should match DisputeState.Resolved
-            assert.equal(response, DisputeState.Resolved, "Dispute state is incorrect");
+            it("Exchange does not exist", async function () {
+              // An invalid exchange id
+              const exchangeId = "666";
 
-            // exchange should also be finalized
-            // Get the exchange as a struct
-            [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchangeId);
+              // Attempt to resolve the dispute, expecting revert
+              await expect(
+                disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
+            });
 
-            // Parse into entity
-            let returnedExchange = Exchange.fromStruct(exchangeStruct);
+            it("Exchange is not in a disputed state", async function () {
+              exchangeId++;
 
-            // FinalizeDate should be set correctly
-            assert.equal(returnedExchange.finalizedDate, finalizedDate, "Exchange finalizeDate is incorect");
-          });
+              // Commit to offer, creating a new exchange
+              await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
-          it("Buyer can also have a seller account and this will work", async function () {
-            // Create a valid seller with buyer's wallet
-            seller = mockSeller(
-              await buyer.getAddress(),
-              await buyer.getAddress(),
-              ZeroAddress,
-              await buyer.getAddress()
-            );
-            expect(seller.isValid()).is.true;
+              // Attempt to resolve the dispute, expecting revert
+              await expect(
+                disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_STATE);
+            });
 
-            await accountHandler.connect(buyer).createSeller(seller, emptyAuthToken, voucherInitValues);
+            it("Caller is neither the seller nor the buyer for the given exchange id", async function () {
+              // Wallet without any account
+              // Attempt to resolve the dispute, expecting revert
+              await expect(
+                disputeHandler.connect(rando).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_BUYER_OR_SELLER);
 
-            // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
-              .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
-          });
+              // Wallet with seller account, but not the seller in this exchange
+              // Create a valid seller
+              seller = mockSeller(
+                await other1.getAddress(),
+                await other1.getAddress(),
+                ZeroAddress,
+                await other1.getAddress()
+              );
+              expect(seller.isValid()).is.true;
 
-          it("Dispute can be mutually resolved even if it's in escalated state", async function () {
-            // escalate dispute
-            await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
+              await accountHandler.connect(other1).createSeller(seller, emptyAuthToken, voucherInitValues);
+              // Attempt to resolve the dispute, expecting revert
+              await expect(
+                disputeHandler.connect(other1).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_BUYER_OR_SELLER);
 
-            // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
-              .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
-          });
+              // Wallet with buyer account, but not the buyer in this exchange
+              // Create a valid buyer
+              let buyer = mockBuyer(await other2.getAddress());
+              expect(buyer.isValid()).is.true;
+              await accountHandler.connect(other2).createBuyer(buyer);
 
-          it("Dispute can be mutually resolved even if it's in escalated state and past the resolution period", async function () {
-            // Set time forward before the dispute original expiration date
-            await setNextBlockTimestamp(Number(BigInt(disputedDate) + BigInt(resolutionPeriod) / 2n));
+              // Attempt to resolve the dispute, expecting revert
+              await expect(
+                disputeHandler.connect(other2).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_BUYER_OR_SELLER);
+            });
 
-            // escalate dispute
-            await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
+            it("signature does not belong to the address of the other party", async function () {
+              // Collect the signature components
+              signature = await prepareDataSignature(
+                rando,
+                customSignatureType,
+                "Resolution",
+                message,
+                await disputeHandler.getAddress()
+              );
 
-            // Set time forward to the dispute original expiration date
-            await setNextBlockTimestamp(Number(timeout) + 10);
+              // Attempt to resolve the dispute, expecting revert
+              await expect(
+                disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNATURE_VALIDATION_FAILED);
 
-            // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
-              .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
-          });
+              // Attempt to resolve the dispute, expecting revert
+              await expect(
+                disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNATURE_VALIDATION_FAILED);
+            });
 
-          it("Dispute can be mutually resolved if it's past original timeout, but it was extended", async function () {
-            // Extend the dispute timeout
-            await disputeHandler
-              .connect(assistant)
-              .extendDisputeTimeout(exchangeId, Number(timeout) + 2 * Number(oneWeek));
+            it("signature resolution does not match input buyerPercentBasisPoints ", async function () {
+              // Set different buyer percentage
+              buyerPercentBasisPoints = (Number(buyerPercentBasisPoints) + 1000).toString(); // add 10%
 
-            // put past original timeout where normally it would not revert
-            await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
+              // Attempt to resolve the dispute, expecting revert
+              await expect(
+                disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNATURE_VALIDATION_FAILED);
+            });
 
-            // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
-              .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
+            it("signature has invalid field", async function () {
+              signature = signature.substring(2);
+              const r = "0x" + signature.substring(0, 64);
+              const s = signature.substring(64, 128);
+              const v = parseInt(signature.substring(128, 130), 16);
+
+              // Attempt to resolve the dispute, expecting revert
+              await expect(
+                disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r + s + "aa")
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
+              await expect(
+                disputeHandler
+                  .connect(assistant)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, r + zeroPadBytes("0x", 32).slice(2) + v)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
+              await expect(
+                disputeHandler
+                  .connect(assistant)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, zeroPadBytes("0x", 32) + s + v)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
+              await expect(
+                disputeHandler
+                  .connect(assistant)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, r + toHexString(MaxUint256).slice(2) + v)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
+            });
+
+            it("dispute state is neither resolving or escalated", async function () {
+              // Retract the dispute, put it into RETRACTED state
+              await disputeHandler.connect(buyer).retractDispute(exchangeId);
+
+              // Attempt to resolve the dispute, expecting revert
+              await expect(
+                disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_STATE);
+            });
           });
         });
 
-        context("👉 seller is the caller", async function () {
+        context("Contract wallet signer", async function () {
+          let contractWallet, contractWalletAddress;
+          let contractWalletSignature = randomBytes(64); // Use random bytes for the contract wallet signature
+
           beforeEach(async function () {
-            // Collect the signature components
-            ({ r, s, v } = await prepareDataSignatureParameters(
-              buyer, // When seller is the caller, buyer should be the signer.
-              customSignatureType,
-              "Resolution",
-              message,
-              await disputeHandler.getAddress()
-            ));
+            // Deploy contract wallet
+            const contractWalletFactory = await getContractFactory("ContractWallet");
+            contractWallet = await contractWalletFactory.deploy();
+            await contractWallet.waitForDeployment();
+            contractWalletAddress = await contractWallet.getAddress();
           });
 
-          it("should emit a DisputeResolved event", async function () {
-            // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
-              .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
+          context("👉 buyer is the caller", async function () {
+            beforeEach(async function () {
+              // change assistant to the contract wallet
+              const contractWalletSeller = seller.clone();
+              contractWalletSeller.assistant = contractWalletAddress;
+              await accountHandler.connect(assistant).updateSeller(contractWalletSeller, emptyAuthToken);
+
+              const data = accountHandler.interface.encodeFunctionData("optInToSellerUpdate", [
+                seller.id,
+                [SellerUpdateFields.Assistant],
+              ]);
+              await contractWallet.forwardCall(accountHandler.getAddress(), data);
+            });
+
+            it("should emit a DisputeResolved event", async function () {
+              // Resolve the dispute, testing for the event
+              await expect(
+                disputeHandler
+                  .connect(buyer)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, contractWalletSignature)
+              )
+                .to.emit(disputeHandler, "DisputeResolved")
+                .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
+            });
+
+            it("should update state", async function () {
+              // Resolve the dispute
+              tx = await disputeHandler
+                .connect(buyer)
+                .resolveDispute(exchangeId, buyerPercentBasisPoints, contractWalletSignature);
+
+              // Get the block timestamp of the confirmed tx and set finalizedDate
+              blockNumber = tx.blockNumber;
+              block = await provider.getBlock(blockNumber);
+              finalizedDate = block.timestamp.toString();
+
+              dispute = new Dispute(exchangeId, DisputeState.Resolved, buyerPercentBasisPoints);
+              disputeDates = new DisputeDates(disputedDate, "0", finalizedDate, timeout);
+
+              // Get the dispute as a struct
+              [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchangeId);
+
+              // Parse into entities
+              returnedDispute = Dispute.fromStruct(disputeStruct);
+              returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
+
+              // Returned values should match the expected dispute and dispute dates
+              for (const [key, value] of Object.entries(dispute)) {
+                expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
+              }
+              for (const [key, value] of Object.entries(disputeDates)) {
+                expect(JSON.stringify(returnedDisputeDates[key]) === JSON.stringify(value)).is.true;
+              }
+
+              // Get the dispute state
+              [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchangeId);
+
+              // It should match DisputeState.Resolved
+              assert.equal(response, DisputeState.Resolved, "Dispute state is incorrect");
+
+              // exchange should also be finalized
+              // Get the exchange as a struct
+              [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchangeId);
+
+              // Parse into entity
+              let returnedExchange = Exchange.fromStruct(exchangeStruct);
+
+              // FinalizeDate should be set correctly
+              assert.equal(returnedExchange.finalizedDate, finalizedDate, "Exchange finalizeDate is incorect");
+            });
+
+            it("Buyer can also have a seller account and this will work", async function () {
+              // Create a valid seller with buyer's wallet
+              seller = mockSeller(
+                await buyer.getAddress(),
+                await buyer.getAddress(),
+                ZeroAddress,
+                await buyer.getAddress()
+              );
+              expect(seller.isValid()).is.true;
+
+              await accountHandler.connect(buyer).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+              // Resolve the dispute, testing for the event
+              await expect(
+                disputeHandler
+                  .connect(buyer)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, contractWalletSignature)
+              )
+                .to.emit(disputeHandler, "DisputeResolved")
+                .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
+            });
+
+            it("Dispute can be mutually resolved even if it's in escalated state", async function () {
+              // escalate dispute
+              await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
+
+              // Resolve the dispute, testing for the event
+              await expect(
+                disputeHandler
+                  .connect(buyer)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, contractWalletSignature)
+              )
+                .to.emit(disputeHandler, "DisputeResolved")
+                .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
+            });
+
+            it("Dispute can be mutually resolved even if it's in escalated state and past the resolution period", async function () {
+              // Set time forward before the dispute original expiration date
+              await setNextBlockTimestamp(Number(BigInt(disputedDate) + BigInt(resolutionPeriod) / 2n));
+
+              // escalate dispute
+              await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
+
+              // Set time forward to the dispute original expiration date
+              await setNextBlockTimestamp(Number(timeout) + 10);
+
+              // Resolve the dispute, testing for the event
+              await expect(
+                disputeHandler
+                  .connect(buyer)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, contractWalletSignature)
+              )
+                .to.emit(disputeHandler, "DisputeResolved")
+                .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
+            });
+
+            it("Dispute can be mutually resolved if it's past original timeout, but it was extended", async function () {
+              // Extend the dispute timeout
+              const data = disputeHandler.interface.encodeFunctionData("extendDisputeTimeout", [
+                exchangeId,
+                Number(timeout) + 2 * Number(oneWeek),
+              ]);
+              await contractWallet.forwardCall(disputeHandler.getAddress(), data);
+
+              // put past original timeout where normally it would not revert
+              await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
+
+              // Resolve the dispute, testing for the event
+              await expect(
+                disputeHandler
+                  .connect(buyer)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, contractWalletSignature)
+              )
+                .to.emit(disputeHandler, "DisputeResolved")
+                .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
+            });
           });
 
-          it("should update state", async function () {
-            // Resolve the dispute
-            tx = await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+          context("👉 seller is the caller", async function () {
+            beforeEach(async function () {
+              // change buyer to the contract wallet
+              await accountHandler
+                .connect(buyer)
+                .updateBuyer({ id: buyerId, wallet: contractWalletAddress, active: true });
+            });
 
-            // Get the block timestamp of the confirmed tx and set finalizedDate
-            blockNumber = tx.blockNumber;
-            block = await provider.getBlock(blockNumber);
-            finalizedDate = block.timestamp.toString();
+            it("should emit a DisputeResolved event", async function () {
+              // Resolve the dispute, testing for the event
+              await expect(
+                disputeHandler
+                  .connect(assistant)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, contractWalletSignature)
+              )
+                .to.emit(disputeHandler, "DisputeResolved")
+                .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
+            });
 
-            dispute = new Dispute(exchangeId, DisputeState.Resolved, buyerPercentBasisPoints);
-            disputeDates = new DisputeDates(disputedDate, "0", finalizedDate, timeout);
-
-            // Get the dispute as a struct
-            [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchangeId);
-
-            // Parse into entities
-            returnedDispute = Dispute.fromStruct(disputeStruct);
-            returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
-
-            // Returned values should match the expected dispute and dispute dates
-            for (const [key, value] of Object.entries(dispute)) {
-              expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
-            }
-            for (const [key, value] of Object.entries(disputeDates)) {
-              expect(JSON.stringify(returnedDisputeDates[key]) === JSON.stringify(value)).is.true;
-            }
-
-            // Get the dispute state
-            [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchangeId);
-
-            // It should match DisputeState.Resolved
-            assert.equal(response, DisputeState.Resolved, "Dispute state is incorrect");
-
-            // exchange should also be finalized
-            // Get the exchange as a struct
-            [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchangeId);
-
-            // Parse into entity
-            let returnedExchange = Exchange.fromStruct(exchangeStruct);
-
-            // FinalizeDate should be set correctly
-            assert.equal(returnedExchange.finalizedDate, finalizedDate, "Exchange finalizeDate is incorect");
-          });
-
-          it("Assistant can also have a buyer account and this will work", async function () {
-            // Create a valid buyer with assistant's wallet
-            let buyer = mockBuyer(await assistant.getAddress());
-            expect(buyer.isValid()).is.true;
-            await accountHandler.connect(assistant).createBuyer(buyer);
-
-            // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
-              .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
-          });
-
-          it("Dispute can be mutually resolved even if it's in escalated state", async function () {
-            // escalate dispute
-            await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
-
-            // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
-              .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
-          });
-
-          it("Dispute can be mutually resolved even if it's in escalated state and past the resolution period", async function () {
-            // Set time forward before the dispute original expiration date
-            await setNextBlockTimestamp(Number(BigInt(disputedDate) + BigInt(resolutionPeriod) / 2n));
-
-            // escalate dispute
-            await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
-
-            // Set time forward to the dispute original expiration date
-            await setNextBlockTimestamp(Number(timeout) + 10);
-
-            // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
-              .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
-          });
-
-          it("Dispute can be mutually resolved if it's past original timeout, but it was extended", async function () {
-            // Extend the dispute timeout
-            await disputeHandler
-              .connect(assistant)
-              .extendDisputeTimeout(exchangeId, Number(timeout) + 2 * Number(oneWeek));
-
-            // put past original timeout where normally it would not revert
-            await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
-
-            // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
-              .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
-          });
-        });
-
-        context("💔 Revert Reasons", async function () {
-          beforeEach(async function () {
-            // Collect the signature components
-            ({ r, s, v } = await prepareDataSignatureParameters(
-              buyer, // When seller is the caller, buyer should be the signer.
-              customSignatureType,
-              "Resolution",
-              message,
-              await disputeHandler.getAddress()
-            ));
-          });
-
-          it("The disputes region of protocol is paused", async function () {
-            // Pause the disputes region of the protocol
-            await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
-
-            // Attempt to resolve a dispute, expecting revert
-            await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
-              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
-              .withArgs(PausableRegion.Disputes);
-          });
-
-          it("Specified buyer percent exceeds 100%", async function () {
-            // Set buyer percent above 100%
-            buyerPercentBasisPoints = "12000"; // 120%
-
-            // Attempt to resolve the dispute, expecting revert
-            await expect(
-              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_BUYER_PERCENT);
-          });
-
-          it("Dispute has expired", async function () {
-            // Set time forward to the dispute expiration date
-            await setNextBlockTimestamp(Number(timeout) + 1);
-
-            // Attempt to resolve the dispute, expecting revert
-            await expect(
-              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.DISPUTE_HAS_EXPIRED);
-          });
-
-          it("Exchange does not exist", async function () {
-            // An invalid exchange id
-            const exchangeId = "666";
-
-            // Attempt to resolve the dispute, expecting revert
-            await expect(
-              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
-          });
-
-          it("Exchange is not in a disputed state", async function () {
-            exchangeId++;
-
-            // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
-
-            // Attempt to resolve the dispute, expecting revert
-            await expect(
-              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_STATE);
-          });
-
-          it("Caller is neither the seller nor the buyer for the given exchange id", async function () {
-            // Wallet without any account
-            // Attempt to resolve the dispute, expecting revert
-            await expect(
-              disputeHandler.connect(rando).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_BUYER_OR_SELLER);
-
-            // Wallet with seller account, but not the seller in this exchange
-            // Create a valid seller
-            seller = mockSeller(
-              await other1.getAddress(),
-              await other1.getAddress(),
-              ZeroAddress,
-              await other1.getAddress()
-            );
-            expect(seller.isValid()).is.true;
-
-            await accountHandler.connect(other1).createSeller(seller, emptyAuthToken, voucherInitValues);
-            // Attempt to resolve the dispute, expecting revert
-            await expect(
-              disputeHandler.connect(other1).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_BUYER_OR_SELLER);
-
-            // Wallet with buyer account, but not the buyer in this exchange
-            // Create a valid buyer
-            let buyer = mockBuyer(await other2.getAddress());
-            expect(buyer.isValid()).is.true;
-            await accountHandler.connect(other2).createBuyer(buyer);
-
-            // Attempt to resolve the dispute, expecting revert
-            await expect(
-              disputeHandler.connect(other2).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_BUYER_OR_SELLER);
-          });
-
-          it("signature does not belong to the address of the other party", async function () {
-            // Collect the signature components
-            ({ r, s, v } = await prepareDataSignatureParameters(
-              rando,
-              customSignatureType,
-              "Resolution",
-              message,
-              await disputeHandler.getAddress()
-            ));
-
-            // Attempt to resolve the dispute, expecting revert
-            await expect(
-              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
-
-            // Attempt to resolve the dispute, expecting revert
-            await expect(
-              disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
-          });
-
-          it("signature resolution does not match input buyerPercentBasisPoints ", async function () {
-            // Set different buyer percentage
-            buyerPercentBasisPoints = (Number(buyerPercentBasisPoints) + 1000).toString(); // add 10%
-
-            // Attempt to resolve the dispute, expecting revert
-            await expect(
-              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
-          });
-
-          it("signature has invalid field", async function () {
-            // Attempt to resolve the dispute, expecting revert
-            await expect(
-              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, "0")
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
-            await expect(
-              disputeHandler
+            it("should update state", async function () {
+              // Resolve the dispute
+              tx = await disputeHandler
                 .connect(assistant)
-                .resolveDispute(exchangeId, buyerPercentBasisPoints, r, zeroPadBytes("0x", 32), v)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
-            await expect(
-              disputeHandler
+                .resolveDispute(exchangeId, buyerPercentBasisPoints, contractWalletSignature);
+
+              // Get the block timestamp of the confirmed tx and set finalizedDate
+              blockNumber = tx.blockNumber;
+              block = await provider.getBlock(blockNumber);
+              finalizedDate = block.timestamp.toString();
+
+              dispute = new Dispute(exchangeId, DisputeState.Resolved, buyerPercentBasisPoints);
+              disputeDates = new DisputeDates(disputedDate, "0", finalizedDate, timeout);
+
+              // Get the dispute as a struct
+              [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchangeId);
+
+              // Parse into entities
+              returnedDispute = Dispute.fromStruct(disputeStruct);
+              returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
+
+              // Returned values should match the expected dispute and dispute dates
+              for (const [key, value] of Object.entries(dispute)) {
+                expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
+              }
+              for (const [key, value] of Object.entries(disputeDates)) {
+                expect(JSON.stringify(returnedDisputeDates[key]) === JSON.stringify(value)).is.true;
+              }
+
+              // Get the dispute state
+              [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchangeId);
+
+              // It should match DisputeState.Resolved
+              assert.equal(response, DisputeState.Resolved, "Dispute state is incorrect");
+
+              // exchange should also be finalized
+              // Get the exchange as a struct
+              [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchangeId);
+
+              // Parse into entity
+              let returnedExchange = Exchange.fromStruct(exchangeStruct);
+
+              // FinalizeDate should be set correctly
+              assert.equal(returnedExchange.finalizedDate, finalizedDate, "Exchange finalizeDate is incorect");
+            });
+
+            it("Assistant can also have a buyer account and this will work", async function () {
+              // Create a valid buyer with assistant's wallet
+              let buyer = mockBuyer(await assistant.getAddress());
+              expect(buyer.isValid()).is.true;
+              await accountHandler.connect(assistant).createBuyer(buyer);
+
+              // Resolve the dispute, testing for the event
+              await expect(
+                disputeHandler
+                  .connect(assistant)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, contractWalletSignature)
+              )
+                .to.emit(disputeHandler, "DisputeResolved")
+                .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
+            });
+
+            it("Dispute can be mutually resolved even if it's in escalated state", async function () {
+              // escalate dispute
+              const data = disputeHandler.interface.encodeFunctionData("escalateDispute", [exchangeId]);
+              await contractWallet.forwardCall(disputeHandler.getAddress(), data, {
+                value: buyerEscalationDepositNative,
+              });
+
+              // Resolve the dispute, testing for the event
+              await expect(
+                disputeHandler
+                  .connect(assistant)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, contractWalletSignature)
+              )
+                .to.emit(disputeHandler, "DisputeResolved")
+                .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
+            });
+
+            it("Dispute can be mutually resolved even if it's in escalated state and past the resolution period", async function () {
+              // Set time forward before the dispute original expiration date
+              await setNextBlockTimestamp(Number(BigInt(disputedDate) + BigInt(resolutionPeriod) / 2n));
+
+              // escalate dispute
+              const data = disputeHandler.interface.encodeFunctionData("escalateDispute", [exchangeId]);
+              await contractWallet.forwardCall(disputeHandler.getAddress(), data, {
+                value: buyerEscalationDepositNative,
+              });
+
+              // Set time forward to the dispute original expiration date
+              await setNextBlockTimestamp(Number(timeout) + 10);
+
+              // Resolve the dispute, testing for the event
+              await expect(
+                disputeHandler
+                  .connect(assistant)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, contractWalletSignature)
+              )
+                .to.emit(disputeHandler, "DisputeResolved")
+                .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
+            });
+
+            it("Dispute can be mutually resolved if it's past original timeout, but it was extended", async function () {
+              // Extend the dispute timeout
+              await disputeHandler
                 .connect(assistant)
-                .resolveDispute(exchangeId, buyerPercentBasisPoints, zeroPadBytes("0x", 32), s, v)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
-            await expect(
-              disputeHandler
-                .connect(assistant)
-                .resolveDispute(exchangeId, buyerPercentBasisPoints, r, toHexString(MaxUint256), v)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_SIGNATURE);
+                .extendDisputeTimeout(exchangeId, Number(timeout) + 2 * Number(oneWeek));
+
+              // put past original timeout where normally it would not revert
+              await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
+
+              // Resolve the dispute, testing for the event
+              await expect(
+                disputeHandler
+                  .connect(assistant)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, contractWalletSignature)
+              )
+                .to.emit(disputeHandler, "DisputeResolved")
+                .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
+            });
           });
 
-          it("dispute state is neither resolving or escalated", async function () {
-            // Retract the dispute, put it into RETRACTED state
-            await disputeHandler.connect(buyer).retractDispute(exchangeId);
+          context("💔 Revert Reasons", async function () {
+            const randomValidECDSASignature =
+              "0x84ddd3eaf623d5beffc2a66af9525f5cebbe080046f772e1b70df2b7eae63daa791058df09489d531c6bff71091b3a8a5f22488aa2812366e3b063732747033c1c"; // for test where other revert reasons are tested
 
-            // Attempt to resolve the dispute, expecting revert
-            await expect(
-              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
-            ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_STATE);
+            beforeEach(async function () {
+              // change buyer to the contract wallet
+              await accountHandler
+                .connect(buyer)
+                .updateBuyer({ id: buyerId, wallet: contractWalletAddress, active: true });
+            });
+
+            it("The disputes region of protocol is paused", async function () {
+              // Pause the disputes region of the protocol
+              await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
+
+              // Attempt to resolve a dispute, expecting revert
+              await expect(
+                disputeHandler
+                  .connect(assistant)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, contractWalletSignature)
+              )
+                .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+                .withArgs(PausableRegion.Disputes);
+            });
+
+            it("Specified buyer percent exceeds 100%", async function () {
+              // Set buyer percent above 100%
+              buyerPercentBasisPoints = "12000"; // 120%
+
+              // Attempt to resolve the dispute, expecting revert
+              await expect(
+                disputeHandler
+                  .connect(assistant)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, contractWalletSignature)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_BUYER_PERCENT);
+            });
+
+            it("Dispute has expired", async function () {
+              // Set time forward to the dispute expiration date
+              await setNextBlockTimestamp(Number(timeout) + 1);
+
+              // Attempt to resolve the dispute, expecting revert
+              await expect(
+                disputeHandler
+                  .connect(assistant)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, contractWalletSignature)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.DISPUTE_HAS_EXPIRED);
+            });
+
+            it("Exchange does not exist", async function () {
+              // An invalid exchange id
+              const exchangeId = "666";
+
+              // Attempt to resolve the dispute, expecting revert
+              await expect(
+                disputeHandler
+                  .connect(assistant)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, contractWalletSignature)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_EXCHANGE);
+            });
+
+            it("Caller is neither the seller nor the buyer for the given exchange id", async function () {
+              // Wallet without any account
+              // Attempt to resolve the dispute, expecting revert
+              await expect(
+                disputeHandler
+                  .connect(rando)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, contractWalletSignature)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_BUYER_OR_SELLER);
+
+              // Wallet with seller account, but not the seller in this exchange
+              // Create a valid seller
+              seller = mockSeller(
+                await other1.getAddress(),
+                await other1.getAddress(),
+                ZeroAddress,
+                await other1.getAddress()
+              );
+              expect(seller.isValid()).is.true;
+
+              await accountHandler.connect(other1).createSeller(seller, emptyAuthToken, voucherInitValues);
+              // Attempt to resolve the dispute, expecting revert
+              await expect(
+                disputeHandler
+                  .connect(other1)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, contractWalletSignature)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_BUYER_OR_SELLER);
+
+              // Wallet with buyer account, but not the buyer in this exchange
+              // Create a valid buyer
+              let buyer = mockBuyer(await other2.getAddress());
+              expect(buyer.isValid()).is.true;
+              await accountHandler.connect(other2).createBuyer(buyer);
+
+              // Attempt to resolve the dispute, expecting revert
+              await expect(
+                disputeHandler
+                  .connect(other2)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, contractWalletSignature)
+              ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_BUYER_OR_SELLER);
+            });
+
+            it("Signature is invalid", async function () {
+              await contractWallet.setValidity(1); // 1=invalid, returns wrong magic value
+
+              // Contract wallet returns wrong magic value
+              await expect(
+                disputeHandler
+                  .connect(assistant)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, contractWalletSignature)
+              ).to.be.revertedWithCustomError(disputeHandler, "SignatureValidationFailed");
+            });
+
+            it("Contract reverts", async function () {
+              // Contract wallet reverts
+              await contractWallet.setValidity(2); // 2=revert
+
+              await expect(
+                disputeHandler
+                  .connect(assistant)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, randomValidECDSASignature)
+              ).to.be.revertedWithCustomError(contractWallet, "UnknownValidity");
+
+              // Error string
+              await contractWallet.setRevertReason(1); // 1=error string
+
+              await expect(
+                disputeHandler
+                  .connect(assistant)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, randomValidECDSASignature)
+              ).to.be.revertedWith("Error string");
+
+              // Arbitrary bytes
+              await contractWallet.setRevertReason(2); // 2=arbitrary bytes
+
+              await expect(
+                disputeHandler
+                  .connect(assistant)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, randomValidECDSASignature)
+              ).to.be.reverted;
+
+              // Divide by zero
+              await contractWallet.setRevertReason(3); // 3=divide by zero
+
+              await expect(
+                disputeHandler
+                  .connect(assistant)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, randomValidECDSASignature)
+              ).to.be.revertedWithPanic("0x12");
+
+              // Out of bounds
+              await contractWallet.setRevertReason(4); // 4=out of bounds
+
+              await expect(
+                disputeHandler
+                  .connect(assistant)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, randomValidECDSASignature)
+              ).to.be.revertedWithPanic("0x32");
+            });
+
+            it("Contract returns invalid data", async function () {
+              // Contract wallet returns invalid data
+              await contractWallet.setValidity(2); // 2=revert
+              await contractWallet.setRevertReason(5); // 5=return too short
+
+              await expect(
+                disputeHandler
+                  .connect(assistant)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, randomValidECDSASignature)
+              )
+                .to.be.revertedWithCustomError(disputeHandler, "UnexpectedDataReturned")
+                .withArgs("0x00");
+
+              // Too long return
+              await contractWallet.setRevertReason(6); // 6=return too long
+
+              await expect(
+                disputeHandler
+                  .connect(assistant)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, randomValidECDSASignature)
+              )
+                .to.be.revertedWithCustomError(disputeHandler, "UnexpectedDataReturned")
+                .withArgs("0x1626ba7e0000000000000000000000000000000000000000000000000000000000");
+
+              // Polluted return
+              await contractWallet.setRevertReason(7); // 7=more data than bytes4
+
+              await expect(
+                disputeHandler
+                  .connect(assistant)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, randomValidECDSASignature)
+              )
+                .to.be.revertedWithCustomError(disputeHandler, "UnexpectedDataReturned")
+                .withArgs("0x1626ba7e000000000000000abcde000000000000000000000000000000000000");
+            });
+
+            it("Contract does not implement `isValidSignature`", async function () {
+              // Deploy a contract that does not implement `isValidSignature`
+              const test2FacetFactory = await getContractFactory("Test2Facet");
+              const test2Facet = await test2FacetFactory.deploy();
+              await test2Facet.waitForDeployment();
+
+              const data = accountHandler.interface.encodeFunctionData("updateBuyer", [
+                { id: buyerId, wallet: await test2Facet.getAddress(), active: true },
+              ]);
+              await contractWallet.forwardCall(disputeHandler.getAddress(), data, {
+                value: buyerEscalationDepositNative,
+              });
+
+              // Contract wallet returns wrong magic value
+              await expect(
+                disputeHandler
+                  .connect(assistant)
+                  .resolveDispute(exchangeId, buyerPercentBasisPoints, randomValidECDSASignature)
+              ).to.be.revertedWithCustomError(disputeHandler, "SignatureValidationFailed");
+            });
           });
         });
       });
@@ -2163,16 +2716,16 @@ describe("IBosonDisputeHandler", function () {
           };
 
           // Collect the signature components
-          ({ r, s, v } = await prepareDataSignatureParameters(
+          signature = await prepareDataSignature(
             assistant, // When buyer is the caller, seller should be the signer.
             customSignatureType,
             "Resolution",
             message,
             await disputeHandler.getAddress()
-          ));
+          );
 
           // Buyer resolves dispute
-          await disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+          await disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, signature);
 
           // Get the dispute state
           [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchangeId);
@@ -2332,16 +2885,16 @@ describe("IBosonDisputeHandler", function () {
             };
 
             // Collect the signature components
-            ({ r, s, v } = await prepareDataSignatureParameters(
+            signature = await prepareDataSignature(
               buyer, // When seller is the caller, buyer should be the signer.
               customSignatureType,
               "Resolution",
               message,
               await disputeHandler.getAddress()
-            ));
+            );
 
             // Retract dispute
-            await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
+            await disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature);
 
             // Dispute in resolved state, ask if exchange is finalized
             [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchangeId);

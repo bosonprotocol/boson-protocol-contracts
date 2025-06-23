@@ -9,7 +9,7 @@ import { IBosonMetaTransactionsEvents } from "../events/IBosonMetaTransactionsEv
  *
  * @notice Manages incoming meta-transactions in the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xb3e4e803
+ * The ERC-165 identifier for this interface is: 0x10ee6731
  */
 interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents, BosonErrors {
     /**
@@ -37,18 +37,14 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents, BosonEr
      * @param _functionName - the name of the function to be executed
      * @param _functionSignature - the function signature
      * @param _nonce - the nonce value of the transaction
-     * @param _sigR - r part of the signer's signature
-     * @param _sigS - s part of the signer's signature
-     * @param _sigV - v part of the signer's signature
+     * @param _signature - meta transaction signature. If the signer is EOA, it must be ECDSA signature in the format of (r,s,v) struct, otherwise, it must be a valid ERC1271 signature.
      */
     function executeMetaTransaction(
         address _userAddress,
         string memory _functionName,
         bytes calldata _functionSignature,
         uint256 _nonce,
-        bytes32 _sigR,
-        bytes32 _sigS,
-        uint8 _sigV
+        bytes calldata _signature
     ) external payable returns (bytes memory);
 
     /**

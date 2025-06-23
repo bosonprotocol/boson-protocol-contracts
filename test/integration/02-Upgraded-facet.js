@@ -16,7 +16,7 @@ const {
 const {
   setNextBlockTimestamp,
   calculateVoucherExpiry,
-  prepareDataSignatureParameters,
+  prepareDataSignature,
   applyPercentage,
   setupTestEnvironment,
   getSnapshot,
@@ -559,7 +559,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         context("👉 buyer is the caller", async function () {
           it("should emit a DisputeResolved event", async function () {
             // Collect the signature components
-            const { r, s, v } = await prepareDataSignatureParameters(
+            const signature = await prepareDataSignature(
               assistant, // When buyer is the caller, seller should be the signer.
               customSignatureType,
               "Resolution",
@@ -568,7 +568,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             );
 
             // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
+            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, signature))
               .to.emit(disputeHandler, "DisputeResolved")
               .withArgs(exchangeId, buyerPercentBasisPoints, await buyer.getAddress());
           });
@@ -577,7 +577,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         context("👉 seller is the caller", async function () {
           it("should emit a DisputeResolved event", async function () {
             // Collect the signature components
-            const { r, s, v } = await prepareDataSignatureParameters(
+            const signature = await prepareDataSignature(
               buyer, // When seller is the caller, buyer should be the signer.
               customSignatureType,
               "Resolution",
@@ -586,7 +586,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             );
 
             // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
+            await expect(
+              disputeHandler.connect(assistant).resolveDispute(exchangeId, buyerPercentBasisPoints, signature)
+            )
               .to.emit(disputeHandler, "DisputeResolved")
               .withArgs(exchangeId, buyerPercentBasisPoints, await assistant.getAddress());
           });
