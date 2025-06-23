@@ -10,7 +10,7 @@ import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x8d33bd5b
+ * The ERC-165 identifier for this interface is: 0xdf08b19e
  */
 interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
     /**
@@ -48,19 +48,17 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
-     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
+     * @param _drParameters - the id of chosen dispute resolver (can be 0) and mutualizer address (0 for self-mutualization)
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
-     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function createOffer(
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates,
         BosonTypes.OfferDurations calldata _offerDurations,
-        uint256 _disputeResolverId,
+        BosonTypes.DRParameters calldata _drParameters,
         uint256 _agentId,
-        uint256 _feeLimit,
-        address _mutualizerAddress
+        uint256 _feeLimit
     ) external;
 
     /**

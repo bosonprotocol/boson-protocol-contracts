@@ -56,29 +56,19 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
-     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
+     * @param _drParameters - the id of chosen dispute resolver (can be 0) and mutualizer address (0 for self-mutualization)
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
-     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function createOffer(
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
-        uint256 _disputeResolverId,
+        BosonTypes.DRParameters calldata _drParameters,
         uint256 _agentId,
-        uint256 _feeLimit,
-        address _mutualizerAddress
+        uint256 _feeLimit
     ) external override offersNotPaused nonReentrant {
-        createOfferInternal(
-            _offer,
-            _offerDates,
-            _offerDurations,
-            _disputeResolverId,
-            _agentId,
-            _feeLimit,
-            _mutualizerAddress
-        );
+        createOfferInternal(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit);
     }
 
     /**
@@ -133,10 +123,9 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
                 batchOffer.offers[i],
                 batchOffer.offerDates[i],
                 batchOffer.offerDurations[i],
-                batchOffer.disputeResolverIds[i],
+                batchOffer.drParameters[i],
                 batchOffer.agentIds[i],
-                batchOffer.feeLimits[i],
-                batchOffer.mutualizerAddresses[i]
+                batchOffer.feeLimits[i]
             );
             unchecked {
                 i++;
@@ -523,10 +512,9 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         if (
             batchOffer.offers.length != batchOffer.offerDates.length ||
             batchOffer.offers.length != batchOffer.offerDurations.length ||
-            batchOffer.offers.length != batchOffer.disputeResolverIds.length ||
+            batchOffer.offers.length != batchOffer.drParameters.length ||
             batchOffer.offers.length != batchOffer.agentIds.length ||
-            batchOffer.offers.length != batchOffer.feeLimits.length ||
-            batchOffer.offers.length != batchOffer.mutualizerAddresses.length
+            batchOffer.offers.length != batchOffer.feeLimits.length
         ) {
             revert ArrayLengthMismatch();
         }

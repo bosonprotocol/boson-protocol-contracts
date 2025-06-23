@@ -46,19 +46,17 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
-     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
+     * @param _drParameters - the id of chosen dispute resolver (can be 0) and mutualizer address (0 for self-mutualization)
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
-     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function createOfferInternal(
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
-        uint256 _disputeResolverId,
+        BosonTypes.DRParameters calldata _drParameters,
         uint256 _agentId,
-        uint256 _feeLimit,
-        address _mutualizerAddress
+        uint256 _feeLimit
     ) internal {
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByAssistant(msgSender());
@@ -69,7 +67,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         _offer.id = offerId;
 
         // Store the offer
-        storeOffer(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId, _feeLimit, _mutualizerAddress);
+        storeOffer(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit);
     }
 
     /**
@@ -114,19 +112,17 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
-     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
+     * @param _drParameters - the id of chosen dispute resolver (can be 0) and mutualizer address (0 for self-mutualization)
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
-     * @param _mutualizerAddress - the address of the DR fee mutualizer (can be zero for self-mutualization)
      */
     function storeOffer(
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
-        uint256 _disputeResolverId,
+        BosonTypes.DRParameters calldata _drParameters,
         uint256 _agentId,
-        uint256 _feeLimit,
-        address _mutualizerAddress
+        uint256 _feeLimit
     ) internal {
         // validFrom date must be less than validUntil date
         if (_offerDates.validFrom >= _offerDates.validUntil) revert InvalidOfferPeriod();
@@ -162,27 +158,27 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             // If price and sellerDeposit are 0, seller is not obliged to choose dispute resolver, which is done by setting _disputeResolverId to 0.
             // In this case, there is no need to check the validity of the dispute resolver. However, if one (or more) of {price, sellerDeposit, _disputeResolverId}
             // is different from 0, it must be checked that dispute resolver exists, supports the exchange token and seller is allowed to choose them.
-            if (_offer.price != 0 || _offer.sellerDeposit != 0 || _disputeResolverId != 0) {
+            if (_offer.price != 0 || _offer.sellerDeposit != 0 || _drParameters.disputeResolverId != 0) {
                 (
                     bool exists,
                     DisputeResolver storage disputeResolver,
                     DisputeResolverFee[] storage disputeResolverFees
-                ) = fetchDisputeResolver(_disputeResolverId);
+                ) = fetchDisputeResolver(_drParameters.disputeResolverId);
                 if (!exists || !disputeResolver.active) revert InvalidDisputeResolver();
 
                 // Operate in a block to avoid "stack too deep" error
                 {
                     // check that seller is on the DR allow list
-                    if (lookups.allowedSellers[_disputeResolverId].length > 0) {
+                    if (lookups.allowedSellers[_drParameters.disputeResolverId].length > 0) {
                         // if length == 0, dispute resolver allows any seller
                         // if length > 0, we check that it is on allow list
-                        if (lookups.allowedSellerIndex[_disputeResolverId][_offer.sellerId] == 0)
+                        if (lookups.allowedSellerIndex[_drParameters.disputeResolverId][_offer.sellerId] == 0)
                             revert SellerNotApproved();
                     }
 
                     // get the index of DisputeResolverFee and make sure DR supports the exchangeToken
                     {
-                        uint256 feeIndex = lookups.disputeResolverFeeTokenIndex[_disputeResolverId][
+                        uint256 feeIndex = lookups.disputeResolverFeeTokenIndex[_drParameters.disputeResolverId][
                             _offer.exchangeToken
                         ];
                         if (feeIndex == 0) revert DRUnsupportedFee();
@@ -190,13 +186,13 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                         uint256 feeAmount = disputeResolverFees[feeIndex - 1].feeAmount;
 
                         // store DR terms
-                        disputeResolutionTerms.disputeResolverId = _disputeResolverId;
+                        disputeResolutionTerms.disputeResolverId = _drParameters.disputeResolverId;
                         disputeResolutionTerms.escalationResponsePeriod = disputeResolver.escalationResponsePeriod;
                         disputeResolutionTerms.feeAmount = feeAmount;
                         disputeResolutionTerms.buyerEscalationDeposit =
                             (feeAmount * fees.buyerEscalationDepositPercentage) /
                             HUNDRED_PERCENT;
-                        disputeResolutionTerms.mutualizerAddress = payable(_mutualizerAddress);
+                        disputeResolutionTerms.mutualizerAddress = _drParameters.mutualizerAddress;
                     }
                     protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
                 }

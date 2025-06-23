@@ -169,6 +169,11 @@ contract BosonTypes {
         RoyaltyInfo[] royaltyInfo;
     }
 
+    struct DRParameters {
+        uint256 disputeResolverId;
+        address payable mutualizerAddress;
+    }
+
     struct OfferDates {
         uint256 validFrom;
         uint256 validUntil;
@@ -365,9 +370,8 @@ contract BosonTypes {
         Offer[] offers;
         OfferDates[] offerDates;
         OfferDurations[] offerDurations;
-        uint256[] disputeResolverIds;
+        DRParameters[] drParameters;
         uint256[] agentIds;
         uint256[] feeLimits;
-        address[] mutualizerAddresses;
     }
 }
