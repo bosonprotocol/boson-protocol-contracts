@@ -43,7 +43,7 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.9.6",
-    "@openzeppelin/contracts-upgradeable": "4.9.6"
+    "@openzeppelin/contracts-upgradeable": "5.3.0"
   },
   "devDependencies": {
     "@bosonprotocol/solidoc": "3.0.3",
