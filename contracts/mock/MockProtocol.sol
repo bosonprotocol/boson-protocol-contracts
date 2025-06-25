@@ -99,7 +99,14 @@ contract MockProtocol {
         uint256 exchangeId,
         uint256 disputeResolverId
     ) external {
-        IDRFeeMutualizer(mutualizer).requestDRFee(sellerId, offerId, feeAmount, tokenAddress, exchangeId, disputeResolverId);
+        IDRFeeMutualizer(mutualizer).requestDRFee(
+            sellerId,
+            offerId,
+            feeAmount,
+            tokenAddress,
+            exchangeId,
+            disputeResolverId
+        );
     }
 
     /**

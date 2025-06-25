@@ -690,7 +690,17 @@ describe("DRFeeMutualizer", function () {
         it("should revert when owner tries to void agreement with refundOnCancel false", async function () {
           const tx = await drFeeMutualizer
             .connect(owner)
-            .newAgreement(sellerId, offerId, 2, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, false, ZeroAddress);
+            .newAgreement(
+              sellerId,
+              offerId,
+              2,
+              TWO_ETHER,
+              TWENTY_ETHER,
+              THIRTY_DAYS,
+              ZERO_POINT_ONE_ETHER,
+              false,
+              ZeroAddress
+            );
           const receipt = await tx.wait();
           const agreementId = receipt.logs[0].args[0];
           await drFeeMutualizer.connect(seller).payPremium(agreementId, { value: ZERO_POINT_ONE_ETHER });
@@ -894,7 +904,13 @@ describe("DRFeeMutualizer", function () {
       });
 
       it("should return false when fee amount exceeds maxAmountPerTx", async function () {
-        const isCovered = await drFeeMutualizer.isSellerCovered(sellerId, offerId, THREE_ETHER, ZeroAddress, disputeResolverId);
+        const isCovered = await drFeeMutualizer.isSellerCovered(
+          sellerId,
+          offerId,
+          THREE_ETHER,
+          ZeroAddress,
+          disputeResolverId
+        );
         expect(isCovered).to.be.false;
       });
 
@@ -908,7 +924,13 @@ describe("DRFeeMutualizer", function () {
           1,
           disputeResolverId
         );
-        const isCovered = await drFeeMutualizer.isSellerCovered(sellerId, offerId, THREE_ETHER, ZeroAddress, disputeResolverId);
+        const isCovered = await drFeeMutualizer.isSellerCovered(
+          sellerId,
+          offerId,
+          THREE_ETHER,
+          ZeroAddress,
+          disputeResolverId
+        );
         expect(isCovered).to.be.false;
       });
 
@@ -966,7 +988,17 @@ describe("DRFeeMutualizer", function () {
       it("should check for 'any dispute resolver' agreement when specific one doesn't exist", async function () {
         await drFeeMutualizer
           .connect(owner)
-          .newAgreement(sellerId, offerId, 0, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress);
+          .newAgreement(
+            sellerId,
+            offerId,
+            0,
+            TWO_ETHER,
+            TWENTY_ETHER,
+            THIRTY_DAYS,
+            ZERO_POINT_ONE_ETHER,
+            true,
+            ZeroAddress
+          );
         await drFeeMutualizer.connect(seller).payPremium(2, { value: ZERO_POINT_ONE_ETHER });
         const isCovered = await drFeeMutualizer.isSellerCovered(
           sellerId,
@@ -1109,7 +1141,13 @@ describe("DRFeeMutualizer", function () {
 
       it("should return false when seller is not covered", async function () {
         const feeAmount = THREE_ETHER;
-        const isCovered = await drFeeMutualizer.isSellerCovered(sellerId, offerId, feeAmount, ZeroAddress, disputeResolverId);
+        const isCovered = await drFeeMutualizer.isSellerCovered(
+          sellerId,
+          offerId,
+          feeAmount,
+          ZeroAddress,
+          disputeResolverId
+        );
         expect(isCovered).to.be.false;
       });
 
@@ -1118,7 +1156,9 @@ describe("DRFeeMutualizer", function () {
           const feeAmount = ZERO_POINT_FIVE_ETHER;
           const exchangeId = EXCHANGE_ID_1;
           await expect(
-            drFeeMutualizer.connect(rando).requestDRFee(sellerId, offerId, feeAmount, ZeroAddress, exchangeId, disputeResolverId)
+            drFeeMutualizer
+              .connect(rando)
+              .requestDRFee(sellerId, offerId, feeAmount, ZeroAddress, exchangeId, disputeResolverId)
           ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.ONLY_PROTOCOL);
         });
 
@@ -1630,7 +1670,17 @@ describe("DRFeeMutualizer", function () {
       const offerId = 1;
       const tx = await drFeeMutualizer
         .connect(owner)
-        .newAgreement(sellerId, offerId, disputeResolverId, TWO_ETHER, TWENTY_ETHER, TWELVE_DAYS, ONE_ETHER, true, ZeroAddress);
+        .newAgreement(
+          sellerId,
+          offerId,
+          disputeResolverId,
+          TWO_ETHER,
+          TWENTY_ETHER,
+          TWELVE_DAYS,
+          ONE_ETHER,
+          true,
+          ZeroAddress
+        );
       const receipt = await tx.wait();
       const agreementId = receipt.logs[0].args[0];
 
@@ -1739,7 +1789,13 @@ describe("DRFeeMutualizer", function () {
       const agreement2 = await drFeeMutualizer.getAgreement(agreementId);
       expect(agreement2.totalMutualized).to.equal(TWO_ETHER);
 
-      const isCovered = await drFeeMutualizer.isSellerCovered(sellerId, offerId, ONE_ETHER, ZeroAddress, disputeResolverId);
+      const isCovered = await drFeeMutualizer.isSellerCovered(
+        sellerId,
+        offerId,
+        ONE_ETHER,
+        ZeroAddress,
+        disputeResolverId
+      );
       expect(isCovered).to.be.false;
     });
   });
