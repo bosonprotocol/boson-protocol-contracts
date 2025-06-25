@@ -1502,6 +1502,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
             // Request DR fee from mutualizer
             bool success = IDRFeeMutualizer(mutualizer).requestDRFee(
                 _offer.sellerId,
+                _offer.id,
                 _drFeeAmount,
                 exchangeToken,
                 _exchangeId,

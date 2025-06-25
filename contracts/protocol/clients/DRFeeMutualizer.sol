@@ -16,8 +16,10 @@ import { BosonErrors } from "../../domain/BosonErrors.sol";
 
 /**
  * @title DRFeeMutualizer
- * @notice Reference implementation of DR Fee Mutualizer with agreement management and meta-transaction support
- * @dev This contract provides dispute resolver fee mutualization with configurable agreements
+ * @notice Reference implementation of DR Fee Mutualizer with offer-based agreement management and meta-transaction support
+ * @dev This contract provides dispute resolver fee mutualization with configurable agreements per offer.
+ *      Each offer can have its own agreement with a dispute resolver, allowing for granular control over
+ *      fee mutualization. Universal agreements can be created by setting disputeResolverId=0 (covers all dispute resolvers for that offer).
  */
 contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, Ownable {
     using SafeERC20 for IERC20;
@@ -77,7 +79,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         uint256 returnedAmount
     );
 
-    event AgreementCreated(uint256 indexed agreementId, uint256 indexed sellerId, uint256 indexed disputeResolverId);
+    event AgreementCreated(uint256 agreementId, uint256 indexed sellerId, uint256 indexed offerId, uint256 indexed disputeResolverId);
 
     event AgreementActivated(uint256 indexed agreementId, uint256 indexed sellerId);
 
@@ -89,8 +91,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
     mapping(address => uint256) public poolBalances; // tokenAddress => balance
     mapping(uint256 => FeeInfo) public feeInfoByExchange;
 
-    // Agreement management
-    mapping(uint256 => mapping(uint256 => uint256)) public sellerToDisputeResolverToAgreement; // sellerId => disputeResolverId => agreementId
+    mapping(uint256 => mapping(uint256 => mapping(uint256 => uint256))) public sellerToOfferToDisputeResolverToAgreement; // sellerId => offerId => disputeResolverId => agreementId
     Agreement[] private agreements;
     bool public depositRestrictedToOwner;
 
@@ -131,23 +132,26 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
     /**
      * @notice Checks if a seller is covered for a specific DR fee
      * @param _sellerId The seller ID
+     * @param _offerId The offer ID
      * @param _feeAmount The fee amount to cover
      * @param _tokenAddress The token address (address(0) for native currency)
      * @param _disputeResolverId The dispute resolver ID (0 for universal agreement covering all dispute resolvers)
      * @return bool True if the seller is covered, false otherwise
-     * @dev Checks for both specific dispute resolver agreements and universal agreements (disputeResolverId = 0)
+     * @dev Checks for both specific dispute resolver agreements and universal agreements (disputeResolverId = 0).
+     *      Agreements are offer-specific, so the offerId must match the agreement's offerId.
      */
     function isSellerCovered(
         uint256 _sellerId,
+        uint256 _offerId,
         uint256 _feeAmount,
         address _tokenAddress,
         uint256 _disputeResolverId
     ) public view override returns (bool) {
         // Check if agreement exists and is valid
-        uint256 agreementId = sellerToDisputeResolverToAgreement[_sellerId][_disputeResolverId];
+        uint256 agreementId = sellerToOfferToDisputeResolverToAgreement[_sellerId][_offerId][_disputeResolverId];
         if (agreementId == 0 && _disputeResolverId != 0) {
             // If no specific agreement exists, check for "any dispute resolver" agreement
-            agreementId = sellerToDisputeResolverToAgreement[_sellerId][0];
+            agreementId = sellerToOfferToDisputeResolverToAgreement[_sellerId][_offerId][0];
         }
         if (agreementId == 0) return false;
 
@@ -167,6 +171,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
     /**
      * @notice Requests a DR fee for a seller
      * @param _sellerId The seller ID
+     * @param _offerId The offer ID
      * @param _feeAmount The fee amount to cover
      * @param _tokenAddress The token address (address(0) for native currency)
      * @param _exchangeId The exchange ID
@@ -182,20 +187,21 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
      */
     function requestDRFee(
         uint256 _sellerId,
+        uint256 _offerId,
         uint256 _feeAmount,
         address _tokenAddress,
         uint256 _exchangeId,
         uint256 _disputeResolverId
     ) external override onlyProtocol nonReentrant returns (bool success) {
         if (_feeAmount == 0) revert InvalidAmount();
-        if (!isSellerCovered(_sellerId, _feeAmount, _tokenAddress, _disputeResolverId)) {
+        if (!isSellerCovered(_sellerId, _offerId, _feeAmount, _tokenAddress, _disputeResolverId)) {
             return false;
         }
 
-        uint256 agreementId = sellerToDisputeResolverToAgreement[_sellerId][_disputeResolverId];
+        uint256 agreementId = sellerToOfferToDisputeResolverToAgreement[_sellerId][_offerId][_disputeResolverId];
         if (agreementId == 0 && _disputeResolverId != 0) {
             // If no specific agreement exists, check for "any dispute resolver" agreement
-            agreementId = sellerToDisputeResolverToAgreement[_sellerId][0];
+            agreementId = sellerToOfferToDisputeResolverToAgreement[_sellerId][_offerId][0];
         }
         Agreement storage agreement = agreements[agreementId];
 
@@ -307,6 +313,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
     /**
      * @notice Creates a new agreement between seller and dispute resolver
      * @param _sellerId The seller ID
+     * @param _offerId The offer ID
      * @param _disputeResolverId The dispute resolver ID (0 for "any dispute resolver" i.e. universal agreement)
      * @param _maxAmountPerTx The maximum mutualized amount per transaction
      * @param _maxAmountTotal The maximum total mutualized amount
@@ -315,7 +322,9 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
      * @param _refundOnCancel Whether premium is refunded on cancellation
      * @param _tokenAddress The token address for the agreement (address(0) for native currency)
      * @return agreementId The ID of the created agreement
-     * @dev Only callable by the contract owner. Prevents duplicate active agreements for the same dispute resolver.
+     * @dev Only callable by the contract owner. Prevents duplicate active agreements for the same offer and dispute resolver.
+     *      Agreements are offer-specific: each offer can have its own agreement with a dispute resolver.
+     *      Universal agreements can be created by setting disputeResolverId=0 (covers all dispute resolvers for that offer).
      *
      * Reverts if:
      * - Caller is not owner
@@ -323,10 +332,11 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
      * - maxAmountPerTx is 0
      * - maxAmountTotal < maxAmountPerTx
      * - timePeriod is 0
-     * - Active agreement exists for same dispute resolver
+     * - Active agreement exists for same offer and dispute resolver
      */
     function newAgreement(
         uint256 _sellerId,
+        uint256 _offerId,
         uint256 _disputeResolverId,
         uint256 _maxAmountPerTx,
         uint256 _maxAmountTotal,
@@ -340,7 +350,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         if (_maxAmountTotal < _maxAmountPerTx) revert MaxTotalMustBeGreaterThanOrEqualToMaxPerTx();
         if (_timePeriod == 0) revert TimePeriodMustBeGreaterThanZero();
 
-        uint256 existingAgreementId = sellerToDisputeResolverToAgreement[_sellerId][_disputeResolverId];
+        uint256 existingAgreementId = sellerToOfferToDisputeResolverToAgreement[_sellerId][_offerId][_disputeResolverId];
         if (existingAgreementId != 0) {
             Agreement storage existingAgreement = agreements[existingAgreementId];
             if (
@@ -369,9 +379,9 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
             })
         );
 
-        sellerToDisputeResolverToAgreement[_sellerId][_disputeResolverId] = agreementId;
+        sellerToOfferToDisputeResolverToAgreement[_sellerId][_offerId][_disputeResolverId] = agreementId;
 
-        emit AgreementCreated(agreementId, _sellerId, _disputeResolverId);
+        emit AgreementCreated(agreementId, _sellerId, _offerId, _disputeResolverId);
     }
 
     /**
@@ -497,17 +507,19 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
     }
 
     /**
-     * @notice Gets agreement ID for a seller and dispute resolver
+     * @notice Gets agreement ID for a seller, offer and dispute resolver
      * @param _sellerId The seller ID
+     * @param _offerId The offer ID
      * @param _disputeResolverId The dispute resolver ID (0 for universal agreement)
      * @return agreementId The ID of the agreement (0 if not found)
-     * @dev Checks for both specific dispute resolver agreements and universal agreements (disputeResolverId = 0)
+     * @dev Checks for both specific dispute resolver agreements and universal agreements (disputeResolverId = 0).
+     *      Agreements are offer-specific, so the offerId must match the agreement's offerId.
      */
-    function getAgreementId(uint256 _sellerId, uint256 _disputeResolverId) external view returns (uint256) {
-        uint256 agreementId = sellerToDisputeResolverToAgreement[_sellerId][_disputeResolverId];
+    function getAgreementId(uint256 _sellerId, uint256 _offerId, uint256 _disputeResolverId) external view returns (uint256) {
+        uint256 agreementId = sellerToOfferToDisputeResolverToAgreement[_sellerId][_offerId][_disputeResolverId];
         if (agreementId == 0 && _disputeResolverId != 0) {
             // If no specific agreement exists, check for "any dispute resolver" agreement
-            agreementId = sellerToDisputeResolverToAgreement[_sellerId][0];
+            agreementId = sellerToOfferToDisputeResolverToAgreement[_sellerId][_offerId][0];
         }
         return agreementId;
     }

@@ -93,12 +93,13 @@ contract MockProtocol {
     function callRequestDRFee(
         address mutualizer,
         uint256 sellerId,
+        uint256 offerId,
         uint256 feeAmount,
         address tokenAddress,
         uint256 exchangeId,
         uint256 disputeResolverId
     ) external {
-        IDRFeeMutualizer(mutualizer).requestDRFee(sellerId, feeAmount, tokenAddress, exchangeId, disputeResolverId);
+        IDRFeeMutualizer(mutualizer).requestDRFee(sellerId, offerId, feeAmount, tokenAddress, exchangeId, disputeResolverId);
     }
 
     /**
