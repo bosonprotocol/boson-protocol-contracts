@@ -1,4 +1,4 @@
-const { bigNumberIsValid } = require("../util/validations.js");
+const { bigNumberIsValid, addressIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: DisputeResolutionTerms
@@ -12,14 +12,16 @@ class DisputeResolutionTerms {
       uint256 escalationResponsePeriod;
       uint256 feeAmount;
       uint256 buyerEscalationDeposit;
+      address payable mutualizerAddress;
     }
   */
 
-  constructor(disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit) {
+  constructor(disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit, mutualizerAddress) {
     this.disputeResolverId = disputeResolverId;
     this.escalationResponsePeriod = escalationResponsePeriod;
     this.feeAmount = feeAmount;
     this.buyerEscalationDeposit = buyerEscalationDeposit;
+    this.mutualizerAddress = mutualizerAddress;
   }
 
   /**
@@ -28,8 +30,8 @@ class DisputeResolutionTerms {
    * @returns {DisputeResolutionTerms}
    */
   static fromObject(o) {
-    const { disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit } = o;
-    return new DisputeResolutionTerms(disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit);
+    const { disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit, mutualizerAddress } = o;
+    return new DisputeResolutionTerms(disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit, mutualizerAddress);
   }
 
   /**
@@ -38,16 +40,17 @@ class DisputeResolutionTerms {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit;
+    let disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit, mutualizerAddress;
 
     // destructure struct
-    [disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit] = struct;
+    [disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit, mutualizerAddress] = struct;
 
     return DisputeResolutionTerms.fromObject({
       disputeResolverId: disputeResolverId.toString(),
       escalationResponsePeriod: escalationResponsePeriod.toString(),
       feeAmount: feeAmount.toString(),
       buyerEscalationDeposit: buyerEscalationDeposit.toString(),
+      mutualizerAddress: mutualizerAddress.toString(),
     });
   }
 
@@ -72,7 +75,7 @@ class DisputeResolutionTerms {
    * @returns {string}
    */
   toStruct() {
-    return [this.disputeResolverId, this.escalationResponsePeriod, this.feeAmount, this.buyerEscalationDeposit];
+    return [this.disputeResolverId, this.escalationResponsePeriod, this.feeAmount, this.buyerEscalationDeposit, this.mutualizerAddress];
   }
 
   /**
@@ -121,6 +124,15 @@ class DisputeResolutionTerms {
   }
 
   /**
+   * Is this DisputeResolutionTerms instance's mutualizerAddress field valid?
+   * If present, must be a string representation of an address
+   * @returns {boolean}
+   */
+  mutualizerAddressIsValid() {
+    return addressIsValid(this.mutualizerAddress);
+  }
+
+  /**
    * Is this DisputeResolutionTerms instance valid?
    * @returns {boolean}
    */
@@ -129,7 +141,8 @@ class DisputeResolutionTerms {
       this.disputeResolverIdIsValid() &&
       this.escalationResponsePeriodIsValid() &&
       this.feeAmountIsValid() &&
-      this.buyerEscalationDepositIsValid()
+      this.buyerEscalationDepositIsValid() &&
+      this.mutualizerAddressIsValid()
     );
   }
 }

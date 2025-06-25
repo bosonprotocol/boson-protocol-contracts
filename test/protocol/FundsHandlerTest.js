@@ -91,7 +91,7 @@ describe("IBosonFundsHandler", function () {
     expectedRoyaltyRecipientsAvailableFunds;
   let tokenListSeller, tokenListBuyer, tokenAmountsSeller, tokenAmountsBuyer, tokenList, tokenAmounts;
   let tx, txReceipt, txCost, event;
-  let disputeResolverFees, disputeResolver, disputeResolverId;
+  let disputeResolverFees, disputeResolver, drParams;
   let buyerPercentBasisPoints;
   let resolutionType, customSignatureType, message, r, s, v;
   let disputedDate, escalatedDate, timeout;
@@ -485,7 +485,7 @@ describe("IBosonFundsHandler", function () {
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
         // Mock offer
-        const { offer, offerDates, offerDurations, disputeResolverId, offerFees } = await mockOffer();
+        const { offer, offerDates, offerDurations, drParams, offerFees } = await mockOffer();
         offer.quantityAvailable = "2";
         offer.id = "0";
         offerNative = offer;
@@ -507,12 +507,12 @@ describe("IBosonFundsHandler", function () {
 
         offerNative.id = await offerHandler
           .connect(assistant)
-          .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+          .createOffer(offerNative, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
             getOfferId: true,
           });
         offerToken.id = await offerHandler
           .connect(assistant)
-          .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+          .createOffer(offerToken, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
             getOfferId: true,
           });
 
@@ -785,7 +785,7 @@ describe("IBosonFundsHandler", function () {
               await accountHandler.connect(rando).createAgent(agent);
 
               // Mock offer
-              const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+              const { offer, offerDates, offerDurations, drParams } = await mockOffer();
               agentOffer = offer.clone();
               agentOffer.id = "0";
               exchangeId = "3";
@@ -794,7 +794,7 @@ describe("IBosonFundsHandler", function () {
               // Create offer with agent
               agentOffer.id = await offerHandler
                 .connect(assistant)
-                .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+                .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                   getOfferId: true,
                 });
 
@@ -1855,24 +1855,24 @@ describe("IBosonFundsHandler", function () {
       offerDurations = mo.offerDurations;
       expect(offerDurations.isValid()).is.true;
 
-      disputeResolverId = mo.disputeResolverId;
+      drParams = mo.drParams;
 
       agentId = "0"; // agent id is optional while creating an offer
       offerFeeLimit = MaxUint256;
       // Create both offers
       offerNative.id = await offerHandler
         .connect(assistant)
-        .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+        .createOffer(offerNative, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
           getOfferId: true,
         });
       offerToken.id = await offerHandler
         .connect(assistant)
-        .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+        .createOffer(offerToken, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
           getOfferId: true,
         });
       offerPriceDiscovery.id = await offerHandler
         .connect(assistant)
-        .createOffer(offerPriceDiscovery, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+        .createOffer(offerPriceDiscovery, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
           getOfferId: true,
         });
       expect(offerNative.isValid()).is.true;
@@ -2282,7 +2282,7 @@ describe("IBosonFundsHandler", function () {
             ]);
           offerToken.id = await offerHandler
             .connect(assistant)
-            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+            .createOffer(offerToken, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
               getOfferId: true,
             });
 
@@ -2305,7 +2305,7 @@ describe("IBosonFundsHandler", function () {
 
           offerToken.id = await offerHandler
             .connect(assistant)
-            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+            .createOffer(offerToken, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
               getOfferId: true,
             });
 
@@ -2338,7 +2338,7 @@ describe("IBosonFundsHandler", function () {
 
           offerToken.id = await offerHandler
             .connect(assistant)
-            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+            .createOffer(offerToken, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
               getOfferId: true,
             });
 
@@ -2352,7 +2352,7 @@ describe("IBosonFundsHandler", function () {
 
           offerNative.id = await offerHandler
             .connect(assistant)
-            .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+            .createOffer(offerNative, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
               getOfferId: true,
             });
 
@@ -2410,7 +2410,7 @@ describe("IBosonFundsHandler", function () {
           DRFee = parseUnits("0", "ether").toString();
           await accountHandler
             .connect(adminDR)
-            .addFeesToDisputeResolver(disputeResolverId, [
+            .addFeesToDisputeResolver(drParams.disputeResolverId, [
               new DisputeResolverFee(await Foreign20WithFee.getAddress(), "Foreign20WithFee", DRFee),
             ]);
 
@@ -2422,7 +2422,7 @@ describe("IBosonFundsHandler", function () {
           // Create a new offer
           offerToken.id = await offerHandler
             .connect(assistant)
-            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+            .createOffer(offerToken, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
               getOfferId: true,
             });
 
@@ -2558,7 +2558,7 @@ describe("IBosonFundsHandler", function () {
             // Create Agent offer
             agentOffer.id = await offerHandler
               .connect(assistant)
-              .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+              .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                 getOfferId: true,
               });
 
@@ -2752,7 +2752,7 @@ describe("IBosonFundsHandler", function () {
             // Create Agent offer
             agentOffer.id = await offerHandler
               .connect(assistant)
-              .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+              .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                 getOfferId: true,
               });
 
@@ -2935,7 +2935,7 @@ describe("IBosonFundsHandler", function () {
             // Create Agent offer
             agentOffer.id = await offerHandler
               .connect(assistant)
-              .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+              .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                 getOfferId: true,
               });
 
@@ -3146,7 +3146,7 @@ describe("IBosonFundsHandler", function () {
               exchangeId = "2";
               agentOffer.id = await offerHandler
                 .connect(assistant)
-                .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+                .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                   getOfferId: true,
                 });
               await exchangeHandler
@@ -3321,7 +3321,7 @@ describe("IBosonFundsHandler", function () {
               // Create Agent offer
               agentOffer.id = await offerHandler
                 .connect(assistant)
-                .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+                .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                   getOfferId: true,
                 });
 
@@ -3544,7 +3544,7 @@ describe("IBosonFundsHandler", function () {
               // Create Agent offer
               agentOffer.id = await offerHandler
                 .connect(assistant)
-                .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+                .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                   getOfferId: true,
                 });
 
@@ -3772,7 +3772,7 @@ describe("IBosonFundsHandler", function () {
               exchangeId = "2";
               agentOffer.id = await offerHandler
                 .connect(assistant)
-                .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+                .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                   getOfferId: true,
                 });
 
@@ -3962,7 +3962,7 @@ describe("IBosonFundsHandler", function () {
               // Create Agent offer
               agentOffer.id = await offerHandler
                 .connect(assistant)
-                .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+                .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                   getOfferId: true,
                 });
 
@@ -4174,7 +4174,7 @@ describe("IBosonFundsHandler", function () {
               // Create Agent offer
               agentOffer.id = await offerHandler
                 .connect(assistant)
-                .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+                .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                   getOfferId: true,
                 });
 
@@ -4362,7 +4362,7 @@ describe("IBosonFundsHandler", function () {
                 // Create Agent offer
                 agentOffer.id = await offerHandler
                   .connect(assistant)
-                  .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+                  .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                     getOfferId: true,
                   });
 
@@ -4559,7 +4559,7 @@ describe("IBosonFundsHandler", function () {
                 // Create Agent offer
                 agentOffer.id = await offerHandler
                   .connect(assistant)
-                  .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+                  .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                     getOfferId: true,
                   });
 
@@ -4737,7 +4737,7 @@ describe("IBosonFundsHandler", function () {
             // Create Agent Offer before setting new protocol fee as 3%
             agentOffer.id = await offerHandler
               .connect(assistant)
-              .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+              .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                 getOfferId: true,
               });
 
@@ -4949,7 +4949,7 @@ describe("IBosonFundsHandler", function () {
 
                 offer.id = await offerHandler
                   .connect(assistant)
-                  .createOffer(offer, offerDates, offerDurations, disputeResolverId, 0, offerFeeLimit, {
+                  .createOffer(offer, offerDates, offerDurations, drParams, 0, offerFeeLimit, {
                     getOfferId: true,
                   });
 
@@ -5710,7 +5710,7 @@ describe("IBosonFundsHandler", function () {
 
               offer.id = await offerHandler
                 .connect(assistant)
-                .createOffer(offer, offerDates, offerDurations, disputeResolverId, 0, offerFeeLimit, {
+                .createOffer(offer, offerDates, offerDurations, drParams, 0, offerFeeLimit, {
                   getOfferId: true,
                 });
 

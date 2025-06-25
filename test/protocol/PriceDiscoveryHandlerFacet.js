@@ -54,7 +54,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
     configHandler,
     priceDiscoveryHandler;
   let bosonVoucherClone;
-  let offerId, seller, disputeResolverId;
+  let offerId, seller ;
   let block, tx;
   let support;
   let price, sellerPool;
@@ -63,7 +63,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
   let protocolFeePercentage;
   let voucher;
   let exchange;
-  let disputeResolver, disputeResolverFees;
+  let drParams, disputeResolverFees;
   let expectedCloneAddress;
   let voucherInitValues;
   let emptyAuthToken;
@@ -199,7 +199,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
       expectedCloneAddress = calculateCloneAddress(protocolDiamondAddress, beaconProxyAddress, admin.address);
 
       // Create a valid dispute resolver
-      disputeResolver = mockDisputeResolver(
+      const disputeResolver = mockDisputeResolver(
         assistantDR.address,
         adminDR.address,
         ZeroAddress,
@@ -221,7 +221,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
       // Create the offer
       const mo = await mockOffer();
-      ({ offerDates, offerDurations } = mo);
+      ({ offerDates, offerDurations, drParams } = mo);
       offer = mo.offer;
       offer.priceType = PriceType.Discovery;
       offer.price = "0";
@@ -230,7 +230,6 @@ describe("IPriceDiscoveryHandlerFacet", function () {
       offerFees.protocolFee = applyPercentage(offer.price, protocolFeePercentage);
 
       offer.quantityAvailable = "10";
-      disputeResolverId = mo.disputeResolverId;
 
       offerDurations.voucherValid = (oneMonth * 12n).toString();
 
@@ -242,7 +241,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
       // Create the offer, reserve range and premint vouchers
       await offerHandler
         .connect(assistant)
-        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+        .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
       await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
       bosonVoucher = await getContractAt("BosonVoucher", expectedCloneAddress);
       await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
@@ -582,7 +581,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             let tokenId = deriveTokenId(offer.id, exchangeId);
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+              .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
             await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
             await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
 
@@ -726,7 +725,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             newOffer.id = "2";
             await offerHandler
               .connect(assistant)
-              .createOffer(newOffer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+              .createOffer(newOffer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
             await offerHandler
               .connect(assistant)
               .reserveRange(newOffer.id, newOffer.quantityAvailable, assistant.address);
@@ -1017,7 +1016,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             let tokenId = deriveTokenId(offer.id, exchangeId);
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+              .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
             await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, assistant.address);
             await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
 

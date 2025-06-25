@@ -87,7 +87,6 @@ exports.RevertReasons = {
   INEXISTENT_DISPUTE_RESOLVER_FEES: "InexistentDisputeResolverFees",
   DUPLICATE_DISPUTE_RESOLVER_FEES: "DuplicateDisputeResolverFees",
   DISPUTE_RESOLVER_FEE_NOT_FOUND: "DisputeResolverFeeNotFound",
-  FEE_AMOUNT_NOT_YET_SUPPORTED: "FeeAmountNotYetSupported",
   INVALID_AUTH_TOKEN_TYPE: "InvalidAuthTokenType",
   ADMIN_OR_AUTH_TOKEN: "AdminOrAuthToken",
   AUTH_TOKEN_MUST_BE_UNIQUE: "AuthTokenMustBeUnique",

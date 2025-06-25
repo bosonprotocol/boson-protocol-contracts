@@ -1,6 +1,7 @@
 const { expect } = require("chai");
-const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
 const { oneMonth } = require("../util/constants");
+const { ZeroAddress } = require("ethers");
+const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
 
 /**
  *  Test the DisputeResolutionTerms domain entity
@@ -24,7 +25,8 @@ describe("DisputeResolutionTerms", function () {
         disputeResolverId,
         escalationResponsePeriod,
         feeAmount,
-        buyerEscalationDeposit
+        buyerEscalationDeposit,
+        ZeroAddress
       );
       expect(disputeResolutionTerms.disputeResolverIdIsValid()).is.true;
       expect(disputeResolutionTerms.escalationResponsePeriodIsValid()).is.true;
@@ -41,7 +43,8 @@ describe("DisputeResolutionTerms", function () {
         disputeResolverId,
         escalationResponsePeriod,
         feeAmount,
-        buyerEscalationDeposit
+        buyerEscalationDeposit,
+        ZeroAddress
       );
       expect(disputeResolutionTerms.isValid()).is.true;
     });
@@ -147,7 +150,8 @@ describe("DisputeResolutionTerms", function () {
         disputeResolverId,
         escalationResponsePeriod,
         feeAmount,
-        buyerEscalationDeposit
+        buyerEscalationDeposit,
+        ZeroAddress
       );
       expect(disputeResolutionTerms.isValid()).is.true;
 
@@ -157,10 +161,11 @@ describe("DisputeResolutionTerms", function () {
         escalationResponsePeriod,
         feeAmount,
         buyerEscalationDeposit,
+        mutualizerAddress: ZeroAddress
       };
 
       // Struct representation
-      struct = [disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit];
+      struct = [disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit, ZeroAddress];
     });
 
     context("👉 Static", async function () {

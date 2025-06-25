@@ -287,7 +287,8 @@ describe("IBosonOrchestrationHandler", function () {
         disputeResolver.id,
         disputeResolver.escalationResponsePeriod,
         DRFeeNative,
-        applyPercentage(DRFeeNative, buyerEscalationDepositPercentage)
+        applyPercentage(DRFeeNative, buyerEscalationDepositPercentage),
+        ZeroAddress
       );
       disputeResolutionTermsStruct = disputeResolutionTerms.toStruct();
 
@@ -326,7 +327,10 @@ describe("IBosonOrchestrationHandler", function () {
         // create an offer with erc20 exchange token
         await offerHandler
           .connect(assistant)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+          .createOffer(offer, offerDates, offerDurations, {
+            disputeResolverId: disputeResolverId,
+            mutualizerAddress: ZeroAddress
+          }, agentId, offerFeeLimit);
 
         // mint tokens to buyer and approve the protocol
         buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
@@ -349,7 +353,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             emptyAuthToken,
             voucherInitValues,
             agentId,
@@ -615,7 +622,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             emptyAuthToken,
             voucherInitValues,
             agentId,
@@ -681,7 +691,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             authToken,
             voucherInitValues,
             agentId,
@@ -749,7 +762,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             emptyAuthToken,
             voucherInitValues,
             agentId,
@@ -771,7 +787,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             authToken,
             voucherInitValues,
             agentId,
@@ -865,7 +884,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             authToken,
             voucherInitValues,
             agentId,
@@ -932,7 +954,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             authToken,
             voucherInitValues,
             agentId,
@@ -996,7 +1021,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             emptyAuthToken,
             voucherInitValues,
             agentId,
@@ -1057,7 +1085,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               emptyAuthToken,
               voucherInitValues,
               agentId,
@@ -1091,7 +1122,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               emptyAuthToken,
               voucherInitValues,
               agentId,
@@ -1119,7 +1153,8 @@ describe("IBosonOrchestrationHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeToken,
-          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+          ZeroAddress
         ).toStruct();
         offerFees.protocolFee = protocolFeeFlatBoson;
         offerFeesStruct = offerFees.toStruct();
@@ -1133,7 +1168,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               emptyAuthToken,
               voucherInitValues,
               agentId,
@@ -1158,7 +1196,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offerFees.protocolFee = "0";
         disputeResolver.id = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0", "0", ZeroAddress).toStruct();
         offerFeesStruct = offerFees.toStruct();
 
         // Create a seller and an offer, testing for the event
@@ -1170,7 +1208,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               emptyAuthToken,
               voucherInitValues,
               agentId,
@@ -1204,7 +1245,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               emptyAuthToken,
               voucherInitValues,
               agentId,
@@ -1235,7 +1279,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               emptyAuthToken,
               voucherInitValues,
               agentId,
@@ -1265,7 +1312,8 @@ describe("IBosonOrchestrationHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeToken,
-          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+          ZeroAddress
         ).toStruct();
         offerFees.protocolFee = protocolFeeFlatBoson;
         offerFeesStruct = offerFees.toStruct();
@@ -1279,7 +1327,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               emptyAuthToken,
               voucherInitValues,
               agentId,
@@ -1313,7 +1364,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               emptyAuthToken,
               voucherInitValues,
               agentId,
@@ -1366,7 +1420,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               premintParameters,
               authToken,
               voucherInitValues,
@@ -1446,7 +1503,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               premintParameters,
               authToken,
               voucherInitValues,
@@ -1547,7 +1607,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -1571,7 +1634,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -1595,7 +1661,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -1621,7 +1690,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 premintParameters,
                 emptyAuthToken,
                 voucherInitValues,
@@ -1645,7 +1717,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -1668,7 +1743,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -1689,7 +1767,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -1711,7 +1792,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 authToken,
                 voucherInitValues,
                 agentId,
@@ -1732,7 +1816,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -1755,7 +1842,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -1774,7 +1864,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 authToken,
                 voucherInitValues,
                 agentId,
@@ -1795,7 +1888,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -1820,7 +1916,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 authToken,
                 voucherInitValues,
                 agentId,
@@ -1843,7 +1942,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -1869,7 +1971,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -1891,7 +1996,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -1913,7 +2021,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -1936,7 +2047,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -1959,7 +2073,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -1982,7 +2099,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -2006,7 +2126,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -2028,7 +2151,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -2050,7 +2176,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -2072,7 +2201,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -2094,7 +2226,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -2116,7 +2251,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -2150,7 +2288,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -2173,7 +2314,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -2211,7 +2355,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -2243,7 +2390,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -2265,7 +2415,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -2288,7 +2441,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 premintParameters,
                 emptyAuthToken,
                 voucherInitValues,
@@ -2312,7 +2468,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 premintParameters,
                 emptyAuthToken,
                 voucherInitValues,
@@ -2336,7 +2495,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 premintParameters,
                 emptyAuthToken,
                 voucherInitValues,
@@ -2359,7 +2521,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -2401,7 +2566,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               emptyAuthToken,
               voucherInitValues,
               agentId,
@@ -2450,7 +2618,10 @@ describe("IBosonOrchestrationHandler", function () {
                   offer,
                   offerDates,
                   offerDurations,
-                  disputeResolver.id,
+                  {
+                    disputeResolverId: disputeResolver.id,
+                    mutualizerAddress: ZeroAddress
+                  },
                   authToken,
                   voucherInitValues,
                   agentId,
@@ -2484,7 +2655,10 @@ describe("IBosonOrchestrationHandler", function () {
                   offer,
                   offerDates,
                   offerDurations,
-                  disputeResolver.id,
+                  {
+                    disputeResolverId: disputeResolver.id,
+                    mutualizerAddress: ZeroAddress
+                  },
                   emptyAuthToken,
                   voucherInitValues,
                   agent.id,
@@ -2506,7 +2680,10 @@ describe("IBosonOrchestrationHandler", function () {
                   offer,
                   offerDates,
                   offerDurations,
-                  disputeResolver.id,
+                  {
+                    disputeResolverId: disputeResolver.id,
+                    mutualizerAddress: ZeroAddress
+                  },
                   emptyAuthToken,
                   voucherInitValues,
                   agent.id,
@@ -2555,7 +2732,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             condition,
             agentId,
             offerFeeLimit
@@ -2599,7 +2779,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             condition,
             agentId,
             offerFeeLimit
@@ -2660,7 +2843,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             condition,
             agentId,
             offerFeeLimit
@@ -2706,7 +2892,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             condition,
             agentId,
             offerFeeLimit
@@ -2748,7 +2937,8 @@ describe("IBosonOrchestrationHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeToken,
-          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+          ZeroAddress
         ).toStruct();
         offerFees.protocolFee = protocolFeeFlatBoson;
         offerFeesStruct = offerFees.toStruct();
@@ -2761,7 +2951,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               condition,
               agentId,
               offerFeeLimit
@@ -2785,7 +2978,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offerFees.protocolFee = "0";
         disputeResolver.id = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0", "0", ZeroAddress).toStruct();
         offerFeesStruct = offerFees.toStruct();
 
         // Create an offer with condition, testing for the events
@@ -2796,7 +2989,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               condition,
               agentId,
               offerFeeLimit
@@ -2828,7 +3024,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               condition,
               agentId,
               offerFeeLimit
@@ -2857,7 +3056,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               condition,
               agentId,
               offerFeeLimit
@@ -2883,7 +3085,8 @@ describe("IBosonOrchestrationHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeToken,
-          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+          ZeroAddress
         ).toStruct();
         offerFees.protocolFee = protocolFeeFlatBoson;
         offerFeesStruct = offerFees.toStruct();
@@ -2896,7 +3099,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               condition,
               agentId,
               offerFeeLimit
@@ -2929,7 +3135,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               condition,
               agentId,
               offerFeeLimit
@@ -2956,7 +3165,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               condition,
               agentId,
               offerFeeLimit
@@ -3002,7 +3214,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               condition,
               agentId,
               offerFeeLimit
@@ -3076,7 +3291,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               premintParameters,
               condition,
               agentId,
@@ -3140,7 +3358,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               premintParameters,
               condition,
               agentId,
@@ -3216,7 +3437,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 emptyAuthToken,
                 voucherInitValues,
                 agentId,
@@ -3239,7 +3463,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 condition,
                 agentId,
                 offerFeeLimit
@@ -3268,7 +3495,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 premintParameters,
                 condition,
                 agentId,
@@ -3291,7 +3521,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 condition,
                 agentId,
                 offerFeeLimit
@@ -3310,7 +3543,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 condition,
                 agentId,
                 offerFeeLimit
@@ -3329,7 +3565,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 condition,
                 agentId,
                 offerFeeLimit
@@ -3349,7 +3588,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 condition,
                 agentId,
                 offerFeeLimit
@@ -3369,7 +3611,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 condition,
                 agentId,
                 offerFeeLimit
@@ -3402,7 +3647,10 @@ describe("IBosonOrchestrationHandler", function () {
                   offer,
                   offerDates,
                   offerDurations,
-                  disputeResolver.id,
+                  {
+                    disputeResolverId: disputeResolver.id,
+                    mutualizerAddress: ZeroAddress
+                  },
                   condition,
                   agentId,
                   offerFeeLimit
@@ -3422,7 +3670,10 @@ describe("IBosonOrchestrationHandler", function () {
                   offer,
                   offerDates,
                   offerDurations,
-                  disputeResolver.id,
+                  {
+                    disputeResolverId: disputeResolver.id,
+                    mutualizerAddress: ZeroAddress
+                  },
                   condition,
                   agentId,
                   offerFeeLimit
@@ -3442,7 +3693,10 @@ describe("IBosonOrchestrationHandler", function () {
                   offer,
                   offerDates,
                   offerDurations,
-                  disputeResolver.id,
+                  {
+                    disputeResolverId: disputeResolver.id,
+                    mutualizerAddress: ZeroAddress
+                  },
                   condition,
                   agentId,
                   offerFeeLimit
@@ -3486,7 +3740,10 @@ describe("IBosonOrchestrationHandler", function () {
           // Create the offer
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit);
+            .createOffer(offer, offerDates, offerDurations, {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            }, agentId, offerFeeLimit);
 
           nextOfferId++;
         }
@@ -3532,7 +3789,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             nextGroupId,
             agentId,
             offerFeeLimit
@@ -3575,7 +3835,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             nextGroupId,
             agentId,
             offerFeeLimit
@@ -3636,7 +3899,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             nextGroupId,
             agentId,
             offerFeeLimit
@@ -3682,7 +3948,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             nextGroupId,
             agentId,
             offerFeeLimit
@@ -3724,7 +3993,8 @@ describe("IBosonOrchestrationHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeToken,
-          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+          ZeroAddress
         ).toStruct();
         offerFees.protocolFee = protocolFeeFlatBoson;
         offerFeesStruct = offerFees.toStruct();
@@ -3737,7 +4007,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               nextGroupId,
               agentId,
               offerFeeLimit
@@ -3761,7 +4034,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offerFees.protocolFee = "0";
         disputeResolver.id = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0", "0", ZeroAddress).toStruct();
         offerFeesStruct = offerFees.toStruct();
 
         // Create an offer, add it to the group, testing for the events
@@ -3772,7 +4045,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               nextGroupId,
               agentId,
               offerFeeLimit
@@ -3804,7 +4080,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               nextGroupId,
               agentId,
               offerFeeLimit
@@ -3833,7 +4112,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               nextGroupId,
               agentId,
               offerFeeLimit
@@ -3859,7 +4141,8 @@ describe("IBosonOrchestrationHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeToken,
-          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+          ZeroAddress
         ).toStruct();
         offerFees.protocolFee = protocolFeeFlatBoson;
         offerFeesStruct = offerFees.toStruct();
@@ -3872,7 +4155,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               nextGroupId,
               agentId,
               offerFeeLimit
@@ -3905,7 +4191,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               nextGroupId,
               agentId,
               offerFeeLimit
@@ -3932,7 +4221,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               nextGroupId,
               agentId,
               offerFeeLimit
@@ -3978,7 +4270,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               nextGroupId,
               agentId,
               offerFeeLimit
@@ -4051,7 +4346,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               premintParameters,
               nextGroupId,
               agentId,
@@ -4110,7 +4408,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               premintParameters,
               nextGroupId,
               agentId,
@@ -4185,7 +4486,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 nextGroupId,
                 agentId,
                 offerFeeLimit
@@ -4207,7 +4511,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 nextGroupId,
                 agentId,
                 offerFeeLimit
@@ -4231,7 +4538,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 premintParameters,
                 nextGroupId,
                 agentId,
@@ -4254,7 +4564,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 nextGroupId,
                 agentId,
                 offerFeeLimit
@@ -4276,7 +4589,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 invalidGroupId,
                 agentId,
                 offerFeeLimit
@@ -4294,7 +4610,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 invalidGroupId,
                 agentId,
                 offerFeeLimit
@@ -4311,7 +4630,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 nextGroupId,
                 agentId,
                 offerFeeLimit
@@ -4362,7 +4684,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             twin,
             agentId,
             offerFeeLimit
@@ -4415,7 +4740,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             twin,
             agentId,
             offerFeeLimit
@@ -4480,7 +4808,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             twin,
             agentId,
             offerFeeLimit
@@ -4541,7 +4872,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             twin,
             agentId,
             offerFeeLimit
@@ -4597,7 +4931,8 @@ describe("IBosonOrchestrationHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeToken,
-          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+          ZeroAddress
         ).toStruct();
         offerFees.protocolFee = protocolFeeFlatBoson;
         offerFeesStruct = offerFees.toStruct();
@@ -4610,7 +4945,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               twin,
               agentId,
               offerFeeLimit
@@ -4634,7 +4972,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offerFees.protocolFee = "0";
         disputeResolver.id = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0", "0", ZeroAddress).toStruct();
         offerFeesStruct = offerFees.toStruct();
 
         // Create an offer, a twin and a bundle, testing for the events
@@ -4645,7 +4983,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               twin,
               agentId,
               offerFeeLimit
@@ -4679,7 +5020,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               twin,
               agentId,
               offerFeeLimit
@@ -4708,7 +5052,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               twin,
               agentId,
               offerFeeLimit
@@ -4734,7 +5081,8 @@ describe("IBosonOrchestrationHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeToken,
-          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+          ZeroAddress
         ).toStruct();
         offerFees.protocolFee = protocolFeeFlatBoson;
         offerFeesStruct = offerFees.toStruct();
@@ -4747,7 +5095,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               twin,
               agentId,
               offerFeeLimit
@@ -4780,7 +5131,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               twin,
               agentId,
               offerFeeLimit
@@ -4807,7 +5161,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               twin,
               agentId,
               offerFeeLimit
@@ -4853,7 +5210,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               twin,
               agentId,
               offerFeeLimit
@@ -4931,7 +5291,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               premintParameters,
               twin,
               agentId,
@@ -5000,7 +5363,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               premintParameters,
               twin,
               agentId,
@@ -5078,7 +5444,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 twin,
                 agentId,
                 offerFeeLimit
@@ -5100,7 +5469,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 twin,
                 agentId,
                 offerFeeLimit
@@ -5122,7 +5494,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 twin,
                 agentId,
                 offerFeeLimit
@@ -5144,7 +5519,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 twin,
                 agentId,
                 offerFeeLimit
@@ -5173,7 +5551,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 premintParameters,
                 twin,
                 agentId,
@@ -5198,7 +5579,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 twin,
                 agentId,
                 offerFeeLimit
@@ -5217,7 +5601,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 twin,
                 agentId,
                 offerFeeLimit
@@ -5236,7 +5623,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 twin,
                 agentId,
                 offerFeeLimit
@@ -5255,7 +5645,10 @@ describe("IBosonOrchestrationHandler", function () {
                   offer,
                   offerDates,
                   offerDurations,
-                  disputeResolver.id,
+                  {
+                    disputeResolverId: disputeResolver.id,
+                    mutualizerAddress: ZeroAddress
+                  },
                   twin,
                   agentId,
                   offerFeeLimit
@@ -5273,7 +5666,10 @@ describe("IBosonOrchestrationHandler", function () {
                   offer,
                   offerDates,
                   offerDurations,
-                  disputeResolver.id,
+                  {
+                    disputeResolverId: disputeResolver.id,
+                    mutualizerAddress: ZeroAddress
+                  },
                   twin,
                   agentId,
                   offerFeeLimit
@@ -5291,7 +5687,10 @@ describe("IBosonOrchestrationHandler", function () {
                   offer,
                   offerDates,
                   offerDurations,
-                  disputeResolver.id,
+                  {
+                    disputeResolverId: disputeResolver.id,
+                    mutualizerAddress: ZeroAddress
+                  },
                   twin,
                   agentId,
                   offerFeeLimit
@@ -5363,7 +5762,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             condition,
             twin,
             agentId,
@@ -5427,7 +5829,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             condition,
             twin,
             agentId,
@@ -5512,7 +5917,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             condition,
             twin,
             agentId,
@@ -5584,7 +5992,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             condition,
             twin,
             agentId,
@@ -5651,7 +6062,8 @@ describe("IBosonOrchestrationHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeToken,
-          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+          ZeroAddress
         ).toStruct();
         offerFees.protocolFee = protocolFeeFlatBoson;
         offerFeesStruct = offerFees.toStruct();
@@ -5664,7 +6076,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               condition,
               twin,
               agentId,
@@ -5689,7 +6104,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offerFees.protocolFee = "0";
         disputeResolver.id = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0", "0", ZeroAddress).toStruct();
         offerFeesStruct = offerFees.toStruct();
 
         // Create an offer with condition, twin and bundle testing for the events
@@ -5700,7 +6115,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               condition,
               twin,
               agentId,
@@ -5735,7 +6153,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               condition,
               twin,
               agentId,
@@ -5765,7 +6186,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               condition,
               twin,
               agentId,
@@ -5792,7 +6216,8 @@ describe("IBosonOrchestrationHandler", function () {
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
           DRFeeToken,
-          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage),
+          ZeroAddress
         ).toStruct();
         offerFees.protocolFee = protocolFeeFlatBoson;
         offerFeesStruct = offerFees.toStruct();
@@ -5805,7 +6230,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               condition,
               twin,
               agentId,
@@ -5839,7 +6267,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               condition,
               twin,
               agentId,
@@ -5867,7 +6298,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               condition,
               twin,
               agentId,
@@ -5915,7 +6349,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               condition,
               twin,
               agentId,
@@ -6008,7 +6445,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               premintParameters,
               condition,
               twin,
@@ -6088,7 +6528,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               premintParameters,
               condition,
               twin,
@@ -6186,7 +6629,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 condition,
                 twin,
                 agentId,
@@ -6209,7 +6655,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 condition,
                 twin,
                 agentId,
@@ -6232,7 +6681,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 condition,
                 twin,
                 agentId,
@@ -6255,7 +6707,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 condition,
                 twin,
                 agentId,
@@ -6278,7 +6733,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 condition,
                 twin,
                 agentId,
@@ -6303,7 +6761,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 premintParameters,
                 condition,
                 twin,
@@ -6351,7 +6812,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             condition,
             emptyAuthToken,
             voucherInitValues,
@@ -6430,7 +6894,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             condition,
             emptyAuthToken,
             voucherInitValues,
@@ -6542,7 +7009,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             condition,
             emptyAuthToken,
             voucherInitValues,
@@ -6609,7 +7079,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             condition,
             emptyAuthToken,
             voucherInitValues,
@@ -6675,7 +7148,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             condition,
             emptyAuthToken,
             voucherInitValues,
@@ -6755,7 +7231,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               condition,
               emptyAuthToken,
               voucherInitValues,
@@ -6832,7 +7311,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               premintParameters,
               condition,
               emptyAuthToken,
@@ -6930,7 +7412,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               premintParameters,
               condition,
               emptyAuthToken,
@@ -7051,7 +7536,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 condition,
                 emptyAuthToken,
                 voucherInitValues,
@@ -7076,7 +7564,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 condition,
                 emptyAuthToken,
                 voucherInitValues,
@@ -7101,7 +7592,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 condition,
                 emptyAuthToken,
                 voucherInitValues,
@@ -7126,7 +7620,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 condition,
                 emptyAuthToken,
                 voucherInitValues,
@@ -7153,7 +7650,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 premintParameters,
                 condition,
                 emptyAuthToken,
@@ -7208,7 +7708,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             twin,
             emptyAuthToken,
             voucherInitValues,
@@ -7305,7 +7808,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             twin,
             emptyAuthToken,
             voucherInitValues,
@@ -7423,7 +7929,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             twin,
             emptyAuthToken,
             voucherInitValues,
@@ -7493,7 +8002,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             twin,
             emptyAuthToken,
             voucherInitValues,
@@ -7563,7 +8075,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             twin,
             emptyAuthToken,
             voucherInitValues,
@@ -7661,7 +8176,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               twin,
               emptyAuthToken,
               voucherInitValues,
@@ -7761,7 +8279,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               premintParameters,
               twin,
               emptyAuthToken,
@@ -7882,7 +8403,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               premintParameters,
               twin,
               emptyAuthToken,
@@ -8006,7 +8530,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 twin,
                 emptyAuthToken,
                 voucherInitValues,
@@ -8031,7 +8558,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 twin,
                 emptyAuthToken,
                 voucherInitValues,
@@ -8056,7 +8586,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 twin,
                 emptyAuthToken,
                 voucherInitValues,
@@ -8081,7 +8614,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 twin,
                 emptyAuthToken,
                 voucherInitValues,
@@ -8106,7 +8642,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 twin,
                 emptyAuthToken,
                 voucherInitValues,
@@ -8136,7 +8675,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 premintParameters,
                 twin,
                 emptyAuthToken,
@@ -8210,7 +8752,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             condition,
             twin,
             emptyAuthToken,
@@ -8313,7 +8858,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             condition,
             twin,
             emptyAuthToken,
@@ -8451,7 +8999,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             condition,
             twin,
             emptyAuthToken,
@@ -8522,7 +9073,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             condition,
             twin,
             emptyAuthToken,
@@ -8593,7 +9147,10 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
-            disputeResolver.id,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress
+            },
             condition,
             twin,
             emptyAuthToken,
@@ -8709,7 +9266,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               condition,
               twin,
               emptyAuthToken,
@@ -8833,7 +9393,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               premintParameters,
               condition,
               twin,
@@ -8955,7 +9518,10 @@ describe("IBosonOrchestrationHandler", function () {
               offer,
               offerDates,
               offerDurations,
-              disputeResolver.id,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress
+              },
               premintParameters,
               condition,
               twin,
@@ -9099,7 +9665,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 condition,
                 twin,
                 emptyAuthToken,
@@ -9125,7 +9694,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 condition,
                 twin,
                 emptyAuthToken,
@@ -9151,7 +9723,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 condition,
                 twin,
                 emptyAuthToken,
@@ -9177,7 +9752,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 condition,
                 twin,
                 emptyAuthToken,
@@ -9203,7 +9781,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 condition,
                 twin,
                 emptyAuthToken,
@@ -9229,7 +9810,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 condition,
                 twin,
                 emptyAuthToken,
@@ -9260,7 +9844,10 @@ describe("IBosonOrchestrationHandler", function () {
                 offer,
                 offerDates,
                 offerDurations,
-                disputeResolver.id,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress
+                },
                 premintParameters,
                 condition,
                 twin,
