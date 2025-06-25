@@ -510,9 +510,7 @@ describe("IBosonFundsHandler", function () {
         offerToken = offer.clone();
         offerToken.id = "0";
         offerToken.exchangeToken = await mockToken.getAddress();
-        console.log(`Mutualizer address: ${await drFeeMutualizer.getAddress()}`);
         drParams.mutualizerAddress = await drFeeMutualizer.getAddress();
-        console.log(`DR params: ${JSON.stringify(drParams)}`);
         // Check if domains are valid
         expect(offerNative.isValid()).is.true;
         expect(offerToken.isValid()).is.true;
@@ -523,15 +521,11 @@ describe("IBosonFundsHandler", function () {
         voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
 
         // Create both offers
-
-        console.log(`Creating offer native`);
         offerNative.id = await offerHandler
           .connect(assistant)
           .createOffer(offerNative, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
             getOfferId: true,
           });
-
-        console.log(`Creating offer token`);
         offerToken.id = await offerHandler
           .connect(assistant)
           .createOffer(offerToken, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
@@ -609,10 +603,8 @@ describe("IBosonFundsHandler", function () {
           fundsHandler.connect(assistant).depositFunds(seller.id, ZeroAddress, sellerDeposit, { value: sellerDeposit }),
         ]);
 
-        console.log(`Committing to offer token`);
         // commit to both offers
         await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
-        console.log(`Committing to offer native`);
         await exchangeHandler
           .connect(buyer)
           .commitToOffer(await buyer.getAddress(), offerNative.id, { value: offerNative.price });
