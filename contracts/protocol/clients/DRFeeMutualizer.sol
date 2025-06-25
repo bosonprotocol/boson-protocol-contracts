@@ -122,24 +122,24 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
 
     /**
      * @notice Checks if a seller is covered for a specific DR fee
-     * @param sellerId The seller ID
-     * @param feeAmount The fee amount to cover
-     * @param tokenAddress The token address (address(0) for native currency)
-     * @param disputeResolverId The dispute resolver ID (0 for universal agreement covering all dispute resolvers)
+     * @param _sellerId The seller ID
+     * @param _feeAmount The fee amount to cover
+     * @param _tokenAddress The token address (address(0) for native currency)
+     * @param _disputeResolverId The dispute resolver ID (0 for universal agreement covering all dispute resolvers)
      * @return bool True if the seller is covered, false otherwise
      * @dev Checks for both specific dispute resolver agreements and universal agreements (disputeResolverId = 0)
      */
     function isSellerCovered(
-        uint256 sellerId,
-        uint256 feeAmount,
-        address tokenAddress,
-        uint256 disputeResolverId
+        uint256 _sellerId,
+        uint256 _feeAmount,
+        address _tokenAddress,
+        uint256 _disputeResolverId
     ) public view override returns (bool) {
         // Check if agreement exists and is valid
-        uint256 agreementId = sellerToDisputeResolverToAgreement[sellerId][disputeResolverId];
-        if (agreementId == 0 && disputeResolverId != 0) {
+        uint256 agreementId = sellerToDisputeResolverToAgreement[_sellerId][_disputeResolverId];
+        if (agreementId == 0 && _disputeResolverId != 0) {
             // If no specific agreement exists, check for "any dispute resolver" agreement
-            agreementId = sellerToDisputeResolverToAgreement[sellerId][0];
+            agreementId = sellerToDisputeResolverToAgreement[_sellerId][0];
         }
         if (agreementId == 0) return false;
 
@@ -148,21 +148,21 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
         // Basic agreement validation
         if (agreement.startTime == 0 || agreement.isVoided) return false;
         if (block.timestamp > agreement.startTime + agreement.timePeriod) return false;
-        if (agreement.tokenAddress != tokenAddress) return false;
-        if (feeAmount > agreement.maxAmountPerTx) return false;
-        if (agreement.totalMutualized + feeAmount > agreement.maxAmountTotal) return false;
+        if (agreement.tokenAddress != _tokenAddress) return false;
+        if (_feeAmount > agreement.maxAmountPerTx) return false;
+        if (agreement.totalMutualized + _feeAmount > agreement.maxAmountTotal) return false;
 
         // Check pool balance
-        return poolBalances[tokenAddress] >= feeAmount;
+        return poolBalances[_tokenAddress] >= _feeAmount;
     }
 
     /**
      * @notice Requests a DR fee for a seller
-     * @param sellerId The seller ID
-     * @param feeAmount The fee amount to cover
-     * @param tokenAddress The token address (address(0) for native currency)
-     * @param exchangeId The exchange ID
-     * @param disputeResolverId The dispute resolver ID (0 for universal agreement)
+     * @param _sellerId The seller ID
+     * @param _feeAmount The fee amount to cover
+     * @param _tokenAddress The token address (address(0) for native currency)
+     * @param _exchangeId The exchange ID
+     * @param _disputeResolverId The dispute resolver ID (0 for universal agreement)
      * @return success True if the request was successful, false otherwise
      * @dev Only callable by the Boson protocol. Returns false if seller is not covered.
      *
@@ -173,42 +173,42 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
      * - ERC20 or native currency transfer fails
      */
     function requestDRFee(
-        uint256 sellerId,
-        uint256 feeAmount,
-        address tokenAddress,
-        uint256 exchangeId,
-        uint256 disputeResolverId
+        uint256 _sellerId,
+        uint256 _feeAmount,
+        address _tokenAddress,
+        uint256 _exchangeId,
+        uint256 _disputeResolverId
     ) external override onlyProtocol nonReentrant returns (bool success) {
-        if (feeAmount == 0) revert InvalidAmount();
-        if (!isSellerCovered(sellerId, feeAmount, tokenAddress, disputeResolverId)) {
+        if (_feeAmount == 0) revert InvalidAmount();
+        if (!isSellerCovered(_sellerId, _feeAmount, _tokenAddress, _disputeResolverId)) {
             return false;
         }
 
-        uint256 agreementId = sellerToDisputeResolverToAgreement[sellerId][disputeResolverId];
-        if (agreementId == 0 && disputeResolverId != 0) {
+        uint256 agreementId = sellerToDisputeResolverToAgreement[_sellerId][_disputeResolverId];
+        if (agreementId == 0 && _disputeResolverId != 0) {
             // If no specific agreement exists, check for "any dispute resolver" agreement
-            agreementId = sellerToDisputeResolverToAgreement[sellerId][0];
+            agreementId = sellerToDisputeResolverToAgreement[_sellerId][0];
         }
         Agreement storage agreement = agreements[agreementId];
 
-        agreement.totalMutualized += feeAmount;
+        agreement.totalMutualized += _feeAmount;
         // isSellerCovered checks for pool balance, so we can safely subtract feeAmount from pool balance
         unchecked {
-            poolBalances[tokenAddress] -= feeAmount;
+            poolBalances[_tokenAddress] -= _feeAmount;
         }
 
-        feeInfoByExchange[exchangeId] = FeeInfo({ token: tokenAddress, amount: feeAmount, sellerId: sellerId });
+        feeInfoByExchange[_exchangeId] = FeeInfo({ token: _tokenAddress, amount: _feeAmount, sellerId: _sellerId });
 
-        FundsLib.transferFundsOut(tokenAddress, payable(BOSON_PROTOCOL), feeAmount);
+        FundsLib.transferFundsOut(_tokenAddress, payable(BOSON_PROTOCOL), _feeAmount);
 
-        emit DRFeeProvided(exchangeId, sellerId, feeAmount);
+        emit DRFeeProvided(_exchangeId, _sellerId, _feeAmount);
         return true;
     }
 
     /**
      * @notice Returns a DR fee to the mutualizer
-     * @param exchangeId The exchange ID
-     * @param feeAmount The amount being returned (0 means protocol kept all fees)
+     * @param _exchangeId The exchange ID
+     * @param _feeAmount The amount being returned (0 means protocol kept all fees)
      * @dev Only callable by the Boson protocol. For native currency, feeAmount must equal msg.value.
      *
      * Reverts if:
@@ -218,27 +218,27 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
      * - msg.value > 0 for ERC20 tokens
      * - ERC20 or native currency transfer fails
      */
-    function returnDRFee(uint256 exchangeId, uint256 feeAmount) external payable override onlyProtocol nonReentrant {
-        FeeInfo storage feeInfo = feeInfoByExchange[exchangeId];
+    function returnDRFee(uint256 _exchangeId, uint256 _feeAmount) external payable override onlyProtocol nonReentrant {
+        FeeInfo storage feeInfo = feeInfoByExchange[_exchangeId];
         if (feeInfo.amount == 0) revert InvalidExchangeId();
 
         // Fee is being returned, add back to pool (if any)
-        if (feeAmount > 0) {
-            FundsLib.validateIncomingPayment(feeInfo.token, feeAmount);
-            poolBalances[feeInfo.token] += feeAmount;
+        if (_feeAmount > 0) {
+            FundsLib.validateIncomingPayment(feeInfo.token, _feeAmount);
+            poolBalances[feeInfo.token] += _feeAmount;
         }
 
-        delete feeInfoByExchange[exchangeId];
+        delete feeInfoByExchange[_exchangeId];
 
-        emit DRFeeReturned(exchangeId, feeInfo.sellerId, feeInfo.amount, feeAmount);
+        emit DRFeeReturned(_exchangeId, feeInfo.sellerId, feeInfo.amount, _feeAmount);
     }
 
     // ============= Pool Management =============
 
     /**
      * @notice Deposits funds to the mutualizer pool
-     * @param tokenAddress The token address (address(0) for native currency)
-     * @param amount The amount to deposit (for native currency msg.value == amount)
+     * @param _tokenAddress The token address (address(0) for native currency)
+     * @param _amount The amount to deposit (for native currency msg.value == amount)
      * @dev For native currency deposits, the amount parameter should equal to msg.value
      *
      * Reverts if:
@@ -248,21 +248,21 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
      * - msg.value > 0 for ERC20 tokens
      * - ERC20 or native currency transfer fails
      */
-    function deposit(address tokenAddress, uint256 amount) external payable nonReentrant {
+    function deposit(address _tokenAddress, uint256 _amount) external payable nonReentrant {
         if (depositRestrictedToOwner && msg.sender != owner()) revert DepositsRestrictedToOwner();
-        if (amount == 0) revert InvalidAmount();
+        if (_amount == 0) revert InvalidAmount();
 
-        FundsLib.validateIncomingPayment(tokenAddress, amount);
-        poolBalances[tokenAddress] += amount;
+        FundsLib.validateIncomingPayment(_tokenAddress, _amount);
+        poolBalances[_tokenAddress] += _amount;
 
-        emit FundsDeposited(msg.sender, tokenAddress, amount);
+        emit FundsDeposited(msg.sender, _tokenAddress, _amount);
     }
 
     /**
      * @notice Withdraws funds from the mutualizer pool
-     * @param tokenAddress The token address (address(0) for native currency)
-     * @param amount The amount to withdraw
-     * @param to The address to withdraw to
+     * @param _tokenAddress The token address (address(0) for native currency)
+     * @param _amount The amount to withdraw
+     * @param _to The address to withdraw to
      * @dev Only callable by the contract owner
      *
      * Reverts if:
@@ -272,41 +272,41 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
      * - Pool balance is insufficient
      * - ERC20 or native currency transfer fails
      */
-    function withdraw(address tokenAddress, uint256 amount, address payable to) external onlyOwner nonReentrant {
-        if (amount == 0) revert InvalidAmount();
-        if (to == address(0)) revert InvalidRecipient();
-        if (poolBalances[tokenAddress] < amount) revert InsufficientPoolBalance();
+    function withdraw(address _tokenAddress, uint256 _amount, address payable _to) external onlyOwner nonReentrant {
+        if (_amount == 0) revert InvalidAmount();
+        if (_to == address(0)) revert InvalidRecipient();
+        if (poolBalances[_tokenAddress] < _amount) revert InsufficientPoolBalance();
 
         unchecked {
-            poolBalances[tokenAddress] -= amount;
+            poolBalances[_tokenAddress] -= _amount;
         }
 
-        FundsLib.transferFundsOut(tokenAddress, to, amount);
+        FundsLib.transferFundsOut(_tokenAddress, _to, _amount);
 
-        emit FundsWithdrawn(to, tokenAddress, amount);
+        emit FundsWithdrawn(_to, _tokenAddress, _amount);
     }
 
     /**
      * @notice Gets pool balance for a token
-     * @param tokenAddress The token address (address(0) for native currency)
+     * @param _tokenAddress The token address (address(0) for native currency)
      * @return balance The pool balance
      */
-    function getPoolBalance(address tokenAddress) external view returns (uint256 balance) {
-        return poolBalances[tokenAddress];
+    function getPoolBalance(address _tokenAddress) external view returns (uint256 balance) {
+        return poolBalances[_tokenAddress];
     }
 
     // ============= Agreement Management =============
 
     /**
      * @notice Creates a new agreement between seller and dispute resolver
-     * @param sellerId The seller ID
-     * @param disputeResolverId The dispute resolver ID (0 for "any dispute resolver" i.e. universal agreement)
-     * @param maxAmountPerTx The maximum mutualized amount per transaction
-     * @param maxAmountTotal The maximum total mutualized amount
-     * @param timePeriod The time period for the agreement (in seconds)
-     * @param premium The premium amount to be paid by seller
-     * @param refundOnCancel Whether premium is refunded on cancellation
-     * @param tokenAddress The token address for the agreement (address(0) for native currency)
+     * @param _sellerId The seller ID
+     * @param _disputeResolverId The dispute resolver ID (0 for "any dispute resolver" i.e. universal agreement)
+     * @param _maxAmountPerTx The maximum mutualized amount per transaction
+     * @param _maxAmountTotal The maximum total mutualized amount
+     * @param _timePeriod The time period for the agreement (in seconds)
+     * @param _premium The premium amount to be paid by seller
+     * @param _refundOnCancel Whether premium is refunded on cancellation
+     * @param _tokenAddress The token address for the agreement (address(0) for native currency)
      * @return agreementId The ID of the created agreement
      * @dev Only callable by the contract owner. Prevents duplicate active agreements for the same dispute resolver.
      *
@@ -319,21 +319,21 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
      * - Active agreement exists for same dispute resolver
      */
     function newAgreement(
-        uint256 sellerId,
-        uint256 disputeResolverId,
-        uint256 maxAmountPerTx,
-        uint256 maxAmountTotal,
-        uint256 timePeriod,
-        uint256 premium,
-        bool refundOnCancel,
-        address tokenAddress
+        uint256 _sellerId,
+        uint256 _disputeResolverId,
+        uint256 _maxAmountPerTx,
+        uint256 _maxAmountTotal,
+        uint256 _timePeriod,
+        uint256 _premium,
+        bool _refundOnCancel,
+        address _tokenAddress
     ) external onlyOwner returns (uint256 agreementId) {
-        if (sellerId == 0) revert InvalidSellerId();
-        if (maxAmountPerTx == 0) revert MaxAmountPerTxMustBeGreaterThanZero();
-        if (maxAmountTotal < maxAmountPerTx) revert MaxTotalMustBeGreaterThanOrEqualToMaxPerTx();
-        if (timePeriod == 0) revert TimePeriodMustBeGreaterThanZero();
+        if (_sellerId == 0) revert InvalidSellerId();
+        if (_maxAmountPerTx == 0) revert MaxAmountPerTxMustBeGreaterThanZero();
+        if (_maxAmountTotal < _maxAmountPerTx) revert MaxTotalMustBeGreaterThanOrEqualToMaxPerTx();
+        if (_timePeriod == 0) revert TimePeriodMustBeGreaterThanZero();
 
-        uint256 existingAgreementId = sellerToDisputeResolverToAgreement[sellerId][disputeResolverId];
+        uint256 existingAgreementId = sellerToDisputeResolverToAgreement[_sellerId][_disputeResolverId];
         if (existingAgreementId != 0) {
             Agreement storage existingAgreement = agreements[existingAgreementId];
             if (
@@ -349,27 +349,27 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
 
         agreements.push(
             Agreement({
-                maxAmountPerTx: maxAmountPerTx,
-                maxAmountTotal: maxAmountTotal,
-                timePeriod: timePeriod,
-                premium: premium,
-                refundOnCancel: refundOnCancel,
-                tokenAddress: tokenAddress,
+                maxAmountPerTx: _maxAmountPerTx,
+                maxAmountTotal: _maxAmountTotal,
+                timePeriod: _timePeriod,
+                premium: _premium,
+                refundOnCancel: _refundOnCancel,
+                tokenAddress: _tokenAddress,
                 startTime: 0,
                 totalMutualized: 0,
                 isVoided: false,
-                sellerId: sellerId
+                sellerId: _sellerId
             })
         );
 
-        sellerToDisputeResolverToAgreement[sellerId][disputeResolverId] = agreementId;
+        sellerToDisputeResolverToAgreement[_sellerId][_disputeResolverId] = agreementId;
 
-        emit AgreementCreated(agreementId, sellerId, disputeResolverId);
+        emit AgreementCreated(agreementId, _sellerId, _disputeResolverId);
     }
 
     /**
      * @notice Voids an existing agreement
-     * @param agreementId The ID of the agreement to void
+     * @param _agreementId The ID of the agreement to void
      * @dev Can be called by the seller or owner (if refundOnCancel is true). Calculates time-based refunds.
      *
      * Reverts if:
@@ -379,10 +379,10 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
      * - ERC20 or native currency transfer fails
      * - Seller not found
      */
-    function voidAgreement(uint256 agreementId) external {
-        if (agreementId == 0 || agreementId >= agreements.length) revert InvalidAgreementId();
+    function voidAgreement(uint256 _agreementId) external {
+        if (_agreementId == 0 || _agreementId >= agreements.length) revert InvalidAgreementId();
         bool premiumRefunded;
-        Agreement storage agreement = agreements[agreementId];
+        Agreement storage agreement = agreements[_agreementId];
         if (agreement.isVoided) revert AgreementAlreadyVoided();
 
         (bool exists, BosonTypes.Seller memory seller, ) = IBosonAccountHandler(BOSON_PROTOCOL).getSeller(
@@ -426,12 +426,12 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
             }
         }
 
-        emit AgreementVoided(agreementId, premiumRefunded);
+        emit AgreementVoided(_agreementId, premiumRefunded);
     }
 
     /**
      * @notice Pays premium to activate an agreement
-     * @param agreementId The ID of the agreement to activate
+     * @param _agreementId The ID of the agreement to activate
      * @dev For native currency agreements, send the premium as msg.value. For ERC20, approve the token first.
      *
      * Reverts if:
@@ -442,10 +442,10 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
      * - msg.value > 0 for ERC20 tokens
      * - ERC20 or native currency transfer fails
      */
-    function payPremium(uint256 agreementId) external payable nonReentrant {
-        if (agreementId == 0 || agreementId >= agreements.length) revert InvalidAgreementId();
+    function payPremium(uint256 _agreementId) external payable nonReentrant {
+        if (_agreementId == 0 || _agreementId >= agreements.length) revert InvalidAgreementId();
 
-        Agreement storage agreement = agreements[agreementId];
+        Agreement storage agreement = agreements[_agreementId];
         if (agreement.startTime > 0) revert AgreementAlreadyActive();
         if (agreement.isVoided) revert AgreementIsVoided();
 
@@ -453,49 +453,49 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
         poolBalances[agreement.tokenAddress] += agreement.premium;
         agreement.startTime = block.timestamp;
 
-        emit AgreementActivated(agreementId, agreement.sellerId);
+        emit AgreementActivated(_agreementId, agreement.sellerId);
     }
 
     // ============= Admin Functions =============
 
     /**
      * @notice Sets whether deposits are restricted to owner only
-     * @param restricted Whether deposits are restricted to owner only
+     * @param _restricted Whether deposits are restricted to owner only
      * @dev Only callable by the contract owner
      *
      * Reverts if:
      * - Caller is not owner
      */
-    function setDepositRestriction(bool restricted) external onlyOwner {
-        depositRestrictedToOwner = restricted;
+    function setDepositRestriction(bool _restricted) external onlyOwner {
+        depositRestrictedToOwner = _restricted;
     }
 
     /**
      * @notice Gets agreement details
-     * @param agreementId The ID of the agreement
+     * @param _agreementId The ID of the agreement
      * @return agreement The details of the agreement
      * @dev Reverts if agreementId is invalid
      *
      * Reverts if:
      * - agreementId is 0 or >= agreements.length
      */
-    function getAgreement(uint256 agreementId) external view returns (Agreement memory) {
-        if (agreementId == 0 || agreementId >= agreements.length) revert InvalidAgreementId();
-        return agreements[agreementId];
+    function getAgreement(uint256 _agreementId) external view returns (Agreement memory) {
+        if (_agreementId == 0 || _agreementId >= agreements.length) revert InvalidAgreementId();
+        return agreements[_agreementId];
     }
 
     /**
      * @notice Gets agreement ID for a seller and dispute resolver
-     * @param sellerId The seller ID
-     * @param disputeResolverId The dispute resolver ID (0 for universal agreement)
+     * @param _sellerId The seller ID
+     * @param _disputeResolverId The dispute resolver ID (0 for universal agreement)
      * @return agreementId The ID of the agreement (0 if not found)
      * @dev Checks for both specific dispute resolver agreements and universal agreements (disputeResolverId = 0)
      */
-    function getAgreementId(uint256 sellerId, uint256 disputeResolverId) external view returns (uint256) {
-        uint256 agreementId = sellerToDisputeResolverToAgreement[sellerId][disputeResolverId];
-        if (agreementId == 0 && disputeResolverId != 0) {
+    function getAgreementId(uint256 _sellerId, uint256 _disputeResolverId) external view returns (uint256) {
+        uint256 agreementId = sellerToDisputeResolverToAgreement[_sellerId][_disputeResolverId];
+        if (agreementId == 0 && _disputeResolverId != 0) {
             // If no specific agreement exists, check for "any dispute resolver" agreement
-            agreementId = sellerToDisputeResolverToAgreement[sellerId][0];
+            agreementId = sellerToDisputeResolverToAgreement[_sellerId][0];
         }
         return agreementId;
     }

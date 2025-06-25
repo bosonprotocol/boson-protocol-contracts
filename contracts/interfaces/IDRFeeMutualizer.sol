@@ -9,27 +9,27 @@ pragma solidity 0.8.22;
 interface IDRFeeMutualizer {
     /**
      * @notice Checks if a seller is covered for a specific DR fee
-     * @param sellerId The seller ID
-     * @param feeAmount The fee amount to cover
-     * @param tokenAddress The token address (address(0) for native currency)
-     * @param disputeResolverId The dispute resolver ID (0 for universal agreement covering all dispute resolvers)
+     * @param _sellerId The seller ID
+     * @param _feeAmount The fee amount to cover
+     * @param _tokenAddress The token address (address(0) for native currency)
+     * @param _disputeResolverId The dispute resolver ID (0 for universal agreement covering all dispute resolvers)
      * @return bool True if the seller is covered, false otherwise
      * @dev Checks for both specific dispute resolver agreements and universal agreements (disputeResolverId = 0)
      */
     function isSellerCovered(
-        uint256 sellerId,
-        uint256 feeAmount,
-        address tokenAddress,
-        uint256 disputeResolverId
+        uint256 _sellerId,
+        uint256 _feeAmount,
+        address _tokenAddress,
+        uint256 _disputeResolverId
     ) external view returns (bool);
 
     /**
      * @notice Requests a DR fee for a seller
-     * @param sellerId The seller ID
-     * @param feeAmount The fee amount to cover
-     * @param tokenAddress The token address (address(0) for native currency)
-     * @param exchangeId The exchange ID
-     * @param disputeResolverId The dispute resolver ID (0 for universal agreement)
+     * @param _sellerId The seller ID
+     * @param _feeAmount The fee amount to cover
+     * @param _tokenAddress The token address (address(0) for native currency)
+     * @param _exchangeId The exchange ID
+     * @param _disputeResolverId The dispute resolver ID (0 for universal agreement)
      * @return success True if the request was successful, false otherwise
      * @dev Only callable by the Boson protocol. Returns false if seller is not covered.
      *
@@ -40,17 +40,17 @@ interface IDRFeeMutualizer {
      * - ERC20 or native currency transfer fails
      */
     function requestDRFee(
-        uint256 sellerId,
-        uint256 feeAmount,
-        address tokenAddress,
-        uint256 exchangeId,
-        uint256 disputeResolverId
+        uint256 _sellerId,
+        uint256 _feeAmount,
+        address _tokenAddress,
+        uint256 _exchangeId,
+        uint256 _disputeResolverId
     ) external returns (bool success);
 
     /**
      * @notice Returns a DR fee to the mutualizer
-     * @param exchangeId The exchange ID
-     * @param feeAmount The amount being returned (0 means protocol kept all fees)
+     * @param _exchangeId The exchange ID
+     * @param _feeAmount The amount being returned (0 means protocol kept all fees)
      * @dev Only callable by the Boson protocol. For native currency, feeAmount must equal msg.value.
      *
      * Reverts if:
@@ -60,5 +60,5 @@ interface IDRFeeMutualizer {
      * - msg.value > 0 for ERC20 tokens
      * - ERC20 or native currency transfer fails
      */
-    function returnDRFee(uint256 exchangeId, uint256 feeAmount) external payable;
+    function returnDRFee(uint256 _exchangeId, uint256 _feeAmount) external payable;
 }
