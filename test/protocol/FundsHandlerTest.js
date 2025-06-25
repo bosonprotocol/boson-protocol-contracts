@@ -115,6 +115,7 @@ describe("IBosonFundsHandler", function () {
   let offerFeeLimit;
   let bosonErrors;
   let bpd;
+  let drFeeMutualizer;
 
   before(async function () {
     accountId.next(true);
@@ -201,6 +202,11 @@ describe("IBosonFundsHandler", function () {
     priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
     await priceDiscoveryContract.waitForDeployment();
 
+    // Deploy DRFeeMutualizer
+    const DRFeeMutualizerFactory = await ethers.getContractFactory("DRFeeMutualizer");
+    drFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolDiamondAddress, ZeroAddress);
+    await drFeeMutualizer.waitForDeployment();
+
     // Get the beacon proxy address
     beaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
 
@@ -253,6 +259,16 @@ describe("IBosonFundsHandler", function () {
 
       // approve protocol to transfer the tokens
       await mockToken.connect(assistant).approve(protocolDiamondAddress, "1000000");
+
+      // top up drFeeMutualizer with non-native token
+      await mockToken.mint(deployer.address, "1000000000000000000");
+      await mockToken.connect(deployer).approve(await drFeeMutualizer.getAddress(), "1000000000000000000");
+      await drFeeMutualizer.connect(deployer).deposit(await mockToken.getAddress(), "1000000000000000000");
+
+      // top up drFeeMutualizer with native token
+      await drFeeMutualizer
+        .connect(deployer)
+        .deposit(ZeroAddress, "1000000000000000000", { value: "1000000000000000000" });
 
       // set the deposit amount
       depositAmount = 100n;
@@ -459,6 +475,7 @@ describe("IBosonFundsHandler", function () {
       beforeEach(async function () {
         // Initial ids for all the things
         exchangeId = "1";
+        const drFeeAmount = parseUnits("0.001", "ether");
 
         // Create a valid dispute resolver
         disputeResolver = mockDisputeResolver(
@@ -472,8 +489,8 @@ describe("IBosonFundsHandler", function () {
 
         //Create DisputeResolverFee array so offer creation will succeed
         disputeResolverFees = [
-          new DisputeResolverFee(ZeroAddress, "Native", "0"),
-          new DisputeResolverFee(await mockToken.getAddress(), "mockToken", "0"),
+          new DisputeResolverFee(ZeroAddress, "Native", drFeeAmount.toString()), // 0.001 ETH in wei
+          new DisputeResolverFee(await mockToken.getAddress(), "mockToken", drFeeAmount.toString()), // 0.001 tokens
         ];
 
         // Make empty seller list, so every seller is allowed
@@ -493,7 +510,9 @@ describe("IBosonFundsHandler", function () {
         offerToken = offer.clone();
         offerToken.id = "0";
         offerToken.exchangeToken = await mockToken.getAddress();
-
+        console.log(`Mutualizer address: ${await drFeeMutualizer.getAddress()}`);
+        drParams.mutualizerAddress = await drFeeMutualizer.getAddress();
+        console.log(`DR params: ${JSON.stringify(drParams)}`);
         // Check if domains are valid
         expect(offerNative.isValid()).is.true;
         expect(offerToken.isValid()).is.true;
@@ -505,16 +524,67 @@ describe("IBosonFundsHandler", function () {
 
         // Create both offers
 
+        console.log(`Creating offer native`);
         offerNative.id = await offerHandler
           .connect(assistant)
           .createOffer(offerNative, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
             getOfferId: true,
           });
+
+        console.log(`Creating offer token`);
         offerToken.id = await offerHandler
           .connect(assistant)
           .createOffer(offerToken, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
             getOfferId: true,
           });
+
+        // Create DR fee mutualizer agreement for the seller for the two offers
+        const maxAmountPerTx = parseUnits("0.01", "ether"); // 0.01 ETH max per transaction
+        const maxAmountTotal = parseUnits("0.1", "ether"); // 0.1 ETH total max
+        const timePeriod = 30 * 24 * 60 * 60; // 30 days
+        const premium = parseUnits("0.005", "ether"); // 0.005 ETH premium
+        const refundOnCancel = true;
+        const tokenAddress = await mockToken.getAddress();
+
+        // Create agreement for non-native currency offer
+        const nonNativeTokenAgreementId = 1;
+        await drFeeMutualizer
+          .connect(deployer)
+          .newAgreement(
+            seller.id,
+            offerToken.id,
+            disputeResolver.id,
+            maxAmountPerTx.toString(),
+            maxAmountTotal.toString(),
+            timePeriod.toString(),
+            premium.toString(),
+            refundOnCancel,
+            tokenAddress
+          );
+
+        // Create agreement for native currency offer
+        const nativeTokenAgreementId = 2;
+        await drFeeMutualizer
+          .connect(deployer)
+          .newAgreement(
+            seller.id,
+            offerNative.id,
+            disputeResolver.id,
+            maxAmountPerTx.toString(),
+            maxAmountTotal.toString(),
+            timePeriod.toString(),
+            premium.toString(),
+            refundOnCancel,
+            ZeroAddress
+          );
+
+        // pay premium for the non-native token offer agreement
+        await mockToken.mint(deployer.address, premium);
+        await mockToken.connect(deployer).approve(await drFeeMutualizer.getAddress(), premium);
+        await drFeeMutualizer.connect(deployer).payPremium(nonNativeTokenAgreementId);
+
+        // pay premium for the native token offer agreement
+        await drFeeMutualizer.connect(deployer).payPremium(nativeTokenAgreementId, { value: premium });
 
         // Set used variables
         price = offerToken.price;
@@ -539,8 +609,10 @@ describe("IBosonFundsHandler", function () {
           fundsHandler.connect(assistant).depositFunds(seller.id, ZeroAddress, sellerDeposit, { value: sellerDeposit }),
         ]);
 
+        console.log(`Committing to offer token`);
         // commit to both offers
         await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
+        console.log(`Committing to offer native`);
         await exchangeHandler
           .connect(buyer)
           .commitToOffer(await buyer.getAddress(), offerNative.id, { value: offerNative.price });
@@ -555,7 +627,7 @@ describe("IBosonFundsHandler", function () {
       });
 
       context("👉 withdrawFunds()", async function () {
-        context("singe exchange", async function () {
+        context("single exchange", async function () {
           beforeEach(async function () {
             // cancel the voucher, so both seller and buyer have something to withdraw
             await exchangeHandler.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
@@ -1856,6 +1928,7 @@ describe("IBosonFundsHandler", function () {
       expect(offerDurations.isValid()).is.true;
 
       drParams = mo.drParams;
+      drParams.mutualizer = await drFeeMutualizer.getAddress();
 
       agentId = "0"; // agent id is optional while creating an offer
       offerFeeLimit = MaxUint256;

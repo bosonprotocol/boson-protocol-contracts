@@ -248,20 +248,31 @@ library FundsLib {
             );
         }
 
-        // Return unused DR fee to mutualizer if original fee was not zero
+        // Return unused DR fee to mutualizer or seller's pool
         if (drTerms.feeAmount != 0) {
             uint256 returnAmount = drTerms.feeAmount - payoff.disputeResolver;
 
-            if (exchangeToken == address(0)) {
-                IDRFeeMutualizer(drTerms.mutualizerAddress).returnDRFee{ value: returnAmount }(
-                    _exchangeId,
-                    returnAmount
-                );
-            } else {
-                if (returnAmount != 0) {
-                    IERC20(exchangeToken).safeApprove(drTerms.mutualizerAddress, returnAmount);
+            if (returnAmount != 0) {
+                if (drTerms.mutualizerAddress == address(0)) {
+                    increaseAvailableFundsAndEmitEvent(
+                        _exchangeId,
+                        offer.sellerId,
+                        exchangeToken,
+                        returnAmount,
+                        sender
+                    );
+                } else {
+                    decreaseAvailableFunds(PROTOCOL_ENTITY_ID, exchangeToken, returnAmount);
+                    if (exchangeToken == address(0)) {
+                        IDRFeeMutualizer(drTerms.mutualizerAddress).returnDRFee{ value: returnAmount }(
+                            _exchangeId,
+                            returnAmount
+                        );
+                    } else {
+                        IERC20(exchangeToken).safeApprove(drTerms.mutualizerAddress, returnAmount);
+                        IDRFeeMutualizer(drTerms.mutualizerAddress).returnDRFee(_exchangeId, returnAmount);
+                    }
                 }
-                IDRFeeMutualizer(drTerms.mutualizerAddress).returnDRFee(_exchangeId, returnAmount);
             }
         }
     }
