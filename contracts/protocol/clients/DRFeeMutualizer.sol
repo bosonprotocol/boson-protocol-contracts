@@ -21,6 +21,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
 
     // Custom errors
     error OnlyProtocol();
+    error InvalidProtocolAddress();
     error InvalidExchangeId();
     error InvalidAmount();
     error InvalidRecipient();
@@ -93,6 +94,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
      * @param _bosonProtocol The address of the Boson protocol contract
      */
     constructor(address _bosonProtocol) {
+        if (_bosonProtocol == address(0)) revert InvalidProtocolAddress();
         BOSON_PROTOCOL = _bosonProtocol;
         // Initialize with empty agreement at index 0 for 1-indexed access
         agreements.push(

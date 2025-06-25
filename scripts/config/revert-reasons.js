@@ -251,6 +251,7 @@ exports.RevertReasons = {
   AGREEMENT_IS_VOIDED: "AgreementIsVoided",
   INVALID_AGREEMENT_ID: "InvalidAgreementId",
   ONLY_PROTOCOL: "OnlyProtocol",
+  INVALID_PROTOCOL_ADDRESS: "InvalidProtocolAddress",
   INVALID_EXCHANGE_ID: "InvalidExchangeId",
   AGREEMENT_ALREADY_EXISTS: "AgreementAlreadyExists",
   AGREEMENT_ALREADY_VOIDED: "AgreementAlreadyVoided",

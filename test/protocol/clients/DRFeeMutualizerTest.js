@@ -73,6 +73,16 @@ describe("DRFeeMutualizer", function () {
     it("should set owner correctly", async function () {
       expect(await drFeeMutualizer.owner()).to.equal(await owner.getAddress());
     });
+
+    context("💔 Revert Reasons", async function () {
+      it("should revert when protocol address is zero", async function () {
+        const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
+        await expect(DRFeeMutualizerFactory.deploy(ZeroAddress)).to.be.revertedWithCustomError(
+          DRFeeMutualizerFactory,
+          RevertReasons.INVALID_PROTOCOL_ADDRESS
+        );
+      });
+    });
   });
 
   context("📋 Pool Management", async function () {
