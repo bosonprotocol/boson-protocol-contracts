@@ -1326,17 +1326,17 @@ describe("IBosonMetaTransactionsHandler", function () {
               expect(offerDates.isValid()).is.true;
               expect(offerDurations.isValid()).is.true;
 
-            // Create the offer
-            await offerHandler
-              .connect(assistant)
-              .createOffer(
-                offerToken,
-                offerDates,
-                offerDurations,
-                { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
-                agentId,
-                offerFeeLimit
-              );
+              // Create the offer
+              await offerHandler
+                .connect(assistant)
+                .createOffer(
+                  offerToken,
+                  offerDates,
+                  offerDurations,
+                  { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
+                  agentId,
+                  offerFeeLimit
+                );
 
               // top up seller's and buyer's account
               await maliciousToken.mint(await assistant.getAddress(), sellerDeposit);
@@ -1610,17 +1610,17 @@ describe("IBosonMetaTransactionsHandler", function () {
                 .connect(assistant)
                 .depositFunds(seller.id, await mockToken.getAddress(), sellerDeposit);
 
-            // Create the offer
-            await offerHandler
-              .connect(assistant)
-              .createOffer(
-                offer,
-                offerDates,
-                offerDurations,
-                { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
-                agentId,
-                offerFeeLimit
-              );
+              // Create the offer
+              await offerHandler
+                .connect(assistant)
+                .createOffer(
+                  offer,
+                  offerDates,
+                  offerDurations,
+                  { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
+                  agentId,
+                  offerFeeLimit
+                );
 
               // Set the offer Type
               offerType = [
@@ -1834,18 +1834,18 @@ describe("IBosonMetaTransactionsHandler", function () {
               });
               expect(condition.isValid()).to.be.true;
 
-            // Create the offer
-            await orchestrationHandler
-              .connect(assistant)
-              .createOfferWithCondition(
-                offer,
-                offerDates,
-                offerDurations,
-                { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
-                condition,
-                agentId,
-                offerFeeLimit
-              );
+              // Create the offer
+              await orchestrationHandler
+                .connect(assistant)
+                .createOfferWithCondition(
+                  offer,
+                  offerDates,
+                  offerDurations,
+                  { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
+                  condition,
+                  agentId,
+                  offerFeeLimit
+                );
 
               // Set the offer Type
               offerType = [
@@ -2069,18 +2069,18 @@ describe("IBosonMetaTransactionsHandler", function () {
             });
           });
 
-        context("👉 MetaTxExchange", async function () {
-          beforeEach(async function () {
-            await offerHandler
-              .connect(assistant)
-              .createOffer(
-                offer,
-                offerDates,
-                offerDurations,
-                { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
-                agentId,
-                offerFeeLimit
-              );
+          context("👉 MetaTxExchange", async function () {
+            beforeEach(async function () {
+              await offerHandler
+                .connect(assistant)
+                .createOffer(
+                  offer,
+                  offerDates,
+                  offerDurations,
+                  { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
+                  agentId,
+                  offerFeeLimit
+                );
 
               // Required exchange constructor params
               exchange = mockExchange({ buyerId, finalizedDate: "0" });
@@ -3327,15 +3327,15 @@ describe("IBosonMetaTransactionsHandler", function () {
             // deposit to seller's pool
             await fundsHandler.connect(assistant).depositFunds(seller.id, await mockToken.getAddress(), sellerDeposit);
 
-          // Prepare the function signature for the facet function.
-          functionSignature = offerHandler.interface.encodeFunctionData("createOffer", [
-            offer,
-            offerDates,
-            offerDurations,
-            { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
-            agentId,
-            offerFeeLimit,
-          ]);
+            // Prepare the function signature for the facet function.
+            functionSignature = offerHandler.interface.encodeFunctionData("createOffer", [
+              offer,
+              offerDates,
+              offerDurations,
+              { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
+              agentId,
+              offerFeeLimit,
+            ]);
 
             // Set the message Type
             metaTransactionType = [
@@ -3350,15 +3350,15 @@ describe("IBosonMetaTransactionsHandler", function () {
               MetaTransaction: metaTransactionType,
             };
 
-          // Prepare the message
-          message = {};
-          message.nonce = parseInt(nonce);
-          message.from = await assistant.getAddress();
-          message.contractAddress = await offerHandler.getAddress();
-          message.functionName =
-            "createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,uint8,string,string,bool,uint256,(address[],uint256[])[]),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),(uint256,address),uint256,uint256)";
-          message.functionSignature = functionSignature;
-        });
+            // Prepare the message
+            message = {};
+            message.nonce = parseInt(nonce);
+            message.from = await assistant.getAddress();
+            message.contractAddress = await offerHandler.getAddress();
+            message.functionName =
+              "createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,uint8,string,string,bool,uint256,(address[],uint256[])[]),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),(uint256,address),uint256,uint256)";
+            message.functionSignature = functionSignature;
+          });
 
           afterEach(async function () {
             // Reset the accountId iterator
@@ -3399,15 +3399,15 @@ describe("IBosonMetaTransactionsHandler", function () {
             offerDates.validFrom = (BigInt(Date.now()) + oneMonth * 6n).toString(); // 6 months from now
             offerDates.validUntil = BigInt(Date.now()).toString(); // now
 
-          // Prepare the function signature for the facet function.
-          functionSignature = offerHandler.interface.encodeFunctionData("createOffer", [
-            offer,
-            offerDates,
-            offerDurations,
-            { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
-            agentId,
-            offerFeeLimit,
-          ]);
+            // Prepare the function signature for the facet function.
+            functionSignature = offerHandler.interface.encodeFunctionData("createOffer", [
+              offer,
+              offerDates,
+              offerDurations,
+              { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
+              agentId,
+              offerFeeLimit,
+            ]);
 
             // Prepare the message
             message.functionSignature = functionSignature;
@@ -3556,27 +3556,27 @@ describe("IBosonMetaTransactionsHandler", function () {
             expect(offerDates.isValid()).is.true;
             expect(offerDurations.isValid()).is.true;
 
-          // Create both offers
-          await offerHandler
-            .connect(assistant)
-            .createOffer(
-              offerNative,
-              offerDates,
-              offerDurations,
-              { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
-              agentId,
-              offerFeeLimit
-            );
-          await offerHandler
-            .connect(assistant)
-            .createOffer(
-              offerToken,
-              offerDates,
-              offerDurations,
-              { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
-              agentId,
-              offerFeeLimit
-            );
+            // Create both offers
+            await offerHandler
+              .connect(assistant)
+              .createOffer(
+                offerNative,
+                offerDates,
+                offerDurations,
+                { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
+                agentId,
+                offerFeeLimit
+              );
+            await offerHandler
+              .connect(assistant)
+              .createOffer(
+                offerToken,
+                offerDates,
+                offerDurations,
+                { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
+                agentId,
+                offerFeeLimit
+              );
 
             // top up seller's and buyer's account
             await mockToken.mint(await assistant.getAddress(), sellerDeposit);
