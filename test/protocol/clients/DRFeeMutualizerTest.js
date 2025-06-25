@@ -29,22 +29,30 @@ const HUNDRED_ETHER = parseUnits("100", "ether");
 const TWO_HUNDRED_ETHER = parseUnits("200", "ether");
 const THOUSAND_ETHER = parseUnits("1000", "ether");
 
+// Common test constants
+const INVALID_ID = 999;
+const ZERO_AMOUNT = 0;
+const EXCHANGE_ID_1 = 123;
+const EXCHANGE_ID_2 = 456;
+const EXCHANGE_ID_3 = 789;
+
 const setupMockProtocolAndMutualizer = async (sellerId, sellerAddress) => {
   const MockProtocolFactory = await getContractFactory("MockProtocol");
   const mockProtocol = await MockProtocolFactory.deploy();
   await mockProtocol.waitForDeployment();
   await mockProtocol.setSeller(sellerId, sellerAddress);
 
-  const [owner] = await getSigners();
-  await owner.sendTransaction({
-    to: await mockProtocol.getAddress(),
-    value: ethers.parseEther("10"),
-  });
+  const MockForwarderFactory = await getContractFactory("MockForwarder");
+  const mockForwarder = await MockForwarderFactory.deploy();
+  await mockForwarder.waitForDeployment();
 
   const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
-  const drFeeMutualizer = await DRFeeMutualizerFactory.deploy(await mockProtocol.getAddress());
+  const drFeeMutualizer = await DRFeeMutualizerFactory.deploy(
+    await mockProtocol.getAddress(),
+    await mockForwarder.getAddress()
+  );
   await drFeeMutualizer.waitForDeployment();
-  return { mockProtocol, drFeeMutualizer };
+  return { mockProtocol, drFeeMutualizer, mockForwarder };
 };
 
 describe("DRFeeMutualizer", function () {
@@ -54,8 +62,16 @@ describe("DRFeeMutualizer", function () {
 
   before(async function () {
     [owner, protocol, seller, buyer, rando] = await getSigners();
+
+    const MockForwarderFactory = await getContractFactory("MockForwarder");
+    const mockForwarder = await MockForwarderFactory.deploy();
+    await mockForwarder.waitForDeployment();
+
     const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
-    drFeeMutualizer = await DRFeeMutualizerFactory.deploy(await protocol.getAddress());
+    drFeeMutualizer = await DRFeeMutualizerFactory.deploy(
+      await protocol.getAddress(),
+      await mockForwarder.getAddress()
+    );
     await drFeeMutualizer.waitForDeployment();
     [mockToken] = await deployMockTokens(["Foreign20"]);
     await mockToken.mint(await owner.getAddress(), THOUSAND_ETHER);
@@ -76,11 +92,14 @@ describe("DRFeeMutualizer", function () {
 
     context("💔 Revert Reasons", async function () {
       it("should revert when protocol address is zero", async function () {
+        const MockForwarderFactory = await getContractFactory("MockForwarder");
+        const mockForwarder = await MockForwarderFactory.deploy();
+        await mockForwarder.waitForDeployment();
+
         const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
-        await expect(DRFeeMutualizerFactory.deploy(ZeroAddress)).to.be.revertedWithCustomError(
-          DRFeeMutualizerFactory,
-          RevertReasons.INVALID_PROTOCOL_ADDRESS
-        );
+        await expect(
+          DRFeeMutualizerFactory.deploy(ZeroAddress, await mockForwarder.getAddress())
+        ).to.be.revertedWithCustomError(DRFeeMutualizerFactory, RevertReasons.INVALID_PROTOCOL_ADDRESS);
       });
     });
   });
@@ -107,6 +126,13 @@ describe("DRFeeMutualizer", function () {
             .withArgs(await rando.getAddress(), ZeroAddress, amount);
         });
 
+        it("should allow direct calls when deposits are not restricted", async function () {
+          const amount = ONE_ETHER;
+          await expect(drFeeMutualizer.connect(seller).deposit(ZeroAddress, amount, { value: amount }))
+            .to.emit(drFeeMutualizer, "FundsDeposited")
+            .withArgs(await seller.getAddress(), ZeroAddress, amount);
+        });
+
         context("💔 Revert Reasons", async function () {
           it("should revert when no native currency sent", async function () {
             await expect(drFeeMutualizer.connect(owner).deposit(ZeroAddress, ONE_ETHER)).to.be.revertedWithCustomError(
@@ -126,7 +152,7 @@ describe("DRFeeMutualizer", function () {
 
           it("should revert when amount is zero", async function () {
             await expect(
-              drFeeMutualizer.connect(owner).deposit(ZeroAddress, 0, { value: 0 })
+              drFeeMutualizer.connect(owner).deposit(ZeroAddress, ZERO_AMOUNT, { value: ZERO_AMOUNT })
             ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INVALID_AMOUNT);
           });
         });
@@ -159,8 +185,17 @@ describe("DRFeeMutualizer", function () {
 
           it("should revert when amount is zero", async function () {
             await expect(
-              drFeeMutualizer.connect(owner).deposit(await mockToken.getAddress(), 0)
+              drFeeMutualizer.connect(owner).deposit(await mockToken.getAddress(), ZERO_AMOUNT)
             ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INVALID_AMOUNT);
+          });
+
+          it("should revert when native value sent for ERC20 token", async function () {
+            const amount = ONE_ETHER;
+            await expect(
+              drFeeMutualizer
+                .connect(owner)
+                .deposit(await mockToken.getAddress(), amount, { value: ZERO_POINT_FIVE_ETHER })
+            ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.NATIVE_NOT_ALLOWED);
           });
         });
       });
@@ -195,7 +230,7 @@ describe("DRFeeMutualizer", function () {
 
           it("should revert when amount is zero", async function () {
             await expect(
-              drFeeMutualizer.connect(owner).withdraw(ZeroAddress, 0, await buyer.getAddress())
+              drFeeMutualizer.connect(owner).withdraw(ZeroAddress, ZERO_AMOUNT, await buyer.getAddress())
             ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INVALID_AMOUNT);
           });
 
@@ -240,7 +275,7 @@ describe("DRFeeMutualizer", function () {
 
       it("should return zero for non-existent token", async function () {
         const balance = await drFeeMutualizer.getPoolBalance(await rando.getAddress());
-        expect(balance).to.equal(0);
+        expect(balance).to.equal(ZERO_AMOUNT);
       });
     });
   });
@@ -255,8 +290,9 @@ describe("DRFeeMutualizer", function () {
     });
 
     context("👉 newAgreement()", async function () {
+      const disputeResolverId = 1;
+      const agreementId = 1;
       it("should create agreement successfully", async function () {
-        const disputeResolverId = 1;
         const maxAmountPerTx = ONE_ETHER;
         const maxAmountTotal = TEN_ETHER;
         const timePeriod = THIRTY_DAYS;
@@ -279,17 +315,17 @@ describe("DRFeeMutualizer", function () {
             )
         )
           .to.emit(drFeeMutualizer, "AgreementCreated")
-          .withArgs(1, sellerId, disputeResolverId);
+          .withArgs(agreementId, sellerId, disputeResolverId);
 
-        const agreement = await drFeeMutualizer.getAgreement(1);
+        const agreement = await drFeeMutualizer.getAgreement(agreementId);
         expect(agreement.maxAmountPerTx).to.equal(maxAmountPerTx);
         expect(agreement.maxAmountTotal).to.equal(maxAmountTotal);
         expect(agreement.timePeriod).to.equal(timePeriod);
         expect(agreement.premium).to.equal(premium);
         expect(agreement.refundOnCancel).to.equal(refundOnCancel);
         expect(agreement.tokenAddress).to.equal(tokenAddress);
-        expect(agreement.startTime).to.equal(0);
-        expect(agreement.totalMutualized).to.equal(0);
+        expect(agreement.startTime).to.equal(ZERO_AMOUNT);
+        expect(agreement.totalMutualized).to.equal(ZERO_AMOUNT);
         expect(agreement.isVoided).to.equal(false);
       });
 
@@ -298,7 +334,16 @@ describe("DRFeeMutualizer", function () {
           await expect(
             drFeeMutualizer
               .connect(owner)
-              .newAgreement(0, 1, ONE_ETHER, TEN_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress)
+              .newAgreement(
+                ZERO_AMOUNT,
+                disputeResolverId,
+                ONE_ETHER,
+                TEN_ETHER,
+                THIRTY_DAYS,
+                ZERO_POINT_ONE_ETHER,
+                true,
+                ZeroAddress
+              )
           ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INVALID_SELLER_ID);
         });
 
@@ -306,7 +351,16 @@ describe("DRFeeMutualizer", function () {
           await expect(
             drFeeMutualizer
               .connect(owner)
-              .newAgreement(sellerId, 1, 0, TEN_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress)
+              .newAgreement(
+                sellerId,
+                disputeResolverId,
+                ZERO_AMOUNT,
+                TEN_ETHER,
+                THIRTY_DAYS,
+                ZERO_POINT_ONE_ETHER,
+                true,
+                ZeroAddress
+              )
           ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.MAX_AMOUNT_PER_TX_MUST_BE_GREATER_THAN_ZERO);
         });
 
@@ -314,7 +368,16 @@ describe("DRFeeMutualizer", function () {
           await expect(
             drFeeMutualizer
               .connect(owner)
-              .newAgreement(sellerId, 1, TEN_ETHER, ONE_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress)
+              .newAgreement(
+                sellerId,
+                disputeResolverId,
+                TEN_ETHER,
+                ONE_ETHER,
+                THIRTY_DAYS,
+                ZERO_POINT_ONE_ETHER,
+                true,
+                ZeroAddress
+              )
           ).to.be.revertedWithCustomError(
             drFeeMutualizer,
             RevertReasons.MAX_TOTAL_MUST_BE_GREATER_THAN_OR_EQUAL_TO_MAX_PER_TX
@@ -325,7 +388,16 @@ describe("DRFeeMutualizer", function () {
           await expect(
             drFeeMutualizer
               .connect(owner)
-              .newAgreement(sellerId, 1, ONE_ETHER, TEN_ETHER, 0, ZERO_POINT_ONE_ETHER, true, ZeroAddress)
+              .newAgreement(
+                sellerId,
+                disputeResolverId,
+                ONE_ETHER,
+                TEN_ETHER,
+                ZERO_AMOUNT,
+                ZERO_POINT_ONE_ETHER,
+                true,
+                ZeroAddress
+              )
           ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.TIME_PERIOD_MUST_BE_GREATER_THAN_ZERO);
         });
 
@@ -333,28 +405,48 @@ describe("DRFeeMutualizer", function () {
           await expect(
             drFeeMutualizer
               .connect(rando)
-              .newAgreement(sellerId, 1, ONE_ETHER, TEN_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress)
+              .newAgreement(
+                sellerId,
+                disputeResolverId,
+                ONE_ETHER,
+                TEN_ETHER,
+                THIRTY_DAYS,
+                ZERO_POINT_ONE_ETHER,
+                true,
+                ZeroAddress
+              )
           ).to.be.revertedWith(RevertReasons.OWNABLE_NOT_OWNER);
         });
       });
     });
 
     context("👉 payPremium()", async function () {
+      const disputeResolverId = 1;
+      const agreementId = 1;
       beforeEach(async function () {
         await drFeeMutualizer
           .connect(owner)
-          .newAgreement(sellerId, 1, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress);
+          .newAgreement(
+            sellerId,
+            disputeResolverId,
+            TWO_ETHER,
+            TWENTY_ETHER,
+            THIRTY_DAYS,
+            ZERO_POINT_ONE_ETHER,
+            true,
+            ZeroAddress
+          );
       });
 
       context("Native Currency", async function () {
         it("should activate agreement with native currency premium", async function () {
           const premium = ZERO_POINT_ONE_ETHER;
 
-          await expect(drFeeMutualizer.connect(seller).payPremium(1, { value: premium }))
+          await expect(drFeeMutualizer.connect(seller).payPremium(agreementId, { value: premium }))
             .to.emit(drFeeMutualizer, "AgreementActivated")
-            .withArgs(1, sellerId);
+            .withArgs(agreementId, sellerId);
 
-          const agreement = await drFeeMutualizer.getAgreement(1);
+          const agreement = await drFeeMutualizer.getAgreement(agreementId);
           expect(agreement.startTime).to.be.greaterThan(0);
         });
 
@@ -362,44 +454,47 @@ describe("DRFeeMutualizer", function () {
           it("should revert when incorrect premium amount", async function () {
             const wrongPremium = ZERO_POINT_TWO_ETHER;
             await expect(
-              drFeeMutualizer.connect(seller).payPremium(1, { value: wrongPremium })
+              drFeeMutualizer.connect(seller).payPremium(agreementId, { value: wrongPremium })
             ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
           });
 
           it("should revert when agreement is already active", async function () {
             const premium = ZERO_POINT_ONE_ETHER;
-            await drFeeMutualizer.connect(seller).payPremium(1, { value: premium });
+            await drFeeMutualizer.connect(seller).payPremium(agreementId, { value: premium });
 
             await expect(
-              drFeeMutualizer.connect(seller).payPremium(1, { value: premium })
+              drFeeMutualizer.connect(seller).payPremium(agreementId, { value: premium })
             ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.AGREEMENT_ALREADY_ACTIVE);
           });
 
           it("should revert when agreement is voided", async function () {
-            await drFeeMutualizer.connect(owner).voidAgreement(1);
+            await drFeeMutualizer.connect(owner).voidAgreement(agreementId);
 
             const premium = ZERO_POINT_ONE_ETHER;
             await expect(
-              drFeeMutualizer.connect(seller).payPremium(1, { value: premium })
+              drFeeMutualizer.connect(seller).payPremium(agreementId, { value: premium })
             ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.AGREEMENT_IS_VOIDED);
           });
 
           it("should revert when agreement ID is invalid", async function () {
             const premium = ZERO_POINT_ONE_ETHER;
             await expect(
-              drFeeMutualizer.connect(seller).payPremium(999, { value: premium })
+              drFeeMutualizer.connect(seller).payPremium(INVALID_ID, { value: premium })
             ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INVALID_AGREEMENT_ID);
           });
         });
       });
 
       context("ERC20 Token", async function () {
+        const erc20SellerId = 2;
+        const erc20DisputeResolverId = 2;
+        const erc20AgreementId = 2;
         beforeEach(async function () {
           await drFeeMutualizer
             .connect(owner)
             .newAgreement(
-              2,
-              2,
+              erc20SellerId,
+              erc20DisputeResolverId,
               TWO_ETHER,
               TWENTY_ETHER,
               THIRTY_DAYS,
@@ -413,31 +508,40 @@ describe("DRFeeMutualizer", function () {
           const premium = HUNDRED_ETHER;
           await mockToken.connect(seller).approve(await drFeeMutualizer.getAddress(), premium);
 
-          await expect(drFeeMutualizer.connect(seller).payPremium(2))
+          await expect(drFeeMutualizer.connect(seller).payPremium(erc20AgreementId))
             .to.emit(drFeeMutualizer, "AgreementActivated")
-            .withArgs(2, 2);
+            .withArgs(erc20AgreementId, erc20SellerId);
 
-          const agreement = await drFeeMutualizer.getAgreement(2);
+          const agreement = await drFeeMutualizer.getAgreement(erc20AgreementId);
           expect(agreement.startTime).to.be.greaterThan(0);
         });
 
         context("💔 Revert Reasons", async function () {
           it("should revert when native currency sent for ERC20 token", async function () {
             await mockToken.connect(seller).approve(await drFeeMutualizer.getAddress(), HUNDRED_ETHER);
-            await expect(drFeeMutualizer.connect(seller).payPremium(2, { value: 1000 })).to.be.revertedWithCustomError(
-              drFeeMutualizer,
-              RevertReasons.NATIVE_NOT_ALLOWED
-            );
+            await expect(
+              drFeeMutualizer.connect(seller).payPremium(erc20AgreementId, { value: ZERO_POINT_FIVE_ETHER })
+            ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.NATIVE_NOT_ALLOWED);
           });
         });
       });
     });
 
     context("👉 voidAgreement()", async function () {
+      const disputeResolverId = 1;
       it("should void agreement successfully by seller", async function () {
         const tx = await drFeeMutualizer
           .connect(owner)
-          .newAgreement(sellerId, 1, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress);
+          .newAgreement(
+            sellerId,
+            disputeResolverId,
+            TWO_ETHER,
+            TWENTY_ETHER,
+            THIRTY_DAYS,
+            ZERO_POINT_ONE_ETHER,
+            true,
+            ZeroAddress
+          );
         const receipt = await tx.wait();
         const agreementId = receipt.logs[0].args[0];
         await drFeeMutualizer.connect(seller).payPremium(agreementId, { value: ZERO_POINT_ONE_ETHER });
@@ -451,7 +555,16 @@ describe("DRFeeMutualizer", function () {
       it("should void agreement successfully by owner when refundOnCancel is true", async function () {
         const tx = await drFeeMutualizer
           .connect(owner)
-          .newAgreement(sellerId, 1, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress);
+          .newAgreement(
+            sellerId,
+            disputeResolverId,
+            TWO_ETHER,
+            TWENTY_ETHER,
+            THIRTY_DAYS,
+            ZERO_POINT_ONE_ETHER,
+            true,
+            ZeroAddress
+          );
         const receipt = await tx.wait();
         const agreementId = receipt.logs[0].args[0];
         await drFeeMutualizer.connect(seller).payPremium(agreementId, { value: ZERO_POINT_ONE_ETHER });
@@ -464,7 +577,7 @@ describe("DRFeeMutualizer", function () {
 
       context("💔 Revert Reasons", async function () {
         it("should revert when agreement ID is invalid", async function () {
-          await expect(drFeeMutualizer.connect(seller).voidAgreement(999)).to.be.revertedWithCustomError(
+          await expect(drFeeMutualizer.connect(seller).voidAgreement(INVALID_ID)).to.be.revertedWithCustomError(
             drFeeMutualizer,
             RevertReasons.INVALID_AGREEMENT_ID
           );
@@ -473,7 +586,16 @@ describe("DRFeeMutualizer", function () {
         it("should revert when agreement is already voided", async function () {
           const tx = await drFeeMutualizer
             .connect(owner)
-            .newAgreement(sellerId, 1, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress);
+            .newAgreement(
+              sellerId,
+              disputeResolverId,
+              TWO_ETHER,
+              TWENTY_ETHER,
+              THIRTY_DAYS,
+              ZERO_POINT_ONE_ETHER,
+              true,
+              ZeroAddress
+            );
           const receipt = await tx.wait();
           const agreementId = receipt.logs[0].args[0];
           await drFeeMutualizer.connect(seller).payPremium(agreementId, { value: ZERO_POINT_ONE_ETHER });
@@ -487,7 +609,16 @@ describe("DRFeeMutualizer", function () {
         it("should revert when caller is not authorized", async function () {
           const tx = await drFeeMutualizer
             .connect(owner)
-            .newAgreement(sellerId, 1, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress);
+            .newAgreement(
+              sellerId,
+              disputeResolverId,
+              TWO_ETHER,
+              TWENTY_ETHER,
+              THIRTY_DAYS,
+              ZERO_POINT_ONE_ETHER,
+              true,
+              ZeroAddress
+            );
           const receipt = await tx.wait();
           const agreementId = receipt.logs[0].args[0];
           await drFeeMutualizer.connect(seller).payPremium(agreementId, { value: ZERO_POINT_ONE_ETHER });
@@ -513,27 +644,9 @@ describe("DRFeeMutualizer", function () {
     });
 
     context("👉 getAgreement()", async function () {
+      const disputeResolverId = 1;
+      const agreementId = 1;
       it("should return agreement details", async function () {
-        await drFeeMutualizer
-          .connect(owner)
-          .newAgreement(sellerId, 1, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress);
-        const agreement = await drFeeMutualizer.getAgreement(1);
-        expect(agreement.maxAmountPerTx).to.equal(TWO_ETHER);
-        expect(agreement.maxAmountTotal).to.equal(TWENTY_ETHER);
-        expect(agreement.tokenAddress).to.equal(ZeroAddress);
-      });
-
-      it("should revert when agreement ID is invalid", async function () {
-        await expect(drFeeMutualizer.getAgreement(999)).to.be.revertedWithCustomError(
-          drFeeMutualizer,
-          RevertReasons.INVALID_AGREEMENT_ID
-        );
-      });
-    });
-
-    context("👉 getAgreementId()", async function () {
-      it("should return correct agreement ID for specific dispute resolver", async function () {
-        const disputeResolverId = 1;
         await drFeeMutualizer
           .connect(owner)
           .newAgreement(
@@ -546,21 +659,47 @@ describe("DRFeeMutualizer", function () {
             true,
             ZeroAddress
           );
+        const agreement = await drFeeMutualizer.getAgreement(agreementId);
+        expect(agreement.maxAmountPerTx).to.equal(TWO_ETHER);
+        expect(agreement.maxAmountTotal).to.equal(TWENTY_ETHER);
+        expect(agreement.tokenAddress).to.equal(ZeroAddress);
+      });
+
+      it("should revert when agreement ID is invalid", async function () {
+        await expect(drFeeMutualizer.getAgreement(INVALID_ID)).to.be.revertedWithCustomError(
+          drFeeMutualizer,
+          RevertReasons.INVALID_AGREEMENT_ID
+        );
+      });
+    });
+
+    context("👉 getAgreementId()", async function () {
+      const disputeResolverId = 1;
+      it("should return correct agreement ID for specific dispute resolver", async function () {
         const agreementId = await drFeeMutualizer.getAgreementId(sellerId, disputeResolverId);
-        expect(agreementId).to.equal(1);
+        expect(agreementId).to.equal(agreementId);
       });
 
       it("should return universal agreement ID when specific one doesn't exist", async function () {
         await drFeeMutualizer
           .connect(owner)
-          .newAgreement(sellerId, 0, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress);
-        const agreementId = await drFeeMutualizer.getAgreementId(sellerId, 999);
-        expect(agreementId).to.equal(1);
+          .newAgreement(
+            sellerId,
+            ZERO_AMOUNT,
+            TWO_ETHER,
+            TWENTY_ETHER,
+            THIRTY_DAYS,
+            ZERO_POINT_ONE_ETHER,
+            true,
+            ZeroAddress
+          );
+        const agreementId = await drFeeMutualizer.getAgreementId(sellerId, INVALID_ID);
+        expect(agreementId).to.equal(agreementId);
       });
 
       it("should return zero for non-existent agreement", async function () {
-        const agreementId = await drFeeMutualizer.getAgreementId(sellerId, 999);
-        expect(agreementId).to.equal(0);
+        const agreementId = await drFeeMutualizer.getAgreementId(sellerId, INVALID_ID);
+        expect(agreementId).to.equal(ZERO_AMOUNT);
       });
     });
   });
@@ -577,21 +716,37 @@ describe("DRFeeMutualizer", function () {
     });
 
     context("👉 isSellerCovered()", async function () {
+      const disputeResolverId = 1;
+      const agreementId = 1;
       beforeEach(async function () {
         await drFeeMutualizer
           .connect(owner)
-          .newAgreement(sellerId, 1, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress);
-        await drFeeMutualizer.connect(seller).payPremium(1, { value: ZERO_POINT_ONE_ETHER });
+          .newAgreement(
+            sellerId,
+            disputeResolverId,
+            TWO_ETHER,
+            TWENTY_ETHER,
+            THIRTY_DAYS,
+            ZERO_POINT_ONE_ETHER,
+            true,
+            ZeroAddress
+          );
+        await drFeeMutualizer.connect(seller).payPremium(agreementId, { value: ZERO_POINT_ONE_ETHER });
         await drFeeMutualizer.connect(owner).deposit(ZeroAddress, FIVE_ETHER, { value: FIVE_ETHER });
       });
 
       it("should return true when seller is covered", async function () {
-        const isCovered = await drFeeMutualizer.isSellerCovered(sellerId, ZERO_POINT_FIVE_ETHER, ZeroAddress, 1);
+        const isCovered = await drFeeMutualizer.isSellerCovered(
+          sellerId,
+          ZERO_POINT_FIVE_ETHER,
+          ZeroAddress,
+          disputeResolverId
+        );
         expect(isCovered).to.be.true;
       });
 
       it("should return false when fee amount exceeds maxAmountPerTx", async function () {
-        const isCovered = await drFeeMutualizer.isSellerCovered(sellerId, THREE_ETHER, ZeroAddress, 1);
+        const isCovered = await drFeeMutualizer.isSellerCovered(sellerId, THREE_ETHER, ZeroAddress, disputeResolverId);
         expect(isCovered).to.be.false;
       });
 
@@ -602,28 +757,35 @@ describe("DRFeeMutualizer", function () {
           EIGHT_ETHER,
           ZeroAddress,
           1,
-          1
+          disputeResolverId
         );
-        const isCovered = await drFeeMutualizer.isSellerCovered(sellerId, THREE_ETHER, ZeroAddress, 1);
+        const isCovered = await drFeeMutualizer.isSellerCovered(sellerId, THREE_ETHER, ZeroAddress, disputeResolverId);
         expect(isCovered).to.be.false;
       });
 
       it("should return false when agreement is expired", async function () {
-        // Get the agreement start time directly from the contract
-        const agreement = await drFeeMutualizer.getAgreement(1);
+        const agreement = await drFeeMutualizer.getAgreement(agreementId);
         const agreementStartTime = agreement.startTime;
-
-        // Advance time by 31 days from when agreement was activated
         const futureTimestamp = agreementStartTime + BigInt(THIRTY_ONE_DAYS);
         await setNextBlockTimestamp(Number(futureTimestamp), true);
 
-        const isCovered = await drFeeMutualizer.isSellerCovered(sellerId, ZERO_POINT_FIVE_ETHER, ZeroAddress, 1);
+        const isCovered = await drFeeMutualizer.isSellerCovered(
+          sellerId,
+          ZERO_POINT_FIVE_ETHER,
+          ZeroAddress,
+          disputeResolverId
+        );
         expect(isCovered).to.be.false;
       });
 
       it("should return false when agreement is voided", async function () {
-        await drFeeMutualizer.connect(seller).voidAgreement(1);
-        const isCovered = await drFeeMutualizer.isSellerCovered(sellerId, ZERO_POINT_FIVE_ETHER, ZeroAddress, 1);
+        await drFeeMutualizer.connect(seller).voidAgreement(agreementId);
+        const isCovered = await drFeeMutualizer.isSellerCovered(
+          sellerId,
+          ZERO_POINT_FIVE_ETHER,
+          ZeroAddress,
+          disputeResolverId
+        );
         expect(isCovered).to.be.false;
       });
 
@@ -632,14 +794,19 @@ describe("DRFeeMutualizer", function () {
           sellerId,
           ZERO_POINT_FIVE_ETHER,
           await mockToken.getAddress(),
-          1
+          disputeResolverId
         );
         expect(isCovered).to.be.false;
       });
 
       it("should return false when pool balance is insufficient", async function () {
         await drFeeMutualizer.connect(owner).withdraw(ZeroAddress, FIVE_ETHER, await owner.getAddress());
-        const isCovered = await drFeeMutualizer.isSellerCovered(sellerId, ZERO_POINT_FIVE_ETHER, ZeroAddress, 1);
+        const isCovered = await drFeeMutualizer.isSellerCovered(
+          sellerId,
+          ZERO_POINT_FIVE_ETHER,
+          ZeroAddress,
+          disputeResolverId
+        );
         expect(isCovered).to.be.false;
       });
 
@@ -648,23 +815,39 @@ describe("DRFeeMutualizer", function () {
           .connect(owner)
           .newAgreement(sellerId, 0, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress);
         await drFeeMutualizer.connect(seller).payPremium(2, { value: ZERO_POINT_ONE_ETHER });
-        const isCovered = await drFeeMutualizer.isSellerCovered(sellerId, ZERO_POINT_FIVE_ETHER, ZeroAddress, 999);
+        const isCovered = await drFeeMutualizer.isSellerCovered(
+          sellerId,
+          ZERO_POINT_FIVE_ETHER,
+          ZeroAddress,
+          INVALID_ID
+        );
         expect(isCovered).to.be.true;
       });
     });
 
     context("👉 requestDRFee()", async function () {
+      const disputeResolverId = 1;
+      const agreementId = 1;
       beforeEach(async function () {
         await drFeeMutualizer
           .connect(owner)
-          .newAgreement(sellerId, 1, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress);
-        await drFeeMutualizer.connect(seller).payPremium(1, { value: ZERO_POINT_ONE_ETHER });
+          .newAgreement(
+            sellerId,
+            disputeResolverId,
+            TWO_ETHER,
+            TWENTY_ETHER,
+            THIRTY_DAYS,
+            ZERO_POINT_ONE_ETHER,
+            true,
+            ZeroAddress
+          );
+        await drFeeMutualizer.connect(seller).payPremium(agreementId, { value: ZERO_POINT_ONE_ETHER });
         await drFeeMutualizer.connect(owner).deposit(ZeroAddress, FIVE_ETHER, { value: FIVE_ETHER });
       });
 
       it("should request DR fee successfully", async function () {
         const feeAmount = ZERO_POINT_FIVE_ETHER;
-        const exchangeId = 123;
+        const exchangeId = EXCHANGE_ID_1;
         const protocolBalanceBefore = await ethers.provider.getBalance(await mockProtocol.getAddress());
 
         await expect(
@@ -674,7 +857,7 @@ describe("DRFeeMutualizer", function () {
             feeAmount,
             ZeroAddress,
             exchangeId,
-            1
+            disputeResolverId
           )
         )
           .to.emit(drFeeMutualizer, "DRFeeProvided")
@@ -685,30 +868,42 @@ describe("DRFeeMutualizer", function () {
       });
 
       it("should request DR fee successfully (ERC20)", async function () {
+        const erc20SellerId = 2;
+        const erc20DisputeResolverId = 2;
+        const erc20AgreementId = 2;
         await drFeeMutualizer
           .connect(owner)
-          .newAgreement(2, 2, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, HUNDRED_ETHER, true, await mockToken.getAddress());
+          .newAgreement(
+            erc20SellerId,
+            erc20DisputeResolverId,
+            TWO_ETHER,
+            TWENTY_ETHER,
+            THIRTY_DAYS,
+            HUNDRED_ETHER,
+            true,
+            await mockToken.getAddress()
+          );
         await mockToken.connect(seller).approve(await drFeeMutualizer.getAddress(), HUNDRED_ETHER);
-        await drFeeMutualizer.connect(seller).payPremium(2);
+        await drFeeMutualizer.connect(seller).payPremium(erc20AgreementId);
         await mockToken.connect(owner).approve(await drFeeMutualizer.getAddress(), FIVE_ETHER);
         await drFeeMutualizer.connect(owner).deposit(await mockToken.getAddress(), FIVE_ETHER);
 
         const feeAmount = ZERO_POINT_FIVE_ETHER;
-        const exchangeId = 456;
+        const exchangeId = EXCHANGE_ID_2;
         const protocolBalanceBefore = await mockToken.balanceOf(await mockProtocol.getAddress());
 
         await expect(
           mockProtocol.callRequestDRFee(
             await drFeeMutualizer.getAddress(),
-            2,
+            erc20SellerId,
             feeAmount,
             await mockToken.getAddress(),
             exchangeId,
-            2
+            erc20DisputeResolverId
           )
         )
           .to.emit(drFeeMutualizer, "DRFeeProvided")
-          .withArgs(exchangeId, 2, feeAmount);
+          .withArgs(exchangeId, erc20SellerId, feeAmount);
 
         const protocolBalanceAfter = await mockToken.balanceOf(await mockProtocol.getAddress());
         expect(protocolBalanceAfter - protocolBalanceBefore).to.equal(feeAmount);
@@ -716,16 +911,16 @@ describe("DRFeeMutualizer", function () {
 
       it("should return false when seller is not covered", async function () {
         const feeAmount = THREE_ETHER;
-        const isCovered = await drFeeMutualizer.isSellerCovered(sellerId, feeAmount, ZeroAddress, 1);
+        const isCovered = await drFeeMutualizer.isSellerCovered(sellerId, feeAmount, ZeroAddress, disputeResolverId);
         expect(isCovered).to.be.false;
       });
 
       context("💔 Revert Reasons", async function () {
         it("should revert when caller is not protocol", async function () {
           const feeAmount = ZERO_POINT_FIVE_ETHER;
-          const exchangeId = 123;
+          const exchangeId = EXCHANGE_ID_1;
           await expect(
-            drFeeMutualizer.connect(rando).requestDRFee(sellerId, feeAmount, ZeroAddress, exchangeId, 1)
+            drFeeMutualizer.connect(rando).requestDRFee(sellerId, feeAmount, ZeroAddress, exchangeId, disputeResolverId)
           ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.ONLY_PROTOCOL);
         });
       });
@@ -733,23 +928,33 @@ describe("DRFeeMutualizer", function () {
 
     context("👉 returnDRFee()", async function () {
       let exchangeId;
+      const disputeResolverId = 1;
 
       beforeEach(async function () {
         const tx = await drFeeMutualizer
           .connect(owner)
-          .newAgreement(sellerId, 1, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress);
+          .newAgreement(
+            sellerId,
+            disputeResolverId,
+            TWO_ETHER,
+            TWENTY_ETHER,
+            THIRTY_DAYS,
+            ZERO_POINT_ONE_ETHER,
+            true,
+            ZeroAddress
+          );
         const receipt = await tx.wait();
         const agreementId = receipt.logs[0].args[0];
         await drFeeMutualizer.connect(seller).payPremium(agreementId, { value: ZERO_POINT_ONE_ETHER });
         await drFeeMutualizer.connect(owner).deposit(ZeroAddress, FIVE_ETHER, { value: FIVE_ETHER });
-        exchangeId = 123;
+        exchangeId = EXCHANGE_ID_1;
         await mockProtocol.callRequestDRFee(
           await drFeeMutualizer.getAddress(),
           sellerId,
           ZERO_POINT_FIVE_ETHER,
           ZeroAddress,
           exchangeId,
-          1
+          disputeResolverId
         );
       });
 
@@ -777,34 +982,45 @@ describe("DRFeeMutualizer", function () {
       });
 
       it("should allow returning DR fee with 0 amount and clean up tracking (ERC20)", async function () {
+        const erc20SellerId = 2;
+        const erc20DisputeResolverId = 2;
+        const erc20AgreementId = 2;
         await drFeeMutualizer
           .connect(owner)
-          .newAgreement(2, 2, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, HUNDRED_ETHER, true, await mockToken.getAddress());
+          .newAgreement(
+            erc20SellerId,
+            erc20DisputeResolverId,
+            TWO_ETHER,
+            TWENTY_ETHER,
+            THIRTY_DAYS,
+            HUNDRED_ETHER,
+            true,
+            await mockToken.getAddress()
+          );
         await mockToken.connect(seller).approve(await drFeeMutualizer.getAddress(), HUNDRED_ETHER);
-        await drFeeMutualizer.connect(seller).payPremium(2);
+        await drFeeMutualizer.connect(seller).payPremium(erc20AgreementId);
         await mockToken.connect(owner).approve(await drFeeMutualizer.getAddress(), FIVE_ETHER);
         await drFeeMutualizer.connect(owner).deposit(await mockToken.getAddress(), FIVE_ETHER);
-        const erc20ExchangeId = 789;
         await mockProtocol.callRequestDRFee(
           await drFeeMutualizer.getAddress(),
-          2,
+          erc20SellerId,
           ZERO_POINT_FIVE_ETHER,
           await mockToken.getAddress(),
-          erc20ExchangeId,
-          2
+          EXCHANGE_ID_3,
+          erc20DisputeResolverId
         );
         await mockProtocol.approveToken(await mockToken.getAddress(), await drFeeMutualizer.getAddress(), 0);
-        await expect(mockProtocol.callReturnDRFee(await drFeeMutualizer.getAddress(), erc20ExchangeId, 0)).to.not.be
+        await expect(mockProtocol.callReturnDRFee(await drFeeMutualizer.getAddress(), EXCHANGE_ID_3, 0)).to.not.be
           .reverted;
         await expect(
-          mockProtocol.callReturnDRFee(await drFeeMutualizer.getAddress(), erc20ExchangeId, ZERO_POINT_ONE_ETHER)
+          mockProtocol.callReturnDRFee(await drFeeMutualizer.getAddress(), EXCHANGE_ID_3, ZERO_POINT_ONE_ETHER)
         ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INVALID_EXCHANGE_ID);
       });
 
       context("💔 Revert Reasons", async function () {
         it("should revert when exchange ID is invalid", async function () {
           await expect(
-            mockProtocol.callReturnDRFee(await drFeeMutualizer.getAddress(), 999, ZERO_POINT_ONE_ETHER, {
+            mockProtocol.callReturnDRFee(await drFeeMutualizer.getAddress(), INVALID_ID, ZERO_POINT_ONE_ETHER, {
               value: ZERO_POINT_ONE_ETHER,
             })
           ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INVALID_EXCHANGE_ID);
@@ -821,11 +1037,13 @@ describe("DRFeeMutualizer", function () {
         });
 
         it("should revert when native currency sent for ERC20 token", async function () {
+          const erc20SellerId = 2;
+          const erc20DisputeResolverId = 2;
           const tx = await drFeeMutualizer
             .connect(owner)
             .newAgreement(
-              2,
-              2,
+              erc20SellerId,
+              erc20DisputeResolverId,
               TWO_ETHER,
               TWENTY_ETHER,
               THIRTY_DAYS,
@@ -841,28 +1059,28 @@ describe("DRFeeMutualizer", function () {
           await mockToken.connect(owner).approve(await drFeeMutualizer.getAddress(), FIVE_ETHER);
           await drFeeMutualizer.connect(owner).deposit(await mockToken.getAddress(), FIVE_ETHER);
 
-          const erc20ExchangeId = 456;
+          const erc20ExchangeId = EXCHANGE_ID_2;
 
           const isCovered = await drFeeMutualizer.isSellerCovered(
-            2,
+            erc20SellerId,
             ZERO_POINT_FIVE_ETHER,
             await mockToken.getAddress(),
-            2
+            erc20DisputeResolverId
           );
           expect(isCovered).to.be.true;
 
           await mockProtocol.callRequestDRFee(
             await drFeeMutualizer.getAddress(),
-            2,
+            erc20SellerId,
             ZERO_POINT_FIVE_ETHER,
             await mockToken.getAddress(),
             erc20ExchangeId,
-            2
+            erc20DisputeResolverId
           );
 
           await expect(
             mockProtocol.callReturnDRFee(await drFeeMutualizer.getAddress(), erc20ExchangeId, ZERO_POINT_THREE_ETHER, {
-              value: 1000,
+              value: ZERO_POINT_FIVE_ETHER,
             })
           ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.NATIVE_NOT_ALLOWED);
         });
@@ -878,11 +1096,13 @@ describe("DRFeeMutualizer", function () {
     });
 
     it("should handle ERC20 fee return correctly", async function () {
+      const erc20SellerId = 2;
+      const erc20DisputeResolverId = 2;
       const tx = await drFeeMutualizer
         .connect(owner)
         .newAgreement(
-          2,
-          2,
+          erc20SellerId,
+          erc20DisputeResolverId,
           TWO_ETHER,
           TWENTY_ETHER,
           THIRTY_DAYS,
@@ -899,14 +1119,14 @@ describe("DRFeeMutualizer", function () {
       await mockToken.connect(owner).approve(await drFeeMutualizer.getAddress(), FIVE_ETHER);
       await drFeeMutualizer.connect(owner).deposit(await mockToken.getAddress(), FIVE_ETHER);
 
-      const erc20ExchangeId = 456;
+      const erc20ExchangeId = EXCHANGE_ID_3;
       await mockProtocol.callRequestDRFee(
         await drFeeMutualizer.getAddress(),
-        2,
+        erc20SellerId,
         ZERO_POINT_FIVE_ETHER,
         await mockToken.getAddress(),
         erc20ExchangeId,
-        2
+        erc20DisputeResolverId
       );
 
       const poolBalanceBefore = await drFeeMutualizer.getPoolBalance(await mockToken.getAddress());
@@ -934,68 +1154,156 @@ describe("DRFeeMutualizer", function () {
     });
 
     it("should handle multiple agreements for same seller with different dispute resolvers", async function () {
+      const disputeResolverId1 = 1;
+      const disputeResolverId2 = 2;
       await drFeeMutualizer
         .connect(owner)
-        .newAgreement(sellerId, 1, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress);
+        .newAgreement(
+          sellerId,
+          disputeResolverId1,
+          TWO_ETHER,
+          TWENTY_ETHER,
+          THIRTY_DAYS,
+          ZERO_POINT_ONE_ETHER,
+          true,
+          ZeroAddress
+        );
       await drFeeMutualizer
         .connect(owner)
-        .newAgreement(sellerId, 2, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress);
-      const agreementId1 = await drFeeMutualizer.getAgreementId(sellerId, 1);
-      const agreementId2 = await drFeeMutualizer.getAgreementId(sellerId, 2);
+        .newAgreement(
+          sellerId,
+          disputeResolverId2,
+          TWO_ETHER,
+          TWENTY_ETHER,
+          THIRTY_DAYS,
+          ZERO_POINT_ONE_ETHER,
+          true,
+          ZeroAddress
+        );
+      const agreementId1 = await drFeeMutualizer.getAgreementId(sellerId, disputeResolverId1);
+      const agreementId2 = await drFeeMutualizer.getAgreementId(sellerId, disputeResolverId2);
       expect(agreementId1).to.equal(1);
       expect(agreementId2).to.equal(2);
     });
 
     it("should allow creating specific agreement when universal agreement exists", async function () {
+      const universalDisputeResolverId = 0;
+      const specificDisputeResolverId = 1;
       await drFeeMutualizer
         .connect(owner)
-        .newAgreement(sellerId, 0, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress);
+        .newAgreement(
+          sellerId,
+          universalDisputeResolverId,
+          TWO_ETHER,
+          TWENTY_ETHER,
+          THIRTY_DAYS,
+          ZERO_POINT_ONE_ETHER,
+          true,
+          ZeroAddress
+        );
       await drFeeMutualizer.connect(seller).payPremium(1, { value: ZERO_POINT_ONE_ETHER });
 
       await expect(
         drFeeMutualizer
           .connect(owner)
-          .newAgreement(sellerId, 1, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress)
+          .newAgreement(
+            sellerId,
+            specificDisputeResolverId,
+            TWO_ETHER,
+            TWENTY_ETHER,
+            THIRTY_DAYS,
+            ZERO_POINT_ONE_ETHER,
+            true,
+            ZeroAddress
+          )
       )
         .to.emit(drFeeMutualizer, "AgreementCreated")
-        .withArgs(2, sellerId, 1);
+        .withArgs(2, sellerId, specificDisputeResolverId);
     });
 
     it("should allow creating universal agreement when specific agreements exist", async function () {
+      const specificDisputeResolverId = 1;
+      const universalDisputeResolverId = 0;
       await drFeeMutualizer
         .connect(owner)
-        .newAgreement(sellerId, 1, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress);
+        .newAgreement(
+          sellerId,
+          specificDisputeResolverId,
+          TWO_ETHER,
+          TWENTY_ETHER,
+          THIRTY_DAYS,
+          ZERO_POINT_ONE_ETHER,
+          true,
+          ZeroAddress
+        );
       await drFeeMutualizer.connect(seller).payPremium(1, { value: ZERO_POINT_ONE_ETHER });
 
       await expect(
         drFeeMutualizer
           .connect(owner)
-          .newAgreement(sellerId, 0, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress)
+          .newAgreement(
+            sellerId,
+            universalDisputeResolverId,
+            TWO_ETHER,
+            TWENTY_ETHER,
+            THIRTY_DAYS,
+            ZERO_POINT_ONE_ETHER,
+            true,
+            ZeroAddress
+          )
       )
         .to.emit(drFeeMutualizer, "AgreementCreated")
-        .withArgs(2, sellerId, 0);
+        .withArgs(2, sellerId, universalDisputeResolverId);
     });
 
     it("should prevent creating duplicate agreement for same dispute resolver", async function () {
+      const disputeResolverId = 1;
       await drFeeMutualizer
         .connect(owner)
-        .newAgreement(sellerId, 1, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress);
+        .newAgreement(
+          sellerId,
+          disputeResolverId,
+          TWO_ETHER,
+          TWENTY_ETHER,
+          THIRTY_DAYS,
+          ZERO_POINT_ONE_ETHER,
+          true,
+          ZeroAddress
+        );
       await drFeeMutualizer.connect(seller).payPremium(1, { value: ZERO_POINT_ONE_ETHER });
 
       await expect(
         drFeeMutualizer
           .connect(owner)
-          .newAgreement(sellerId, 1, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress)
+          .newAgreement(
+            sellerId,
+            disputeResolverId,
+            TWO_ETHER,
+            TWENTY_ETHER,
+            THIRTY_DAYS,
+            ZERO_POINT_ONE_ETHER,
+            true,
+            ZeroAddress
+          )
       ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.AGREEMENT_ALREADY_EXISTS);
     });
 
     it("should allow creating agreement when previous one is expired", async function () {
+      const disputeResolverId = 1;
       await drFeeMutualizer
         .connect(owner)
-        .newAgreement(sellerId, 1, TWO_ETHER, TWENTY_ETHER, ONE_DAY, ZERO_POINT_ONE_ETHER, true, ZeroAddress);
+        .newAgreement(
+          sellerId,
+          disputeResolverId,
+          TWO_ETHER,
+          TWENTY_ETHER,
+          ONE_DAY,
+          ZERO_POINT_ONE_ETHER,
+          true,
+          ZeroAddress
+        );
       await drFeeMutualizer.connect(seller).payPremium(1, { value: ZERO_POINT_ONE_ETHER });
 
-      // Get current block timestamp and advance by 2 days
       const currentBlock = await ethers.provider.getBlock("latest");
       const futureTimestamp = currentBlock.timestamp + TWO_DAYS;
       await setNextBlockTimestamp(futureTimestamp, true);
@@ -1003,133 +1311,128 @@ describe("DRFeeMutualizer", function () {
       await expect(
         drFeeMutualizer
           .connect(owner)
-          .newAgreement(sellerId, 1, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress)
+          .newAgreement(
+            sellerId,
+            disputeResolverId,
+            TWO_ETHER,
+            TWENTY_ETHER,
+            THIRTY_DAYS,
+            ZERO_POINT_ONE_ETHER,
+            true,
+            ZeroAddress
+          )
       )
         .to.emit(drFeeMutualizer, "AgreementCreated")
-        .withArgs(2, sellerId, 1);
+        .withArgs(2, sellerId, disputeResolverId);
     });
 
     it("should handle voiding agreement with refundOnCancel false", async function () {
-      const MockProtocolFactory = await getContractFactory("MockProtocol");
-      const mockProtocol = await MockProtocolFactory.deploy();
-      await mockProtocol.waitForDeployment();
-
-      const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
-      const drFeeMutualizerWithMock = await DRFeeMutualizerFactory.deploy(await mockProtocol.getAddress());
-      await drFeeMutualizerWithMock.waitForDeployment();
-
-      await mockProtocol.setSeller(3, await seller.getAddress());
-
-      const tx = await drFeeMutualizerWithMock
+      const disputeResolverId = 3;
+      const tx = await drFeeMutualizer
         .connect(owner)
-        .newAgreement(3, 3, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, false, ZeroAddress);
+        .newAgreement(
+          sellerId,
+          disputeResolverId,
+          TWO_ETHER,
+          TWENTY_ETHER,
+          THIRTY_DAYS,
+          ZERO_POINT_ONE_ETHER,
+          false,
+          ZeroAddress
+        );
       const receipt = await tx.wait();
       const agreementId = receipt.logs[0].args[0];
 
-      await drFeeMutualizerWithMock.connect(seller).payPremium(agreementId, { value: ZERO_POINT_ONE_ETHER });
+      await drFeeMutualizer.connect(seller).payPremium(agreementId, { value: ZERO_POINT_ONE_ETHER });
 
-      await expect(drFeeMutualizerWithMock.connect(seller).voidAgreement(agreementId))
-        .to.emit(drFeeMutualizerWithMock, "AgreementVoided")
+      await expect(drFeeMutualizer.connect(seller).voidAgreement(agreementId))
+        .to.emit(drFeeMutualizer, "AgreementVoided")
         .withArgs(agreementId, false);
 
-      const agreement = await drFeeMutualizerWithMock.getAgreement(agreementId);
+      const agreement = await drFeeMutualizer.getAgreement(agreementId);
       expect(agreement.isVoided).to.equal(true);
     });
 
     it("should handle voiding inactive agreement", async function () {
-      const MockProtocolFactory = await getContractFactory("MockProtocol");
-      const mockProtocol = await MockProtocolFactory.deploy();
-      await mockProtocol.waitForDeployment();
-
-      const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
-      const drFeeMutualizerWithMock = await DRFeeMutualizerFactory.deploy(await mockProtocol.getAddress());
-      await drFeeMutualizerWithMock.waitForDeployment();
-
-      await mockProtocol.setSeller(4, await seller.getAddress());
-
-      const tx = await drFeeMutualizerWithMock
+      const disputeResolverId = 4;
+      const tx = await drFeeMutualizer
         .connect(owner)
-        .newAgreement(4, 4, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress);
+        .newAgreement(
+          sellerId,
+          disputeResolverId,
+          TWO_ETHER,
+          TWENTY_ETHER,
+          THIRTY_DAYS,
+          ZERO_POINT_ONE_ETHER,
+          true,
+          ZeroAddress
+        );
       const receipt = await tx.wait();
       const agreementId = receipt.logs[0].args[0];
 
-      await expect(drFeeMutualizerWithMock.connect(seller).voidAgreement(agreementId))
-        .to.emit(drFeeMutualizerWithMock, "AgreementVoided")
+      await expect(drFeeMutualizer.connect(seller).voidAgreement(agreementId))
+        .to.emit(drFeeMutualizer, "AgreementVoided")
         .withArgs(agreementId, false);
 
-      const agreement = await drFeeMutualizerWithMock.getAgreement(agreementId);
+      const agreement = await drFeeMutualizer.getAgreement(agreementId);
       expect(agreement.isVoided).to.equal(true);
     });
 
     it("should handle time-based refund calculation correctly", async function () {
-      const MockProtocolFactory = await getContractFactory("MockProtocol");
-      const mockProtocol = await MockProtocolFactory.deploy();
-      await mockProtocol.waitForDeployment();
-
-      const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
-      const drFeeMutualizerWithMock = await DRFeeMutualizerFactory.deploy(await mockProtocol.getAddress());
-      await drFeeMutualizerWithMock.waitForDeployment();
-
-      await mockProtocol.setSeller(5, await seller.getAddress());
-
-      const tx = await drFeeMutualizerWithMock
+      const disputeResolverId = 5;
+      const tx = await drFeeMutualizer
         .connect(owner)
-        .newAgreement(5, 5, TWO_ETHER, TWENTY_ETHER, TWELVE_DAYS, ONE_ETHER, true, ZeroAddress);
+        .newAgreement(sellerId, disputeResolverId, TWO_ETHER, TWENTY_ETHER, TWELVE_DAYS, ONE_ETHER, true, ZeroAddress);
       const receipt = await tx.wait();
       const agreementId = receipt.logs[0].args[0];
 
       const protocolBalanceBefore = await ethers.provider.getBalance(await mockProtocol.getAddress());
-      await drFeeMutualizerWithMock.connect(seller).payPremium(agreementId, { value: ONE_ETHER });
+      await drFeeMutualizer.connect(seller).payPremium(agreementId, { value: ONE_ETHER });
 
-      // Get the agreement start time directly from the contract
-      const agreement = await drFeeMutualizerWithMock.getAgreement(agreementId);
+      const agreement = await drFeeMutualizer.getAgreement(agreementId);
       const agreementStartTime = agreement.startTime;
 
-      // Advance time by 9 days from when agreement was activated
       const futureTimestamp = agreementStartTime + BigInt(NINE_DAYS);
       await setNextBlockTimestamp(Number(futureTimestamp));
 
-      await expect(drFeeMutualizerWithMock.connect(seller).voidAgreement(agreementId))
-        .to.emit(drFeeMutualizerWithMock, "AgreementVoided")
+      await expect(drFeeMutualizer.connect(seller).voidAgreement(agreementId))
+        .to.emit(drFeeMutualizer, "AgreementVoided")
         .withArgs(agreementId, true);
 
       const protocolBalanceAfter = await ethers.provider.getBalance(await mockProtocol.getAddress());
-      // After 9 days out of 12 days, seller should get 3/12 = 25% of premium back
       const expectedRefund = (ONE_ETHER * 3n) / 12n;
       expect(protocolBalanceAfter - protocolBalanceBefore).to.equal(expectedRefund);
     });
 
     it("should handle ERC20 time-based refund calculation correctly", async function () {
-      const MockProtocolFactory = await getContractFactory("MockProtocol");
-      const mockProtocol = await MockProtocolFactory.deploy();
-      await mockProtocol.waitForDeployment();
-
-      const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
-      const drFeeMutualizerWithMock = await DRFeeMutualizerFactory.deploy(await mockProtocol.getAddress());
-      await drFeeMutualizerWithMock.waitForDeployment();
-
-      await mockProtocol.setSeller(7, await seller.getAddress());
-
-      const tx = await drFeeMutualizerWithMock
+      const disputeResolverId = 7;
+      const tx = await drFeeMutualizer
         .connect(owner)
-        .newAgreement(7, 7, TWO_ETHER, TWENTY_ETHER, TWELVE_DAYS, HUNDRED_ETHER, true, await mockToken.getAddress());
+        .newAgreement(
+          sellerId,
+          disputeResolverId,
+          TWO_ETHER,
+          TWENTY_ETHER,
+          TWELVE_DAYS,
+          HUNDRED_ETHER,
+          true,
+          await mockToken.getAddress()
+        );
       const receipt = await tx.wait();
       const agreementId = receipt.logs[0].args[0];
 
       const protocolBalanceBefore = await mockToken.balanceOf(await mockProtocol.getAddress());
-      await mockToken.connect(seller).approve(await drFeeMutualizerWithMock.getAddress(), HUNDRED_ETHER);
-      await drFeeMutualizerWithMock.connect(seller).payPremium(agreementId);
+      await mockToken.connect(seller).approve(await drFeeMutualizer.getAddress(), HUNDRED_ETHER);
+      await drFeeMutualizer.connect(seller).payPremium(agreementId);
 
-      // Get the agreement start time directly from the contract
-      const agreement = await drFeeMutualizerWithMock.getAgreement(agreementId);
+      const agreement = await drFeeMutualizer.getAgreement(agreementId);
       const agreementStartTime = agreement.startTime;
 
-      // Advance time by 9 days from when agreement was activated
       const futureTimestamp = agreementStartTime + BigInt(NINE_DAYS);
       await setNextBlockTimestamp(Number(futureTimestamp));
 
-      await expect(drFeeMutualizerWithMock.connect(seller).voidAgreement(agreementId))
-        .to.emit(drFeeMutualizerWithMock, "AgreementVoided")
+      await expect(drFeeMutualizer.connect(seller).voidAgreement(agreementId))
+        .to.emit(drFeeMutualizer, "AgreementVoided")
         .withArgs(agreementId, true);
 
       const protocolBalanceAfter = await mockToken.balanceOf(await mockProtocol.getAddress());
@@ -1139,26 +1442,50 @@ describe("DRFeeMutualizer", function () {
     });
 
     it("should handle maxAmountTotal limit correctly", async function () {
+      const disputeResolverId = 6;
       const tx = await drFeeMutualizer
         .connect(owner)
-        .newAgreement(6, 6, ONE_ETHER, TWO_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress);
+        .newAgreement(
+          sellerId,
+          disputeResolverId,
+          ONE_ETHER,
+          TWO_ETHER,
+          THIRTY_DAYS,
+          ZERO_POINT_ONE_ETHER,
+          true,
+          ZeroAddress
+        );
       const receipt = await tx.wait();
       const agreementId = receipt.logs[0].args[0];
 
       await drFeeMutualizer.connect(seller).payPremium(agreementId, { value: ZERO_POINT_ONE_ETHER });
       await drFeeMutualizer.connect(owner).deposit(ZeroAddress, FIVE_ETHER, { value: FIVE_ETHER });
 
-      await mockProtocol.callRequestDRFee(await drFeeMutualizer.getAddress(), 6, ONE_ETHER, ZeroAddress, 100, 6);
+      await mockProtocol.callRequestDRFee(
+        await drFeeMutualizer.getAddress(),
+        sellerId,
+        ONE_ETHER,
+        ZeroAddress,
+        100,
+        disputeResolverId
+      );
 
       const agreement1 = await drFeeMutualizer.getAgreement(agreementId);
       expect(agreement1.totalMutualized).to.equal(ONE_ETHER);
 
-      await mockProtocol.callRequestDRFee(await drFeeMutualizer.getAddress(), 6, ONE_ETHER, ZeroAddress, 101, 6);
+      await mockProtocol.callRequestDRFee(
+        await drFeeMutualizer.getAddress(),
+        sellerId,
+        ONE_ETHER,
+        ZeroAddress,
+        101,
+        disputeResolverId
+      );
 
       const agreement2 = await drFeeMutualizer.getAgreement(agreementId);
       expect(agreement2.totalMutualized).to.equal(TWO_ETHER);
 
-      const isCovered = await drFeeMutualizer.isSellerCovered(6, ONE_ETHER, ZeroAddress, 6);
+      const isCovered = await drFeeMutualizer.isSellerCovered(sellerId, ONE_ETHER, ZeroAddress, disputeResolverId);
       expect(isCovered).to.be.false;
     });
   });
@@ -1178,6 +1505,265 @@ describe("DRFeeMutualizer", function () {
           RevertReasons.OWNABLE_NOT_OWNER
         );
       });
+    });
+  });
+
+  context("📋 Meta-Transactions", async function () {
+    let mockForwarder;
+    let forwarderAddress;
+    let drFeeMutualizerWithForwarder;
+    let seller;
+    let mockProtocol;
+
+    // Common constants for meta-transaction tests
+    const sellerId = 1;
+    const disputeResolverId = 1;
+    const agreementId = 1;
+    const forwarderVersion = "0.0.1";
+
+    beforeEach(async function () {
+      [seller] = await getSigners();
+
+      const MockProtocolFactory = await getContractFactory("MockProtocol");
+      mockProtocol = await MockProtocolFactory.deploy();
+      await mockProtocol.waitForDeployment();
+      await mockProtocol.setSeller(sellerId, await seller.getAddress());
+
+      const MockForwarderFactory = await getContractFactory("MockForwarder");
+      mockForwarder = await MockForwarderFactory.deploy();
+      await mockForwarder.waitForDeployment();
+      forwarderAddress = await mockForwarder.getAddress();
+
+      const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
+      drFeeMutualizerWithForwarder = await DRFeeMutualizerFactory.deploy(
+        await mockProtocol.getAddress(),
+        forwarderAddress
+      );
+      await drFeeMutualizerWithForwarder.waitForDeployment();
+    });
+
+    it("should verify forwarder setup", async function () {
+      expect(await mockForwarder.getNonce(await seller.getAddress())).to.equal(0);
+      const isTrustedForwarder = await drFeeMutualizerWithForwarder.isTrustedForwarder(forwarderAddress);
+      expect(isTrustedForwarder).to.be.true;
+    });
+
+    it("should allow direct calls", async function () {
+      const amount = ONE_ETHER;
+      await expect(drFeeMutualizerWithForwarder.connect(seller).deposit(ZeroAddress, amount, { value: amount }))
+        .to.emit(drFeeMutualizerWithForwarder, "FundsDeposited")
+        .withArgs(await seller.getAddress(), ZeroAddress, amount);
+    });
+
+    it("should handle meta-transaction deposit", async function () {
+      const amount = ONE_ETHER;
+      const balanceBefore = await drFeeMutualizerWithForwarder.getPoolBalance(ZeroAddress);
+      const forwardRequest = {
+        from: await seller.getAddress(),
+        to: await drFeeMutualizerWithForwarder.getAddress(),
+        nonce: await mockForwarder.getNonce(await seller.getAddress()),
+        data: drFeeMutualizerWithForwarder.interface.encodeFunctionData("deposit", [ZeroAddress, amount]),
+      };
+      const signature = await seller.signTypedData(
+        {
+          name: "MockForwarder",
+          version: forwarderVersion,
+          chainId: await ethers.provider.getNetwork().then((n) => n.chainId),
+          verifyingContract: forwarderAddress,
+        },
+        {
+          ForwardRequest: [
+            { name: "from", type: "address" },
+            { name: "to", type: "address" },
+            { name: "nonce", type: "uint256" },
+            { name: "data", type: "bytes" },
+          ],
+        },
+        forwardRequest
+      );
+
+      await expect(mockForwarder.execute(forwardRequest, signature, { value: amount }))
+        .to.emit(drFeeMutualizerWithForwarder, "FundsDeposited")
+        .withArgs(await seller.getAddress(), ZeroAddress, amount);
+      const balanceAfter = await drFeeMutualizerWithForwarder.getPoolBalance(ZeroAddress);
+      expect(balanceAfter - balanceBefore).to.equal(amount);
+    });
+
+    it("should handle meta-transaction payPremium (native)", async function () {
+      const [owner] = await getSigners();
+      await drFeeMutualizerWithForwarder
+        .connect(owner)
+        .newAgreement(
+          sellerId,
+          disputeResolverId,
+          TWO_ETHER,
+          TWENTY_ETHER,
+          THIRTY_DAYS,
+          ZERO_POINT_ONE_ETHER,
+          true,
+          ZeroAddress
+        );
+
+      const premium = ZERO_POINT_ONE_ETHER;
+      const forwardRequest = {
+        from: await seller.getAddress(),
+        to: await drFeeMutualizerWithForwarder.getAddress(),
+        nonce: await mockForwarder.getNonce(await seller.getAddress()),
+        data: drFeeMutualizerWithForwarder.interface.encodeFunctionData("payPremium", [agreementId]),
+      };
+      const signature = await seller.signTypedData(
+        {
+          name: "MockForwarder",
+          version: forwarderVersion,
+          chainId: await ethers.provider.getNetwork().then((n) => n.chainId),
+          verifyingContract: forwarderAddress,
+        },
+        {
+          ForwardRequest: [
+            { name: "from", type: "address" },
+            { name: "to", type: "address" },
+            { name: "nonce", type: "uint256" },
+            { name: "data", type: "bytes" },
+          ],
+        },
+        forwardRequest
+      );
+
+      await expect(mockForwarder.execute(forwardRequest, signature, { value: premium }))
+        .to.emit(drFeeMutualizerWithForwarder, "AgreementActivated")
+        .withArgs(agreementId, sellerId);
+
+      const agreement = await drFeeMutualizerWithForwarder.getAgreement(agreementId);
+      expect(agreement.startTime).to.be.greaterThan(0);
+    });
+
+    it("should handle meta-transaction payPremium (ERC20)", async function () {
+      const [owner] = await getSigners();
+      await drFeeMutualizerWithForwarder
+        .connect(owner)
+        .newAgreement(
+          sellerId,
+          disputeResolverId,
+          TWO_ETHER,
+          TWENTY_ETHER,
+          THIRTY_DAYS,
+          HUNDRED_ETHER,
+          true,
+          await mockToken.getAddress()
+        );
+
+      await mockToken.connect(seller).approve(await drFeeMutualizerWithForwarder.getAddress(), HUNDRED_ETHER);
+
+      const forwardRequest = {
+        from: await seller.getAddress(),
+        to: await drFeeMutualizerWithForwarder.getAddress(),
+        nonce: await mockForwarder.getNonce(await seller.getAddress()),
+        data: drFeeMutualizerWithForwarder.interface.encodeFunctionData("payPremium", [agreementId]),
+      };
+      const signature = await seller.signTypedData(
+        {
+          name: "MockForwarder",
+          version: forwarderVersion,
+          chainId: await ethers.provider.getNetwork().then((n) => n.chainId),
+          verifyingContract: forwarderAddress,
+        },
+        {
+          ForwardRequest: [
+            { name: "from", type: "address" },
+            { name: "to", type: "address" },
+            { name: "nonce", type: "uint256" },
+            { name: "data", type: "bytes" },
+          ],
+        },
+        forwardRequest
+      );
+
+      await expect(mockForwarder.execute(forwardRequest, signature))
+        .to.emit(drFeeMutualizerWithForwarder, "AgreementActivated")
+        .withArgs(agreementId, sellerId);
+
+      const agreement = await drFeeMutualizerWithForwarder.getAgreement(agreementId);
+      expect(agreement.startTime).to.be.greaterThan(0);
+    });
+
+    it("should handle meta-transaction voidAgreement", async function () {
+      const [owner] = await getSigners();
+      await drFeeMutualizerWithForwarder
+        .connect(owner)
+        .newAgreement(
+          sellerId,
+          disputeResolverId,
+          TWO_ETHER,
+          TWENTY_ETHER,
+          THIRTY_DAYS,
+          ZERO_POINT_ONE_ETHER,
+          true,
+          ZeroAddress
+        );
+      await drFeeMutualizerWithForwarder.connect(seller).payPremium(agreementId, { value: ZERO_POINT_ONE_ETHER });
+
+      const forwardRequest = {
+        from: await seller.getAddress(),
+        to: await drFeeMutualizerWithForwarder.getAddress(),
+        nonce: await mockForwarder.getNonce(await seller.getAddress()),
+        data: drFeeMutualizerWithForwarder.interface.encodeFunctionData("voidAgreement", [agreementId]),
+      };
+      const signature = await seller.signTypedData(
+        {
+          name: "MockForwarder",
+          version: forwarderVersion,
+          chainId: await ethers.provider.getNetwork().then((n) => n.chainId),
+          verifyingContract: forwarderAddress,
+        },
+        {
+          ForwardRequest: [
+            { name: "from", type: "address" },
+            { name: "to", type: "address" },
+            { name: "nonce", type: "uint256" },
+            { name: "data", type: "bytes" },
+          ],
+        },
+        forwardRequest
+      );
+
+      await expect(mockForwarder.execute(forwardRequest, signature))
+        .to.emit(drFeeMutualizerWithForwarder, "AgreementVoided")
+        .withArgs(agreementId, true);
+
+      const agreement = await drFeeMutualizerWithForwarder.getAgreement(agreementId);
+      expect(agreement.isVoided).to.be.true;
+    });
+
+    it("should revert with invalid signature", async function () {
+      const amount = ONE_ETHER;
+      const forwardRequest = {
+        from: await seller.getAddress(),
+        to: await drFeeMutualizerWithForwarder.getAddress(),
+        nonce: await mockForwarder.getNonce(await seller.getAddress()),
+        data: drFeeMutualizerWithForwarder.interface.encodeFunctionData("deposit", [ZeroAddress, amount]),
+      };
+      // Use wrong signer (buyer instead of seller)
+      const [, , , buyer] = await getSigners();
+      const signature = await buyer.signTypedData(
+        {
+          name: "MockForwarder",
+          version: forwarderVersion,
+          chainId: await ethers.provider.getNetwork().then((n) => n.chainId),
+          verifyingContract: forwarderAddress,
+        },
+        {
+          ForwardRequest: [
+            { name: "from", type: "address" },
+            { name: "to", type: "address" },
+            { name: "nonce", type: "uint256" },
+            { name: "data", type: "bytes" },
+          ],
+        },
+        forwardRequest
+      );
+      await expect(mockForwarder.execute(forwardRequest, signature, { value: amount })).to.be.revertedWith(
+        "MockForwarder: signature does not match request"
+      );
     });
   });
 });

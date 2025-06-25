@@ -6,17 +6,20 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Context } from "@openzeppelin/contracts/utils/Context.sol";
+import { ERC2771Context } from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import { IBosonFundsHandler } from "../../interfaces/handlers/IBosonFundsHandler.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 
 /**
  * @title DRFeeMutualizer
- * @notice Reference implementation of DR Fee Mutualizer with agreement management
+ * @notice Reference implementation of DR Fee Mutualizer with agreement management and meta-transaction support
  * @dev This contract provides dispute resolver fee mutualization with configurable agreements
  */
-contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
+contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, Ownable {
     using SafeERC20 for IERC20;
 
     // Custom errors
@@ -38,6 +41,8 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
     error DepositsRestrictedToOwner();
     error AccessDenied();
     error SellerNotFound();
+    error InsufficientValueReceived();
+    error NativeNotAllowed();
 
     struct Agreement {
         uint256 maxAmountPerTx;
@@ -92,8 +97,9 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
     /**
      * @notice Constructor for DRFeeMutualizer
      * @param _bosonProtocol The address of the Boson protocol contract
+     * @param _forwarder The address of the trusted forwarder for meta-transactions
      */
-    constructor(address _bosonProtocol) {
+    constructor(address _bosonProtocol, address _forwarder) ERC2771Context(_forwarder) {
         if (_bosonProtocol == address(0)) revert InvalidProtocolAddress();
         BOSON_PROTOCOL = _bosonProtocol;
         // Initialize with empty agreement at index 0 for 1-indexed access
@@ -251,13 +257,12 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
      * - ERC20 or native currency transfer fails
      */
     function deposit(address _tokenAddress, uint256 _amount) external payable nonReentrant {
-        if (depositRestrictedToOwner && msg.sender != owner()) revert DepositsRestrictedToOwner();
+        address msgSender = _msgSender();
+        if (depositRestrictedToOwner && msgSender != owner()) revert DepositsRestrictedToOwner();
         if (_amount == 0) revert InvalidAmount();
-
         FundsLib.validateIncomingPayment(_tokenAddress, _amount);
         poolBalances[_tokenAddress] += _amount;
-
-        emit FundsDeposited(msg.sender, _tokenAddress, _amount);
+        emit FundsDeposited(msgSender, _tokenAddress, _amount);
     }
 
     /**
@@ -393,7 +398,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
         if (!exists) revert SellerNotFound();
 
         // Check authorization: either owner (if refundOnCancel is true) or the seller admin
-        if (msg.sender != seller.admin && !(msg.sender == owner() && agreement.refundOnCancel)) {
+        if (_msgSender() != seller.admin && !(_msgSender() == owner() && agreement.refundOnCancel)) {
             revert AccessDenied();
         }
 
@@ -451,7 +456,12 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
         if (agreement.startTime > 0) revert AgreementAlreadyActive();
         if (agreement.isVoided) revert AgreementIsVoided();
 
-        FundsLib.validateIncomingPayment(agreement.tokenAddress, agreement.premium);
+        if (agreement.tokenAddress == address(0)) {
+            if (msg.value != agreement.premium) revert BosonErrors.InsufficientValueReceived();
+        } else {
+            if (msg.value != 0) revert BosonErrors.NativeNotAllowed();
+            FundsLib.transferFundsIn(agreement.tokenAddress, _msgSender(), agreement.premium);
+        }
         poolBalances[agreement.tokenAddress] += agreement.premium;
         agreement.startTime = block.timestamp;
 
@@ -500,5 +510,31 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
             agreementId = sellerToDisputeResolverToAgreement[_sellerId][0];
         }
         return agreementId;
+    }
+
+    // ============= Meta-transaction Support =============
+
+    /**
+     * @notice This function returns the sender of the current message.
+     * @dev It is an override of the ERC2771Context._msgSender() function which allows meta transactions.
+     */
+    function _msgSender() internal view override(Context, ERC2771Context) returns (address sender) {
+        return ERC2771Context._msgSender();
+    }
+
+    /**
+     * @notice This function returns the calldata of the current message.
+     * @dev It is an override of the ERC2771Context._msgData() function which allows meta transactions.
+     */
+    function _msgData() internal view override(Context, ERC2771Context) returns (bytes calldata) {
+        return ERC2771Context._msgData();
+    }
+
+    /**
+     * @notice This function specifies the context as being a single address (20 bytes).
+     * @dev It is an override of the ERC2771Context._contextSuffixLength() function which allows meta transactions.
+     */
+    function _contextSuffixLength() internal view override(Context, ERC2771Context) returns (uint256) {
+        return ERC2771Context._contextSuffixLength();
     }
 }
