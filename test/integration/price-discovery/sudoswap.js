@@ -130,14 +130,7 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
 
     await offerHandler
       .connect(assistant)
-      .createOffer(
-        offer.toStruct(),
-        offerDates.toStruct(),
-        offerDurations.toStruct(),
-        drParams,
-        "0",
-        offerFeeLimit
-      );
+      .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), drParams, "0", offerFeeLimit);
 
     const pool = BigInt(offer.sellerDeposit) * BigInt(offer.quantityAvailable);
 

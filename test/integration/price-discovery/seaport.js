@@ -96,14 +96,7 @@ describe("[@skip-on-coverage] seaport integration", function () {
 
     await offerHandler
       .connect(assistant)
-      .createOffer(
-        offer.toStruct(),
-        offerDates.toStruct(),
-        offerDurations.toStruct(),
-        drParams,
-        "0",
-        offerFeeLimit
-      );
+      .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), drParams, "0", offerFeeLimit);
 
     const beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
     const voucherAddress = calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, seller.admin);
