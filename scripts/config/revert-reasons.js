@@ -237,4 +237,21 @@ exports.RevertReasons = {
 
   //Fee Table related
   FEE_TABLE_ASSET_NOT_SUPOPRTED: "FeeTableAssetNotSupported",
+
+  // DR Fee Mutualizer related
+  DEPOSITS_RESTRICTED_TO_OWNER: "DepositsRestrictedToOwner",
+  INVALID_RECIPIENT: "InvalidRecipient",
+  INSUFFICIENT_POOL_BALANCE: "InsufficientPoolBalance",
+  INVALID_SELLER_ID: "InvalidSellerId",
+  MAX_AMOUNT_PER_TX_MUST_BE_GREATER_THAN_ZERO: "MaxAmountPerTxMustBeGreaterThanZero",
+  MAX_TOTAL_MUST_BE_GREATER_THAN_OR_EQUAL_TO_MAX_PER_TX: "MaxTotalMustBeGreaterThanOrEqualToMaxPerTx",
+  TIME_PERIOD_MUST_BE_GREATER_THAN_ZERO: "TimePeriodMustBeGreaterThanZero",
+  AGREEMENT_ALREADY_ACTIVE: "AgreementAlreadyActive",
+  AGREEMENT_IS_VOIDED: "AgreementIsVoided",
+  INVALID_AGREEMENT_ID: "InvalidAgreementId",
+  ONLY_PROTOCOL: "OnlyProtocol",
+  INVALID_EXCHANGE_ID: "InvalidExchangeId",
+  AGREEMENT_ALREADY_EXISTS: "AgreementAlreadyExists",
+  AGREEMENT_ALREADY_VOIDED: "AgreementAlreadyVoided",
+  SELLER_NOT_FOUND: "SellerNotFound",
 };

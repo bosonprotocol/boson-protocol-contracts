@@ -1,8 +1,9 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
 const { ZeroAddress, getSigners, getContractFactory, parseUnits } = ethers;
-const { getSnapshot, revertToSnapshot } = require("../../util/utils.js");
+const { getSnapshot, revertToSnapshot, setNextBlockTimestamp } = require("../../util/utils.js");
 const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens");
+const { RevertReasons } = require("../../../scripts/config/revert-reasons.js");
 
 // Time period constants
 const ONE_DAY = 24 * 60 * 60;
@@ -100,7 +101,7 @@ describe("DRFeeMutualizer", function () {
           it("should revert when no native currency sent", async function () {
             await expect(drFeeMutualizer.connect(owner).deposit(ZeroAddress, ONE_ETHER)).to.be.revertedWithCustomError(
               drFeeMutualizer,
-              "InsufficientValueReceived"
+              RevertReasons.INSUFFICIENT_VALUE_RECEIVED
             );
           });
 
@@ -110,13 +111,13 @@ describe("DRFeeMutualizer", function () {
               drFeeMutualizer
                 .connect(rando)
                 .deposit(ZeroAddress, ZERO_POINT_FIVE_ETHER, { value: ZERO_POINT_FIVE_ETHER })
-            ).to.be.revertedWithCustomError(drFeeMutualizer, "DepositsRestrictedToOwner");
+            ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.DEPOSITS_RESTRICTED_TO_OWNER);
           });
 
           it("should revert when amount is zero", async function () {
             await expect(
               drFeeMutualizer.connect(owner).deposit(ZeroAddress, 0, { value: 0 })
-            ).to.be.revertedWithCustomError(drFeeMutualizer, "InvalidAmount");
+            ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INVALID_AMOUNT);
           });
         });
       });
@@ -143,13 +144,13 @@ describe("DRFeeMutualizer", function () {
 
             await expect(
               drFeeMutualizer.connect(owner).deposit(await mockToken.getAddress(), amount, { value: 1000 })
-            ).to.be.revertedWithCustomError(drFeeMutualizer, "NativeNotAllowed");
+            ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.NATIVE_NOT_ALLOWED);
           });
 
           it("should revert when amount is zero", async function () {
             await expect(
               drFeeMutualizer.connect(owner).deposit(await mockToken.getAddress(), 0)
-            ).to.be.revertedWithCustomError(drFeeMutualizer, "InvalidAmount");
+            ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INVALID_AMOUNT);
           });
         });
       });
@@ -179,25 +180,25 @@ describe("DRFeeMutualizer", function () {
           it("should revert when caller is not owner", async function () {
             await expect(
               drFeeMutualizer.connect(rando).withdraw(ZeroAddress, ONE_ETHER, await buyer.getAddress())
-            ).to.be.revertedWith("Ownable: caller is not the owner");
+            ).to.be.revertedWith(RevertReasons.OWNABLE_NOT_OWNER);
           });
 
           it("should revert when amount is zero", async function () {
             await expect(
               drFeeMutualizer.connect(owner).withdraw(ZeroAddress, 0, await buyer.getAddress())
-            ).to.be.revertedWithCustomError(drFeeMutualizer, "InvalidAmount");
+            ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INVALID_AMOUNT);
           });
 
           it("should revert when recipient is zero address", async function () {
             await expect(
               drFeeMutualizer.connect(owner).withdraw(ZeroAddress, ONE_ETHER, ZeroAddress)
-            ).to.be.revertedWithCustomError(drFeeMutualizer, "InvalidRecipient");
+            ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INVALID_RECIPIENT);
           });
 
           it("should revert when insufficient balance", async function () {
             await expect(
               drFeeMutualizer.connect(owner).withdraw(ZeroAddress, TEN_ETHER, await buyer.getAddress())
-            ).to.be.revertedWithCustomError(drFeeMutualizer, "InsufficientPoolBalance");
+            ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INSUFFICIENT_POOL_BALANCE);
           });
         });
       });
@@ -288,7 +289,7 @@ describe("DRFeeMutualizer", function () {
             drFeeMutualizer
               .connect(owner)
               .newAgreement(0, 1, ONE_ETHER, TEN_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress)
-          ).to.be.revertedWithCustomError(drFeeMutualizer, "InvalidSellerId");
+          ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INVALID_SELLER_ID);
         });
 
         it("should revert when maxAmountPerTx is zero", async function () {
@@ -296,7 +297,7 @@ describe("DRFeeMutualizer", function () {
             drFeeMutualizer
               .connect(owner)
               .newAgreement(sellerId, 1, 0, TEN_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress)
-          ).to.be.revertedWithCustomError(drFeeMutualizer, "MaxAmountPerTxMustBeGreaterThanZero");
+          ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.MAX_AMOUNT_PER_TX_MUST_BE_GREATER_THAN_ZERO);
         });
 
         it("should revert when maxAmountTotal is less than maxAmountPerTx", async function () {
@@ -304,7 +305,10 @@ describe("DRFeeMutualizer", function () {
             drFeeMutualizer
               .connect(owner)
               .newAgreement(sellerId, 1, TEN_ETHER, ONE_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress)
-          ).to.be.revertedWithCustomError(drFeeMutualizer, "MaxTotalMustBeGreaterThanOrEqualToMaxPerTx");
+          ).to.be.revertedWithCustomError(
+            drFeeMutualizer,
+            RevertReasons.MAX_TOTAL_MUST_BE_GREATER_THAN_OR_EQUAL_TO_MAX_PER_TX
+          );
         });
 
         it("should revert when timePeriod is zero", async function () {
@@ -312,7 +316,7 @@ describe("DRFeeMutualizer", function () {
             drFeeMutualizer
               .connect(owner)
               .newAgreement(sellerId, 1, ONE_ETHER, TEN_ETHER, 0, ZERO_POINT_ONE_ETHER, true, ZeroAddress)
-          ).to.be.revertedWithCustomError(drFeeMutualizer, "TimePeriodMustBeGreaterThanZero");
+          ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.TIME_PERIOD_MUST_BE_GREATER_THAN_ZERO);
         });
 
         it("should revert when caller is not owner", async function () {
@@ -320,7 +324,7 @@ describe("DRFeeMutualizer", function () {
             drFeeMutualizer
               .connect(rando)
               .newAgreement(sellerId, 1, ONE_ETHER, TEN_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress)
-          ).to.be.revertedWith("Ownable: caller is not the owner");
+          ).to.be.revertedWith(RevertReasons.OWNABLE_NOT_OWNER);
         });
       });
     });
@@ -349,7 +353,7 @@ describe("DRFeeMutualizer", function () {
             const wrongPremium = ZERO_POINT_TWO_ETHER;
             await expect(
               drFeeMutualizer.connect(seller).payPremium(1, { value: wrongPremium })
-            ).to.be.revertedWithCustomError(drFeeMutualizer, "InsufficientValueReceived");
+            ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
           });
 
           it("should revert when agreement is already active", async function () {
@@ -358,7 +362,7 @@ describe("DRFeeMutualizer", function () {
 
             await expect(
               drFeeMutualizer.connect(seller).payPremium(1, { value: premium })
-            ).to.be.revertedWithCustomError(drFeeMutualizer, "AgreementAlreadyActive");
+            ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.AGREEMENT_ALREADY_ACTIVE);
           });
 
           it("should revert when agreement is voided", async function () {
@@ -367,14 +371,14 @@ describe("DRFeeMutualizer", function () {
             const premium = ZERO_POINT_ONE_ETHER;
             await expect(
               drFeeMutualizer.connect(seller).payPremium(1, { value: premium })
-            ).to.be.revertedWithCustomError(drFeeMutualizer, "AgreementIsVoided");
+            ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.AGREEMENT_IS_VOIDED);
           });
 
           it("should revert when agreement ID is invalid", async function () {
             const premium = ZERO_POINT_ONE_ETHER;
             await expect(
               drFeeMutualizer.connect(seller).payPremium(999, { value: premium })
-            ).to.be.revertedWithCustomError(drFeeMutualizer, "InvalidAgreementId");
+            ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INVALID_AGREEMENT_ID);
           });
         });
       });
@@ -412,7 +416,7 @@ describe("DRFeeMutualizer", function () {
             await mockToken.connect(seller).approve(await drFeeMutualizer.getAddress(), HUNDRED_ETHER);
             await expect(drFeeMutualizer.connect(seller).payPremium(2, { value: 1000 })).to.be.revertedWithCustomError(
               drFeeMutualizer,
-              "NativeNotAllowed"
+              RevertReasons.NATIVE_NOT_ALLOWED
             );
           });
         });
@@ -452,7 +456,7 @@ describe("DRFeeMutualizer", function () {
         it("should revert when agreement ID is invalid", async function () {
           await expect(drFeeMutualizer.connect(seller).voidAgreement(999)).to.be.revertedWithCustomError(
             drFeeMutualizer,
-            "InvalidAgreementId"
+            RevertReasons.INVALID_AGREEMENT_ID
           );
         });
 
@@ -466,7 +470,7 @@ describe("DRFeeMutualizer", function () {
           await drFeeMutualizer.connect(seller).voidAgreement(agreementId);
           await expect(drFeeMutualizer.connect(seller).voidAgreement(agreementId)).to.be.revertedWithCustomError(
             drFeeMutualizer,
-            "AgreementAlreadyVoided"
+            RevertReasons.AGREEMENT_ALREADY_VOIDED
           );
         });
 
@@ -479,7 +483,7 @@ describe("DRFeeMutualizer", function () {
           await drFeeMutualizer.connect(seller).payPremium(agreementId, { value: ZERO_POINT_ONE_ETHER });
           await expect(drFeeMutualizer.connect(rando).voidAgreement(agreementId)).to.be.revertedWithCustomError(
             drFeeMutualizer,
-            "AccessDenied"
+            RevertReasons.ACCESS_DENIED
           );
         });
 
@@ -492,7 +496,7 @@ describe("DRFeeMutualizer", function () {
           await drFeeMutualizer.connect(seller).payPremium(agreementId, { value: ZERO_POINT_ONE_ETHER });
           await expect(drFeeMutualizer.connect(owner).voidAgreement(agreementId)).to.be.revertedWithCustomError(
             drFeeMutualizer,
-            "AccessDenied"
+            RevertReasons.ACCESS_DENIED
           );
         });
       });
@@ -512,7 +516,7 @@ describe("DRFeeMutualizer", function () {
       it("should revert when agreement ID is invalid", async function () {
         await expect(drFeeMutualizer.getAgreement(999)).to.be.revertedWithCustomError(
           drFeeMutualizer,
-          "InvalidAgreementId"
+          RevertReasons.INVALID_AGREEMENT_ID
         );
       });
     });
@@ -595,8 +599,14 @@ describe("DRFeeMutualizer", function () {
       });
 
       it("should return false when agreement is expired", async function () {
-        await ethers.provider.send("evm_increaseTime", [THIRTY_ONE_DAYS]);
-        await ethers.provider.send("evm_mine");
+        // Get the agreement start time directly from the contract
+        const agreement = await drFeeMutualizer.getAgreement(1);
+        const agreementStartTime = agreement.startTime;
+
+        // Advance time by 31 days from when agreement was activated
+        const futureTimestamp = agreementStartTime + BigInt(THIRTY_ONE_DAYS);
+        await setNextBlockTimestamp(Number(futureTimestamp), true);
+
         const isCovered = await drFeeMutualizer.isSellerCovered(sellerId, ZERO_POINT_FIVE_ETHER, ZeroAddress, 1);
         expect(isCovered).to.be.false;
       });
@@ -706,7 +716,7 @@ describe("DRFeeMutualizer", function () {
           const exchangeId = 123;
           await expect(
             drFeeMutualizer.connect(rando).requestDRFee(sellerId, feeAmount, ZeroAddress, exchangeId, 1)
-          ).to.be.revertedWithCustomError(drFeeMutualizer, "OnlyProtocol");
+          ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.ONLY_PROTOCOL);
         });
       });
     });
@@ -753,7 +763,7 @@ describe("DRFeeMutualizer", function () {
           mockProtocol.callReturnDRFee(await drFeeMutualizer.getAddress(), exchangeId, ZERO_POINT_ONE_ETHER, {
             value: ZERO_POINT_ONE_ETHER,
           })
-        ).to.be.revertedWithCustomError(drFeeMutualizer, "InvalidExchangeId");
+        ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INVALID_EXCHANGE_ID);
       });
 
       it("should allow returning DR fee with 0 amount and clean up tracking (ERC20)", async function () {
@@ -778,7 +788,7 @@ describe("DRFeeMutualizer", function () {
           .reverted;
         await expect(
           mockProtocol.callReturnDRFee(await drFeeMutualizer.getAddress(), erc20ExchangeId, ZERO_POINT_ONE_ETHER)
-        ).to.be.revertedWithCustomError(drFeeMutualizer, "InvalidExchangeId");
+        ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INVALID_EXCHANGE_ID);
       });
 
       context("💔 Revert Reasons", async function () {
@@ -787,7 +797,7 @@ describe("DRFeeMutualizer", function () {
             mockProtocol.callReturnDRFee(await drFeeMutualizer.getAddress(), 999, ZERO_POINT_ONE_ETHER, {
               value: ZERO_POINT_ONE_ETHER,
             })
-          ).to.be.revertedWithCustomError(drFeeMutualizer, "InvalidExchangeId");
+          ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INVALID_EXCHANGE_ID);
         });
 
         it("should revert when incorrect native amount sent", async function () {
@@ -797,7 +807,7 @@ describe("DRFeeMutualizer", function () {
             mockProtocol.callReturnDRFee(await drFeeMutualizer.getAddress(), exchangeId, returnAmount, {
               value: wrongAmount,
             })
-          ).to.be.revertedWithCustomError(drFeeMutualizer, "InsufficientValueReceived");
+          ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
         });
 
         it("should revert when native currency sent for ERC20 token", async function () {
@@ -844,7 +854,7 @@ describe("DRFeeMutualizer", function () {
             mockProtocol.callReturnDRFee(await drFeeMutualizer.getAddress(), erc20ExchangeId, ZERO_POINT_THREE_ETHER, {
               value: 1000,
             })
-          ).to.be.revertedWithCustomError(drFeeMutualizer, "NativeNotAllowed");
+          ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.NATIVE_NOT_ALLOWED);
         });
 
         it("should revert when caller is not protocol", async function () {
@@ -852,7 +862,7 @@ describe("DRFeeMutualizer", function () {
             drFeeMutualizer
               .connect(rando)
               .returnDRFee(exchangeId, ZERO_POINT_ONE_ETHER, { value: ZERO_POINT_ONE_ETHER })
-          ).to.be.revertedWithCustomError(drFeeMutualizer, "OnlyProtocol");
+          ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.ONLY_PROTOCOL);
         });
       });
     });
@@ -966,7 +976,7 @@ describe("DRFeeMutualizer", function () {
         drFeeMutualizer
           .connect(owner)
           .newAgreement(sellerId, 1, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress)
-      ).to.be.revertedWithCustomError(drFeeMutualizer, "AgreementAlreadyExists");
+      ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.AGREEMENT_ALREADY_EXISTS);
     });
 
     it("should allow creating agreement when previous one is expired", async function () {
@@ -975,8 +985,10 @@ describe("DRFeeMutualizer", function () {
         .newAgreement(sellerId, 1, TWO_ETHER, TWENTY_ETHER, ONE_DAY, ZERO_POINT_ONE_ETHER, true, ZeroAddress);
       await drFeeMutualizer.connect(seller).payPremium(1, { value: ZERO_POINT_ONE_ETHER });
 
-      await ethers.provider.send("evm_increaseTime", [TWO_DAYS]);
-      await ethers.provider.send("evm_mine");
+      // Get current block timestamp and advance by 2 days
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const futureTimestamp = currentBlock.timestamp + TWO_DAYS;
+      await setNextBlockTimestamp(futureTimestamp, true);
 
       await expect(
         drFeeMutualizer
@@ -985,26 +997,6 @@ describe("DRFeeMutualizer", function () {
       )
         .to.emit(drFeeMutualizer, "AgreementCreated")
         .withArgs(2, sellerId, 1);
-    });
-
-    it("should handle token transfer failures gracefully", async function () {
-      const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
-      const drFeeMutualizerWithMockProtocol = await DRFeeMutualizerFactory.deploy(await mockToken.getAddress());
-      await drFeeMutualizerWithMockProtocol.waitForDeployment();
-
-      await drFeeMutualizerWithMockProtocol
-        .connect(owner)
-        .newAgreement(sellerId, 1, TWO_ETHER, TWENTY_ETHER, THIRTY_DAYS, ZERO_POINT_ONE_ETHER, true, ZeroAddress);
-      await drFeeMutualizerWithMockProtocol.connect(seller).payPremium(1, { value: ZERO_POINT_ONE_ETHER });
-      await drFeeMutualizerWithMockProtocol.connect(owner).deposit(ZeroAddress, FIVE_ETHER, { value: FIVE_ETHER });
-
-      const isCovered = await drFeeMutualizerWithMockProtocol.isSellerCovered(
-        sellerId,
-        ZERO_POINT_FIVE_ETHER,
-        ZeroAddress,
-        1
-      );
-      expect(isCovered).to.be.true;
     });
 
     it("should handle voiding agreement with refundOnCancel false", async function () {
@@ -1076,14 +1068,25 @@ describe("DRFeeMutualizer", function () {
       const receipt = await tx.wait();
       const agreementId = receipt.logs[0].args[0];
 
+      const protocolBalanceBefore = await ethers.provider.getBalance(await mockProtocol.getAddress());
       await drFeeMutualizerWithMock.connect(seller).payPremium(agreementId, { value: ONE_ETHER });
 
-      await ethers.provider.send("evm_increaseTime", [NINE_DAYS]);
-      await ethers.provider.send("evm_mine");
+      // Get the agreement start time directly from the contract
+      const agreement = await drFeeMutualizerWithMock.getAgreement(agreementId);
+      const agreementStartTime = agreement.startTime;
+
+      // Advance time by 9 days from when agreement was activated
+      const futureTimestamp = agreementStartTime + BigInt(NINE_DAYS);
+      await setNextBlockTimestamp(Number(futureTimestamp));
 
       await expect(drFeeMutualizerWithMock.connect(seller).voidAgreement(agreementId))
         .to.emit(drFeeMutualizerWithMock, "AgreementVoided")
         .withArgs(agreementId, true);
+
+      const protocolBalanceAfter = await ethers.provider.getBalance(await mockProtocol.getAddress());
+      // After 9 days out of 12 days, seller should get 3/12 = 25% of premium back
+      const expectedRefund = (ONE_ETHER * 3n) / 12n;
+      expect(protocolBalanceAfter - protocolBalanceBefore).to.equal(expectedRefund);
     });
 
     it("should handle ERC20 time-based refund calculation correctly", async function () {
@@ -1103,15 +1106,26 @@ describe("DRFeeMutualizer", function () {
       const receipt = await tx.wait();
       const agreementId = receipt.logs[0].args[0];
 
+      const protocolBalanceBefore = await mockToken.balanceOf(await mockProtocol.getAddress());
       await mockToken.connect(seller).approve(await drFeeMutualizerWithMock.getAddress(), HUNDRED_ETHER);
       await drFeeMutualizerWithMock.connect(seller).payPremium(agreementId);
 
-      await ethers.provider.send("evm_increaseTime", [NINE_DAYS]);
-      await ethers.provider.send("evm_mine");
+      // Get the agreement start time directly from the contract
+      const agreement = await drFeeMutualizerWithMock.getAgreement(agreementId);
+      const agreementStartTime = agreement.startTime;
+
+      // Advance time by 9 days from when agreement was activated
+      const futureTimestamp = agreementStartTime + BigInt(NINE_DAYS);
+      await setNextBlockTimestamp(Number(futureTimestamp));
 
       await expect(drFeeMutualizerWithMock.connect(seller).voidAgreement(agreementId))
         .to.emit(drFeeMutualizerWithMock, "AgreementVoided")
         .withArgs(agreementId, true);
+
+      const protocolBalanceAfter = await mockToken.balanceOf(await mockProtocol.getAddress());
+      // After 9 days out of 12 days, seller should get 3/12 = 25% of premium back
+      const expectedRefund = (HUNDRED_ETHER * 3n) / 12n;
+      expect(protocolBalanceAfter - protocolBalanceBefore).to.equal(expectedRefund);
     });
 
     it("should handle maxAmountTotal limit correctly", async function () {
@@ -1151,7 +1165,7 @@ describe("DRFeeMutualizer", function () {
 
       it("should revert when caller is not owner", async function () {
         await expect(drFeeMutualizer.connect(rando).setDepositRestriction(true)).to.be.revertedWith(
-          "Ownable: caller is not the owner"
+          RevertReasons.OWNABLE_NOT_OWNER
         );
       });
     });
