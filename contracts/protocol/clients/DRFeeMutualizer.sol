@@ -79,7 +79,12 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         uint256 returnedAmount
     );
 
-    event AgreementCreated(uint256 agreementId, uint256 indexed sellerId, uint256 indexed offerId, uint256 indexed disputeResolverId);
+    event AgreementCreated(
+        uint256 agreementId,
+        uint256 indexed sellerId,
+        uint256 indexed offerId,
+        uint256 indexed disputeResolverId
+    );
 
     event AgreementActivated(uint256 indexed agreementId, uint256 indexed sellerId);
 
@@ -91,7 +96,8 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
     mapping(address => uint256) public poolBalances; // tokenAddress => balance
     mapping(uint256 => FeeInfo) public feeInfoByExchange;
 
-    mapping(uint256 => mapping(uint256 => mapping(uint256 => uint256))) public sellerToOfferToDisputeResolverToAgreement; // sellerId => offerId => disputeResolverId => agreementId
+    mapping(uint256 => mapping(uint256 => mapping(uint256 => uint256)))
+        public sellerToOfferToDisputeResolverToAgreement; // sellerId => offerId => disputeResolverId => agreementId
     Agreement[] private agreements;
     bool public depositRestrictedToOwner;
 
@@ -350,7 +356,9 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         if (_maxAmountTotal < _maxAmountPerTx) revert MaxTotalMustBeGreaterThanOrEqualToMaxPerTx();
         if (_timePeriod == 0) revert TimePeriodMustBeGreaterThanZero();
 
-        uint256 existingAgreementId = sellerToOfferToDisputeResolverToAgreement[_sellerId][_offerId][_disputeResolverId];
+        uint256 existingAgreementId = sellerToOfferToDisputeResolverToAgreement[_sellerId][_offerId][
+            _disputeResolverId
+        ];
         if (existingAgreementId != 0) {
             Agreement storage existingAgreement = agreements[existingAgreementId];
             if (
@@ -515,7 +523,11 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
      * @dev Checks for both specific dispute resolver agreements and universal agreements (disputeResolverId = 0).
      *      Agreements are offer-specific, so the offerId must match the agreement's offerId.
      */
-    function getAgreementId(uint256 _sellerId, uint256 _offerId, uint256 _disputeResolverId) external view returns (uint256) {
+    function getAgreementId(
+        uint256 _sellerId,
+        uint256 _offerId,
+        uint256 _disputeResolverId
+    ) external view returns (uint256) {
         uint256 agreementId = sellerToOfferToDisputeResolverToAgreement[_sellerId][_offerId][_disputeResolverId];
         if (agreementId == 0 && _disputeResolverId != 0) {
             // If no specific agreement exists, check for "any dispute resolver" agreement
