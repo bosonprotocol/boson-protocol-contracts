@@ -161,7 +161,7 @@ describe("DisputeResolutionTerms", function () {
         escalationResponsePeriod,
         feeAmount,
         buyerEscalationDeposit,
-        mutualizerAddress: ZeroAddress
+        mutualizerAddress: ZeroAddress,
       };
 
       // Struct representation

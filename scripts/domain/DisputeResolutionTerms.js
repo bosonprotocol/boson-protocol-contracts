@@ -31,7 +31,13 @@ class DisputeResolutionTerms {
    */
   static fromObject(o) {
     const { disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit, mutualizerAddress } = o;
-    return new DisputeResolutionTerms(disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit, mutualizerAddress);
+    return new DisputeResolutionTerms(
+      disputeResolverId,
+      escalationResponsePeriod,
+      feeAmount,
+      buyerEscalationDeposit,
+      mutualizerAddress
+    );
   }
 
   /**
@@ -75,7 +81,13 @@ class DisputeResolutionTerms {
    * @returns {string}
    */
   toStruct() {
-    return [this.disputeResolverId, this.escalationResponsePeriod, this.feeAmount, this.buyerEscalationDeposit, this.mutualizerAddress];
+    return [
+      this.disputeResolverId,
+      this.escalationResponsePeriod,
+      this.feeAmount,
+      this.buyerEscalationDeposit,
+      this.mutualizerAddress,
+    ];
   }
 
   /**

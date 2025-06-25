@@ -54,7 +54,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
     configHandler,
     priceDiscoveryHandler;
   let bosonVoucherClone;
-  let offerId, seller ;
+  let offerId, seller;
   let block, tx;
   let support;
   let price, sellerPool;

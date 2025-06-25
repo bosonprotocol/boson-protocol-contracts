@@ -414,9 +414,12 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, Ownable {
                     if (tokenAddress != address(0)) {
                         IERC20(tokenAddress).safeApprove(BOSON_PROTOCOL, refundAmount);
                         IBosonFundsHandler(BOSON_PROTOCOL).depositFunds(agreement.sellerId, tokenAddress, refundAmount);
-
                     } else {
-                        IBosonFundsHandler(BOSON_PROTOCOL).depositFunds{value: refundAmount}(agreement.sellerId, tokenAddress, refundAmount);
+                        IBosonFundsHandler(BOSON_PROTOCOL).depositFunds{ value: refundAmount }(
+                            agreement.sellerId,
+                            tokenAddress,
+                            refundAmount
+                        );
                     }
                     premiumRefunded = true;
                 }

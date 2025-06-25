@@ -467,7 +467,9 @@ describe("DisputeResolverHandler", function () {
           new DisputeResolverFee(await other3.getAddress(), "MockToken3", "500"),
         ];
 
-        const disputeResolverFeeListWithNonZeroAmount = new DisputeResolverFeeList(disputeResolverFeesWithNonZeroAmount);
+        const disputeResolverFeeListWithNonZeroAmount = new DisputeResolverFeeList(
+          disputeResolverFeesWithNonZeroAmount
+        );
 
         // Create a dispute resolver with non-zero fee amounts
         const tx = await accountHandler

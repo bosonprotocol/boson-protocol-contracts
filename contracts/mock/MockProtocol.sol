@@ -51,14 +51,13 @@ contract MockProtocol {
      * @return seller The seller data
      * @return authToken The auth token data
      */
-    function getSeller(uint256 sellerId) external view returns (bool exists, BosonTypes.Seller memory seller, BosonTypes.AuthToken memory authToken) {
+    function getSeller(
+        uint256 sellerId
+    ) external view returns (bool exists, BosonTypes.Seller memory seller, BosonTypes.AuthToken memory authToken) {
         exists = sellerAdmins[sellerId] != address(0);
         if (exists) {
             seller = sellers[sellerId];
-            authToken = BosonTypes.AuthToken({
-                tokenId: 0,
-                tokenType: BosonTypes.AuthTokenType.None
-            });
+            authToken = BosonTypes.AuthToken({ tokenId: 0, tokenType: BosonTypes.AuthTokenType.None });
         }
     }
 
@@ -72,7 +71,7 @@ contract MockProtocol {
         // Get the seller's treasury address
         BosonTypes.Seller memory seller = sellers[sellerId];
         require(seller.treasury != address(0), "Seller not found");
-        
+
         if (tokenAddress == address(0)) {
             // Native currency
             if (msg.value != amount) revert("Incorrect native amount");
@@ -83,7 +82,7 @@ contract MockProtocol {
             // Pull tokens from the caller (mutualizer)
             IERC20(tokenAddress).safeTransferFrom(msg.sender, address(this), amount);
         }
-        
+
         // In a real protocol, this would increase available funds for the seller
         // For the mock, we just accept the funds
     }
@@ -105,12 +104,8 @@ contract MockProtocol {
     /**
      * @notice Proxy to call returnDRFee on DRFeeMutualizer as protocol
      */
-    function callReturnDRFee(
-        address mutualizer,
-        uint256 exchangeId,
-        uint256 feeAmount
-    ) external payable {
-        IDRFeeMutualizer(mutualizer).returnDRFee{value: msg.value}(exchangeId, feeAmount);
+    function callReturnDRFee(address mutualizer, uint256 exchangeId, uint256 feeAmount) external payable {
+        IDRFeeMutualizer(mutualizer).returnDRFee{ value: msg.value }(exchangeId, feeAmount);
     }
 
     /**
@@ -123,4 +118,4 @@ contract MockProtocol {
     function approveToken(address token, address spender, uint256 amount) external {
         IERC20(token).approve(spender, amount);
     }
-} 
+}

@@ -325,12 +325,17 @@ describe("IBosonOrchestrationHandler", function () {
         offer.id++;
 
         // create an offer with erc20 exchange token
-        await offerHandler
-          .connect(assistant)
-          .createOffer(offer, offerDates, offerDurations, {
+        await offerHandler.connect(assistant).createOffer(
+          offer,
+          offerDates,
+          offerDurations,
+          {
             disputeResolverId: disputeResolverId,
-            mutualizerAddress: ZeroAddress
-          }, agentId, offerFeeLimit);
+            mutualizerAddress: ZeroAddress,
+          },
+          agentId,
+          offerFeeLimit
+        );
 
         // mint tokens to buyer and approve the protocol
         buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
@@ -346,22 +351,20 @@ describe("IBosonOrchestrationHandler", function () {
 
       beforeEach(async function () {
         // Create the seller and offer
-        await orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOffer(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            emptyAuthToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        await orchestrationHandler.connect(assistant).createSellerAndOffer(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          emptyAuthToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
 
         // buyer escalation deposit used in multiple tests
         buyerEscalationDepositNative = applyPercentage(DRFeeNative, buyerEscalationDepositPercentage);
@@ -615,22 +618,20 @@ describe("IBosonOrchestrationHandler", function () {
     context("👉 createSellerAndOffer()", async function () {
       it("should emit a SellerCreated and OfferCreated events with empty auth token", async function () {
         // Create a seller and an offer, testing for the event
-        tx = await orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOffer(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            emptyAuthToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        tx = await orchestrationHandler.connect(assistant).createSellerAndOffer(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          emptyAuthToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
 
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
@@ -684,22 +685,20 @@ describe("IBosonOrchestrationHandler", function () {
         sellerStruct = seller.toStruct();
 
         // Create a seller and an offer, testing for the event
-        tx = await orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOffer(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            authToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        tx = await orchestrationHandler.connect(assistant).createSellerAndOffer(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          authToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
 
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
@@ -755,22 +754,20 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Attempt to create a seller and an offer, expecting revert
 
-        tx = orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOffer(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            emptyAuthToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        tx = orchestrationHandler.connect(assistant).createSellerAndOffer(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          emptyAuthToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
         await expect(tx).to.emit(orchestrationHandler, "OfferCreated");
         await expect(tx).to.emit(orchestrationHandler, "SellerCreated");
       });
@@ -780,22 +777,20 @@ describe("IBosonOrchestrationHandler", function () {
         sellerStruct = seller.toStruct();
 
         // Create a seller and an offer
-        await orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOffer(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            authToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        await orchestrationHandler.connect(assistant).createSellerAndOffer(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          authToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
 
         // Get the seller as a struct
         [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -877,22 +872,20 @@ describe("IBosonOrchestrationHandler", function () {
         offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
         // Create a seller and an offer
-        await orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOffer(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            authToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        await orchestrationHandler.connect(assistant).createSellerAndOffer(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          authToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
 
         // Get the collections information
         expectedCloneAddress = calculateCloneAddress(
@@ -947,22 +940,20 @@ describe("IBosonOrchestrationHandler", function () {
         offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
         // Create a seller and an offer
-        await orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOffer(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            authToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        await orchestrationHandler.connect(assistant).createSellerAndOffer(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          authToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
 
         // Get the collections information
         expectedCloneAddress = calculateCloneAddress(
@@ -1014,22 +1005,20 @@ describe("IBosonOrchestrationHandler", function () {
         offer.id = "555";
 
         // Create a seller and an offer, testing for the event
-        tx = await orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOffer(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            emptyAuthToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        tx = await orchestrationHandler.connect(assistant).createSellerAndOffer(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          emptyAuthToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
 
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
@@ -1078,22 +1067,20 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create a seller and an offer, testing for the event
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createSellerAndOffer(
-              seller,
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              emptyAuthToken,
-              voucherInitValues,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createSellerAndOffer(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            emptyAuthToken,
+            voucherInitValues,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -1115,22 +1102,20 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create a seller and an offer, testing for the event
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createSellerAndOffer(
-              seller,
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              emptyAuthToken,
-              voucherInitValues,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createSellerAndOffer(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            emptyAuthToken,
+            voucherInitValues,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -1161,22 +1146,20 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create a seller and an offer, testing for the event
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createSellerAndOffer(
-              seller,
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              emptyAuthToken,
-              voucherInitValues,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createSellerAndOffer(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            emptyAuthToken,
+            voucherInitValues,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -1201,22 +1184,20 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create a seller and an offer, testing for the event
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createSellerAndOffer(
-              seller,
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              emptyAuthToken,
-              voucherInitValues,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createSellerAndOffer(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            emptyAuthToken,
+            voucherInitValues,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -1238,22 +1219,20 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create a seller and an offer, testing for the event
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createSellerAndOffer(
-              seller,
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              emptyAuthToken,
-              voucherInitValues,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createSellerAndOffer(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            emptyAuthToken,
+            voucherInitValues,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -1272,22 +1251,20 @@ describe("IBosonOrchestrationHandler", function () {
       it("Should use the correct dispute resolver fee", async function () {
         // Create an offer in native currency
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createSellerAndOffer(
-              seller,
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              emptyAuthToken,
-              voucherInitValues,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createSellerAndOffer(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            emptyAuthToken,
+            voucherInitValues,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -1320,22 +1297,20 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer in boson token
         await expect(
-          orchestrationHandler
-            .connect(rando)
-            .createSellerAndOffer(
-              seller,
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              emptyAuthToken,
-              voucherInitValues,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(rando).createSellerAndOffer(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            emptyAuthToken,
+            voucherInitValues,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -1357,22 +1332,20 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create a seller and an offer, testing for the event
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createSellerAndOffer(
-              seller,
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              emptyAuthToken,
-              voucherInitValues,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createSellerAndOffer(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            emptyAuthToken,
+            voucherInitValues,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -1413,23 +1386,21 @@ describe("IBosonOrchestrationHandler", function () {
           sellerStruct = seller.toStruct();
 
           // Create a seller and a preminted offer, testing for the event
-          tx = await orchestrationHandler
-            .connect(assistant)
-            .createSellerAndPremintedOffer(
-              seller,
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              premintParameters,
-              authToken,
-              voucherInitValues,
-              agentId,
-              offerFeeLimit
-            );
+          tx = await orchestrationHandler.connect(assistant).createSellerAndPremintedOffer(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            premintParameters,
+            authToken,
+            voucherInitValues,
+            agentId,
+            offerFeeLimit
+          );
 
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
@@ -1496,23 +1467,21 @@ describe("IBosonOrchestrationHandler", function () {
           sellerStruct = seller.toStruct();
 
           // Create a seller and a preminted offer
-          await orchestrationHandler
-            .connect(assistant)
-            .createSellerAndPremintedOffer(
-              seller,
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              premintParameters,
-              authToken,
-              voucherInitValues,
-              agentId,
-              offerFeeLimit
-            );
+          await orchestrationHandler.connect(assistant).createSellerAndPremintedOffer(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            premintParameters,
+            authToken,
+            voucherInitValues,
+            agentId,
+            offerFeeLimit
+          );
 
           // Get the seller as a struct
           [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -1600,22 +1569,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to orchestrate, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Orchestration);
@@ -1627,22 +1594,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a offer expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Sellers);
@@ -1654,22 +1619,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a offer expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Offers);
@@ -1683,23 +1646,21 @@ describe("IBosonOrchestrationHandler", function () {
           const reservedRangeLength = offer.quantityAvailable;
           const premintParameters = [reservedRangeLength, await assistant.getAddress()];
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndPremintedOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                premintParameters,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndPremintedOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              premintParameters,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Exchanges);
@@ -1710,22 +1671,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.MUST_BE_ACTIVE);
         });
 
@@ -1736,22 +1695,20 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller with non-unique admin and assistant, expecting revert
           // N.B. assistant and admin are tested together, since they must be the same
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
         });
 
@@ -1760,22 +1717,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(rando)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(rando).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ADMIN);
         });
 
@@ -1785,22 +1740,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(rando)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                authToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(rando).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              authToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ADMIN);
         });
 
@@ -1809,22 +1762,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(rando)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(rando).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
         });
 
@@ -1835,44 +1786,40 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(rando)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(rando).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.CLERK_DEPRECATED);
         });
 
         it("admin address is NOT zero address and AuthTokenType is NOT None", async function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                authToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              authToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.ADMIN_OR_AUTH_TOKEN);
         });
 
@@ -1881,22 +1828,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.ADMIN_OR_AUTH_TOKEN);
         });
 
@@ -1909,22 +1854,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller with non-unique authToken and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                authToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              authToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.AUTH_TOKEN_MUST_BE_UNIQUE);
         });
 
@@ -1935,22 +1878,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_PERIOD_INVALID);
         });
 
@@ -1964,22 +1905,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_PERIOD_INVALID);
         });
 
@@ -1989,22 +1928,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_PENALTY_INVALID);
         });
 
@@ -2014,22 +1951,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_MUST_BE_ACTIVE);
         });
 
@@ -2040,22 +1975,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
@@ -2066,22 +1999,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
@@ -2092,22 +2023,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
@@ -2119,22 +2048,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
@@ -2144,22 +2071,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_DISPUTE_PERIOD);
         });
 
@@ -2169,22 +2094,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
 
@@ -2194,22 +2117,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_RESOLUTION_PERIOD);
         });
 
@@ -2219,22 +2140,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_QUANTITY_AVAILABLE);
         });
 
@@ -2244,22 +2163,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
@@ -2281,22 +2198,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
@@ -2307,22 +2222,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
@@ -2348,22 +2261,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
@@ -2383,22 +2294,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_NOT_APPROVED);
         });
 
@@ -2408,22 +2317,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.DR_UNSUPPORTED_FEE);
         });
 
@@ -2434,23 +2341,21 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndPremintedOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                premintParameters,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndPremintedOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              premintParameters,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_RANGE_LENGTH);
         });
 
@@ -2461,23 +2366,21 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndPremintedOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                premintParameters,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndPremintedOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              premintParameters,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_RANGE_LENGTH);
         });
 
@@ -2488,23 +2391,21 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndPremintedOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                premintParameters,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndPremintedOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              premintParameters,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_RANGE_LENGTH);
         });
 
@@ -2514,22 +2415,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_COLLECTION);
         });
       });
@@ -2559,22 +2458,20 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("should emit a SellerCreated and OfferCreated events", async function () {
           // Create a seller and an offer, testing for the event
-          const tx = await orchestrationHandler
-            .connect(assistant)
-            .createSellerAndOffer(
-              seller,
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              emptyAuthToken,
-              voucherInitValues,
-              agentId,
-              offerFeeLimit
-            );
+          const tx = await orchestrationHandler.connect(assistant).createSellerAndOffer(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            emptyAuthToken,
+            voucherInitValues,
+            agentId,
+            offerFeeLimit
+          );
 
           await expect(tx)
             .to.emit(orchestrationHandler, "SellerCreated")
@@ -2611,22 +2508,20 @@ describe("IBosonOrchestrationHandler", function () {
 
             // Attempt to Create an offer, expecting revert
             await expect(
-              orchestrationHandler
-                .connect(assistant)
-                .createSellerAndOffer(
-                  seller,
-                  offer,
-                  offerDates,
-                  offerDurations,
-                  {
-                    disputeResolverId: disputeResolver.id,
-                    mutualizerAddress: ZeroAddress
-                  },
-                  authToken,
-                  voucherInitValues,
-                  agentId,
-                  offerFeeLimit
-                )
+              orchestrationHandler.connect(assistant).createSellerAndOffer(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress,
+                },
+                authToken,
+                voucherInitValues,
+                agentId,
+                offerFeeLimit
+              )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_AGENT);
           });
 
@@ -2648,22 +2543,20 @@ describe("IBosonOrchestrationHandler", function () {
 
             // Attempt to Create an offer, expecting revert
             await expect(
-              orchestrationHandler
-                .connect(assistant)
-                .createSellerAndOffer(
-                  seller,
-                  offer,
-                  offerDates,
-                  offerDurations,
-                  {
-                    disputeResolverId: disputeResolver.id,
-                    mutualizerAddress: ZeroAddress
-                  },
-                  emptyAuthToken,
-                  voucherInitValues,
-                  agent.id,
-                  offerFeeLimit
-                )
+              orchestrationHandler.connect(assistant).createSellerAndOffer(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress,
+                },
+                emptyAuthToken,
+                voucherInitValues,
+                agent.id,
+                offerFeeLimit
+              )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.AGENT_FEE_AMOUNT_TOO_HIGH);
           });
 
@@ -2673,22 +2566,20 @@ describe("IBosonOrchestrationHandler", function () {
 
             // Attempt to Create an offer, expecting revert
             await expect(
-              orchestrationHandler
-                .connect(assistant)
-                .createSellerAndOffer(
-                  seller,
-                  offer,
-                  offerDates,
-                  offerDurations,
-                  {
-                    disputeResolverId: disputeResolver.id,
-                    mutualizerAddress: ZeroAddress
-                  },
-                  emptyAuthToken,
-                  voucherInitValues,
-                  agent.id,
-                  offerFeeLimit
-                )
+              orchestrationHandler.connect(assistant).createSellerAndOffer(
+                seller,
+                offer,
+                offerDates,
+                offerDurations,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress,
+                },
+                emptyAuthToken,
+                voucherInitValues,
+                agent.id,
+                offerFeeLimit
+              )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.TOTAL_FEE_EXCEEDS_LIMIT);
           });
         });
@@ -2726,20 +2617,18 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should emit an OfferCreated and GroupCreated events", async function () {
         // Create an offer with condition, testing for the events
-        const tx = await orchestrationHandler
-          .connect(assistant)
-          .createOfferWithCondition(
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            condition,
-            agentId,
-            offerFeeLimit
-          );
+        const tx = await orchestrationHandler.connect(assistant).createOfferWithCondition(
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          condition,
+          agentId,
+          offerFeeLimit
+        );
 
         // OfferCreated event
         await expect(tx)
@@ -2773,20 +2662,18 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should update state", async function () {
         // Create an offer with condition
-        await orchestrationHandler
-          .connect(assistant)
-          .createOfferWithCondition(
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            condition,
-            agentId,
-            offerFeeLimit
-          );
+        await orchestrationHandler.connect(assistant).createOfferWithCondition(
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          condition,
+          agentId,
+          offerFeeLimit
+        );
 
         // Get the offer as a struct
         [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
@@ -2837,20 +2724,18 @@ describe("IBosonOrchestrationHandler", function () {
         offer.id = "555";
 
         // Create an offer with condition, testing for the events
-        const tx = await orchestrationHandler
-          .connect(assistant)
-          .createOfferWithCondition(
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            condition,
-            agentId,
-            offerFeeLimit
-          );
+        const tx = await orchestrationHandler.connect(assistant).createOfferWithCondition(
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          condition,
+          agentId,
+          offerFeeLimit
+        );
 
         // OfferCreated event
         await expect(tx)
@@ -2886,20 +2771,18 @@ describe("IBosonOrchestrationHandler", function () {
         offer.sellerId = "123";
 
         // Create an offer with condition, testing for the events
-        const tx = await orchestrationHandler
-          .connect(assistant)
-          .createOfferWithCondition(
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            condition,
-            agentId,
-            offerFeeLimit
-          );
+        const tx = await orchestrationHandler.connect(assistant).createOfferWithCondition(
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          condition,
+          agentId,
+          offerFeeLimit
+        );
 
         // OfferCreated event
         await expect(tx)
@@ -2945,20 +2828,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer with condition, testing for the events
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferWithCondition(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              condition,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferWithCondition(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            condition,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -2983,20 +2864,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer with condition, testing for the events
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferWithCondition(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              condition,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferWithCondition(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            condition,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -3018,20 +2897,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer with condition, testing for the events
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferWithCondition(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              condition,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferWithCondition(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            condition,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -3050,20 +2927,18 @@ describe("IBosonOrchestrationHandler", function () {
       it("Should use the correct dispute resolver fee", async function () {
         // Create an offer with condition in native currency
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferWithCondition(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              condition,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferWithCondition(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            condition,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -3093,20 +2968,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer with condition in boson token
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferWithCondition(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              condition,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferWithCondition(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            condition,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -3129,20 +3002,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer with condition, testing for the events
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferWithCondition(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              condition,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferWithCondition(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            condition,
+            agentId,
+            offerFeeLimit
+          )
         ).to.emit(orchestrationHandler, "OfferCreated");
       });
 
@@ -3159,20 +3030,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer with condition, testing for the events
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferWithCondition(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              condition,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferWithCondition(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            condition,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -3208,20 +3077,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("should emit an OfferCreated and GroupCreated events", async function () {
           // Create an offer with condition, testing for the events
-          const tx = await orchestrationHandler
-            .connect(assistant)
-            .createOfferWithCondition(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              condition,
-              agentId,
-              offerFeeLimit
-            );
+          const tx = await orchestrationHandler.connect(assistant).createOfferWithCondition(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            condition,
+            agentId,
+            offerFeeLimit
+          );
 
           // OfferCreated event
           await expect(tx)
@@ -3285,21 +3152,19 @@ describe("IBosonOrchestrationHandler", function () {
         it("should emit an OfferCreated, a GroupCreated and a RangeReserved events", async function () {
           // Create a preminted offer with condition, testing for the events
 
-          const tx = await orchestrationHandler
-            .connect(assistant)
-            .createPremintedOfferWithCondition(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              premintParameters,
-              condition,
-              agentId,
-              offerFeeLimit
-            );
+          const tx = await orchestrationHandler.connect(assistant).createPremintedOfferWithCondition(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            premintParameters,
+            condition,
+            agentId,
+            offerFeeLimit
+          );
 
           // OfferCreated event
           await expect(tx)
@@ -3352,21 +3217,19 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("should update state", async function () {
           // Create a preminted offer with condition
-          await orchestrationHandler
-            .connect(assistant)
-            .createPremintedOfferWithCondition(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              premintParameters,
-              condition,
-              agentId,
-              offerFeeLimit
-            );
+          await orchestrationHandler.connect(assistant).createPremintedOfferWithCondition(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            premintParameters,
+            condition,
+            agentId,
+            offerFeeLimit
+          );
 
           // Get the offer as a struct
           [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
@@ -3430,22 +3293,20 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Orchestration);
@@ -3457,20 +3318,18 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to orchestrate, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createOfferWithCondition(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                condition,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createOfferWithCondition(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              condition,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Offers);
@@ -3489,21 +3348,19 @@ describe("IBosonOrchestrationHandler", function () {
           );
           const premintParameters = [reservedRangeLength, bosonVoucherAddress];
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createPremintedOfferWithCondition(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                premintParameters,
-                condition,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createPremintedOfferWithCondition(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              premintParameters,
+              condition,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Exchanges);
@@ -3515,20 +3372,18 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a group, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createOfferWithCondition(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                condition,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createOfferWithCondition(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              condition,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Offers);
@@ -3537,20 +3392,18 @@ describe("IBosonOrchestrationHandler", function () {
         it("Caller not assistant of any seller", async function () {
           // Attempt to create an offer with condition, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(rando)
-              .createOfferWithCondition(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                condition,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(rando).createOfferWithCondition(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              condition,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
         });
 
@@ -3559,20 +3412,18 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createOfferWithCondition(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                condition,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createOfferWithCondition(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              condition,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_CONDITION_PARAMETERS);
         });
 
@@ -3582,20 +3433,18 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createOfferWithCondition(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                condition,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createOfferWithCondition(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              condition,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_CONDITION_PARAMETERS);
         });
 
@@ -3605,20 +3454,18 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createOfferWithCondition(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                condition,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createOfferWithCondition(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              condition,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_CONDITION_PARAMETERS);
         });
 
@@ -3641,20 +3488,18 @@ describe("IBosonOrchestrationHandler", function () {
 
             // Attempt to create an offer with condition, expecting revert
             await expect(
-              orchestrationHandler
-                .connect(assistant)
-                .createOfferWithCondition(
-                  offer,
-                  offerDates,
-                  offerDurations,
-                  {
-                    disputeResolverId: disputeResolver.id,
-                    mutualizerAddress: ZeroAddress
-                  },
-                  condition,
-                  agentId,
-                  offerFeeLimit
-                )
+              orchestrationHandler.connect(assistant).createOfferWithCondition(
+                offer,
+                offerDates,
+                offerDurations,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress,
+                },
+                condition,
+                agentId,
+                offerFeeLimit
+              )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_RECIPIENT);
           });
 
@@ -3664,20 +3509,18 @@ describe("IBosonOrchestrationHandler", function () {
 
             // Attempt to create an offer with condition, expecting revert
             await expect(
-              orchestrationHandler
-                .connect(assistant)
-                .createOfferWithCondition(
-                  offer,
-                  offerDates,
-                  offerDurations,
-                  {
-                    disputeResolverId: disputeResolver.id,
-                    mutualizerAddress: ZeroAddress
-                  },
-                  condition,
-                  agentId,
-                  offerFeeLimit
-                )
+              orchestrationHandler.connect(assistant).createOfferWithCondition(
+                offer,
+                offerDates,
+                offerDurations,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress,
+                },
+                condition,
+                agentId,
+                offerFeeLimit
+              )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
           });
 
@@ -3687,20 +3530,18 @@ describe("IBosonOrchestrationHandler", function () {
 
             // Attempt to create an offer with condition, expecting revert
             await expect(
-              orchestrationHandler
-                .connect(assistant)
-                .createOfferWithCondition(
-                  offer,
-                  offerDates,
-                  offerDurations,
-                  {
-                    disputeResolverId: disputeResolver.id,
-                    mutualizerAddress: ZeroAddress
-                  },
-                  condition,
-                  agentId,
-                  offerFeeLimit
-                )
+              orchestrationHandler.connect(assistant).createOfferWithCondition(
+                offer,
+                offerDates,
+                offerDurations,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress,
+                },
+                condition,
+                agentId,
+                offerFeeLimit
+              )
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
           });
         });
@@ -3738,12 +3579,17 @@ describe("IBosonOrchestrationHandler", function () {
           expect(offerDurations.isValid()).is.true;
 
           // Create the offer
-          await offerHandler
-            .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, {
+          await offerHandler.connect(assistant).createOffer(
+            offer,
+            offerDates,
+            offerDurations,
+            {
               disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            }, agentId, offerFeeLimit);
+              mutualizerAddress: ZeroAddress,
+            },
+            agentId,
+            offerFeeLimit
+          );
 
           nextOfferId++;
         }
@@ -3783,20 +3629,18 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should emit an OfferCreated and GroupUpdated events", async function () {
         // Create an offer, add it to the group, testing for the events
-        const tx = await orchestrationHandler
-          .connect(assistant)
-          .createOfferAddToGroup(
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            nextGroupId,
-            agentId,
-            offerFeeLimit
-          );
+        const tx = await orchestrationHandler.connect(assistant).createOfferAddToGroup(
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          nextGroupId,
+          agentId,
+          offerFeeLimit
+        );
 
         // OfferCreated event
         await expect(tx)
@@ -3829,20 +3673,18 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should update state", async function () {
         // Create an offer, add it to the group
-        await orchestrationHandler
-          .connect(assistant)
-          .createOfferAddToGroup(
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            nextGroupId,
-            agentId,
-            offerFeeLimit
-          );
+        await orchestrationHandler.connect(assistant).createOfferAddToGroup(
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          nextGroupId,
+          agentId,
+          offerFeeLimit
+        );
 
         // Get the offer as a struct
         [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
@@ -3893,20 +3735,18 @@ describe("IBosonOrchestrationHandler", function () {
         offer.id = "555";
 
         // Create an offer, add it to the group, testing for the events
-        const tx = await orchestrationHandler
-          .connect(assistant)
-          .createOfferAddToGroup(
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            nextGroupId,
-            agentId,
-            offerFeeLimit
-          );
+        const tx = await orchestrationHandler.connect(assistant).createOfferAddToGroup(
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          nextGroupId,
+          agentId,
+          offerFeeLimit
+        );
 
         // OfferCreated event
         await expect(tx)
@@ -3942,20 +3782,18 @@ describe("IBosonOrchestrationHandler", function () {
         offer.sellerId = "123";
 
         // Create an offer, add it to the group, testing for the events
-        const tx = await orchestrationHandler
-          .connect(assistant)
-          .createOfferAddToGroup(
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            nextGroupId,
-            agentId,
-            offerFeeLimit
-          );
+        const tx = await orchestrationHandler.connect(assistant).createOfferAddToGroup(
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          nextGroupId,
+          agentId,
+          offerFeeLimit
+        );
 
         // OfferCreated event
         await expect(tx)
@@ -4001,20 +3839,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer, add it to the group, testing for the events
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferAddToGroup(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              nextGroupId,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferAddToGroup(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            nextGroupId,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -4039,20 +3875,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer, add it to the group, testing for the events
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferAddToGroup(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              nextGroupId,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferAddToGroup(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            nextGroupId,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -4074,20 +3908,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer, add it to the group, testing for the events
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferAddToGroup(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              nextGroupId,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferAddToGroup(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            nextGroupId,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -4106,20 +3938,18 @@ describe("IBosonOrchestrationHandler", function () {
       it("Should use the correct dispute resolver fee", async function () {
         // Create an offer in native currency
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferAddToGroup(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              nextGroupId,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferAddToGroup(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            nextGroupId,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -4149,20 +3979,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer in boson token
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferAddToGroup(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              nextGroupId,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferAddToGroup(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            nextGroupId,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -4185,20 +4013,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer in native currency
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferAddToGroup(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              nextGroupId,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferAddToGroup(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            nextGroupId,
+            agentId,
+            offerFeeLimit
+          )
         ).to.emit(orchestrationHandler, "OfferCreated");
       });
 
@@ -4215,20 +4041,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer, add it to the group, testing for the events
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferAddToGroup(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              nextGroupId,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferAddToGroup(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            nextGroupId,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -4264,20 +4088,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("should emit an OfferCreated and GroupUpdated events", async function () {
           // Create an offer, add it to the group, testing for the events
-          const tx = await orchestrationHandler
-            .connect(assistant)
-            .createOfferAddToGroup(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              nextGroupId,
-              agentId,
-              offerFeeLimit
-            );
+          const tx = await orchestrationHandler.connect(assistant).createOfferAddToGroup(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            nextGroupId,
+            agentId,
+            offerFeeLimit
+          );
 
           // OfferCreated event
           await expect(tx)
@@ -4340,21 +4162,19 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("should emit an OfferCreated, a GroupUpdated and a RangeReserved events", async function () {
           // Create a preminted offer, add it to the group, testing for the events
-          const tx = await orchestrationHandler
-            .connect(assistant)
-            .createPremintedOfferAddToGroup(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              premintParameters,
-              nextGroupId,
-              agentId,
-              offerFeeLimit
-            );
+          const tx = await orchestrationHandler.connect(assistant).createPremintedOfferAddToGroup(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            premintParameters,
+            nextGroupId,
+            agentId,
+            offerFeeLimit
+          );
 
           // OfferCreated event
           await expect(tx)
@@ -4402,21 +4222,19 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("should update state", async function () {
           // Create a preminted offer, add it to the group
-          await orchestrationHandler
-            .connect(assistant)
-            .createPremintedOfferAddToGroup(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              premintParameters,
-              nextGroupId,
-              agentId,
-              offerFeeLimit
-            );
+          await orchestrationHandler.connect(assistant).createPremintedOfferAddToGroup(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            premintParameters,
+            nextGroupId,
+            agentId,
+            offerFeeLimit
+          );
 
           // Get the offer as a struct
           [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
@@ -4480,20 +4298,18 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to orchestrate expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createOfferAddToGroup(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                nextGroupId,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createOfferAddToGroup(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              nextGroupId,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Orchestration);
@@ -4505,20 +4321,18 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a offer expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createOfferAddToGroup(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                nextGroupId,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createOfferAddToGroup(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              nextGroupId,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Offers);
@@ -4532,21 +4346,19 @@ describe("IBosonOrchestrationHandler", function () {
           const reservedRangeLength = offer.quantityAvailable;
           const premintParameters = [reservedRangeLength, await assistant.getAddress()];
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createPremintedOfferAddToGroup(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                premintParameters,
-                nextGroupId,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createPremintedOfferAddToGroup(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              premintParameters,
+              nextGroupId,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Exchanges);
@@ -4558,20 +4370,18 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a group expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createOfferAddToGroup(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                nextGroupId,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createOfferAddToGroup(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              nextGroupId,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Groups);
@@ -4583,20 +4393,18 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createOfferAddToGroup(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                invalidGroupId,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createOfferAddToGroup(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              invalidGroupId,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_GROUP);
 
           // Set invalid id
@@ -4604,40 +4412,36 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createOfferAddToGroup(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                invalidGroupId,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createOfferAddToGroup(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              invalidGroupId,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_GROUP);
         });
 
         it("Caller is not the seller of the group", async function () {
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(rando)
-              .createOfferAddToGroup(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                nextGroupId,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(rando).createOfferAddToGroup(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              nextGroupId,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
         });
       });
@@ -4678,20 +4482,18 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should emit an OfferCreated, a TwinCreated and a BundleCreated events", async function () {
         // Create an offer, a twin and a bundle, testing for the events
-        const tx = await orchestrationHandler
-          .connect(assistant)
-          .createOfferAndTwinWithBundle(
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            twin,
-            agentId,
-            offerFeeLimit
-          );
+        const tx = await orchestrationHandler.connect(assistant).createOfferAndTwinWithBundle(
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          twin,
+          agentId,
+          offerFeeLimit
+        );
 
         // OfferCreated event
         await expect(tx)
@@ -4734,20 +4536,18 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should update state", async function () {
         // Create an offer, a twin and a bundle
-        await orchestrationHandler
-          .connect(assistant)
-          .createOfferAndTwinWithBundle(
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            twin,
-            agentId,
-            offerFeeLimit
-          );
+        await orchestrationHandler.connect(assistant).createOfferAndTwinWithBundle(
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          twin,
+          agentId,
+          offerFeeLimit
+        );
 
         // Get the offer as a struct
         [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
@@ -4802,20 +4602,18 @@ describe("IBosonOrchestrationHandler", function () {
         twin.id = "777";
 
         // Create an offer, a twin and a bundle, testing for the events
-        const tx = await orchestrationHandler
-          .connect(assistant)
-          .createOfferAndTwinWithBundle(
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            twin,
-            agentId,
-            offerFeeLimit
-          );
+        const tx = await orchestrationHandler.connect(assistant).createOfferAndTwinWithBundle(
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          twin,
+          agentId,
+          offerFeeLimit
+        );
 
         // OfferCreated event
         await expect(tx)
@@ -4866,20 +4664,18 @@ describe("IBosonOrchestrationHandler", function () {
         twin.sellerId = "456";
 
         // Create an offer, a twin and a bundle, testing for the events
-        const tx = await orchestrationHandler
-          .connect(assistant)
-          .createOfferAndTwinWithBundle(
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            twin,
-            agentId,
-            offerFeeLimit
-          );
+        const tx = await orchestrationHandler.connect(assistant).createOfferAndTwinWithBundle(
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          twin,
+          agentId,
+          offerFeeLimit
+        );
 
         // OfferCreated event
         await expect(tx)
@@ -4939,20 +4735,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferAndTwinWithBundle(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              twin,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferAndTwinWithBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            twin,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -4977,20 +4771,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferAndTwinWithBundle(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              twin,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferAndTwinWithBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            twin,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -5014,20 +4806,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferAndTwinWithBundle(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              twin,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferAndTwinWithBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            twin,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -5046,20 +4836,18 @@ describe("IBosonOrchestrationHandler", function () {
       it("Should use the correct dispute resolver fee", async function () {
         // Create an offer in native currency
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferAndTwinWithBundle(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              twin,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferAndTwinWithBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            twin,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -5089,20 +4877,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer in boson token
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferAndTwinWithBundle(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              twin,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferAndTwinWithBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            twin,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -5125,20 +4911,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferAndTwinWithBundle(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              twin,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferAndTwinWithBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            twin,
+            agentId,
+            offerFeeLimit
+          )
         ).to.emit(orchestrationHandler, "OfferCreated");
       });
 
@@ -5155,20 +4939,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferAndTwinWithBundle(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              twin,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferAndTwinWithBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            twin,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -5204,20 +4986,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("should emit an OfferCreated, a TwinCreated and a BundleCreated events", async function () {
           // Create an offer, a twin and a bundle, testing for the events
-          const tx = await orchestrationHandler
-            .connect(assistant)
-            .createOfferAndTwinWithBundle(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              twin,
-              agentId,
-              offerFeeLimit
-            );
+          const tx = await orchestrationHandler.connect(assistant).createOfferAndTwinWithBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            twin,
+            agentId,
+            offerFeeLimit
+          );
 
           // OfferCreated event
           await expect(tx)
@@ -5285,21 +5065,19 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("should emit an OfferCreated, a TwinCreated, a BundleCreated and a RangeReserved events", async function () {
           // Create a preminted offer, a twin and a bundle, testing for the events
-          const tx = await orchestrationHandler
-            .connect(assistant)
-            .createPremintedOfferAndTwinWithBundle(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              premintParameters,
-              twin,
-              agentId,
-              offerFeeLimit
-            );
+          const tx = await orchestrationHandler.connect(assistant).createPremintedOfferAndTwinWithBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            premintParameters,
+            twin,
+            agentId,
+            offerFeeLimit
+          );
 
           // OfferCreated event
           await expect(tx)
@@ -5357,21 +5135,19 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("should update state", async function () {
           // Create a preminted offer, a twin and a bundle
-          await orchestrationHandler
-            .connect(assistant)
-            .createPremintedOfferAndTwinWithBundle(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              premintParameters,
-              twin,
-              agentId,
-              offerFeeLimit
-            );
+          await orchestrationHandler.connect(assistant).createPremintedOfferAndTwinWithBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            premintParameters,
+            twin,
+            agentId,
+            offerFeeLimit
+          );
 
           // Get the offer as a struct
           [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
@@ -5438,20 +5214,18 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to orchestrate expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createOfferAndTwinWithBundle(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                twin,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createOfferAndTwinWithBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              twin,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Orchestration);
@@ -5463,20 +5237,18 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createOfferAndTwinWithBundle(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                twin,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createOfferAndTwinWithBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              twin,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Offers);
@@ -5488,20 +5260,18 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a bundle, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createOfferAndTwinWithBundle(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                twin,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createOfferAndTwinWithBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              twin,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Bundles);
@@ -5513,20 +5283,18 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a twin, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createOfferAndTwinWithBundle(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                twin,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createOfferAndTwinWithBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              twin,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Twins);
@@ -5545,21 +5313,19 @@ describe("IBosonOrchestrationHandler", function () {
           );
           const premintParameters = [reservedRangeLength, bosonVoucherAddress];
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createPremintedOfferAndTwinWithBundle(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                premintParameters,
-                twin,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createPremintedOfferAndTwinWithBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              premintParameters,
+              twin,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Exchanges);
@@ -5573,20 +5339,18 @@ describe("IBosonOrchestrationHandler", function () {
           twin.tokenAddress = await bosonToken.getAddress();
 
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createOfferAndTwinWithBundle(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                twin,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createOfferAndTwinWithBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              twin,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_TRANSFER_APPROVED);
         });
 
@@ -5595,20 +5359,18 @@ describe("IBosonOrchestrationHandler", function () {
           twin.tokenAddress = await foreign721.getAddress();
 
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createOfferAndTwinWithBundle(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                twin,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createOfferAndTwinWithBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              twin,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_TRANSFER_APPROVED);
         });
 
@@ -5617,20 +5379,18 @@ describe("IBosonOrchestrationHandler", function () {
           twin.tokenAddress = await foreign1155.getAddress();
 
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createOfferAndTwinWithBundle(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                twin,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createOfferAndTwinWithBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              twin,
+              agentId,
+              offerFeeLimit
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_TRANSFER_APPROVED);
         });
 
@@ -5639,20 +5399,18 @@ describe("IBosonOrchestrationHandler", function () {
             twin.tokenAddress = ZeroAddress;
 
             await expect(
-              orchestrationHandler
-                .connect(assistant)
-                .createOfferAndTwinWithBundle(
-                  offer,
-                  offerDates,
-                  offerDurations,
-                  {
-                    disputeResolverId: disputeResolver.id,
-                    mutualizerAddress: ZeroAddress
-                  },
-                  twin,
-                  agentId,
-                  offerFeeLimit
-                )
+              orchestrationHandler.connect(assistant).createOfferAndTwinWithBundle(
+                offer,
+                offerDates,
+                offerDurations,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress,
+                },
+                twin,
+                agentId,
+                offerFeeLimit
+              )
             ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.UNSUPPORTED_TOKEN);
           });
 
@@ -5660,20 +5418,18 @@ describe("IBosonOrchestrationHandler", function () {
             twin.tokenAddress = await twinHandler.getAddress();
 
             await expect(
-              orchestrationHandler
-                .connect(assistant)
-                .createOfferAndTwinWithBundle(
-                  offer,
-                  offerDates,
-                  offerDurations,
-                  {
-                    disputeResolverId: disputeResolver.id,
-                    mutualizerAddress: ZeroAddress
-                  },
-                  twin,
-                  agentId,
-                  offerFeeLimit
-                )
+              orchestrationHandler.connect(assistant).createOfferAndTwinWithBundle(
+                offer,
+                offerDates,
+                offerDurations,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress,
+                },
+                twin,
+                agentId,
+                offerFeeLimit
+              )
             ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.UNSUPPORTED_TOKEN);
           });
 
@@ -5681,20 +5437,18 @@ describe("IBosonOrchestrationHandler", function () {
             twin.tokenAddress = await fallbackError.getAddress();
 
             await expect(
-              orchestrationHandler
-                .connect(assistant)
-                .createOfferAndTwinWithBundle(
-                  offer,
-                  offerDates,
-                  offerDurations,
-                  {
-                    disputeResolverId: disputeResolver.id,
-                    mutualizerAddress: ZeroAddress
-                  },
-                  twin,
-                  agentId,
-                  offerFeeLimit
-                )
+              orchestrationHandler.connect(assistant).createOfferAndTwinWithBundle(
+                offer,
+                offerDates,
+                offerDurations,
+                {
+                  disputeResolverId: disputeResolver.id,
+                  mutualizerAddress: ZeroAddress,
+                },
+                twin,
+                agentId,
+                offerFeeLimit
+              )
             ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.UNSUPPORTED_TOKEN);
           });
         });
@@ -5756,21 +5510,19 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should emit an OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated events", async function () {
         // Create an offer with condition, twin and bundle
-        const tx = await orchestrationHandler
-          .connect(assistant)
-          .createOfferWithConditionAndTwinAndBundle(
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            condition,
-            twin,
-            agentId,
-            offerFeeLimit
-          );
+        const tx = await orchestrationHandler.connect(assistant).createOfferWithConditionAndTwinAndBundle(
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          condition,
+          twin,
+          agentId,
+          offerFeeLimit
+        );
 
         // OfferCreated event
         await expect(tx)
@@ -5823,21 +5575,19 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should update state", async function () {
         // Create an offer with condition, twin and bundle
-        await orchestrationHandler
-          .connect(assistant)
-          .createOfferWithConditionAndTwinAndBundle(
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            condition,
-            twin,
-            agentId,
-            offerFeeLimit
-          );
+        await orchestrationHandler.connect(assistant).createOfferWithConditionAndTwinAndBundle(
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          condition,
+          twin,
+          agentId,
+          offerFeeLimit
+        );
 
         // Get the offer as a struct
         [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
@@ -5911,21 +5661,19 @@ describe("IBosonOrchestrationHandler", function () {
         twin.id = "777";
 
         // Create an offer with condition, twin and bundle
-        const tx = await orchestrationHandler
-          .connect(assistant)
-          .createOfferWithConditionAndTwinAndBundle(
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            condition,
-            twin,
-            agentId,
-            offerFeeLimit
-          );
+        const tx = await orchestrationHandler.connect(assistant).createOfferWithConditionAndTwinAndBundle(
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          condition,
+          twin,
+          agentId,
+          offerFeeLimit
+        );
 
         // OfferCreated event
         await expect(tx)
@@ -5986,21 +5734,19 @@ describe("IBosonOrchestrationHandler", function () {
         twin.sellerId = "456";
 
         // Create an offer with condition, twin and bundle
-        const tx = await orchestrationHandler
-          .connect(assistant)
-          .createOfferWithConditionAndTwinAndBundle(
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            condition,
-            twin,
-            agentId,
-            offerFeeLimit
-          );
+        const tx = await orchestrationHandler.connect(assistant).createOfferWithConditionAndTwinAndBundle(
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          condition,
+          twin,
+          agentId,
+          offerFeeLimit
+        );
 
         // OfferCreated event
         await expect(tx)
@@ -6070,21 +5816,19 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer with condition, twin and bundle testing for the events
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferWithConditionAndTwinAndBundle(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              condition,
-              twin,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferWithConditionAndTwinAndBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            condition,
+            twin,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -6109,21 +5853,19 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer with condition, twin and bundle testing for the events
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferWithConditionAndTwinAndBundle(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              condition,
-              twin,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferWithConditionAndTwinAndBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            condition,
+            twin,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -6147,21 +5889,19 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer with condition, twin and bundle testing for the events
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferWithConditionAndTwinAndBundle(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              condition,
-              twin,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferWithConditionAndTwinAndBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            condition,
+            twin,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -6180,21 +5920,19 @@ describe("IBosonOrchestrationHandler", function () {
       it("Should use the correct dispute resolver fee", async function () {
         // Create an offer in native currency
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferWithConditionAndTwinAndBundle(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              condition,
-              twin,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferWithConditionAndTwinAndBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            condition,
+            twin,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -6224,21 +5962,19 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer in boson token
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferWithConditionAndTwinAndBundle(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              condition,
-              twin,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferWithConditionAndTwinAndBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            condition,
+            twin,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -6261,21 +5997,19 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer with condition, twin and bundle testing for the events
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferWithConditionAndTwinAndBundle(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              condition,
-              twin,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferWithConditionAndTwinAndBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            condition,
+            twin,
+            agentId,
+            offerFeeLimit
+          )
         ).to.emit(orchestrationHandler, "OfferCreated");
       });
 
@@ -6292,21 +6026,19 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer with condition, twin and bundle testing for the events
         await expect(
-          orchestrationHandler
-            .connect(assistant)
-            .createOfferWithConditionAndTwinAndBundle(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              condition,
-              twin,
-              agentId,
-              offerFeeLimit
-            )
+          orchestrationHandler.connect(assistant).createOfferWithConditionAndTwinAndBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            condition,
+            twin,
+            agentId,
+            offerFeeLimit
+          )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -6343,21 +6075,19 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("should emit an OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated events", async function () {
           // Create an offer with condition, twin and bundle
-          const tx = await orchestrationHandler
-            .connect(assistant)
-            .createOfferWithConditionAndTwinAndBundle(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              condition,
-              twin,
-              agentId,
-              offerFeeLimit
-            );
+          const tx = await orchestrationHandler.connect(assistant).createOfferWithConditionAndTwinAndBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            condition,
+            twin,
+            agentId,
+            offerFeeLimit
+          );
 
           // OfferCreated event
           await expect(tx)
@@ -6439,22 +6169,20 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("should emit an OfferCreated, a GroupCreated, a TwinCreated, a BundleCreated and a RangeReserved events", async function () {
           // Create a preminted offer with condition, twin and bundle
-          const tx = await orchestrationHandler
-            .connect(assistant)
-            .createPremintedOfferWithConditionAndTwinAndBundle(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              premintParameters,
-              condition,
-              twin,
-              agentId,
-              offerFeeLimit
-            );
+          const tx = await orchestrationHandler.connect(assistant).createPremintedOfferWithConditionAndTwinAndBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            premintParameters,
+            condition,
+            twin,
+            agentId,
+            offerFeeLimit
+          );
 
           // OfferCreated event
           await expect(tx)
@@ -6522,22 +6250,20 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("should update state", async function () {
           // Create a preminted offer with condition, twin and bundle
-          await orchestrationHandler
-            .connect(assistant)
-            .createPremintedOfferWithConditionAndTwinAndBundle(
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              premintParameters,
-              condition,
-              twin,
-              agentId,
-              offerFeeLimit
-            );
+          await orchestrationHandler.connect(assistant).createPremintedOfferWithConditionAndTwinAndBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            premintParameters,
+            condition,
+            twin,
+            agentId,
+            offerFeeLimit
+          );
 
           // Get the offer as a struct
           [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
@@ -6623,21 +6349,19 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to orchestrate expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createOfferWithConditionAndTwinAndBundle(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                condition,
-                twin,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createOfferWithConditionAndTwinAndBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              condition,
+              twin,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Orchestration);
@@ -6649,21 +6373,19 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createOfferWithConditionAndTwinAndBundle(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                condition,
-                twin,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createOfferWithConditionAndTwinAndBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              condition,
+              twin,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Offers);
@@ -6675,21 +6397,19 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a group, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createOfferWithConditionAndTwinAndBundle(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                condition,
-                twin,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createOfferWithConditionAndTwinAndBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              condition,
+              twin,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Groups);
@@ -6701,21 +6421,19 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a bundle, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createOfferWithConditionAndTwinAndBundle(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                condition,
-                twin,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createOfferWithConditionAndTwinAndBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              condition,
+              twin,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Bundles);
@@ -6727,21 +6445,19 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a twin, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createOfferWithConditionAndTwinAndBundle(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                condition,
-                twin,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createOfferWithConditionAndTwinAndBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              condition,
+              twin,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Twins);
@@ -6755,22 +6471,20 @@ describe("IBosonOrchestrationHandler", function () {
           const reservedRangeLength = offer.quantityAvailable;
           const premintParameters = [reservedRangeLength, await assistant.getAddress()];
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createPremintedOfferWithConditionAndTwinAndBundle(
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                premintParameters,
-                condition,
-                twin,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createPremintedOfferWithConditionAndTwinAndBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              premintParameters,
+              condition,
+              twin,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Exchanges);
@@ -6805,23 +6519,21 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should emit a SellerCreated, an OfferCreated, and a GroupCreated event", async function () {
         // Create a seller and an offer with condition, testing for the events
-        const tx = await orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOfferWithCondition(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            condition,
-            emptyAuthToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        const tx = await orchestrationHandler.connect(assistant).createSellerAndOfferWithCondition(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          condition,
+          emptyAuthToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
 
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
@@ -6887,23 +6599,21 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should update state", async function () {
         // Create a seller and an offer with condition
-        await orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOfferWithCondition(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            condition,
-            emptyAuthToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        await orchestrationHandler.connect(assistant).createSellerAndOfferWithCondition(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          condition,
+          emptyAuthToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
 
         // Get the seller as a struct
         [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -7002,23 +6712,21 @@ describe("IBosonOrchestrationHandler", function () {
         offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
         // Create a seller and an offer with condition
-        await orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOfferWithCondition(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            condition,
-            emptyAuthToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        await orchestrationHandler.connect(assistant).createSellerAndOfferWithCondition(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          condition,
+          emptyAuthToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
 
         // Get the collections information
         expectedCloneAddress = calculateCloneAddress(
@@ -7072,23 +6780,21 @@ describe("IBosonOrchestrationHandler", function () {
         offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
 
         // Create a seller and an offer with condition
-        await orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOfferWithCondition(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            condition,
-            emptyAuthToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        await orchestrationHandler.connect(assistant).createSellerAndOfferWithCondition(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          condition,
+          emptyAuthToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
 
         // Get the collections information
         expectedCloneAddress = calculateCloneAddress(
@@ -7141,23 +6847,21 @@ describe("IBosonOrchestrationHandler", function () {
         seller.id = "444";
 
         // Create a seller and an offer with condition, testing for the events
-        const tx = await orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOfferWithCondition(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            condition,
-            emptyAuthToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        const tx = await orchestrationHandler.connect(assistant).createSellerAndOfferWithCondition(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          condition,
+          emptyAuthToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
 
         // SellerCreated and OfferCreated events
         await expect(tx)
@@ -7224,23 +6928,21 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("should emit a SellerCreated, an OfferCreated, and a GroupCreated event", async function () {
           // Create a seller and an offer with condition, testing for the events
-          const tx = await orchestrationHandler
-            .connect(assistant)
-            .createSellerAndOfferWithCondition(
-              seller,
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              condition,
-              emptyAuthToken,
-              voucherInitValues,
-              agentId,
-              offerFeeLimit
-            );
+          const tx = await orchestrationHandler.connect(assistant).createSellerAndOfferWithCondition(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            condition,
+            emptyAuthToken,
+            voucherInitValues,
+            agentId,
+            offerFeeLimit
+          );
 
           // SellerCreated and OfferCreated events
           await expect(tx)
@@ -7304,24 +7006,22 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("should emit a SellerCreated, an OfferCreated, a GroupCreated and a RangeReserved event", async function () {
           // Create a seller and a preminted offer with condition, testing for the events
-          const tx = await orchestrationHandler
-            .connect(assistant)
-            .createSellerAndPremintedOfferWithCondition(
-              seller,
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              premintParameters,
-              condition,
-              emptyAuthToken,
-              voucherInitValues,
-              agentId,
-              offerFeeLimit
-            );
+          const tx = await orchestrationHandler.connect(assistant).createSellerAndPremintedOfferWithCondition(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            premintParameters,
+            condition,
+            emptyAuthToken,
+            voucherInitValues,
+            agentId,
+            offerFeeLimit
+          );
 
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
@@ -7405,24 +7105,22 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("should update state", async function () {
           // Create a seller and an offer with condition
-          await orchestrationHandler
-            .connect(assistant)
-            .createSellerAndPremintedOfferWithCondition(
-              seller,
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              premintParameters,
-              condition,
-              emptyAuthToken,
-              voucherInitValues,
-              agentId,
-              offerFeeLimit
-            );
+          await orchestrationHandler.connect(assistant).createSellerAndPremintedOfferWithCondition(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            premintParameters,
+            condition,
+            emptyAuthToken,
+            voucherInitValues,
+            agentId,
+            offerFeeLimit
+          );
 
           // Get the seller as a struct
           [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -7529,23 +7227,21 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to orchestrate expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOfferWithCondition(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                condition,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOfferWithCondition(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              condition,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Orchestration);
@@ -7557,23 +7253,21 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOfferWithCondition(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                condition,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOfferWithCondition(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              condition,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Sellers);
@@ -7585,23 +7279,21 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOfferWithCondition(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                condition,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOfferWithCondition(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              condition,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Offers);
@@ -7613,23 +7305,21 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an group, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOfferWithCondition(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                condition,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOfferWithCondition(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              condition,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Groups);
@@ -7643,24 +7333,22 @@ describe("IBosonOrchestrationHandler", function () {
           const reservedRangeLength = offer.quantityAvailable;
           const premintParameters = [reservedRangeLength, await assistant.getAddress()];
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndPremintedOfferWithCondition(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                premintParameters,
-                condition,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndPremintedOfferWithCondition(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              premintParameters,
+              condition,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Exchanges);
@@ -7701,23 +7389,21 @@ describe("IBosonOrchestrationHandler", function () {
         await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
 
         // Create a seller, an offer with condition and a twin with bundle, testing for the events
-        const tx = await orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOfferAndTwinWithBundle(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            twin,
-            emptyAuthToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        const tx = await orchestrationHandler.connect(assistant).createSellerAndOfferAndTwinWithBundle(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          twin,
+          emptyAuthToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
 
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
@@ -7801,23 +7487,21 @@ describe("IBosonOrchestrationHandler", function () {
         await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
 
         // Create a seller, an offer with condition and a twin with bundle, testing for the events
-        await orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOfferAndTwinWithBundle(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            twin,
-            emptyAuthToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        await orchestrationHandler.connect(assistant).createSellerAndOfferAndTwinWithBundle(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          twin,
+          emptyAuthToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
 
         // Get the seller as a struct
         [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -7922,23 +7606,21 @@ describe("IBosonOrchestrationHandler", function () {
         await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
 
         // Create a seller, an offer with condition and a twin with bundle, testing for the events
-        await orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOfferAndTwinWithBundle(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            twin,
-            emptyAuthToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        await orchestrationHandler.connect(assistant).createSellerAndOfferAndTwinWithBundle(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          twin,
+          emptyAuthToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
 
         // Get the collections information
         expectedCloneAddress = calculateCloneAddress(
@@ -7995,23 +7677,21 @@ describe("IBosonOrchestrationHandler", function () {
         await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
 
         // Create a seller, an offer with condition and a twin with bundle, testing for the events
-        await orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOfferAndTwinWithBundle(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            twin,
-            emptyAuthToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        await orchestrationHandler.connect(assistant).createSellerAndOfferAndTwinWithBundle(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          twin,
+          emptyAuthToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
 
         // Get the collections information
         expectedCloneAddress = calculateCloneAddress(
@@ -8068,23 +7748,21 @@ describe("IBosonOrchestrationHandler", function () {
         twin.id = "777";
 
         // Create a seller, an offer with condition and a twin with bundle, testing for the events
-        const tx = await orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOfferAndTwinWithBundle(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            twin,
-            emptyAuthToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        const tx = await orchestrationHandler.connect(assistant).createSellerAndOfferAndTwinWithBundle(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          twin,
+          emptyAuthToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
 
         // SellerCreated and OfferCreated events
         await expect(tx)
@@ -8169,23 +7847,21 @@ describe("IBosonOrchestrationHandler", function () {
           await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
 
           // Create a seller, an offer with condition and a twin with bundle, testing for the events
-          const tx = await orchestrationHandler
-            .connect(assistant)
-            .createSellerAndOfferAndTwinWithBundle(
-              seller,
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              twin,
-              emptyAuthToken,
-              voucherInitValues,
-              agentId,
-              offerFeeLimit
-            );
+          const tx = await orchestrationHandler.connect(assistant).createSellerAndOfferAndTwinWithBundle(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            twin,
+            emptyAuthToken,
+            voucherInitValues,
+            agentId,
+            offerFeeLimit
+          );
 
           // SellerCreated and OfferCreated events
           await expect(tx)
@@ -8272,24 +7948,22 @@ describe("IBosonOrchestrationHandler", function () {
           await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
 
           // Create a seller, a preminted offer with condition and a twin with bundle, testing for the events
-          const tx = await orchestrationHandler
-            .connect(assistant)
-            .createSellerAndPremintedOfferAndTwinWithBundle(
-              seller,
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              premintParameters,
-              twin,
-              emptyAuthToken,
-              voucherInitValues,
-              agentId,
-              offerFeeLimit
-            );
+          const tx = await orchestrationHandler.connect(assistant).createSellerAndPremintedOfferAndTwinWithBundle(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            premintParameters,
+            twin,
+            emptyAuthToken,
+            voucherInitValues,
+            agentId,
+            offerFeeLimit
+          );
 
           expectedCloneAddress = calculateCloneAddress(
             await accountHandler.getAddress(),
@@ -8396,24 +8070,22 @@ describe("IBosonOrchestrationHandler", function () {
           await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
 
           // Create a seller, a preminted offer with condition and a twin with bundle, testing for the events
-          await orchestrationHandler
-            .connect(assistant)
-            .createSellerAndPremintedOfferAndTwinWithBundle(
-              seller,
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              premintParameters,
-              twin,
-              emptyAuthToken,
-              voucherInitValues,
-              agentId,
-              offerFeeLimit
-            );
+          await orchestrationHandler.connect(assistant).createSellerAndPremintedOfferAndTwinWithBundle(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            premintParameters,
+            twin,
+            emptyAuthToken,
+            voucherInitValues,
+            agentId,
+            offerFeeLimit
+          );
 
           // Get the seller as a struct
           [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -8523,23 +8195,21 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to orchestrate expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOfferAndTwinWithBundle(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                twin,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOfferAndTwinWithBundle(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              twin,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Orchestration);
@@ -8551,23 +8221,21 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOfferAndTwinWithBundle(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                twin,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOfferAndTwinWithBundle(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              twin,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Sellers);
@@ -8579,23 +8247,21 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOfferAndTwinWithBundle(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                twin,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOfferAndTwinWithBundle(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              twin,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Offers);
@@ -8607,23 +8273,21 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a bundle, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOfferAndTwinWithBundle(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                twin,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOfferAndTwinWithBundle(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              twin,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Bundles);
@@ -8635,23 +8299,21 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a twin expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOfferAndTwinWithBundle(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                twin,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOfferAndTwinWithBundle(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              twin,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Twins);
@@ -8668,24 +8330,22 @@ describe("IBosonOrchestrationHandler", function () {
           const reservedRangeLength = offer.quantityAvailable;
           const premintParameters = [reservedRangeLength, await assistant.getAddress()];
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndPremintedOfferAndTwinWithBundle(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                premintParameters,
-                twin,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndPremintedOfferAndTwinWithBundle(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              premintParameters,
+              twin,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Exchanges);
@@ -8745,24 +8405,22 @@ describe("IBosonOrchestrationHandler", function () {
         await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
 
         // Create a seller, an offer with condition, twin and bundle
-        const tx = await orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOfferWithConditionAndTwinAndBundle(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            condition,
-            twin,
-            emptyAuthToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        const tx = await orchestrationHandler.connect(assistant).createSellerAndOfferWithConditionAndTwinAndBundle(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          condition,
+          twin,
+          emptyAuthToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
 
         expectedCloneAddress = calculateCloneAddress(
           await accountHandler.getAddress(),
@@ -8851,24 +8509,22 @@ describe("IBosonOrchestrationHandler", function () {
         await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
 
         // Create a seller, an offer with condition, twin and bundle
-        await orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOfferWithConditionAndTwinAndBundle(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            condition,
-            twin,
-            emptyAuthToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        await orchestrationHandler.connect(assistant).createSellerAndOfferWithConditionAndTwinAndBundle(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          condition,
+          twin,
+          emptyAuthToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
 
         // Get the seller as a struct
         [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -8992,24 +8648,22 @@ describe("IBosonOrchestrationHandler", function () {
         await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
 
         // Create a seller, an offer with condition, twin and bundle
-        await orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOfferWithConditionAndTwinAndBundle(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            condition,
-            twin,
-            emptyAuthToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        await orchestrationHandler.connect(assistant).createSellerAndOfferWithConditionAndTwinAndBundle(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          condition,
+          twin,
+          emptyAuthToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
 
         // Get the collections information
         expectedCloneAddress = calculateCloneAddress(
@@ -9066,24 +8720,22 @@ describe("IBosonOrchestrationHandler", function () {
         await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
 
         // Create a seller, an offer with condition, twin and bundle
-        await orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOfferWithConditionAndTwinAndBundle(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            condition,
-            twin,
-            emptyAuthToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        await orchestrationHandler.connect(assistant).createSellerAndOfferWithConditionAndTwinAndBundle(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          condition,
+          twin,
+          emptyAuthToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
 
         // Get the collections information
         expectedCloneAddress = calculateCloneAddress(
@@ -9140,24 +8792,22 @@ describe("IBosonOrchestrationHandler", function () {
         twin.id = "777";
 
         // Create a seller, an offer with condition, twin and bundle
-        const tx = await orchestrationHandler
-          .connect(assistant)
-          .createSellerAndOfferWithConditionAndTwinAndBundle(
-            seller,
-            offer,
-            offerDates,
-            offerDurations,
-            {
-              disputeResolverId: disputeResolver.id,
-              mutualizerAddress: ZeroAddress
-            },
-            condition,
-            twin,
-            emptyAuthToken,
-            voucherInitValues,
-            agentId,
-            offerFeeLimit
-          );
+        const tx = await orchestrationHandler.connect(assistant).createSellerAndOfferWithConditionAndTwinAndBundle(
+          seller,
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          condition,
+          twin,
+          emptyAuthToken,
+          voucherInitValues,
+          agentId,
+          offerFeeLimit
+        );
 
         // SellerCreated and OfferCreated events
         await expect(tx)
@@ -9259,24 +8909,22 @@ describe("IBosonOrchestrationHandler", function () {
           );
 
           // Create a seller, an offer with condition, twin and bundle
-          const tx = await orchestrationHandler
-            .connect(assistant)
-            .createSellerAndOfferWithConditionAndTwinAndBundle(
-              seller,
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              condition,
-              twin,
-              emptyAuthToken,
-              voucherInitValues,
-              agentId,
-              offerFeeLimit
-            );
+          const tx = await orchestrationHandler.connect(assistant).createSellerAndOfferWithConditionAndTwinAndBundle(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            condition,
+            twin,
+            emptyAuthToken,
+            voucherInitValues,
+            agentId,
+            offerFeeLimit
+          );
 
           // SellerCreated and OfferCreated events
           await expect(tx)
@@ -9395,7 +9043,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               {
                 disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
+                mutualizerAddress: ZeroAddress,
               },
               premintParameters,
               condition,
@@ -9511,25 +9159,23 @@ describe("IBosonOrchestrationHandler", function () {
           await bosonToken.connect(assistant).approve(await twinHandler.getAddress(), 1); // approving the twin handler
 
           // Create a seller, a preminted offer with condition, twin and bundle
-          await orchestrationHandler
-            .connect(assistant)
-            .createSellerAndPremintedOfferWithConditionAndTwinAndBundle(
-              seller,
-              offer,
-              offerDates,
-              offerDurations,
-              {
-                disputeResolverId: disputeResolver.id,
-                mutualizerAddress: ZeroAddress
-              },
-              premintParameters,
-              condition,
-              twin,
-              emptyAuthToken,
-              voucherInitValues,
-              agentId,
-              offerFeeLimit
-            );
+          await orchestrationHandler.connect(assistant).createSellerAndPremintedOfferWithConditionAndTwinAndBundle(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            premintParameters,
+            condition,
+            twin,
+            emptyAuthToken,
+            voucherInitValues,
+            agentId,
+            offerFeeLimit
+          );
 
           // Get the seller as a struct
           [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -9658,24 +9304,22 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to orchestrate expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOfferWithConditionAndTwinAndBundle(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                condition,
-                twin,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOfferWithConditionAndTwinAndBundle(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              condition,
+              twin,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Orchestration);
@@ -9687,24 +9331,22 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOfferWithConditionAndTwinAndBundle(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                condition,
-                twin,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOfferWithConditionAndTwinAndBundle(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              condition,
+              twin,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Sellers);
@@ -9716,24 +9358,22 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOfferWithConditionAndTwinAndBundle(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                condition,
-                twin,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOfferWithConditionAndTwinAndBundle(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              condition,
+              twin,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Offers);
@@ -9745,24 +9385,22 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a group, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOfferWithConditionAndTwinAndBundle(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                condition,
-                twin,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOfferWithConditionAndTwinAndBundle(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              condition,
+              twin,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Groups);
@@ -9774,24 +9412,22 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a twin expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOfferWithConditionAndTwinAndBundle(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                condition,
-                twin,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOfferWithConditionAndTwinAndBundle(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              condition,
+              twin,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Twins);
@@ -9803,24 +9439,22 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a group, expecting revert
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndOfferWithConditionAndTwinAndBundle(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                condition,
-                twin,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndOfferWithConditionAndTwinAndBundle(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              condition,
+              twin,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Bundles);
@@ -9837,25 +9471,23 @@ describe("IBosonOrchestrationHandler", function () {
           const reservedRangeLength = offer.quantityAvailable;
           const premintParameters = [reservedRangeLength, await assistant.getAddress()];
           await expect(
-            orchestrationHandler
-              .connect(assistant)
-              .createSellerAndPremintedOfferWithConditionAndTwinAndBundle(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                {
-                  disputeResolverId: disputeResolver.id,
-                  mutualizerAddress: ZeroAddress
-                },
-                premintParameters,
-                condition,
-                twin,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId,
-                offerFeeLimit
-              )
+            orchestrationHandler.connect(assistant).createSellerAndPremintedOfferWithConditionAndTwinAndBundle(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: ZeroAddress,
+              },
+              premintParameters,
+              condition,
+              twin,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId,
+              offerFeeLimit
+            )
           )
             .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
             .withArgs(PausableRegion.Exchanges);

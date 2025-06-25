@@ -1516,12 +1516,17 @@ describe("IBosonDisputeHandler", function () {
             offer.id++;
 
             // Create a new offer
-            await offerHandler
-              .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, {
+            await offerHandler.connect(assistant).createOffer(
+              offer,
+              offerDates,
+              offerDurations,
+              {
                 disputeResolverId: disputeResolverId,
-                mutualizerAddress: ZeroAddress
-              }, agentId, offerFeeLimit);
+                mutualizerAddress: ZeroAddress,
+              },
+              agentId,
+              offerFeeLimit
+            );
 
             // mint tokens and approve
             buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
