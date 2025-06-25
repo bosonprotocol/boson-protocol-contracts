@@ -344,7 +344,7 @@ describe("SnapshotGate", function () {
         // Create the offer
         await offerHandler
           .connect(assistant)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+          .createOffer(offer, offerDates, offerDurations, { disputeResolverId: disputeResolverId, mutualizerAddress: ZeroAddress }, agentId, offerFeeLimit);
         offers.push(offer);
 
         // Required constructor params for Group
@@ -390,7 +390,7 @@ describe("SnapshotGate", function () {
     // Create the offer
     let tx = await offerHandler
       .connect(assistant2)
-      .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+      .createOffer(offer, offerDates, offerDurations, { disputeResolverId: disputeResolverId, mutualizerAddress: ZeroAddress }, agentId, offerFeeLimit);
     offers.push(offer);
 
     const txReceipt = await tx.wait();

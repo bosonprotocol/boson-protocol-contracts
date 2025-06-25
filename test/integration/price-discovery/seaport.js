@@ -88,8 +88,8 @@ describe("[@skip-on-coverage] seaport integration", function () {
 
     await accountHandler.connect(DR).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
-    let offerDurations, disputeResolverId;
-    ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+    let offerDurations, drParams;
+    ({ offer, offerDates, offerDurations, drParams } = await mockOffer());
     offer.quantityAvailable = 10;
     offer.priceType = PriceType.Discovery;
     const offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
@@ -100,7 +100,7 @@ describe("[@skip-on-coverage] seaport integration", function () {
         offer.toStruct(),
         offerDates.toStruct(),
         offerDurations.toStruct(),
-        disputeResolverId,
+        drParams,
         "0",
         offerFeeLimit
       );

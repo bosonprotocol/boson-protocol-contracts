@@ -81,12 +81,12 @@ describe("[@skip-on-coverage] Seaport integration", function () {
 
     await accountHandler.connect(DR).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
-    const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+    const { offer, offerDates, offerDurations, drParams } = await mockOffer();
     offer.quantityAvailable = 10;
 
     await offerHandler
       .connect(assistant)
-      .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, "0");
+      .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), drParams, "0");
 
     const beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
     const voucherAddress = calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, seller.admin);
