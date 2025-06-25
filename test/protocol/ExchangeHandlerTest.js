@@ -58,7 +58,7 @@ const {
   getEvent,
   setNextBlockTimestamp,
   calculateVoucherExpiry,
-  prepareDataSignatureParameters,
+  prepareDataSignature,
   calculateCloneAddress,
   calculateBosonProxyAddress,
   applyPercentage,
@@ -6167,7 +6167,7 @@ describe("IBosonExchangeHandler", function () {
           };
 
           // Collect the signature components
-          const { r, s, v } = await prepareDataSignatureParameters(
+          const signature = await prepareDataSignature(
             buyer, // Assistant is the caller, seller should be the signer.
             customSignatureType,
             "Resolution",
@@ -6176,7 +6176,7 @@ describe("IBosonExchangeHandler", function () {
           );
 
           // Resolve Dispute
-          await disputeHandler.connect(assistant).resolveDispute(exchange.id, buyerPercentBasisPoints, r, s, v);
+          await disputeHandler.connect(assistant).resolveDispute(exchange.id, buyerPercentBasisPoints, signature);
 
           // Now in Resolved state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);

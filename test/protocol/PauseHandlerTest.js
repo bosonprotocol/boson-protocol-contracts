@@ -72,7 +72,7 @@ describe("IBosonPauseHandler", function () {
     function scenarioToRegions(scenario) {
       const regions = [];
       let region = 0;
-      while (scenario > 1) {
+      while (scenario > 0) {
         if (scenario % 2 === 1) {
           regions.push(region);
         }
@@ -190,7 +190,7 @@ describe("IBosonPauseHandler", function () {
       });
 
       it("Can unpause individual regions", async function () {
-        // Regions to paused
+        // Regions to pause
         regions = [PausableRegion.Offers, PausableRegion.Twins, PausableRegion.Bundles];
 
         // Pause protocol
@@ -228,8 +228,9 @@ describe("IBosonPauseHandler", function () {
 
     context("getPausedRegions()", async function () {
       it("should return the correct pause status", async function () {
-        // Regions to paused
-        regions = [PausableRegion.Offers, PausableRegion.Buyers, PausableRegion.Orchestration];
+        // Regions to pause
+        const lastRegion = PausableRegion.Regions[PausableRegion.Regions.length - 1];
+        regions = [PausableRegion.Offers, PausableRegion.Buyers, PausableRegion.Orchestration, lastRegion];
 
         await pauseHandler.connect(pauser).pause(regions);
 

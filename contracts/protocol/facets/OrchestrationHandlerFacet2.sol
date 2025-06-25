@@ -2,7 +2,6 @@
 pragma solidity 0.8.22;
 
 import "../../domain/BosonConstants.sol";
-import { PausableBase } from "../bases/PausableBase.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
 
 /**

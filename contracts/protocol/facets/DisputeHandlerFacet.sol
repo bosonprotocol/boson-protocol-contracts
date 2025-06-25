@@ -225,16 +225,12 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeId  - the id of the associated exchange
      * @param _buyerPercent - percentage of the pot that goes to the buyer
-     * @param _sigR - r part of the signer's signature
-     * @param _sigS - s part of the signer's signature
-     * @param _sigV - v part of the signer's signature
+     * @param _signature - signature of the other party. If the signer is EOA, it must be ECDSA signature in the format of (r,s,v) struct, otherwise, it must be a valid ERC1271 signature.
      */
     function resolveDispute(
         uint256 _exchangeId,
         uint256 _buyerPercent,
-        bytes32 _sigR,
-        bytes32 _sigS,
-        uint8 _sigV
+        bytes calldata _signature
     ) external override nonReentrant {
         // buyer should get at most 100%
         if (_buyerPercent > HUNDRED_PERCENT) revert InvalidBuyerPercent();
@@ -280,8 +276,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
             }
 
             // verify that the signature belongs to the expectedSigner
-            if (!EIP712Lib.verify(expectedSigner, hashResolution(_exchangeId, _buyerPercent), _sigR, _sigS, _sigV))
-                revert SignerAndSignatureDoNotMatch();
+            EIP712Lib.verify(expectedSigner, hashResolution(_exchangeId, _buyerPercent), _signature);
         }
 
         // finalize the dispute

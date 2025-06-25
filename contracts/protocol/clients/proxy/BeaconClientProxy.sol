@@ -35,7 +35,8 @@ contract BeaconClientProxy is Proxy {
      * @notice Modifier to protect initializer function from being invoked twice.
      */
     modifier initializer() {
-        require(!BeaconClientLib.getBeaconSlot().initialized, "Initializable: contract is already initialized");
+        // solhint-disable-next-line custom-errors
+        require(!BeaconClientLib.getBeaconSlot().initialized, "Initializable: contract is already initialized"); // not using Custom Errors here to match OZ 4.9.* errors
         _;
         BeaconClientLib.getBeaconSlot().initialized = true;
     }

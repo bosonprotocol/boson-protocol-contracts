@@ -31,7 +31,7 @@ const {
   setupTestEnvironment,
   getSnapshot,
   revertToSnapshot,
-  prepareDataSignatureParameters,
+  prepareDataSignature,
   getEvent,
   deriveTokenId,
 } = require("../../util/utils.js");
@@ -591,7 +591,7 @@ describe("IBosonVoucher", function () {
           data: functionSignature,
         };
 
-        const { signature } = await prepareDataSignatureParameters(
+        const signature = await prepareDataSignature(
           assistant,
           types,
           "ForwardRequest",

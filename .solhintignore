@@ -1,3 +1,4 @@
 /contracts/access/**
 /contracts/diamond/**
 /contracts/mock/**
+/contracts/example/**

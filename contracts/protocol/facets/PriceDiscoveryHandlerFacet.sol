@@ -5,7 +5,6 @@ import { BuyerBase } from "../bases/BuyerBase.sol";
 import { IBosonPriceDiscoveryHandler } from "../../interfaces/handlers/IBosonPriceDiscoveryHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BuyerBase } from "../bases/BuyerBase.sol";
-import { FundsLib } from "../libs/FundsLib.sol";
 import "../../domain/BosonConstants.sol";
 import { PriceDiscoveryBase } from "../bases/PriceDiscoveryBase.sol";
 
