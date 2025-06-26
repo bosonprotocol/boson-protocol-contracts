@@ -65,7 +65,7 @@
     "hardhat": "^2.24.2",
     "hardhat-contract-sizer": "^2.10.0",
     "hardhat-preprocessor": "^0.1.5",
-    "husky": "^8.0.3",
+    "husky": "^9.1.7",
     "lodash": "^4.17.21",
     "merkletreejs": "^0.5.2",
     "opensea-js": "^7.1.18",
