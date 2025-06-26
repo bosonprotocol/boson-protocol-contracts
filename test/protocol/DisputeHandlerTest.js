@@ -196,7 +196,7 @@ describe("IBosonDisputeHandler", function () {
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
-      DRFeeNative = "0";
+      DRFeeNative = parseUnits("0.5", "ether").toString();
       disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", DRFeeNative)];
 
       // Make empty seller list, so every seller is allowed
@@ -1795,7 +1795,7 @@ describe("IBosonDisputeHandler", function () {
           const [mockToken] = await deployMockTokens(["Foreign20"]);
 
           // add to DR fees
-          DRFeeToken = "0";
+          DRFeeToken = parseUnits("0.1", "ether").toString();
           await accountHandler
             .connect(adminDR)
             .addFeesToDisputeResolver(disputeResolverId, [
@@ -1849,6 +1849,21 @@ describe("IBosonDisputeHandler", function () {
           await expect(tx)
             .to.emit(disputeHandler, "DisputeEscalated")
             .withArgs(exchangeId, disputeResolverId, await buyer.getAddress());
+        });
+
+        it("Does not emit FundsEncumbered if buyerEscalationDeposit is 0", async function () {
+          DRFeeNative = "0";
+          buyerEscalationDepositNative = "0";
+
+          await accountHandler.connect(adminDR).removeFeesFromDisputeResolver(disputeResolverId, [ZeroAddress]);
+          await accountHandler
+            .connect(adminDR)
+            .addFeesToDisputeResolver(disputeResolverId, [new DisputeResolverFee(ZeroAddress, "Native", DRFeeNative)]);
+
+          // Escalate the dispute, testing for the event
+          await expect(
+            disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative })
+          ).to.not.emit(disputeHandler, "FundsEncumbered");
         });
 
         it("should update state", async function () {
@@ -1917,6 +1932,29 @@ describe("IBosonDisputeHandler", function () {
           expect(escrowBalanceAfter - escrowBalanceBefore).to.equal(
             buyerEscalationDepositToken,
             "Escrow balance mismatch"
+          );
+        });
+
+        it("Does not emit FundsEncumbered if buyerEscalationDeposit is 0", async function () {
+          const mockToken = await createDisputeExchangeWithToken();
+
+          DRFeeToken = "0";
+          buyerEscalationDepositToken = "0";
+
+          await mockToken.connect(buyer).approve(await disputeHandler.getAddress(), buyerEscalationDepositToken);
+          await accountHandler
+            .connect(adminDR)
+            .removeFeesFromDisputeResolver(disputeResolverId, [await mockToken.getAddress()]);
+          await accountHandler
+            .connect(adminDR)
+            .addFeesToDisputeResolver(disputeResolverId, [
+              new DisputeResolverFee(await mockToken.getAddress(), "Native", DRFeeNative),
+            ]);
+
+          // Escalate the dispute, testing for the event
+          await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.not.emit(
+            disputeHandler,
+            "FundsEncumbered"
           );
         });
 
@@ -2007,7 +2045,7 @@ describe("IBosonDisputeHandler", function () {
             );
           });
 
-          it.skip("Insufficient native currency sent", async function () {
+          it("Insufficient native currency sent", async function () {
             // Attempt to escalate the dispute, expecting revert
             await expect(
               disputeHandler.connect(buyer).escalateDispute(exchangeId, {
@@ -2027,7 +2065,7 @@ describe("IBosonDisputeHandler", function () {
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.NATIVE_NOT_ALLOWED);
           });
 
-          it.skip("Token contract reverts for another reason", async function () {
+          it("Token contract reverts for another reason", async function () {
             // prepare a disputed exchange
             const mockToken = await createDisputeExchangeWithToken();
 
@@ -2050,7 +2088,7 @@ describe("IBosonDisputeHandler", function () {
             );
           });
 
-          it.skip("Received ERC20 token amount differs from the expected value", async function () {
+          it("Received ERC20 token amount differs from the expected value", async function () {
             // Deploy ERC20 with fees
             const [Foreign20WithFee] = await deployMockTokens(["Foreign20WithFee"]);
 
