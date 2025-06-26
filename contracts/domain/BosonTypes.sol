@@ -150,6 +150,7 @@ contract BosonTypes {
         uint256 escalationResponsePeriod;
         uint256 feeAmount;
         uint256 buyerEscalationDeposit;
+        address payable mutualizerAddress; // Address of the DR fee mutualizer
     }
 
     struct Offer {
@@ -166,6 +167,11 @@ contract BosonTypes {
         bool voided;
         uint256 collectionIndex;
         RoyaltyInfo[] royaltyInfo;
+    }
+
+    struct DRParameters {
+        uint256 disputeResolverId;
+        address payable mutualizerAddress;
     }
 
     struct OfferDates {
@@ -357,5 +363,15 @@ contract BosonTypes {
         uint256 buyer;
         uint256 protocol;
         uint256 agent;
+        uint256 disputeResolver;
+    }
+
+    struct BatchOffer {
+        Offer[] offers;
+        OfferDates[] offerDates;
+        OfferDurations[] offerDurations;
+        DRParameters[] drParameters;
+        uint256[] agentIds;
+        uint256[] feeLimits;
     }
 }

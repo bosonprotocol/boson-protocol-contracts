@@ -116,10 +116,11 @@ async function mockOffer({ refreshModule, legacyOffer } = {}) {
   const offerDates = await mockOfferDates();
   const offerDurations = mockOfferDurations();
   const disputeResolverId = "2";
+  const mutualizerAddress = ZeroAddress;
   const agentFee = "0";
   const offerFees = mockOfferFees(protocolFee, agentFee);
 
-  return { offer, offerDates, offerDurations, offerFees, disputeResolverId };
+  return { offer, offerDates, offerDurations, offerFees, drParams: { disputeResolverId, mutualizerAddress } };
 }
 
 function mockTwin(tokenAddress, tokenType) {

@@ -37,11 +37,9 @@ contract DisputeResolverHandlerFacet is IBosonDisputeResolverHandler, IBosonAcco
      * - Some seller does not exist
      * - Some seller id is duplicated
      * - DisputeResolver is not active (if active == false)
-     * - Fee amount is a non-zero value. Protocol doesn't yet support fees for dispute resolvers
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
-     *                               feeAmount will be ignored because protocol doesn't yet support fees yet but DR still needs to provide array of fees to choose supported tokens
      * @param _sellerAllowList - list of ids of sellers that can choose this dispute resolver. If empty, there are no restrictions on which seller can chose it.
      */
     function createDisputeResolver(
@@ -75,7 +73,7 @@ contract DisputeResolverHandlerFacet is IBosonDisputeResolverHandler, IBosonAcco
         // Get the next account id and increment the counter
         uint256 disputeResolverId = protocolCounters().nextAccountId++;
 
-        // Check that the addresses are unique to one dispute resolver id, across all rolls
+        // Check that the addresses are unique to one dispute resolver id, across all roles
         mapping(address => uint256) storage disputeResolverIdByAssistant = lookups.disputeResolverIdByAssistant;
         mapping(address => uint256) storage disputeResolverIdByAdmin = lookups.disputeResolverIdByAdmin;
         if (
@@ -112,9 +110,6 @@ contract DisputeResolverHandlerFacet is IBosonDisputeResolverHandler, IBosonAcco
         for (uint256 i = 0; i < _disputeResolverFees.length; ) {
             if (disputeResolverFeeTokens[_disputeResolverFees[i].tokenAddress] != 0)
                 revert DuplicateDisputeResolverFees();
-
-            // Protocol doesn't yet support DR fees
-            if (_disputeResolverFees[i].feeAmount != 0) revert FeeAmountNotYetSupported();
 
             disputeResolverFees.push(_disputeResolverFees[i]);
 
@@ -379,11 +374,9 @@ contract DisputeResolverHandlerFacet is IBosonDisputeResolverHandler, IBosonAcco
      * - Dispute resolver does not exist
      * - Number of DisputeResolverFee structs in array is zero
      * - DisputeResolverFee array contains duplicates
-     * - Fee amount is a non-zero value. Protocol doesn't yet support fees for dispute resolvers
      *
      * @param _disputeResolverId - id of the dispute resolver
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
-     *                               feeAmount will be ignored because protocol doesn't yet support fees yet but DR still needs to provide array of fees to choose supported tokens
      */
     function addFeesToDisputeResolver(
         uint256 _disputeResolverId,
@@ -415,9 +408,6 @@ contract DisputeResolverHandlerFacet is IBosonDisputeResolverHandler, IBosonAcco
         for (uint256 i = 0; i < _disputeResolverFees.length; ) {
             if (lookups.disputeResolverFeeTokenIndex[_disputeResolverId][_disputeResolverFees[i].tokenAddress] != 0)
                 revert DuplicateDisputeResolverFees();
-
-            // Protocol doesn't yet support DR fees
-            if (_disputeResolverFees[i].feeAmount != 0) revert FeeAmountNotYetSupported();
 
             disputeResolverFees.push(_disputeResolverFees[i]);
             lookups.disputeResolverFeeTokenIndex[_disputeResolverId][

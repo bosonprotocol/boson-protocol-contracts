@@ -80,7 +80,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
 
   context("After commit actions", function () {
     let buyerAccount, seller, disputeResolver, agentAccount, sellerPendingUpdate;
-    let offer, offerDates, offerDurations, disputeResolverId;
+    let offer, offerDates, offerDurations, drParams;
     let exchangeId;
     let disputeResolverFeeNative;
     let expectedCloneAddress, emptyAuthToken, voucherInitValues;
@@ -142,7 +142,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       await accountHandler.connect(rando).createAgent(agentAccount);
 
       // Create an offer
-      ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+      ({ offer, offerDates, offerDurations, drParams } = await mockOffer());
 
       offerDurations.disputePeriod = (oneMonth * 6n).toString();
 
@@ -155,7 +155,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       const offerFeeLimit = MaxUint256;
       await offerHandler
         .connect(assistant)
-        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentAccount.id, offerFeeLimit);
+        .createOffer(offer, offerDates, offerDurations, drParams, agentAccount.id, offerFeeLimit);
 
       // Deposit seller funds so the commit will succeed
       await fundsHandler

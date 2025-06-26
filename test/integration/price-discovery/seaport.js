@@ -88,22 +88,15 @@ describe("[@skip-on-coverage] seaport integration", function () {
 
     await accountHandler.connect(DR).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
-    let offerDurations, disputeResolverId;
-    ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+    let offerDurations, drParams;
+    ({ offer, offerDates, offerDurations, drParams } = await mockOffer());
     offer.quantityAvailable = 10;
     offer.priceType = PriceType.Discovery;
     const offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
 
     await offerHandler
       .connect(assistant)
-      .createOffer(
-        offer.toStruct(),
-        offerDates.toStruct(),
-        offerDurations.toStruct(),
-        disputeResolverId,
-        "0",
-        offerFeeLimit
-      );
+      .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), drParams, "0", offerFeeLimit);
 
     const beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
     const voucherAddress = calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, seller.admin);
