@@ -7,16 +7,16 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IBosonFundsLibEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
+import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
 
 /**
- * @title FundsLib
+ * @title FundsBase
  *
  * @dev
  */
-abstract contract FundsLib is Context {
+abstract contract FundsBase is Context {
     using SafeERC20 for IERC20;
 
     /**
@@ -61,7 +61,7 @@ abstract contract FundsLib is Context {
         // if offer is non-preminted, validate incoming payment
         if (!_isPreminted) {
             validateIncomingPayment(exchangeToken, _price);
-            emit IBosonFundsLibEvents.FundsEncumbered(_buyerId, exchangeToken, _price, sender);
+            emit IBosonFundsBaseEvents.FundsEncumbered(_buyerId, exchangeToken, _price, sender);
         }
 
         bool isPriceDiscovery = _priceType == BosonTypes.PriceType.Discovery;
@@ -72,7 +72,7 @@ abstract contract FundsLib is Context {
         decreaseAvailableFunds(sellerId, exchangeToken, sellerFundsEncumbered);
 
         // notify external observers
-        emit IBosonFundsLibEvents.FundsEncumbered(sellerId, exchangeToken, sellerFundsEncumbered, sender);
+        emit IBosonFundsBaseEvents.FundsEncumbered(sellerId, exchangeToken, sellerFundsEncumbered, sender);
     }
 
     /**
@@ -218,7 +218,7 @@ abstract contract FundsLib is Context {
 
         if (payoff.protocol > 0) {
             increaseAvailableFunds(0, exchangeToken, payoff.protocol);
-            emit IBosonFundsLibEvents.ProtocolFeeCollected(_exchangeId, exchangeToken, payoff.protocol, sender);
+            emit IBosonFundsBaseEvents.ProtocolFeeCollected(_exchangeId, exchangeToken, payoff.protocol, sender);
         }
         if (payoff.agent > 0) {
             // Get the agent for offer
@@ -372,7 +372,7 @@ abstract contract FundsLib is Context {
         address _sender
     ) internal {
         increaseAvailableFunds(_entityId, _tokenAddress, _amount);
-        emit IBosonFundsLibEvents.FundsReleased(_exchangeId, _entityId, _tokenAddress, _amount, _sender);
+        emit IBosonFundsBaseEvents.FundsReleased(_exchangeId, _entityId, _tokenAddress, _amount, _sender);
     }
 
     /**
@@ -446,7 +446,7 @@ abstract contract FundsLib is Context {
         transferFundsFromProtocol(_tokenAddress, _to, _amount);
 
         // notify the external observers
-        emit IBosonFundsLibEvents.FundsWithdrawn(_entityId, _to, _tokenAddress, _amount, _msgSender());
+        emit IBosonFundsBaseEvents.FundsWithdrawn(_entityId, _to, _tokenAddress, _amount, _msgSender());
     }
 
     /**

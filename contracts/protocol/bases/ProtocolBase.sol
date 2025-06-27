@@ -7,15 +7,15 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { PausableBase } from "./PausableBase.sol";
+import { FundsBase } from "./FundsBase.sol";
 import { ReentrancyGuardBase } from "./ReentrancyGuardBase.sol";
-import { FundsLib } from "../libs/FundsLib.sol";
 
 /**
  * @title ProtocolBase
  *
  * @notice Provides domain and common modifiers to Protocol facets
  */
-abstract contract ProtocolBase is PausableBase, FundsLib, ReentrancyGuardBase, BosonErrors {
+abstract contract ProtocolBase is PausableBase, FundsBase, ReentrancyGuardBase, BosonErrors {
     /**
      * @notice Modifier to protect initializer function from being invoked twice.
      */

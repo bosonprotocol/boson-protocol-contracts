@@ -7,7 +7,7 @@ import { IWrappedNative } from "../../../interfaces/IWrappedNative.sol";
 import { IBosonVoucher } from "../../../interfaces/clients/IBosonVoucher.sol";
 import { IBosonPriceDiscovery } from "../../../interfaces/clients/IBosonPriceDiscovery.sol";
 import { IERC721Receiver } from "../../../interfaces/IERC721Receiver.sol";
-import { FundsLib } from "../../libs/FundsLib.sol";
+import { FundsBase } from "../../bases/FundsBase.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { BosonTypes } from "../../../domain/BosonTypes.sol";
@@ -18,7 +18,7 @@ import { BosonErrors } from "../../../domain/BosonErrors.sol";
  *
  * @dev Boson Price Discovery is an external contract that is used to determine the price of an exchange.
  */
-contract BosonPriceDiscovery is ERC165, FundsLib, IBosonPriceDiscovery, BosonErrors {
+contract BosonPriceDiscovery is ERC165, FundsBase, IBosonPriceDiscovery, BosonErrors {
     using Address for address;
     using SafeERC20 for IERC20;
 
