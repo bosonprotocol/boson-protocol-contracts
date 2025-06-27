@@ -107,10 +107,10 @@ contract SellerHandlerFacet is IBosonSellerHandler, SellerBase {
             if (!exists) revert NoSuchSeller();
         }
         // Get message sender
-        // address sender = msgSender(); // temporary disabled due to stack too deep error. Revisit when compiler version is upgraded
+        // address sender = _msgSender(); // temporary disabled due to stack too deep error. Revisit when compiler version is upgraded
 
         // Check that caller is authorized to call this function
-        authorizeAdmin(lookups, authToken, seller.admin, msgSender());
+        authorizeAdmin(lookups, authToken, seller.admin, _msgSender());
 
         // Clean old seller pending update data if exists
         delete lookups.pendingAddressUpdatesBySeller[_seller.id];
@@ -182,7 +182,7 @@ contract SellerHandlerFacet is IBosonSellerHandler, SellerBase {
 
                 updateApplied = true;
 
-                emit RoyaltyRecipientsChanged(_seller.id, fetchRoyaltyRecipients(_seller.id), msgSender());
+                emit RoyaltyRecipientsChanged(_seller.id, fetchRoyaltyRecipients(_seller.id), _msgSender());
             }
 
             if (keccak256(bytes(_seller.metadataUri)) != keccak256(bytes(seller.metadataUri))) {
@@ -200,13 +200,13 @@ contract SellerHandlerFacet is IBosonSellerHandler, SellerBase {
                     sellerPendingUpdate,
                     authToken,
                     authTokenPendingUpdate,
-                    msgSender()
+                    _msgSender()
                 );
             }
 
             if (needsApproval) {
                 // Notify watchers of state change
-                emit SellerUpdatePending(_seller.id, sellerPendingUpdate, authTokenPendingUpdate, msgSender());
+                emit SellerUpdatePending(_seller.id, sellerPendingUpdate, authTokenPendingUpdate, _msgSender());
             }
 
             if (!updateApplied && !needsApproval) revert NoUpdateApplied();
@@ -254,7 +254,7 @@ contract SellerHandlerFacet is IBosonSellerHandler, SellerBase {
         // Cache protocol lookups and sender for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-        address sender = msgSender();
+        address sender = _msgSender();
 
         for (uint256 i = 0; i < _fieldsToUpdate.length; ) {
             SellerUpdateFields role = _fieldsToUpdate[i];
@@ -364,7 +364,7 @@ contract SellerHandlerFacet is IBosonSellerHandler, SellerBase {
                 sellerPendingUpdate,
                 authToken,
                 authTokenPendingUpdate,
-                msgSender()
+                _msgSender()
             );
         }
     }
@@ -386,7 +386,7 @@ contract SellerHandlerFacet is IBosonSellerHandler, SellerBase {
         VoucherInitValues calldata _voucherInitValues
     ) external sellersNotPaused nonReentrant {
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-        address assistant = msgSender();
+        address assistant = _msgSender();
 
         (bool exists, uint256 sellerId) = getSellerIdByAssistant(assistant);
         if (!exists) revert NoSuchSeller();
@@ -440,7 +440,7 @@ contract SellerHandlerFacet is IBosonSellerHandler, SellerBase {
      * @param _newSalt - new salt
      */
     function updateSellerSalt(uint256 _sellerId, bytes32 _newSalt) external sellersNotPaused nonReentrant {
-        address admin = msgSender();
+        address admin = _msgSender();
 
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
@@ -612,7 +612,7 @@ contract SellerHandlerFacet is IBosonSellerHandler, SellerBase {
             }
         }
 
-        emit RoyaltyRecipientsChanged(_sellerId, fetchRoyaltyRecipients(_sellerId), msgSender());
+        emit RoyaltyRecipientsChanged(_sellerId, fetchRoyaltyRecipients(_sellerId), _msgSender());
     }
 
     /**
@@ -960,7 +960,7 @@ contract SellerHandlerFacet is IBosonSellerHandler, SellerBase {
         uint256 _sellerId
     ) internal view returns (Seller storage seller, address sender) {
         // Get message sender
-        sender = msgSender();
+        sender = _msgSender();
 
         // Check Seller exists in sellers mapping
         bool exists;

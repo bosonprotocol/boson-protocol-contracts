@@ -59,7 +59,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // Get message sender
-        address sender = msgSender();
+        address sender = _msgSender();
 
         // Check that caller is the supplied assistant
         if (_seller.assistant != sender) revert NotAssistant();

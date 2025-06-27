@@ -32,7 +32,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // get message sender
-        address sender = msgSender();
+        address sender = _msgSender();
 
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByAssistant(sender);
@@ -208,7 +208,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         Condition storage condition = fetchCondition(_groupId);
 
         // Notify watchers of state change
-        emit GroupUpdated(_groupId, sellerId, group, condition, msgSender());
+        emit GroupUpdated(_groupId, sellerId, group, condition, _msgSender());
     }
 
     /**
@@ -239,7 +239,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         if (!exists) revert NoSuchGroup();
 
         // Get seller id, we assume seller id exists if group exists
-        (, sellerId) = getSellerIdByAssistant(msgSender());
+        (, sellerId) = getSellerIdByAssistant(_msgSender());
 
         // Caller's seller id must match group seller id
         if (sellerId != group.sellerId) revert NotAssistant();

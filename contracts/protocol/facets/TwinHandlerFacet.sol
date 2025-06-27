@@ -65,7 +65,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
         if (!exists) revert NoSuchTwin();
 
         // Get message sender
-        address sender = msgSender();
+        address sender = _msgSender();
 
         // Get seller id
         (, uint256 sellerId) = getSellerIdByAssistant(sender);

@@ -33,8 +33,8 @@ contract ERC165Facet is IERC165, IERC165Extended {
         // Get the diamond storage slot
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
 
-        // Ensure the caller has the UPGRADER role
-        require(ds.accessController.hasRole(UPGRADER, EIP712Lib.msgSender()), "Caller must have UPGRADER role");
+        // Ensure the caller has the UPGRADER role // TODO: also check what was deployed
+        require(ds.accessController.hasRole(UPGRADER, msg.sender), "Caller must have UPGRADER role");
 
         DiamondLib.addSupportedInterface(_interfaceId);
     }
@@ -48,8 +48,8 @@ contract ERC165Facet is IERC165, IERC165Extended {
         // Get the diamond storage slot
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
 
-        // Ensure the caller has the UPGRADER role
-        require(ds.accessController.hasRole(UPGRADER, EIP712Lib.msgSender()), "Caller must have UPGRADER role");
+        // Ensure the caller has the UPGRADER role // TODO: also check what was deployed
+        require(ds.accessController.hasRole(UPGRADER, msg.sender), "Caller must have UPGRADER role");
 
         DiamondLib.removeSupportedInterface(_interfaceId);
     }

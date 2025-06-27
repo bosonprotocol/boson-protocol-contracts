@@ -34,7 +34,7 @@ contract BuyerBase is ProtocolBase, IBosonAccountEvents {
         storeBuyer(_buyer);
 
         //Notify watchers of state change
-        emit BuyerCreated(_buyer.id, _buyer, msgSender());
+        emit BuyerCreated(_buyer.id, _buyer, _msgSender());
     }
 
     /**

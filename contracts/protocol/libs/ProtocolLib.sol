@@ -233,10 +233,8 @@ library ProtocolLib {
 
     // Storage related to Meta Transactions
     struct ProtocolMetaTxInfo {
-        // The current sender address associated with the transaction
-        address currentSenderAddress;
-        // A flag that tells us whether the current transaction is a meta-transaction or a regular transaction.
-        bool isMetaTransaction;
+        // [deprecated]
+        bytes32 deprecatedSlot;
         // The domain Separator of the protocol
         bytes32 domainSeparator;
         // address => nonce => nonce used indicator

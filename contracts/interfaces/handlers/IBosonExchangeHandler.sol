@@ -5,7 +5,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonExchangeEvents } from "../events/IBosonExchangeEvents.sol";
 import { IBosonTwinEvents } from "../events/IBosonTwinEvents.sol";
-import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
+import { IBosonFundsBaseEvents } from "../events/IBosonFundsEvents.sol";
 
 /**
  * @title IBosonExchangeHandler
@@ -14,7 +14,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * The ERC-165 identifier for this interface is: 0x66e9075a
  */
-interface IBosonExchangeHandler is BosonErrors, IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents {
+interface IBosonExchangeHandler is BosonErrors, IBosonExchangeEvents, IBosonFundsBaseEvents, IBosonTwinEvents {
     /**
      * @notice Commits to a static offer (first step of an exchange).
      *

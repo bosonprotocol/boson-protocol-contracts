@@ -4,7 +4,7 @@ pragma solidity 0.8.22;
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonDisputeEvents } from "../events/IBosonDisputeEvents.sol";
-import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
+import { IBosonFundsBaseEvents } from "../events/IBosonFundsEvents.sol";
 
 /**
  * @title IBosonDisputeHandler
@@ -13,7 +13,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * The ERC-165 identifier for this interface is: 0x712f4b28
  */
-interface IBosonDisputeHandler is BosonErrors, IBosonDisputeEvents, IBosonFundsLibEvents {
+interface IBosonDisputeHandler is BosonErrors, IBosonDisputeEvents, IBosonFundsBaseEvents {
     /**
      * @notice Raises a dispute.
      *

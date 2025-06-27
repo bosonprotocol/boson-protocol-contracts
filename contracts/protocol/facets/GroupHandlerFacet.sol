@@ -130,7 +130,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
         Condition storage condition = fetchCondition(_groupId);
 
         // Notify watchers of state change
-        emit GroupUpdated(_groupId, sellerId, group, condition, msgSender());
+        emit GroupUpdated(_groupId, sellerId, group, condition, _msgSender());
     }
 
     /**
@@ -160,7 +160,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
         if (!exists) revert NoSuchGroup();
 
         // Get message sender
-        address sender = msgSender();
+        address sender = _msgSender();
 
         // Get seller id, we assume seller id exists if offer exists
         (, uint256 sellerId) = getSellerIdByAssistant(sender);

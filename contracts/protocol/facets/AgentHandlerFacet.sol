@@ -53,7 +53,7 @@ contract AgentHandlerFacet is IBosonAgentHandler, IBosonAccountEvents, ProtocolB
         storeAgent(_agent);
 
         //Notify watchers of state change
-        emit AgentCreated(_agent.id, _agent, msgSender());
+        emit AgentCreated(_agent.id, _agent, _msgSender());
     }
 
     /**
@@ -90,7 +90,7 @@ contract AgentHandlerFacet is IBosonAgentHandler, IBosonAccountEvents, ProtocolB
         if (!exists) revert NoSuchAgent();
 
         // Get message sender
-        address sender = msgSender();
+        address sender = _msgSender();
 
         // Check that msg.sender is the wallet address for this agent
         if (agent.wallet != sender) revert NotAgentWallet();
