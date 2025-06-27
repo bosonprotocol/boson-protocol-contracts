@@ -5,7 +5,6 @@ import "../../domain/BosonConstants.sol";
 import { IBosonDisputeHandler } from "../../interfaces/handlers/IBosonDisputeHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
-import { FundsLib } from "../libs/FundsLib.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 
 /**
@@ -447,7 +446,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         }
 
         // Release the funds
-        FundsLib.releaseFunds(_exchangeId);
+        releaseFunds(_exchangeId);
     }
 
     /**

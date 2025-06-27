@@ -5,7 +5,6 @@ import "../../domain/BosonConstants.sol";
 import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
-import { EIP712Lib } from "../libs/EIP712Lib.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { PausableBase } from "./PausableBase.sol";
 import { ReentrancyGuardBase } from "./ReentrancyGuardBase.sol";
@@ -16,7 +15,7 @@ import { FundsLib } from "../libs/FundsLib.sol";
  *
  * @notice Provides domain and common modifiers to Protocol facets
  */
-abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors {
+abstract contract ProtocolBase is PausableBase, FundsLib, ReentrancyGuardBase, BosonErrors {
     /**
      * @notice Modifier to protect initializer function from being invoked twice.
      */
@@ -620,11 +619,21 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
         voucher = fetchVoucher(_exchangeId);
     }
 
+    uint256 private constant ADDRESS_LENGTH = 20;
+
     /**
      * @notice Returns the current sender address.
      */
     function msgSender() internal view returns (address) {
-        return EIP712Lib.msgSender();
+        uint256 msgDataLength = msg.data.length;
+
+        if (msg.sender == address(this) && msgDataLength >= ADDRESS_LENGTH) {
+            unchecked {
+                return address(bytes20(msg.data[msgDataLength - ADDRESS_LENGTH:]));
+            }
+        } else {
+            return msg.sender;
+        }
     }
 
     /**
@@ -701,7 +710,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase, BosonErrors
             return protocolFees().flatBoson;
         }
         uint256 feePercentage = _getFeePercentage(_exchangeToken, _price);
-        return FundsLib.applyPercent(_price, feePercentage);
+        return applyPercent(_price, feePercentage);
     }
 
     /**

@@ -228,15 +228,6 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     }
 
     /**
-     * @notice Sets the current transaction sender.
-     *
-     * @param _signerAddress - Address of the transaction signer
-     */
-    function setCurrentSenderAddress(address _signerAddress) internal {
-        protocolMetaTxInfo().currentSenderAddress = _signerAddress;
-    }
-
-    /**
      * @notice Executes the meta transaction.
      *
      * Reverts if:
@@ -259,12 +250,10 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         // Store the nonce provided to avoid playback of the same tx
         metaTxInfo.usedNonce[_userAddress][_nonce] = true;
 
-        // Set the current transaction signer and transaction type.
-        setCurrentSenderAddress(_userAddress);
-        metaTxInfo.isMetaTransaction = true;
-
         // Invoke local function with an external call
-        (bool success, bytes memory returnData) = address(this).call{ value: msg.value }(_functionSignature);
+        (bool success, bytes memory returnData) = address(this).call{ value: msg.value }(
+            abi.encodePacked(_functionSignature, _userAddress)
+        );
 
         // If error, return error message
         if (!success) {
@@ -278,10 +267,6 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
                 revert(FUNCTION_CALL_NOT_SUCCESSFUL);
             }
         }
-
-        // Reset current transaction signer and transaction type.
-        setCurrentSenderAddress(address(0));
-        metaTxInfo.isMetaTransaction = false;
 
         emit MetaTransactionExecuted(_userAddress, msg.sender, _functionName, _nonce);
         return returnData;

@@ -8,7 +8,6 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BuyerBase } from "../bases/BuyerBase.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
-import { FundsLib } from "../libs/FundsLib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
@@ -214,7 +213,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
         uint256 buyerId = getValidBuyer(_buyer);
 
         // Encumber funds
-        FundsLib.encumberFunds(_offerId, buyerId, _offer.price, _isPreminted, _offer.priceType);
+        encumberFunds(_offerId, buyerId, _offer.price, _isPreminted, _offer.priceType);
 
         // Create and store a new exchange
         Exchange storage exchange = protocolEntities().exchanges[_exchangeId];
@@ -961,7 +960,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
         if (_targetState != ExchangeState.Completed) burnVoucher(_exchange);
 
         // Release the funds
-        FundsLib.releaseFunds(_exchange.id);
+        releaseFunds(_exchange.id);
     }
 
     /**

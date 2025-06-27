@@ -4,7 +4,6 @@ pragma solidity 0.8.22;
 import { IBosonVoucher } from "../interfaces/clients/IBosonVoucher.sol";
 import { BuyerBase } from "../protocol/bases/BuyerBase.sol";
 import { DisputeBase } from "../protocol/bases/DisputeBase.sol";
-import { FundsLib } from "../protocol/libs/FundsLib.sol";
 import "../domain/BosonConstants.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import { ExchangeHandlerFacet } from "../protocol/facets/ExchangeHandlerFacet.sol";
@@ -340,7 +339,7 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         if (_targetState != ExchangeState.Completed) burnVoucher(_exchange);
 
         // Release the funds
-        FundsLib.releaseFunds(_exchange.id);
+        releaseFunds(_exchange.id);
     }
 
     /**

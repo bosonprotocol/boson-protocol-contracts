@@ -18,7 +18,7 @@ import { BosonErrors } from "../../../domain/BosonErrors.sol";
  *
  * @dev Boson Price Discovery is an external contract that is used to determine the price of an exchange.
  */
-contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
+contract BosonPriceDiscovery is ERC165, FundsLib, IBosonPriceDiscovery, BosonErrors {
     using Address for address;
     using SafeERC20 for IERC20;
 
@@ -90,7 +90,7 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
 
         if (overchargedAmount > 0) {
             // Return the surplus to caller
-            FundsLib.transferFundsFromProtocol(_exchangeToken, _msgSender, overchargedAmount);
+            transferFundsFromProtocol(_exchangeToken, _msgSender, overchargedAmount);
         }
 
         // sometimes tokenId is unknow, so we approve all. Since protocol is trusted, this is ok.
@@ -154,7 +154,7 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
 
         // Send the actual price back to the protocol
         if (actualPrice > 0) {
-            FundsLib.transferFundsFromProtocol(_exchangeToken, payable(bosonProtocolAddress), actualPrice);
+            transferFundsFromProtocol(_exchangeToken, payable(bosonProtocolAddress), actualPrice);
         }
     }
 
@@ -199,7 +199,7 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
         // getAndVerifyTokenId(_tokenId);
         // Send the actual price back to the protocol
         if (actualPrice > 0) {
-            FundsLib.transferFundsFromProtocol(_exchangeToken, payable(bosonProtocolAddress), actualPrice);
+            transferFundsFromProtocol(_exchangeToken, payable(bosonProtocolAddress), actualPrice);
         }
     }
 
@@ -241,7 +241,7 @@ contract BosonPriceDiscovery is ERC165, IBosonPriceDiscovery, BosonErrors {
 
             unchecked {
                 // Return the surplus to the sender
-                FundsLib.transferFundsFromProtocol(
+                transferFundsFromProtocol(
                     address(0),
                     payable(_msgSender),
                     thisNativeBalanceAfter - thisNativeBalanceBefore

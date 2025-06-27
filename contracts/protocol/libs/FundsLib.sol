@@ -4,19 +4,19 @@ pragma solidity 0.8.22;
 import "../../domain/BosonConstants.sol";
 import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
-import { EIP712Lib } from "../libs/EIP712Lib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IBosonFundsLibEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { Context } from "@openzeppelin/contracts/utils/Context.sol";
 
 /**
  * @title FundsLib
  *
  * @dev
  */
-library FundsLib {
+abstract contract FundsLib is Context {
     using SafeERC20 for IERC20;
 
     /**
@@ -51,7 +51,7 @@ library FundsLib {
         ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
 
         // get message sender
-        address sender = EIP712Lib.msgSender();
+        address sender = _msgSender();
 
         // fetch offer to get the exchange token, price and seller
         // this will be called only from commitToOffer so we expect that exchange actually exist
@@ -208,7 +208,7 @@ library FundsLib {
         }
 
         // Store payoffs to availablefunds and notify the external observers
-        address sender = EIP712Lib.msgSender();
+        address sender = _msgSender();
         if (payoff.seller > 0) {
             increaseAvailableFundsAndEmitEvent(_exchangeId, offer.sellerId, exchangeToken, payoff.seller, sender);
         }
@@ -294,7 +294,7 @@ library FundsLib {
         }
 
         uint256 resellerBuyPrice = _initialPrice; // the price that reseller paid for the voucher
-        address msgSender = EIP712Lib.msgSender();
+        address msgSender = _msgSender();
         uint256 len = exchangeCosts.length;
         for (uint256 i = 0; i < len; ) {
             // Since all elements of exchangeCosts[i] are used, it makes sense to copy them to memory
@@ -414,7 +414,7 @@ library FundsLib {
      * @param _amount - amount to be transferred
      */
     function transferFundsToProtocol(address _tokenAddress, uint256 _amount) internal {
-        transferFundsToProtocol(_tokenAddress, EIP712Lib.msgSender(), _amount);
+        transferFundsToProtocol(_tokenAddress, _msgSender(), _amount);
     }
 
     /**
@@ -446,7 +446,7 @@ library FundsLib {
         transferFundsFromProtocol(_tokenAddress, _to, _amount);
 
         // notify the external observers
-        emit IBosonFundsLibEvents.FundsWithdrawn(_entityId, _to, _tokenAddress, _amount, EIP712Lib.msgSender());
+        emit IBosonFundsLibEvents.FundsWithdrawn(_entityId, _to, _tokenAddress, _amount, _msgSender());
     }
 
     /**
@@ -563,7 +563,7 @@ library FundsLib {
         BosonTypes.ExchangeCosts memory _secondaryCommit,
         uint256 _effectivePriceMultiplier
     ) internal returns (uint256 sellerRoyalties) {
-        address sender = EIP712Lib.msgSender();
+        address sender = _msgSender();
         address exchangeToken = _offer.exchangeToken;
         BosonTypes.RoyaltyInfo storage _royaltyInfo = _offer.royaltyInfo[_secondaryCommit.royaltyInfoIndex];
         uint256 len = _royaltyInfo.recipients.length;

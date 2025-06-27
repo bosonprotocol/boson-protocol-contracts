@@ -55,6 +55,7 @@ library ClientLib {
         IAccessControl accessController = IAccessControl(
             IBosonConfigHandler(ps.protocolDiamond).getAccessControllerAddress()
         );
-        return accessController.hasRole(_role, EIP712Lib.msgSender());
+        // TODO
+        return accessController.hasRole(_role, msg.sender);
     }
 }
