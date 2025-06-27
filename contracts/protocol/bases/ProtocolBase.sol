@@ -37,7 +37,7 @@ abstract contract ProtocolBase is PausableBase, FundsLib, ReentrancyGuardBase, B
      */
     modifier onlyRole(bytes32 _role) {
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
-        if (!ds.accessController.hasRole(_role, msgSender())) revert AccessDenied();
+        if (!ds.accessController.hasRole(_role, _msgSender())) revert AccessDenied();
         _;
     }
 
@@ -523,7 +523,7 @@ abstract contract ProtocolBase is PausableBase, FundsLib, ReentrancyGuardBase, B
         (, Seller storage seller, ) = fetchSeller(offer.sellerId);
 
         // Caller must be seller's assistant address
-        if (seller.assistant != msgSender()) revert NotAssistant();
+        if (seller.assistant != _msgSender()) revert NotAssistant();
     }
 
     /**
@@ -583,7 +583,7 @@ abstract contract ProtocolBase is PausableBase, FundsLib, ReentrancyGuardBase, B
      */
     function checkBuyer(uint256 _currentBuyer) internal view {
         // Get the caller's buyer account id
-        (, uint256 buyerId) = getBuyerIdByWallet(msgSender());
+        (, uint256 buyerId) = getBuyerIdByWallet(_msgSender());
 
         // Must be the buyer associated with the exchange (which is always voucher holder)
         if (buyerId != _currentBuyer) revert NotVoucherHolder();
@@ -624,7 +624,7 @@ abstract contract ProtocolBase is PausableBase, FundsLib, ReentrancyGuardBase, B
     /**
      * @notice Returns the current sender address.
      */
-    function msgSender() internal view returns (address) {
+    function _msgSender() internal view override returns (address) {
         uint256 msgDataLength = msg.data.length;
 
         if (msg.sender == address(this) && msgDataLength >= ADDRESS_LENGTH) {

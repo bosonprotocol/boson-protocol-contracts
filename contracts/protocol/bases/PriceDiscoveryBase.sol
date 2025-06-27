@@ -132,7 +132,7 @@ contract PriceDiscoveryBase is ProtocolBase {
             _exchangeToken,
             _priceDiscovery,
             _bosonVoucher,
-            payable(msgSender())
+            payable(_msgSender())
         );
 
         _tokenId = getAndVerifyTokenId(_tokenId);
@@ -174,7 +174,7 @@ contract PriceDiscoveryBase is ProtocolBase {
     ) internal returns (uint256 actualPrice) {
         if (_tokenId == 0) revert TokenIdMandatory();
 
-        address sender = msgSender();
+        address sender = _msgSender();
         if (_seller != sender) revert NotVoucherHolder();
 
         // Cache price discovery contract address

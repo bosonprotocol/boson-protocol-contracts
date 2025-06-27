@@ -85,7 +85,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Retracted, 0);
 
         // Notify watchers of state change
-        emit DisputeRetracted(_exchangeId, msgSender());
+        emit DisputeRetracted(_exchangeId, _msgSender());
     }
 
     /**
@@ -121,7 +121,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         (, Seller storage seller, ) = fetchSeller(offer.sellerId);
 
         // get message sender
-        address sender = msgSender();
+        address sender = _msgSender();
 
         // Caller must be seller's assistant address
         if (seller.assistant != sender) revert NotAssistant();
@@ -176,7 +176,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Retracted, 0);
 
         // Notify watchers of state change
-        emit DisputeExpired(_exchangeId, msgSender());
+        emit DisputeExpired(_exchangeId, _msgSender());
     }
 
     /**
@@ -252,7 +252,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
             (, Offer storage offer) = fetchOffer(exchange.offerId);
 
             // get seller id to check if caller is the seller
-            (bool exists, uint256 sellerId) = getSellerIdByAssistant(msgSender());
+            (bool exists, uint256 sellerId) = getSellerIdByAssistant(_msgSender());
 
             // variable to store who the expected signer is
             address expectedSigner;
@@ -265,7 +265,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
                 expectedSigner = buyer.wallet;
             } else {
                 uint256 buyerId;
-                (exists, buyerId) = getBuyerIdByWallet(msgSender());
+                (exists, buyerId) = getBuyerIdByWallet(_msgSender());
                 if (!exists || buyerId != exchange.buyerId) revert NotBuyerOrSeller();
 
                 // caller is the buyer
@@ -282,7 +282,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Resolved, _buyerPercent);
 
         // Notify watchers of state change
-        emit DisputeResolved(_exchangeId, _buyerPercent, msgSender());
+        emit DisputeResolved(_exchangeId, _buyerPercent, _msgSender());
     }
 
     /**
@@ -344,7 +344,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Decided, _buyerPercent);
 
         // Notify watchers of state change
-        emit DisputeDecided(_exchangeId, _buyerPercent, msgSender());
+        emit DisputeDecided(_exchangeId, _buyerPercent, _msgSender());
     }
 
     /**
@@ -372,7 +372,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Refused, 0);
 
         // Notify watchers of state change
-        emit EscalatedDisputeRefused(_exchangeId, msgSender());
+        emit EscalatedDisputeRefused(_exchangeId, _msgSender());
     }
 
     /**
@@ -406,7 +406,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Refused, 0);
 
         // Notify watchers of state change
-        emit EscalatedDisputeExpired(_exchangeId, msgSender());
+        emit EscalatedDisputeExpired(_exchangeId, _msgSender());
     }
 
     /**
@@ -546,7 +546,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // get dispute resolver id to check if caller is the dispute resolver
-        uint256 disputeResolverId = protocolLookups().disputeResolverIdByAssistant[msgSender()];
+        uint256 disputeResolverId = protocolLookups().disputeResolverIdByAssistant[_msgSender()];
         if (disputeResolverId != fetchDisputeResolutionTerms(offer.id).disputeResolverId)
             revert NotDisputeResolverAssistant();
     }

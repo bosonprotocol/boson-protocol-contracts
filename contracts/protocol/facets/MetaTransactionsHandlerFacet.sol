@@ -377,6 +377,6 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         }
 
         // Notify external observers
-        emit FunctionsAllowlisted(_functionNameHashes, _isAllowlisted, msgSender());
+        emit FunctionsAllowlisted(_functionNameHashes, _isAllowlisted, _msgSender());
     }
 }

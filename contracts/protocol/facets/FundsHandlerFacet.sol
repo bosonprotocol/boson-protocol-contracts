@@ -68,7 +68,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         // Increase available funds
         increaseAvailableFunds(_sellerId, _tokenAddress, _amount);
 
-        emit FundsDeposited(_sellerId, msgSender(), _tokenAddress, _amount);
+        emit FundsDeposited(_sellerId, _msgSender(), _tokenAddress, _amount);
     }
 
     /**
@@ -305,7 +305,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * @return destinationAddress - address where the funds are withdrawn
      */
     function getDestinationAddress(uint256 _entityId) internal view returns (address payable destinationAddress) {
-        address payable sender = payable(msgSender());
+        address payable sender = payable(_msgSender());
 
         // First check if the caller is a buyer
         (bool exists, uint256 callerId) = getBuyerIdByWallet(sender);

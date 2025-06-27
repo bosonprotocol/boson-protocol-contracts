@@ -50,7 +50,7 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents, IBosonFundsLibEvents 
         disputeDates.timeout = block.timestamp + offerDurations.resolutionPeriod;
 
         // Notify watchers of state change
-        emit DisputeRaised(_exchange.id, _exchange.buyerId, _sellerId, msgSender());
+        emit DisputeRaised(_exchange.id, _exchange.buyerId, _sellerId, _msgSender());
     }
 
     /**
@@ -120,7 +120,7 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents, IBosonFundsLibEvents 
         dispute.state = DisputeState.Escalated;
 
         // Notify watchers of state change
-        address sender = msgSender();
+        address sender = _msgSender();
         emit FundsEncumbered(buyerId, exchangeToken, buyerEscalationDeposit, sender);
         emit DisputeEscalated(_exchangeId, disputeResolutionTerms.disputeResolverId, sender);
     }
