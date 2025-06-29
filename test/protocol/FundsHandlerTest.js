@@ -546,14 +546,13 @@ describe("IBosonFundsHandler", function () {
           .connect(deployer)
           .newAgreement(
             seller.id,
-            offerToken.id,
+            tokenAddress,
             disputeResolver.id,
             maxAmountPerTx.toString(),
             maxAmountTotal.toString(),
             timePeriod.toString(),
             premium.toString(),
-            refundOnCancel,
-            tokenAddress
+            refundOnCancel
           );
 
         // Create agreement for native currency offer
@@ -562,23 +561,22 @@ describe("IBosonFundsHandler", function () {
           .connect(deployer)
           .newAgreement(
             seller.id,
-            offerNative.id,
+            ZeroAddress,
             disputeResolver.id,
             maxAmountPerTx.toString(),
             maxAmountTotal.toString(),
             timePeriod.toString(),
             premium.toString(),
-            refundOnCancel,
-            ZeroAddress
+            refundOnCancel
           );
 
         // pay premium for the non-native token offer agreement
         await mockToken.mint(deployer.address, premium);
         await mockToken.connect(deployer).approve(await drFeeMutualizer.getAddress(), premium);
-        await drFeeMutualizer.connect(deployer).payPremium(nonNativeTokenAgreementId);
+        await drFeeMutualizer.connect(deployer).payPremium(nonNativeTokenAgreementId, seller.id);
 
         // pay premium for the native token offer agreement
-        await drFeeMutualizer.connect(deployer).payPremium(nativeTokenAgreementId, { value: premium });
+        await drFeeMutualizer.connect(deployer).payPremium(nativeTokenAgreementId, seller.id, { value: premium });
 
         // Set used variables
         price = offerToken.price;

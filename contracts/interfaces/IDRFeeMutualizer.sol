@@ -10,17 +10,14 @@ interface IDRFeeMutualizer {
     /**
      * @notice Checks if a seller is covered for a specific DR fee
      * @param _sellerId The seller ID
-     * @param _offerId The offer ID
      * @param _feeAmount The fee amount to cover
      * @param _tokenAddress The token address (address(0) for native currency)
      * @param _disputeResolverId The dispute resolver ID (0 for universal agreement covering all dispute resolvers)
      * @return bool True if the seller is covered, false otherwise
      * @dev Checks for both specific dispute resolver agreements and universal agreements (disputeResolverId = 0).
-     *      Agreements are offer-specific, so the offerId must match the agreement's offerId.
      */
     function isSellerCovered(
         uint256 _sellerId,
-        uint256 _offerId,
         uint256 _feeAmount,
         address _tokenAddress,
         uint256 _disputeResolverId
@@ -29,7 +26,6 @@ interface IDRFeeMutualizer {
     /**
      * @notice Requests a DR fee for a seller
      * @param _sellerId The seller ID
-     * @param _offerId The offer ID
      * @param _feeAmount The fee amount to cover
      * @param _tokenAddress The token address (address(0) for native currency)
      * @param _exchangeId The exchange ID
@@ -45,7 +41,6 @@ interface IDRFeeMutualizer {
      */
     function requestDRFee(
         uint256 _sellerId,
-        uint256 _offerId,
         uint256 _feeAmount,
         address _tokenAddress,
         uint256 _exchangeId,

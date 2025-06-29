@@ -194,8 +194,8 @@ library FundsLib {
                     payoff.buyer = payoff.buyer + applyPercent(lastPrice, dispute.buyerPercent);
                     payoff.seller = payoff.seller + offerPrice - applyPercent(offerPrice, dispute.buyerPercent);
 
-                    // DR is always paid for Decided, but for Resolved it is paid only if escalated
-                    if (disputeState == BosonTypes.DisputeState.Decided || buyerEscalationDeposit > 0) {
+                    // DR is always paid for escalated disputes (Decided or Resolved with escalation)
+                    if (buyerEscalationDeposit > 0) {
                         payoff.disputeResolver = pe.disputeResolutionTerms[exchange.offerId].feeAmount;
                     }
                 }
@@ -263,9 +263,6 @@ library FundsLib {
                     );
                 }
             } else {
-                if (returnAmount > 0) {
-                    decreaseAvailableFunds(PROTOCOL_ENTITY_ID, exchangeToken, returnAmount);
-                }
                 if (exchangeToken == address(0)) {
                     IDRFeeMutualizer(drTerms.mutualizerAddress).returnDRFee{ value: returnAmount }(
                         _exchangeId,

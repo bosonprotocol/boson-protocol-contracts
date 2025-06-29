@@ -180,6 +180,8 @@ interface BosonErrors {
     error WrongDefaultRecipient();
     // Price discovery offer has non zero price
     error InvalidPriceDiscoveryPrice();
+    // Trying to set the same mutualizer as the existing one
+    error SameMutualizerAddress();
 
     // Group related
     // Group does not exist
@@ -284,8 +286,6 @@ interface BosonErrors {
     error ZeroDepositNotAllowed();
 
     // DR Fee related
-    // DR fee mutualizer call failed during fee return
-    error DRFeeMutualizerCallFailed();
     // DR fee mutualizer cannot provide coverage for the fee
     error DRFeeMutualizerCannotProvideCoverage();
 

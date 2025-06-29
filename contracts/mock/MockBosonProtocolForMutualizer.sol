@@ -8,11 +8,10 @@ import { FundsLib } from "../protocol/libs/FundsLib.sol";
 import { IDRFeeMutualizer } from "../interfaces/IDRFeeMutualizer.sol";
 
 /**
- * @title MockProtocol
- * @notice Mock protocol contract for testing DRFeeMutualizer
- * @dev This contract provides mock implementations of the Boson protocol interfaces
+ * @title MockBosonProtocolForMutualizer
+ * @notice Mock Boson protocol contract specifically for testing DRFeeMutualizer interactions
  */
-contract MockProtocol {
+contract MockBosonProtocolForMutualizer {
     using SafeERC20 for IERC20;
 
     // Storage for mock data
@@ -28,17 +27,17 @@ contract MockProtocol {
 
     /**
      * @notice Sets a seller admin address for testing
-     * @param sellerId The seller ID
-     * @param admin The admin address
+     * @param _sellerId The seller ID
+     * @param _admin The admin address
      */
-    function setSeller(uint256 sellerId, address admin) external {
-        sellerAdmins[sellerId] = admin;
-        sellers[sellerId] = BosonTypes.Seller({
-            id: sellerId,
-            assistant: admin,
-            admin: admin,
-            clerk: admin,
-            treasury: payable(admin),
+    function setSeller(uint256 _sellerId, address _admin) external {
+        sellerAdmins[_sellerId] = _admin;
+        sellers[_sellerId] = BosonTypes.Seller({
+            id: _sellerId,
+            assistant: _admin,
+            admin: _admin,
+            clerk: _admin,
+            treasury: payable(_admin),
             active: true,
             metadataUri: ""
         });
@@ -46,41 +45,41 @@ contract MockProtocol {
 
     /**
      * @notice Mock implementation of getSeller
-     * @param sellerId The seller ID
+     * @param _sellerId The seller ID
      * @return exists Whether the seller exists
      * @return seller The seller data
      * @return authToken The auth token data
      */
     function getSeller(
-        uint256 sellerId
+        uint256 _sellerId
     ) external view returns (bool exists, BosonTypes.Seller memory seller, BosonTypes.AuthToken memory authToken) {
-        exists = sellerAdmins[sellerId] != address(0);
+        exists = sellerAdmins[_sellerId] != address(0);
         if (exists) {
-            seller = sellers[sellerId];
+            seller = sellers[_sellerId];
             authToken = BosonTypes.AuthToken({ tokenId: 0, tokenType: BosonTypes.AuthTokenType.None });
         }
     }
 
     /**
      * @notice Mock implementation of depositFunds
-     * @param sellerId The seller ID
-     * @param tokenAddress The token address
-     * @param amount The amount to deposit
+     * @param _sellerId The seller ID
+     * @param _tokenAddress The token address
+     * @param _amount The amount to deposit
      */
-    function depositFunds(uint256 sellerId, address tokenAddress, uint256 amount) external payable {
+    function depositFunds(uint256 _sellerId, address _tokenAddress, uint256 _amount) external payable {
         // Get the seller's treasury address
-        BosonTypes.Seller memory seller = sellers[sellerId];
+        BosonTypes.Seller memory seller = sellers[_sellerId];
         require(seller.treasury != address(0), "Seller not found");
 
-        if (tokenAddress == address(0)) {
+        if (_tokenAddress == address(0)) {
             // Native currency
-            if (msg.value != amount) revert("Incorrect native amount");
+            if (msg.value != _amount) revert("Incorrect native amount");
             // Funds are now in the protocol contract
         } else {
             // ERC20 token
             if (msg.value != 0) revert("Native not allowed for ERC20");
             // Pull tokens from the caller (mutualizer)
-            IERC20(tokenAddress).safeTransferFrom(msg.sender, address(this), amount);
+            IERC20(_tokenAddress).safeTransferFrom(msg.sender, address(this), _amount);
         }
 
         // In a real protocol, this would increase available funds for the seller
@@ -91,39 +90,37 @@ contract MockProtocol {
      * @notice Proxy to call requestDRFee on DRFeeMutualizer as protocol
      */
     function callRequestDRFee(
-        address mutualizer,
-        uint256 sellerId,
-        uint256 offerId,
-        uint256 feeAmount,
-        address tokenAddress,
-        uint256 exchangeId,
-        uint256 disputeResolverId
+        address _mutualizer,
+        uint256 _feeAmount,
+        uint256 _sellerId,
+        address _tokenAddress,
+        uint256 _exchangeId,
+        uint256 _disputeResolverId
     ) external {
-        IDRFeeMutualizer(mutualizer).requestDRFee(
-            sellerId,
-            offerId,
-            feeAmount,
-            tokenAddress,
-            exchangeId,
-            disputeResolverId
+        IDRFeeMutualizer(_mutualizer).requestDRFee(
+            _sellerId,
+            _feeAmount,
+            _tokenAddress,
+            _exchangeId,
+            _disputeResolverId
         );
     }
 
     /**
      * @notice Proxy to call returnDRFee on DRFeeMutualizer as protocol
      */
-    function callReturnDRFee(address mutualizer, uint256 exchangeId, uint256 feeAmount) external payable {
-        IDRFeeMutualizer(mutualizer).returnDRFee{ value: msg.value }(exchangeId, feeAmount);
+    function callReturnDRFee(address _mutualizer, uint256 _exchangeId, uint256 _feeAmount) external payable {
+        IDRFeeMutualizer(_mutualizer).returnDRFee{ value: msg.value }(_exchangeId, _feeAmount);
     }
 
     /**
      * @notice Helper function to approve ERC20 tokens for the mutualizer
      * @dev This is needed because the mutualizer uses transferFrom to receive ERC20 tokens
-     * @param token The token address to approve
-     * @param spender The address to approve (mutualizer)
-     * @param amount The amount to approve
+     * @param _token The token address to approve
+     * @param _spender The address to approve (mutualizer)
+     * @param _amount The amount to approve
      */
-    function approveToken(address token, address spender, uint256 amount) external {
-        IERC20(token).approve(spender, amount);
+    function approveToken(address _token, address _spender, uint256 _amount) external {
+        IERC20(_token).approve(_spender, _amount);
     }
 }

@@ -1502,7 +1502,6 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
             // Request DR fee from mutualizer
             bool success = IDRFeeMutualizer(mutualizer).requestDRFee(
                 _offer.sellerId,
-                _offer.id,
                 _drFeeAmount,
                 exchangeToken,
                 _exchangeId,
@@ -1515,14 +1514,6 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
 
             if (!success || feeTransferred != _drFeeAmount) {
                 revert BosonErrors.DRFeeMutualizerCannotProvideCoverage();
-            } else {
-                FundsLib.increaseAvailableFundsAndEmitEvent(
-                    _exchangeId,
-                    PROTOCOL_ENTITY_ID,
-                    exchangeToken,
-                    feeTransferred,
-                    mutualizer
-                );
             }
         }
 
@@ -1531,7 +1522,8 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
             _exchangeId,
             exchangeToken,
             _drFeeAmount,
-            _disputeTerms.mutualizerAddress
+            _disputeTerms.mutualizerAddress,
+            msg.sender
         );
     }
 }

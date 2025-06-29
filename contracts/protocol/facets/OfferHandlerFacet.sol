@@ -105,27 +105,40 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * - Royalty percentage is less than the value decided by the admin
      * - Total royalty percentage is more than max royalty percentage
      *
-     * @param batchOffer struct containing all batch offer arrays:
-     *   - offers: array of fully populated Offer structs
-     *   - offerDates: array of fully populated OfferDates structs
-     *   - offerDurations: array of fully populated OfferDurations structs
-     *   - disputeResolverIds: array of ids of chosen dispute resolvers (can be 0)
-     *   - agentIds: array of ids of agents
-     *   - feeLimits: array of maximum fees that seller is willing to pay per exchange (for static offers)
-     *   - mutualizerAddresses: array of addresses of DR fee mutualizers (can be zero for self-mutualization)
+     * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
+     * @param _offerDates - the array of fully populated offer dates structs
+     * @param _offerDurations - the array of fully populated offer durations structs
+     * @param _drParameters - the array of ids of chosen dispute resolvers (can be 0) and mutualizer address (0 for self-mutualization)
+     * @param _agentIds - the array of ids of agents
+     * @param _feeLimits - the array of maximum fees that seller is willing to pay per exchange (for static offers)
      */
     function createOfferBatch(
-        BosonTypes.BatchOffer calldata batchOffer
+        Offer[] calldata _offers,
+        OfferDates[] calldata _offerDates,
+        OfferDurations[] calldata _offerDurations,
+        DRParameters[] calldata _drParameters,
+        uint256[] calldata _agentIds,
+        uint256[] calldata _feeLimits
     ) external override offersNotPaused nonReentrant {
-        _validateBatchOfferLengths(batchOffer);
-        for (uint256 i; i < batchOffer.offers.length; ) {
+        // Number of offer dates structs, offer durations structs and drParameters must match the number of offers
+        if (
+            _offers.length != _offerDates.length ||
+            _offers.length != _offerDurations.length ||
+            _offers.length != _drParameters.length ||
+            _offers.length != _agentIds.length ||
+            _offers.length != _feeLimits.length
+        ) {
+            revert ArrayLengthMismatch();
+        }
+        for (uint256 i; i < _offers.length; ) {
+            // Create offer and update structs values to represent true state
             createOfferInternal(
-                batchOffer.offers[i],
-                batchOffer.offerDates[i],
-                batchOffer.offerDurations[i],
-                batchOffer.drParameters[i],
-                batchOffer.agentIds[i],
-                batchOffer.feeLimits[i]
+                _offers[i],
+                _offerDates[i],
+                _offerDurations[i],
+                _drParameters[i],
+                _agentIds[i],
+                _feeLimits[i]
             );
             unchecked {
                 i++;
@@ -419,6 +432,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * - Offer does not exist
      * - Caller is not the assistant of the offer
      * - Offer has already been voided
+     * - New mutualizer address is the same as the existing one
      *
      * @param _offerId - the id of the offer to update
      * @param _newMutualizer - the new mutualizer address (can be zero for self-mutualization)
@@ -428,9 +442,10 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         Offer storage offer = getValidOfferWithSellerCheck(_offerId);
 
         DisputeResolutionTerms storage disputeResolutionTerms = fetchDisputeResolutionTerms(_offerId);
+        if (disputeResolutionTerms.mutualizerAddress == _newMutualizer) revert SameMutualizerAddress();
         disputeResolutionTerms.mutualizerAddress = payable(_newMutualizer);
 
-        emit OfferMutualizerUpdated(_offerId, offer.sellerId, _newMutualizer);
+        emit OfferMutualizerUpdated(_offerId, offer.sellerId, _newMutualizer, msgSender());
     }
 
     /**
@@ -501,22 +516,5 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      */
     function getAgentIdByOffer(uint256 _offerId) external view override returns (bool exists, uint256 agentId) {
         return fetchAgentIdByOffer(_offerId);
-    }
-
-    /**
-     * @notice Validates that all arrays in the batch offer have the same length
-     *
-     * @param batchOffer struct containing all batch offer arrays
-     */
-    function _validateBatchOfferLengths(BosonTypes.BatchOffer calldata batchOffer) private pure {
-        if (
-            batchOffer.offers.length != batchOffer.offerDates.length ||
-            batchOffer.offers.length != batchOffer.offerDurations.length ||
-            batchOffer.offers.length != batchOffer.drParameters.length ||
-            batchOffer.offers.length != batchOffer.agentIds.length ||
-            batchOffer.offers.length != batchOffer.feeLimits.length
-        ) {
-            revert ArrayLengthMismatch();
-        }
     }
 }

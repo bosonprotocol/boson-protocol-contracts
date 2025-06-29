@@ -16,10 +16,9 @@ import { BosonErrors } from "../../domain/BosonErrors.sol";
 
 /**
  * @title DRFeeMutualizer
- * @notice Reference implementation of DR Fee Mutualizer with offer-based agreement management and meta-transaction support
- * @dev This contract provides dispute resolver fee mutualization with configurable agreements per offer.
- *      Each offer can have its own agreement with a dispute resolver, allowing for granular control over
- *      fee mutualization. Universal agreements can be created by setting disputeResolverId=0 (covers all dispute resolvers for that offer).
+ * @notice Reference implementation of DR Fee Mutualizer with exchange token-based agreement management and meta-transaction support
+ * @dev This contract provides dispute resolver fee mutualization with configurable agreements per seller + exchange token + dispute resolver.
+ *      Each seller can have agreements for different exchange tokens and dispute resolvers. Universal agreements can be created by setting disputeResolverId=0.
  */
 contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, Ownable {
     using SafeERC20 for IERC20;
@@ -45,24 +44,24 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
     error SellerNotFound();
     error InsufficientValueReceived();
     error NativeNotAllowed();
+    error AgreementTimePeriodTooLong();
 
     struct Agreement {
         uint256 maxAmountPerTx;
         uint256 maxAmountTotal;
         uint256 timePeriod;
         uint256 premium; // Premium amount to be paid by seller
-        bool refundOnCancel; // Whether premium is refunded on cancellation
         address tokenAddress; // Token address for the agreement (address(0) for native currency)
+        bool refundOnCancel; // Whether premium is refunded on cancellation
+        bool isVoided;
         uint256 startTime; // When the agreement becomes active (0 if not activated)
         uint256 totalMutualized; // Total amount mutualized so far
-        bool isVoided;
         uint256 sellerId; // The seller ID for this agreement
     }
 
     struct FeeInfo {
         address token;
         uint256 amount;
-        uint256 sellerId;
     }
 
     // Events
@@ -72,23 +71,18 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
 
     event DRFeeProvided(uint256 indexed exchangeId, uint256 indexed sellerId, uint256 feeAmount);
 
-    event DRFeeReturned(
-        uint256 indexed exchangeId,
-        uint256 indexed sellerId,
-        uint256 originalFeeAmount,
-        uint256 returnedAmount
-    );
+    event DRFeeReturned(uint256 indexed exchangeId, uint256 originalFeeAmount, uint256 returnedAmount);
 
     event AgreementCreated(
         uint256 agreementId,
         uint256 indexed sellerId,
-        uint256 indexed offerId,
+        address indexed tokenAddress,
         uint256 indexed disputeResolverId
     );
 
     event AgreementActivated(uint256 indexed agreementId, uint256 indexed sellerId);
 
-    event AgreementVoided(uint256 indexed agreementId, bool premiumRefunded);
+    event AgreementVoided(uint256 indexed agreementId, bool premiumRefunded, uint256 amountRefunded);
 
     address private immutable BOSON_PROTOCOL;
 
@@ -96,8 +90,8 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
     mapping(address => uint256) public poolBalances; // tokenAddress => balance
     mapping(uint256 => FeeInfo) public feeInfoByExchange;
 
-    mapping(uint256 => mapping(uint256 => mapping(uint256 => uint256)))
-        public sellerToOfferToDisputeResolverToAgreement; // sellerId => offerId => disputeResolverId => agreementId
+    mapping(uint256 => mapping(address => mapping(uint256 => uint256)))
+        public sellerToTokenToDisputeResolverToAgreement; // sellerId => tokenAddress => disputeResolverId => agreementId
     Agreement[] private agreements;
     bool public depositRestrictedToOwner;
 
@@ -110,20 +104,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         if (_bosonProtocol == address(0)) revert InvalidProtocolAddress();
         BOSON_PROTOCOL = _bosonProtocol;
         // Initialize with empty agreement at index 0 for 1-indexed access
-        agreements.push(
-            Agreement({
-                maxAmountPerTx: 0,
-                maxAmountTotal: 0,
-                timePeriod: 0,
-                premium: 0,
-                refundOnCancel: false,
-                tokenAddress: address(0),
-                startTime: 0,
-                totalMutualized: 0,
-                isVoided: true,
-                sellerId: 0
-            })
-        );
+        agreements.push();
     }
 
     /**
@@ -138,26 +119,23 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
     /**
      * @notice Checks if a seller is covered for a specific DR fee
      * @param _sellerId The seller ID
-     * @param _offerId The offer ID
      * @param _feeAmount The fee amount to cover
      * @param _tokenAddress The token address (address(0) for native currency)
      * @param _disputeResolverId The dispute resolver ID (0 for universal agreement covering all dispute resolvers)
      * @return bool True if the seller is covered, false otherwise
      * @dev Checks for both specific dispute resolver agreements and universal agreements (disputeResolverId = 0).
-     *      Agreements are offer-specific, so the offerId must match the agreement's offerId.
      */
     function isSellerCovered(
         uint256 _sellerId,
-        uint256 _offerId,
         uint256 _feeAmount,
         address _tokenAddress,
         uint256 _disputeResolverId
     ) public view override returns (bool) {
         // Check if agreement exists and is valid
-        uint256 agreementId = sellerToOfferToDisputeResolverToAgreement[_sellerId][_offerId][_disputeResolverId];
+        uint256 agreementId = sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][_disputeResolverId];
         if (agreementId == 0 && _disputeResolverId != 0) {
             // If no specific agreement exists, check for "any dispute resolver" agreement
-            agreementId = sellerToOfferToDisputeResolverToAgreement[_sellerId][_offerId][0];
+            agreementId = sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][0];
         }
         if (agreementId == 0) return false;
 
@@ -177,7 +155,6 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
     /**
      * @notice Requests a DR fee for a seller
      * @param _sellerId The seller ID
-     * @param _offerId The offer ID
      * @param _feeAmount The fee amount to cover
      * @param _tokenAddress The token address (address(0) for native currency)
      * @param _exchangeId The exchange ID
@@ -193,21 +170,20 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
      */
     function requestDRFee(
         uint256 _sellerId,
-        uint256 _offerId,
         uint256 _feeAmount,
         address _tokenAddress,
         uint256 _exchangeId,
         uint256 _disputeResolverId
     ) external override onlyProtocol nonReentrant returns (bool success) {
         if (_feeAmount == 0) revert InvalidAmount();
-        if (!isSellerCovered(_sellerId, _offerId, _feeAmount, _tokenAddress, _disputeResolverId)) {
+        if (!isSellerCovered(_sellerId, _feeAmount, _tokenAddress, _disputeResolverId)) {
             return false;
         }
 
-        uint256 agreementId = sellerToOfferToDisputeResolverToAgreement[_sellerId][_offerId][_disputeResolverId];
+        uint256 agreementId = sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][_disputeResolverId];
         if (agreementId == 0 && _disputeResolverId != 0) {
             // If no specific agreement exists, check for "any dispute resolver" agreement
-            agreementId = sellerToOfferToDisputeResolverToAgreement[_sellerId][_offerId][0];
+            agreementId = sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][0];
         }
         Agreement storage agreement = agreements[agreementId];
 
@@ -217,7 +193,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
             poolBalances[_tokenAddress] -= _feeAmount;
         }
 
-        feeInfoByExchange[_exchangeId] = FeeInfo({ token: _tokenAddress, amount: _feeAmount, sellerId: _sellerId });
+        feeInfoByExchange[_exchangeId] = FeeInfo({ token: _tokenAddress, amount: _feeAmount });
 
         FundsLib.transferFundsOut(_tokenAddress, payable(BOSON_PROTOCOL), _feeAmount);
 
@@ -228,29 +204,33 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
     /**
      * @notice Returns a DR fee to the mutualizer
      * @param _exchangeId The exchange ID
-     * @param _feeAmount The amount being returned (0 means protocol kept all fees)
-     * @dev Only callable by the Boson protocol. For native currency, feeAmount must equal msg.value.
+     * @param _returnedFeeAmount The amount being returned (0 means protocol kept all fees)
+     * @dev Only callable by the Boson protocol. For native currency, returnedFeeAmount must equal msg.value.
      *
      * Reverts if:
      * - Caller is not the Boson protocol
      * - exchangeId is not found
-     * - msg.value != feeAmount for native currency
+     * - msg.value != returnedFeeAmount for native currency
      * - msg.value > 0 for ERC20 tokens
      * - ERC20 or native currency transfer fails
      */
-    function returnDRFee(uint256 _exchangeId, uint256 _feeAmount) external payable override onlyProtocol nonReentrant {
+    function returnDRFee(
+        uint256 _exchangeId,
+        uint256 _returnedFeeAmount
+    ) external payable override onlyProtocol nonReentrant {
         FeeInfo storage feeInfo = feeInfoByExchange[_exchangeId];
-        if (feeInfo.amount == 0) revert InvalidExchangeId();
+        uint256 requestedFeeAmount = feeInfo.amount;
+        if (requestedFeeAmount == 0) revert InvalidExchangeId();
 
         // Fee is being returned, add back to pool (if any)
-        if (_feeAmount > 0) {
-            FundsLib.validateIncomingPayment(feeInfo.token, _feeAmount);
-            poolBalances[feeInfo.token] += _feeAmount;
+        if (_returnedFeeAmount > 0) {
+            FundsLib.validateIncomingPayment(feeInfo.token, _returnedFeeAmount);
+            poolBalances[feeInfo.token] += _returnedFeeAmount;
         }
 
         delete feeInfoByExchange[_exchangeId];
 
-        emit DRFeeReturned(_exchangeId, feeInfo.sellerId, feeInfo.amount, _feeAmount);
+        emit DRFeeReturned(_exchangeId, requestedFeeAmount, _returnedFeeAmount);
     }
 
     // ============= Pool Management =============
@@ -272,7 +252,14 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         address msgSender = _msgSender();
         if (depositRestrictedToOwner && msgSender != owner()) revert DepositsRestrictedToOwner();
         if (_amount == 0) revert InvalidAmount();
-        FundsLib.validateIncomingPayment(_tokenAddress, _amount);
+
+        if (_tokenAddress == address(0)) {
+            if (msg.value != _amount) revert BosonErrors.InsufficientValueReceived();
+        } else {
+            if (msg.value != 0) revert BosonErrors.NativeNotAllowed();
+            FundsLib.transferFundsIn(_tokenAddress, msgSender, _amount);
+        }
+
         poolBalances[_tokenAddress] += _amount;
         emit FundsDeposited(msgSender, _tokenAddress, _amount);
     }
@@ -317,20 +304,18 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
     // ============= Agreement Management =============
 
     /**
-     * @notice Creates a new agreement between seller and dispute resolver
+     * @notice Creates a new agreement between seller and dispute resolver for a specific exchange token
      * @param _sellerId The seller ID
-     * @param _offerId The offer ID
+     * @param _tokenAddress The exchange token address for the agreement (address(0) for native currency)
      * @param _disputeResolverId The dispute resolver ID (0 for "any dispute resolver" i.e. universal agreement)
      * @param _maxAmountPerTx The maximum mutualized amount per transaction
      * @param _maxAmountTotal The maximum total mutualized amount
      * @param _timePeriod The time period for the agreement (in seconds)
      * @param _premium The premium amount to be paid by seller
      * @param _refundOnCancel Whether premium is refunded on cancellation
-     * @param _tokenAddress The token address for the agreement (address(0) for native currency)
      * @return agreementId The ID of the created agreement
-     * @dev Only callable by the contract owner. Prevents duplicate active agreements for the same offer and dispute resolver.
-     *      Agreements are offer-specific: each offer can have its own agreement with a dispute resolver.
-     *      Universal agreements can be created by setting disputeResolverId=0 (covers all dispute resolvers for that offer).
+     * @dev Only callable by the contract owner. Prevents duplicate active agreements for the same seller, token and dispute resolver.
+     *      Universal agreements can be created by setting disputeResolverId=0 (covers all dispute resolvers for that token).
      *
      * Reverts if:
      * - Caller is not owner
@@ -338,25 +323,24 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
      * - maxAmountPerTx is 0
      * - maxAmountTotal < maxAmountPerTx
      * - timePeriod is 0
-     * - Active agreement exists for same offer and dispute resolver
+     * - Active agreement exists for same seller, exchange token and dispute resolver
      */
     function newAgreement(
         uint256 _sellerId,
-        uint256 _offerId,
+        address _tokenAddress,
         uint256 _disputeResolverId,
         uint256 _maxAmountPerTx,
         uint256 _maxAmountTotal,
         uint256 _timePeriod,
         uint256 _premium,
-        bool _refundOnCancel,
-        address _tokenAddress
+        bool _refundOnCancel
     ) external onlyOwner returns (uint256 agreementId) {
         if (_sellerId == 0) revert InvalidSellerId();
         if (_maxAmountPerTx == 0) revert MaxAmountPerTxMustBeGreaterThanZero();
         if (_maxAmountTotal < _maxAmountPerTx) revert MaxTotalMustBeGreaterThanOrEqualToMaxPerTx();
         if (_timePeriod == 0) revert TimePeriodMustBeGreaterThanZero();
 
-        uint256 existingAgreementId = sellerToOfferToDisputeResolverToAgreement[_sellerId][_offerId][
+        uint256 existingAgreementId = sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][
             _disputeResolverId
         ];
         if (existingAgreementId != 0) {
@@ -378,18 +362,18 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
                 maxAmountTotal: _maxAmountTotal,
                 timePeriod: _timePeriod,
                 premium: _premium,
-                refundOnCancel: _refundOnCancel,
                 tokenAddress: _tokenAddress,
+                refundOnCancel: _refundOnCancel,
+                isVoided: false,
                 startTime: 0,
                 totalMutualized: 0,
-                isVoided: false,
                 sellerId: _sellerId
             })
         );
 
-        sellerToOfferToDisputeResolverToAgreement[_sellerId][_offerId][_disputeResolverId] = agreementId;
+        sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][_disputeResolverId] = agreementId;
 
-        emit AgreementCreated(agreementId, _sellerId, _offerId, _disputeResolverId);
+        emit AgreementCreated(agreementId, _sellerId, _tokenAddress, _disputeResolverId);
     }
 
     /**
@@ -421,6 +405,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         }
 
         agreement.isVoided = true;
+        uint256 refundAmount;
 
         if (
             (agreement.startTime > 0 && agreement.refundOnCancel) &&
@@ -431,11 +416,10 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
                 // Calculate refund as: premium * (remaining time / total time)
                 // Example: If premium is 100, timePeriod is 12 months, and 3 months remain:
                 // refund = 100 * 3 / 12 = 100 * 0.25 = 25
-                uint256 refundAmount = (agreement.premium * remainingTime) / agreement.timePeriod;
-                address tokenAddress = agreement.tokenAddress;
-
+                refundAmount = (agreement.premium * remainingTime) / agreement.timePeriod;
                 if (refundAmount > 0) {
                     // Deposit seller's refund through BP funds handler
+                    address tokenAddress = agreement.tokenAddress;
                     if (tokenAddress != address(0)) {
                         IERC20(tokenAddress).safeApprove(BOSON_PROTOCOL, refundAmount);
                         IBosonFundsHandler(BOSON_PROTOCOL).depositFunds(agreement.sellerId, tokenAddress, refundAmount);
@@ -451,29 +435,32 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
             }
         }
 
-        emit AgreementVoided(_agreementId, premiumRefunded);
+        emit AgreementVoided(_agreementId, premiumRefunded, refundAmount);
     }
 
     /**
      * @notice Pays premium to activate an agreement
      * @param _agreementId The ID of the agreement to activate
+     * @param _sellerId The ID of the seller
      * @dev For native currency agreements, send the premium as msg.value. For ERC20, approve the token first.
      *
      * Reverts if:
      * - agreementId is invalid
+     * - sellerId does not match the agreement's sellerId
      * - Agreement is already active
      * - Agreement is voided
      * - msg.value != premium for native currency
      * - msg.value > 0 for ERC20 tokens
      * - ERC20 or native currency transfer fails
      */
-    function payPremium(uint256 _agreementId) external payable nonReentrant {
+    function payPremium(uint256 _agreementId, uint256 _sellerId) external payable nonReentrant {
         if (_agreementId == 0 || _agreementId >= agreements.length) revert InvalidAgreementId();
-
+        uint256 currentTime = block.timestamp;
         Agreement storage agreement = agreements[_agreementId];
         if (agreement.startTime > 0) revert AgreementAlreadyActive();
         if (agreement.isVoided) revert AgreementIsVoided();
-
+        if (agreement.sellerId != _sellerId) revert InvalidSellerId();
+        if (currentTime > type(uint256).max - agreement.timePeriod) revert AgreementTimePeriodTooLong();
         if (agreement.tokenAddress == address(0)) {
             if (msg.value != agreement.premium) revert BosonErrors.InsufficientValueReceived();
         } else {
@@ -481,9 +468,9 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
             FundsLib.transferFundsIn(agreement.tokenAddress, _msgSender(), agreement.premium);
         }
         poolBalances[agreement.tokenAddress] += agreement.premium;
-        agreement.startTime = block.timestamp;
+        agreement.startTime = currentTime;
 
-        emit AgreementActivated(_agreementId, agreement.sellerId);
+        emit AgreementActivated(_agreementId, _sellerId);
     }
 
     // ============= Admin Functions =============
@@ -515,23 +502,22 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
     }
 
     /**
-     * @notice Gets agreement ID for a seller, offer and dispute resolver
+     * @notice Gets agreement ID for a seller, token and dispute resolver
      * @param _sellerId The seller ID
-     * @param _offerId The offer ID
+     * @param _tokenAddress The exchange token address
      * @param _disputeResolverId The dispute resolver ID (0 for universal agreement)
      * @return agreementId The ID of the agreement (0 if not found)
      * @dev Checks for both specific dispute resolver agreements and universal agreements (disputeResolverId = 0).
-     *      Agreements are offer-specific, so the offerId must match the agreement's offerId.
      */
     function getAgreementId(
         uint256 _sellerId,
-        uint256 _offerId,
+        address _tokenAddress,
         uint256 _disputeResolverId
     ) external view returns (uint256) {
-        uint256 agreementId = sellerToOfferToDisputeResolverToAgreement[_sellerId][_offerId][_disputeResolverId];
+        uint256 agreementId = sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][_disputeResolverId];
         if (agreementId == 0 && _disputeResolverId != 0) {
             // If no specific agreement exists, check for "any dispute resolver" agreement
-            agreementId = sellerToOfferToDisputeResolverToAgreement[_sellerId][_offerId][0];
+            agreementId = sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][0];
         }
         return agreementId;
     }

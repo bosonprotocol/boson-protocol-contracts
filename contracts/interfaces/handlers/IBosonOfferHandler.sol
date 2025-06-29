@@ -10,7 +10,7 @@ import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xdf08b19e
+ * The ERC-165 identifier for this interface is: 0x44f68f71
  */
 interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
     /**
@@ -94,16 +94,21 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      *   - If Agent does not exist
      *   - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit
      *
-     * @param batchOffer struct containing all batch offer arrays:
-     *   - offers: array of fully populated Offer structs
-     *   - offerDates: array of fully populated OfferDates structs
-     *   - offerDurations: array of fully populated OfferDurations structs
-     *   - disputeResolverIds: array of ids of chosen dispute resolvers (can be 0)
-     *   - agentIds: array of ids of agents
-     *   - feeLimits: array of maximum fees that seller is willing to pay per exchange (for static offers)
-     *   - mutualizerAddresses: array of addresses of DR fee mutualizers (can be zero for self-mutualization)
+     * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
+     * @param _offerDates - the array of fully populated offer dates structs
+     * @param _offerDurations - the array of fully populated offer durations structs
+     * @param _drParameters - the array of ids of chosen dispute resolvers (can be 0) and mutualizer address (0 for self-mutualization)
+     * @param _agentIds - the array of ids of agents
+     * @param _feeLimits - the array of maximum fees that seller is willing to pay per exchange (for static offers)
      */
-    function createOfferBatch(BosonTypes.BatchOffer calldata batchOffer) external;
+    function createOfferBatch(
+        BosonTypes.Offer[] calldata _offers,
+        BosonTypes.OfferDates[] calldata _offerDates,
+        BosonTypes.OfferDurations[] calldata _offerDurations,
+        BosonTypes.DRParameters[] calldata _drParameters,
+        uint256[] calldata _agentIds,
+        uint256[] calldata _feeLimits
+    ) external;
 
     /**
      * @notice Reserves a range of vouchers to be associated with an offer
