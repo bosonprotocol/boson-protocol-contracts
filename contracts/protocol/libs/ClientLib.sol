@@ -3,7 +3,6 @@ pragma solidity 0.8.22;
 
 import { IAccessControl } from "../../interfaces/IAccessControl.sol";
 import { IBosonConfigHandler } from "../../interfaces/handlers/IBosonConfigHandler.sol";
-import { EIP712Lib } from "../libs/EIP712Lib.sol";
 
 /**
  * @title ClientLib
@@ -55,7 +54,7 @@ library ClientLib {
         IAccessControl accessController = IAccessControl(
             IBosonConfigHandler(ps.protocolDiamond).getAccessControllerAddress()
         );
-        // TODO
+
         return accessController.hasRole(_role, msg.sender);
     }
 }
