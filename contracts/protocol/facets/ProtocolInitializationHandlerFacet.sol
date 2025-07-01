@@ -129,7 +129,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         uint256 _maxPremintedVouchers = abi.decode(_initializationData, (uint256));
         if (_maxPremintedVouchers == 0) revert ValueZeroNotAllowed();
         protocolLimits().maxPremintedVouchers = _maxPremintedVouchers;
-        emit MaxPremintedVouchersChanged(_maxPremintedVouchers, msgSender());
+        emit MaxPremintedVouchersChanged(_maxPremintedVouchers, _msgSender());
     }
 
     /**
@@ -171,7 +171,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         // Initialize limits.maxPremintedVouchers (configHandlerFacet initializer)
         if (_minResolutionPeriod == 0) revert ValueZeroNotAllowed();
         limits.minResolutionPeriod = _minResolutionPeriod;
-        emit MinResolutionPeriodChanged(_minResolutionPeriod, msgSender());
+        emit MinResolutionPeriodChanged(_minResolutionPeriod, _msgSender());
 
         // Deploy a new voucher proxy
         protocolAddresses().beaconProxy = address(new BeaconClientProxy{ salt: VOUCHER_PROXY_SALT }());
@@ -237,7 +237,7 @@ contract ProtocolInitializationHandlerFacet is IBosonProtocolInitializationHandl
         if (_priceDiscovery != address(0)) {
             // We allow it to be 0, since it can be set later
             protocolAddresses().priceDiscovery = _priceDiscovery;
-            emit PriceDiscoveryAddressChanged(_priceDiscovery, msgSender());
+            emit PriceDiscoveryAddressChanged(_priceDiscovery, _msgSender());
         }
     }
 

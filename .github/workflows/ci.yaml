@@ -132,7 +132,7 @@ jobs:
       - name: Check Code Coverage
         shell: bash
         run: |
-          MAX_SKIPPED=1 # at this moment msgData() in BosonVoucher is not covered
+          MAX_SKIPPED=0
           { read TOTAL; read COVERED; read COVERAGE; } <<< $(jq '.total.lines.total, .total.lines.covered, .total.lines.pct' coverage/coverage-summary.json)
           SKIPPED=$(($TOTAL - $COVERED))
           echo "solidity code coverage is '$COVERAGE'"

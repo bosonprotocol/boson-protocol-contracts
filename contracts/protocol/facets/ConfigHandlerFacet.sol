@@ -88,7 +88,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     function setTokenAddress(address payable _tokenAddress) public override onlyRole(ADMIN) nonReentrant {
         checkNonZeroAddress(_tokenAddress);
         protocolAddresses().token = _tokenAddress;
-        emit TokenAddressChanged(_tokenAddress, msgSender());
+        emit TokenAddressChanged(_tokenAddress, _msgSender());
     }
 
     /**
@@ -114,7 +114,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     function setTreasuryAddress(address payable _treasuryAddress) public override onlyRole(ADMIN) nonReentrant {
         checkNonZeroAddress(_treasuryAddress);
         protocolAddresses().treasury = _treasuryAddress;
-        emit TreasuryAddressChanged(_treasuryAddress, msgSender());
+        emit TreasuryAddressChanged(_treasuryAddress, _msgSender());
     }
 
     /**
@@ -140,7 +140,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     function setVoucherBeaconAddress(address _voucherBeaconAddress) public override onlyRole(ADMIN) nonReentrant {
         checkNonZeroAddress(_voucherBeaconAddress);
         protocolAddresses().voucherBeacon = _voucherBeaconAddress;
-        emit VoucherBeaconAddressChanged(_voucherBeaconAddress, msgSender());
+        emit VoucherBeaconAddressChanged(_voucherBeaconAddress, _msgSender());
     }
 
     /**
@@ -166,7 +166,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     function setBeaconProxyAddress(address _beaconProxyAddress) public override onlyRole(ADMIN) nonReentrant {
         checkNonZeroAddress(_beaconProxyAddress);
         protocolAddresses().beaconProxy = _beaconProxyAddress;
-        emit BeaconProxyAddressChanged(_beaconProxyAddress, msgSender());
+        emit BeaconProxyAddressChanged(_beaconProxyAddress, _msgSender());
     }
 
     /**
@@ -192,7 +192,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     function setPriceDiscoveryAddress(address _priceDiscovery) public override onlyRole(ADMIN) nonReentrant {
         checkNonZeroAddress(_priceDiscovery);
         protocolAddresses().priceDiscovery = _priceDiscovery;
-        emit PriceDiscoveryAddressChanged(_priceDiscovery, msgSender());
+        emit PriceDiscoveryAddressChanged(_priceDiscovery, _msgSender());
     }
 
     /**
@@ -226,7 +226,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         protocolFees().percentage = _protocolFeePercentage;
 
         // Notify watchers of state change
-        emit ProtocolFeePercentageChanged(_protocolFeePercentage, msgSender());
+        emit ProtocolFeePercentageChanged(_protocolFeePercentage, _msgSender());
     }
 
     /**
@@ -259,7 +259,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
             setTokenPriceRanges(_tokenAddress, _priceRanges);
             setTokenFeePercentages(_tokenAddress, _feePercentages);
         }
-        emit FeeTableUpdated(_tokenAddress, _priceRanges, _feePercentages, msgSender());
+        emit FeeTableUpdated(_tokenAddress, _priceRanges, _feePercentages, _msgSender());
     }
 
     /**
@@ -341,7 +341,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         protocolFees().flatBoson = _protocolFeeFlatBoson;
 
         // Notify watchers of state change
-        emit ProtocolFeeFlatBosonChanged(_protocolFeeFlatBoson, msgSender());
+        emit ProtocolFeeFlatBosonChanged(_protocolFeeFlatBoson, _msgSender());
     }
 
     /**
@@ -371,7 +371,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         checkNonZeroValue(_maxEscalationResponsePeriod);
 
         protocolLimits().maxEscalationResponsePeriod = _maxEscalationResponsePeriod;
-        emit MaxEscalationResponsePeriodChanged(_maxEscalationResponsePeriod, msgSender());
+        emit MaxEscalationResponsePeriodChanged(_maxEscalationResponsePeriod, _msgSender());
     }
 
     /**
@@ -407,7 +407,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         protocolLimits().maxTotalOfferFeePercentage = _maxTotalOfferFeePercentage;
 
         // Notify watchers of state change
-        emit MaxTotalOfferFeePercentageChanged(_maxTotalOfferFeePercentage, msgSender());
+        emit MaxTotalOfferFeePercentageChanged(_maxTotalOfferFeePercentage, _msgSender());
     }
 
     /**
@@ -446,7 +446,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         protocolLimits().maxRoyaltyPercentage = _maxRoyaltyPercentage;
 
         // Notify watchers of state change
-        emit MaxRoyaltyPercentageChanged(_maxRoyaltyPercentage, msgSender());
+        emit MaxRoyaltyPercentageChanged(_maxRoyaltyPercentage, _msgSender());
     }
 
     /**
@@ -482,7 +482,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         protocolFees().buyerEscalationDepositPercentage = _buyerEscalationDepositPercentage;
 
         // Notify watchers of state change
-        emit BuyerEscalationFeePercentageChanged(_buyerEscalationDepositPercentage, msgSender());
+        emit BuyerEscalationFeePercentageChanged(_buyerEscalationDepositPercentage, _msgSender());
     }
 
     /**
@@ -517,7 +517,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
             revert InvalidAuthTokenType();
         checkNonZeroAddress(_authTokenContract);
         protocolLookups().authTokenContracts[_authTokenType] = _authTokenContract;
-        emit AuthTokenContractChanged(_authTokenType, _authTokenContract, msgSender());
+        emit AuthTokenContractChanged(_authTokenType, _authTokenContract, _msgSender());
     }
 
     /**
@@ -552,7 +552,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         if (_minResolutionPeriod > limits.maxResolutionPeriod) revert InvalidResolutionPeriod();
 
         limits.minResolutionPeriod = _minResolutionPeriod;
-        emit MinResolutionPeriodChanged(_minResolutionPeriod, msgSender());
+        emit MinResolutionPeriodChanged(_minResolutionPeriod, _msgSender());
     }
 
     /**
@@ -586,7 +586,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         if (_maxResolutionPeriod < limits.minResolutionPeriod) revert InvalidResolutionPeriod();
 
         limits.maxResolutionPeriod = _maxResolutionPeriod;
-        emit MaxResolutionPeriodChanged(_maxResolutionPeriod, msgSender());
+        emit MaxResolutionPeriodChanged(_maxResolutionPeriod, _msgSender());
     }
 
     /**
@@ -612,7 +612,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         checkNonZeroValue(_minDisputePeriod);
 
         protocolLimits().minDisputePeriod = _minDisputePeriod;
-        emit MinDisputePeriodChanged(_minDisputePeriod, msgSender());
+        emit MinDisputePeriodChanged(_minDisputePeriod, _msgSender());
     }
 
     /**
@@ -638,7 +638,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     ) external override onlyRole(ADMIN) nonReentrant {
         checkNonZeroAddress(_accessControllerAddress);
         DiamondLib.diamondStorage().accessController = IAccessControl(_accessControllerAddress);
-        emit AccessControllerAddressChanged(_accessControllerAddress, msgSender());
+        emit AccessControllerAddressChanged(_accessControllerAddress, _msgSender());
     }
 
     /**

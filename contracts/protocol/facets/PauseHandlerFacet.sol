@@ -37,7 +37,7 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
         togglePause(_regions, true);
 
         // Notify watchers of state change
-        emit ProtocolPaused(_regions, msgSender());
+        emit ProtocolPaused(_regions, _msgSender());
     }
 
     /**
@@ -59,7 +59,7 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
         togglePause(_regions, false);
 
         // Notify watchers of state change
-        emit ProtocolUnpaused(_regions, msgSender());
+        emit ProtocolUnpaused(_regions, _msgSender());
     }
 
     /**

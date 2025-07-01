@@ -65,7 +65,7 @@ contract DisputeResolverHandlerFacet is IBosonDisputeResolverHandler, IBosonAcco
         // Scope to avoid stack too deep errors
         {
             // Get message sender
-            address sender = msgSender();
+            address sender = _msgSender();
 
             // Check that caller is the supplied admin and assistant
             if (_disputeResolver.admin != sender || _disputeResolver.assistant != sender) revert NotAdminAndAssistant();
@@ -135,7 +135,7 @@ contract DisputeResolverHandlerFacet is IBosonDisputeResolverHandler, IBosonAcco
             _disputeResolver,
             _disputeResolverFees,
             _sellerAllowList,
-            msgSender()
+            _msgSender()
         );
     }
 
@@ -192,7 +192,7 @@ contract DisputeResolverHandlerFacet is IBosonDisputeResolverHandler, IBosonAcco
         if (!exists) revert NoSuchDisputeResolver();
 
         // Get message sender
-        address sender = msgSender();
+        address sender = _msgSender();
 
         // Check that caller is the admin address for this dispute resolver
         if (disputeResolver.admin != sender) revert NotAdmin();
@@ -291,7 +291,7 @@ contract DisputeResolverHandlerFacet is IBosonDisputeResolverHandler, IBosonAcco
     ) external disputeResolversNotPaused nonReentrant {
         // Cache protocol lookups and sender for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-        address sender = msgSender();
+        address sender = _msgSender();
 
         // Get disputeResolver pending update
         (bool exists, DisputeResolver storage disputeResolverPendingUpdate) = fetchDisputeResolverPendingUpdate(
@@ -403,7 +403,7 @@ contract DisputeResolverHandlerFacet is IBosonDisputeResolverHandler, IBosonAcco
         if (!exists) revert NoSuchDisputeResolver();
 
         // Get message sender
-        address sender = msgSender();
+        address sender = _msgSender();
 
         // Check that msg.sender is the admin address for this dispute resolver
         if (disputeResolver.admin != sender) revert NotAdmin();
@@ -465,7 +465,7 @@ contract DisputeResolverHandlerFacet is IBosonDisputeResolverHandler, IBosonAcco
         if (!exists) revert NoSuchDisputeResolver();
 
         // Get message sender
-        address sender = msgSender();
+        address sender = _msgSender();
 
         // Check that msg.sender is the admin address for this dispute resolver
         if (disputeResolver.admin != sender) revert NotAdmin();
@@ -536,7 +536,7 @@ contract DisputeResolverHandlerFacet is IBosonDisputeResolverHandler, IBosonAcco
         if (!exists) revert NoSuchDisputeResolver();
 
         // Get message sender
-        address sender = msgSender();
+        address sender = _msgSender();
 
         // Check that msg.sender is the admin address for this dispute resolver
         if (disputeResolver.admin != sender) revert NotAdmin();
@@ -581,7 +581,7 @@ contract DisputeResolverHandlerFacet is IBosonDisputeResolverHandler, IBosonAcco
         if (!exists) revert NoSuchDisputeResolver();
 
         // Get message sender
-        address sender = msgSender();
+        address sender = _msgSender();
 
         // Check that msg.sender is the admin address for this dispute resolver
         if (disputeResolver.admin != sender) revert NotAdmin();

@@ -38,7 +38,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // get message sender
-        address sender = msgSender();
+        address sender = _msgSender();
 
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByAssistant(sender);
@@ -122,7 +122,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
         if (!exists) revert NoSuchTwin();
 
         // Get seller id, we assume seller id exists if twin exists
-        (, uint256 sellerId) = getSellerIdByAssistant(msgSender());
+        (, uint256 sellerId) = getSellerIdByAssistant(_msgSender());
 
         // Caller's seller id must match twin seller id
         if (sellerId != twin.sellerId) revert NotAssistant();
