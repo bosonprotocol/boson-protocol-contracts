@@ -82,8 +82,13 @@ async function main(env, facetConfig, create3) {
     process.exit(1);
   }
 
-  console.log("🔱 Deployer account: ", deployer ? await deployer.getAddress() : "not found" && process.exit());
-  console.log(divider);
+  if (deployer) {
+    console.log("🔱 Deployer account: ", await deployer.getAddress());
+    console.log(divider);
+  } else {
+    console.log("❌ Deployer account not found");
+    process.exit();
+  }
 
   console.log(`💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...`);
 
