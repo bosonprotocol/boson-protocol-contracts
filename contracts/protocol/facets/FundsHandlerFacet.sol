@@ -63,7 +63,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         } else {
             // Transfer tokens from the caller
             if (_tokenAddress == address(0)) revert InvalidAddress();
-            FundsLib.transferFundsToProtocol(_tokenAddress, _amount);
+            FundsLib.transferFundsIn(_tokenAddress, _amount);
         }
 
         // Increase available funds
@@ -275,7 +275,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             for (uint256 i = 0; i < tokenList.length; ) {
                 // Get available funds from storage
                 uint256 availableFunds = entityFunds[tokenList[i]];
-                FundsLib.transferFundsFromProtocol(_entityId, tokenList[i], _destinationAddress, availableFunds);
+                FundsLib.transferFundsOut(_entityId, tokenList[i], _destinationAddress, availableFunds);
 
                 unchecked {
                     i++;
@@ -287,7 +287,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
                 if (_tokenAmounts[i] == 0) revert NothingToWithdraw();
 
                 // Transfer funds
-                FundsLib.transferFundsFromProtocol(_entityId, _tokenList[i], _destinationAddress, _tokenAmounts[i]);
+                FundsLib.transferFundsOut(_entityId, _tokenList[i], _destinationAddress, _tokenAmounts[i]);
 
                 unchecked {
                     i++;

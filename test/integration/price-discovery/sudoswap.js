@@ -121,8 +121,8 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
 
     await accountHandler.connect(DR).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
-    let offerDates, offerDurations, disputeResolverId;
-    ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+    let offerDates, offerDurations, drParams;
+    ({ offer, offerDates, offerDurations, drParams } = await mockOffer());
     offer.exchangeToken = wethAddress;
     offer.quantityAvailable = 10;
     offer.priceType = PriceType.Discovery;
@@ -130,14 +130,7 @@ describe("[@skip-on-coverage] sudoswap integration", function () {
 
     await offerHandler
       .connect(assistant)
-      .createOffer(
-        offer.toStruct(),
-        offerDates.toStruct(),
-        offerDurations.toStruct(),
-        disputeResolverId,
-        "0",
-        offerFeeLimit
-      );
+      .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), drParams, "0", offerFeeLimit);
 
     const pool = BigInt(offer.sellerDeposit) * BigInt(offer.quantityAvailable);
 

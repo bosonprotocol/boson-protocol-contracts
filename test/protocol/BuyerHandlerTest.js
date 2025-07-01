@@ -405,9 +405,17 @@ describe("BuyerHandler", function () {
           expect(offerDurations.isValid()).is.true;
 
           // Create the offer
-          await offerHandler
-            .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId, offerFeeLimit);
+          await offerHandler.connect(assistant).createOffer(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            agentId,
+            offerFeeLimit
+          );
 
           offerId = offer.id;
           const sellerDeposit = offer.sellerDeposit;
