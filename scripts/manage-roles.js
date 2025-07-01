@@ -41,8 +41,13 @@ async function main(env) {
   // Get the accounts
   const accounts = await listAccounts();
   const admin = accounts[0];
-  console.log("🔱 Admin account: ", admin ? admin : "not found" && process.exit());
-  console.log(divider);
+  if (admin) {
+    console.log("🔱 Admin account: ", admin);
+    console.log(divider);
+  } else {
+    console.log("❌ Admin account not found");
+    process.exit();
+  }
 
   console.log(`🔑 Confirming roles...`);
 

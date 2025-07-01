@@ -47,6 +47,8 @@
   },
   "devDependencies": {
     "@bosonprotocol/solidoc": "3.0.3",
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.30.0",
     "@nomicfoundation/hardhat-ethers": "3.0.8",
     "@nomicfoundation/hardhat-network-helpers": "1.0.12",
     "@nomicfoundation/hardhat-toolbox": "5.0.0",
@@ -62,6 +64,7 @@
     "ethers": "^6.14.3",
     "ethersv5": "npm:ethers@^5.7.2",
     "glob": "^10.3.10",
+    "globals": "^16.2.0",
     "hardhat": "^2.24.2",
     "hardhat-contract-sizer": "^2.10.0",
     "hardhat-preprocessor": "^0.1.5",
