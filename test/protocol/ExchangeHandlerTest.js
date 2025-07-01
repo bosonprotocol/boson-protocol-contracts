@@ -587,7 +587,6 @@ describe("IBosonExchangeHandler", function () {
         royaltyPercentage2 = voucherInitValues.royaltyPercentage; // 8%
         seller2Treasury = seller.treasury;
 
-        receiver, royaltyAmount;
         [receiver, royaltyAmount] = await bosonVoucherClone2.connect(assistant).royaltyInfo(tokenId2, offer.price);
 
         // Expectations
@@ -3666,8 +3665,8 @@ describe("IBosonExchangeHandler", function () {
 
             const range = {};
             const arrayStart = BigInt(keccak256(secondMappingSlot));
-            (range.start = await getStorageAt(protocolDiamondAddress, arrayStart + 0n)),
-              (range.end = await getStorageAt(protocolDiamondAddress, arrayStart + 1n));
+            ((range.start = await getStorageAt(protocolDiamondAddress, arrayStart + 0n)),
+              (range.end = await getStorageAt(protocolDiamondAddress, arrayStart + 1n)));
 
             const expectedRange = {
               start: zeroPadValue(toHexString(BigInt("2")), 32),
