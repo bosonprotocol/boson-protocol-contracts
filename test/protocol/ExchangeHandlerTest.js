@@ -71,7 +71,7 @@ const { oneWeek, oneMonth } = require("../util/constants");
 const { FundsList } = require("../../scripts/domain/Funds");
 const { toHexString } = require("../../scripts/util/utils.js");
 const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
-const { getSelectors, FacetCutAction } = require("../../scripts/util/diamond-utils.js");
+const { FacetCutAction } = require("../../scripts/util/diamond-utils.js");
 const { encodeBytes32String } = require("ethers");
 
 /**
@@ -106,8 +106,7 @@ describe("IBosonExchangeHandler", function () {
     bundleHandler,
     groupHandler,
     pauseHandler,
-    configHandler,
-    mockMetaTransactionsHandler;
+    configHandler;
   let bosonVoucher, voucherImplementation;
   let bosonVoucherClone, bosonVoucherCloneAddress;
   let beaconProxyAddress;
@@ -201,38 +200,6 @@ describe("IBosonExchangeHandler", function () {
     await revertToSnapshot(snapshotId);
     snapshotId = await getSnapshot();
   });
-
-  async function upgradeMetaTransactionsHandlerFacet() {
-    // Upgrade the ExchangeHandlerFacet functions
-    // DiamondCutFacet
-    const cutFacetViaDiamond = await getContractAt("DiamondCutFacet", protocolDiamondAddress);
-
-    // Deploy MockMetaTransactionsHandlerFacet
-    const MockMetaTransactionsHandlerFacet = await getContractFactory("MockMetaTransactionsHandlerFacet");
-    const mockMetaTransactionsHandlerFacet = await MockMetaTransactionsHandlerFacet.deploy();
-    await mockMetaTransactionsHandlerFacet.waitForDeployment();
-
-    // Define the facet cut
-    const facetCuts = [
-      {
-        facetAddress: await mockMetaTransactionsHandlerFacet.getAddress(),
-        action: FacetCutAction.Add,
-        functionSelectors: getSelectors(mockMetaTransactionsHandlerFacet),
-      },
-    ];
-
-    // Send the DiamondCut transaction
-    const tx = await cutFacetViaDiamond.connect(deployer).diamondCut(facetCuts, ZeroAddress, "0x");
-
-    // Wait for transaction to confirm
-    const receipt = await tx.wait();
-
-    // Be certain transaction was successful
-    assert.equal(receipt.status, 1, `Diamond upgrade failed: ${tx.hash}`);
-
-    // Cast Diamond to MockMetaTransactionsHandlerFacet
-    mockMetaTransactionsHandler = await getContractAt("MockMetaTransactionsHandlerFacet", protocolDiamondAddress);
-  }
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
   context("📋 Interfaces", async function () {
@@ -2406,18 +2373,6 @@ describe("IBosonExchangeHandler", function () {
           await expect(exchangeHandler.connect(rando).cancelVoucher(exchange.id)).to.revertedWithCustomError(
             bosonErrors,
             RevertReasons.NOT_VOUCHER_HOLDER
-          );
-        });
-
-        it("getCurrentSenderAddress() returns zero address and has isMetaTransaction set to true on chain", async function () {
-          await upgradeMetaTransactionsHandlerFacet();
-
-          await mockMetaTransactionsHandler.setAsMetaTransactionAndCurrentSenderAs(ZeroAddress);
-
-          // Attempt to cancel the voucher, expecting revert
-          await expect(exchangeHandler.connect(rando).cancelVoucher(exchange.id)).to.revertedWithCustomError(
-            bosonErrors,
-            RevertReasons.INVALID_ADDRESS
           );
         });
       });

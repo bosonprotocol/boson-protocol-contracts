@@ -78,7 +78,7 @@ contract BuyerHandlerFacet is BuyerBase, IBosonBuyerHandler {
         if (!exists) revert NoSuchBuyer();
 
         // Get message sender
-        address sender = msgSender();
+        address sender = _msgSender();
 
         // Check that msg.sender is the wallet address for this buyer
         if (buyer.wallet != sender) revert NotBuyerWallet();
