@@ -63,7 +63,7 @@
     "eslint-plugin-no-only-tests": "^3.1.0",
     "ethers": "^6.15.0",
     "ethersv5": "npm:ethers@^5.7.2",
-    "glob": "^10.3.10",
+    "glob": "^11.0.3",
     "globals": "^16.3.0",
     "hardhat": "^2.25.0",
     "hardhat-contract-sizer": "^2.10.0",
