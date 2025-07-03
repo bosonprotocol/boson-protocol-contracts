@@ -4,7 +4,9 @@ pragma solidity 0.8.22;
 import "../../../domain/BosonConstants.sol";
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
-import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
+import {
+    IERC721MetadataUpgradeable
+} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
 import { IERC2981Upgradeable } from "@openzeppelin/contracts-upgradeable/interfaces/IERC2981Upgradeable.sol";
 import { IERC165Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -464,7 +466,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             }
         }
 
-        // solhint-disable-next-line custom-errors
+        // solhint-disable-next-line gas-custom-errors
         require(exists, ERC721_INVALID_TOKEN_ID); // not using Custom Errors here to match OZ 4.9.* errors
         return offer.metadataUri;
     }
@@ -493,7 +495,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
     function transferOwnership(
         address _newOwner
     ) public override(IBosonVoucher, OwnableUpgradeable) onlyRole(PROTOCOL) {
-        // solhint-disable-next-line custom-errors
+        // solhint-disable-next-line gas-custom-errors
         require(_newOwner != address(0), OWNABLE_ZERO_ADDRESS); // not using Custom Errors here to match OZ 4.9.* errors
 
         _transferOwnership(_newOwner);
@@ -548,7 +550,6 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         try IERC20(_to).balanceOf(address(this)) returns (uint256) {
             revert InteractionNotAllowed();
         } catch {}
-
         return _to.functionCallWithValue(_data, msg.value, FUNCTION_CALL_NOT_SUCCESSFUL);
     }
 
@@ -792,7 +793,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         // If token is committable, it is a pre-minted token
         bool committable = isTokenCommittable(_tokenId);
 
-        // solhint-disable-next-line custom-errors
+        // solhint-disable-next-line gas-custom-errors
         require(_exists(_tokenId) || committable, "ERC721: invalid token ID"); // not using Custom Errors here to match OZ 4.9.* errors
     }
 
