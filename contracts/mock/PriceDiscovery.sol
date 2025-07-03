@@ -42,7 +42,6 @@ contract PriceDiscoveryMock {
                 }
             }
         }
-
         // transfer exchange token
         if (_order.exchangeToken == address(0)) {
             (bool success, ) = payable(_order.seller).call{ value: _order.price }("");
@@ -82,7 +81,6 @@ contract PriceDiscoveryMock {
                 }
             }
         }
-
         // transfer exchange token
         try IERC20(_order.exchangeToken).transferFrom(_order.buyer, msg.sender, _order.price) {} catch (
             bytes memory reason
@@ -96,7 +94,6 @@ contract PriceDiscoveryMock {
                 }
             }
         }
-
         // return half of the sent value back to the caller
         payable(msg.sender).transfer(msg.value / 2);
     }

@@ -262,7 +262,6 @@ contract AuctionHouse is IAuctionHouse, ReentrancyGuard {
             _cancelAuction(auctionId);
             return;
         }
-
         if (auctions[auctionId].curator != address(0)) {
             curatorFee = tokenOwnerProfit.mul(auctions[auctionId].curatorFeePercentage).div(100);
             tokenOwnerProfit = tokenOwnerProfit.sub(curatorFee);
