@@ -3,10 +3,13 @@ pragma solidity 0.8.22;
 
 import "../../domain/BosonConstants.sol";
 import { BosonErrors } from "../../domain/BosonErrors.sol";
+import { IAccessControl } from "../../interfaces/IAccessControl.sol";
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
+import { IBosonConfigHandler } from "../../interfaces/handlers/IBosonConfigHandler.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { ClientLib } from "../libs/ClientLib.sol";
+import { Context } from "@openzeppelin/contracts/utils/Context.sol";
 
 /**
  * @title ClientBase
@@ -17,7 +20,7 @@ import { ClientLib } from "../libs/ClientLib.sol";
  * to use `BeaconClientBase` instead
  *
  */
-abstract contract ClientBase is BosonTypes, BosonErrors {
+abstract contract ClientBase is BosonTypes, BosonErrors, Context {
     /**
      * @dev Modifier that checks that the caller has a specific role.
      *
@@ -29,7 +32,7 @@ abstract contract ClientBase is BosonTypes, BosonErrors {
      * @param _role - the role to check
      */
     modifier onlyRole(bytes32 _role) {
-        if (!ClientLib.hasRole(_role)) revert AccessDenied();
+        if (!hasRole(_role)) revert AccessDenied();
         _;
     }
 
@@ -44,5 +47,23 @@ abstract contract ClientBase is BosonTypes, BosonErrors {
         ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
         (, Exchange memory exchange, ) = IBosonExchangeHandler(ps.protocolDiamond).getExchange(_exchangeId);
         (exists, offer, , , , ) = IBosonOfferHandler(ps.protocolDiamond).getOffer(exchange.offerId);
+    }
+
+    /**
+     * @notice Checks that the caller has a specific role.
+     *
+     * Reverts if caller doesn't have role.
+     *
+     * See: {AccessController.hasRole}
+     *
+     * @param _role - the role to check
+     */
+    function hasRole(bytes32 _role) internal view returns (bool) {
+        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
+        IAccessControl accessController = IAccessControl(
+            IBosonConfigHandler(ps.protocolDiamond).getAccessControllerAddress()
+        );
+
+        return accessController.hasRole(_role, _msgSender());
     }
 }

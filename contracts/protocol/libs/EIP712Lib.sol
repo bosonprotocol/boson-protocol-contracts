@@ -155,34 +155,4 @@ library EIP712Lib {
     function toTypedMessageHash(bytes32 _messageHash) internal returns (bytes32) {
         return keccak256(abi.encodePacked("\x19\x01", getDomainSeparator(), _messageHash));
     }
-
-    /**
-     * @notice Gets the current message sender address from storage.
-     *
-     * @return the the current message sender address from storage
-     */
-    function getCurrentSenderAddress() internal view returns (address) {
-        return ProtocolLib.protocolMetaTxInfo().currentSenderAddress;
-    }
-
-    /**
-     * @notice Returns the message sender address.
-     *
-     * @dev Could be msg.sender or the message sender address from storage (in case of meta transaction).
-     *
-     * @return the message sender address
-     */
-    function msgSender() internal view returns (address) {
-        bool isItAMetaTransaction = ProtocolLib.protocolMetaTxInfo().isMetaTransaction;
-
-        // Get sender from the storage if this is a meta transaction
-        if (isItAMetaTransaction) {
-            address sender = getCurrentSenderAddress();
-            if (sender == address(0)) revert BosonErrors.InvalidAddress();
-
-            return sender;
-        } else {
-            return msg.sender;
-        }
-    }
 }

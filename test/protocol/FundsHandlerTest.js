@@ -1785,7 +1785,7 @@ describe("IBosonFundsHandler", function () {
 
   // Funds library methods.
   // Cannot be invoked directly, so tests calls the methods that use them
-  context("📋 FundsLib  Methods", async function () {
+  context("📋 FundsBase  Methods", async function () {
     let orderPrice;
     beforeEach(async function () {
       // Create a valid seller

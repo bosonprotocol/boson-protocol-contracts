@@ -7,27 +7,14 @@ import { IAccessControl } from "../../interfaces/IAccessControl.sol";
 import { IClientExternalAddresses } from "../../interfaces/clients/IClientExternalAddresses.sol";
 import { IBosonConfigHandler } from "../../interfaces/handlers/IBosonConfigHandler.sol";
 import { ClientLib } from "../libs/ClientLib.sol";
+import { ClientBase } from "./ClientBase.sol";
 
 /**
  * @title ClientExternalAddressesBase
  *
  * @notice Helps minimal proxies.
  */
-contract ClientExternalAddressesBase is IClientExternalAddresses, BosonErrors {
-    /**
-     * @dev Modifier that checks that the caller has a specific role.
-     *
-     * Reverts if caller doesn't have role.
-     *
-     * See: {AccessController.hasRole}
-     *
-     * @param _role - the role to check
-     */
-    modifier onlyRole(bytes32 _role) {
-        if (!ClientLib.hasRole(_role)) revert AccessDenied();
-        _;
-    }
-
+contract ClientExternalAddressesBase is IClientExternalAddresses, BosonErrors, ClientBase {
     /**
      * @notice Instantiates the contract.
      *
@@ -80,7 +67,7 @@ contract ClientExternalAddressesBase is IClientExternalAddresses, BosonErrors {
         ps.implementation = _impl;
 
         // Notify watchers of state change
-        emit Upgraded(_impl, msg.sender);
+        emit Upgraded(_impl, _msgSender());
     }
 
     /**
