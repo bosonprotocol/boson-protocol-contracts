@@ -130,7 +130,6 @@ contract MockAuction {
                 }
             }
         }
-
         _handleOutgoingBid(auctions[auctionId].tokenOwner, tokenOwnerProfit, auctions[auctionId].auctionCurrency);
 
         delete auctions[auctionId];
