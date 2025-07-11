@@ -59,7 +59,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         uint256 _feeLimit
     ) internal {
         // get seller id, make sure it exists and store it to incoming struct
-        (bool exists, uint256 sellerId) = getSellerIdByAssistant(msgSender());
+        (bool exists, uint256 sellerId) = getSellerIdByAssistant(_msgSender());
         if (!exists) revert NotAssistant();
         _offer.sellerId = sellerId;
         // Get the next offerId and increment the counter
@@ -307,7 +307,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             disputeResolutionTerms,
             offerFees,
             _agentId,
-            msgSender()
+            _msgSender()
         );
     }
 
@@ -353,7 +353,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             getCloneAddress(protocolLookups(), offer.sellerId, offer.collectionIndex)
         );
 
-        address sender = msgSender();
+        address sender = _msgSender();
 
         // _to must be the contract address or the contract owner
         if (_to != address(bosonVoucher) && _to != sender) revert InvalidToAddress();

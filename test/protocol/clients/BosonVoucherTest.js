@@ -182,6 +182,71 @@ describe("IBosonVoucher", function () {
         initalizableClone.initializeVoucher(2, "1", await assistant.getAddress(), voucherInitValues)
       ).to.be.revertedWith(RevertReasons.INITIALIZABLE_ALREADY_INITIALIZED);
     });
+
+    it("Test context in BosonVoucherBase", async function () {
+      const MockBosonVoucherBase = await getContractFactory("MockBosonVoucherBase");
+      const mockBosonVoucherBase = await MockBosonVoucherBase.deploy();
+
+      const data = mockBosonVoucherBase.interface.encodeFunctionData("testMsgData", ["0xdeadbeef"]);
+
+      const tx = await mockBosonVoucherBase.testMsgData("0xdeadbeef");
+
+      // Verify the event
+      await expect(tx)
+        .to.emit(mockBosonVoucherBase, "IncomingData")
+        .withArgs(await deployer.getAddress(), data, 0);
+
+      // Verify the state
+      expect(await mockBosonVoucherBase.data()).to.equal(data);
+      expect(await mockBosonVoucherBase.sender()).to.equal(await deployer.getAddress());
+    });
+
+    it("Test context in BosonVoucher", async function () {
+      const MockBosonVoucher = await getContractFactory("MockBosonVoucher");
+      const mockBosonVoucher = await MockBosonVoucher.deploy(await forwarder.getAddress());
+
+      const from = await assistant.getAddress();
+      const nonce = Number(await forwarder.getNonce(from));
+
+      const types = {
+        ForwardRequest: [
+          { name: "from", type: "address" },
+          { name: "to", type: "address" },
+          { name: "nonce", type: "uint256" },
+          { name: "data", type: "bytes" },
+        ],
+      };
+
+      const data = mockBosonVoucher.interface.encodeFunctionData("testMsgData", ["0xdeadbeef"]);
+      const dataWithAddress = data + from.slice(2).toLowerCase();
+
+      const message = {
+        from,
+        to: await mockBosonVoucher.getAddress(),
+        nonce,
+        data,
+      };
+
+      const signature = await prepareDataSignature(
+        assistant,
+        types,
+        "ForwardRequest",
+        message,
+        await forwarder.getAddress(),
+        "MockForwarder",
+        "0.0.1",
+        "0Z"
+      );
+
+      const tx = await forwarder.execute(message, signature);
+
+      // Verify the event
+      await expect(tx).to.emit(mockBosonVoucher, "IncomingData").withArgs(from, data, 20);
+
+      // Verify the state
+      expect(await mockBosonVoucher.data()).to.equal(dataWithAddress);
+      expect(await mockBosonVoucher.sender()).to.equal(await forwarder.getAddress());
+    });
   });
 
   context("Tests with an actual protocol offer", async function () {

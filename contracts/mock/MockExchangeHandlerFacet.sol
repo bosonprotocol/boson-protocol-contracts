@@ -4,7 +4,6 @@ pragma solidity 0.8.22;
 import { IBosonVoucher } from "../interfaces/clients/IBosonVoucher.sol";
 import { BuyerBase } from "../protocol/bases/BuyerBase.sol";
 import { DisputeBase } from "../protocol/bases/DisputeBase.sol";
-import { FundsLib } from "../protocol/libs/FundsLib.sol";
 import "../domain/BosonConstants.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import { ExchangeHandlerFacet } from "../protocol/facets/ExchangeHandlerFacet.sol";
@@ -73,7 +72,7 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         (, offer) = fetchOffer(offerId);
 
         // Get message sender
-        address sender = msgSender();
+        address sender = _msgSender();
 
         // Is this the buyer?
         bool buyerExists;
@@ -141,7 +140,7 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         // Get seller id associated with caller
         bool sellerExists;
         uint256 sellerId;
-        (sellerExists, sellerId) = getSellerIdByAssistant(msgSender());
+        (sellerExists, sellerId) = getSellerIdByAssistant(_msgSender());
 
         // Get the offer, which will definitely exist
         Offer storage offer;
@@ -180,7 +179,7 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         finalizeExchange(exchange, ExchangeState.Canceled);
 
         // Notify watchers of state change
-        emit VoucherCanceled2(exchange.offerId, _exchangeId, msgSender());
+        emit VoucherCanceled2(exchange.offerId, _exchangeId, _msgSender());
     }
 
     /**
@@ -212,7 +211,7 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         voucher.expired = true;
 
         // Notify watchers of state change
-        emit VoucherExpired2(exchange.offerId, _exchangeId, msgSender());
+        emit VoucherExpired2(exchange.offerId, _exchangeId, _msgSender());
     }
 
     /**
@@ -240,7 +239,7 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         (, offer) = fetchOffer(offerId);
 
         // Get message sender
-        address sender = msgSender();
+        address sender = _msgSender();
 
         // Get seller id associated with caller
         bool sellerExists;
@@ -310,7 +309,7 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         }
 
         // Notify watchers of state change
-        emit VoucherRedeemed2(offerId, _exchangeId, msgSender());
+        emit VoucherRedeemed2(offerId, _exchangeId, _msgSender());
     }
 
     /**
@@ -340,7 +339,7 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         if (_targetState != ExchangeState.Completed) burnVoucher(_exchange);
 
         // Release the funds
-        FundsLib.releaseFunds(_exchange.id);
+        releaseFunds(_exchange.id);
     }
 
     /**
@@ -358,7 +357,7 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         finalizeExchange(exchange, ExchangeState.Revoked);
 
         // Notify watchers of state change
-        emit VoucherRevoked2(exchange.offerId, exchange.id, msgSender());
+        emit VoucherRevoked2(exchange.offerId, exchange.id, _msgSender());
     }
 
     /**
@@ -411,7 +410,7 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
             // Get seller account
             (, Seller storage seller, ) = fetchSeller(bundle.sellerId);
 
-            address sender = msgSender();
+            address sender = _msgSender();
             // Variable to track whether some twin transfer failed
             bool transferFailed;
 
@@ -535,7 +534,7 @@ contract MockExchangeHandlerFacetWithDefect is MockExchangeHandlerFacet {
         // finalizeExchange() is not executed.
 
         // Notify watchers of state change
-        emit VoucherCanceled2(exchange.offerId, _exchangeId, msgSender());
+        emit VoucherCanceled2(exchange.offerId, _exchangeId, _msgSender());
     }
 }
 

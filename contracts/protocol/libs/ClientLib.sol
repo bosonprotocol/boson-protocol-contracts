@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
-import { IAccessControl } from "../../interfaces/IAccessControl.sol";
-import { IBosonConfigHandler } from "../../interfaces/handlers/IBosonConfigHandler.sol";
-import { EIP712Lib } from "../libs/EIP712Lib.sol";
-
 /**
  * @title ClientLib
  *
@@ -39,22 +35,5 @@ library ClientLib {
         assembly {
             ps.slot := position
         }
-    }
-
-    /**
-     * @notice Checks that the caller has a specific role.
-     *
-     * Reverts if caller doesn't have role.
-     *
-     * See: {AccessController.hasRole}
-     *
-     * @param _role - the role to check
-     */
-    function hasRole(bytes32 _role) internal view returns (bool) {
-        ProxyStorage storage ps = proxyStorage();
-        IAccessControl accessController = IAccessControl(
-            IBosonConfigHandler(ps.protocolDiamond).getAccessControllerAddress()
-        );
-        return accessController.hasRole(_role, EIP712Lib.msgSender());
     }
 }

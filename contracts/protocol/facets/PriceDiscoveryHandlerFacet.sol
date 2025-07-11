@@ -138,7 +138,7 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
                 wNative.withdraw(actualPrice);
             }
 
-            emit FundsEncumbered(buyerId, exchangeToken, actualPrice, msgSender());
+            emit FundsEncumbered(buyerId, exchangeToken, actualPrice, _msgSender());
             // Not emitting BuyerCommitted since it's emitted in commitToOfferInternal
         }
     }

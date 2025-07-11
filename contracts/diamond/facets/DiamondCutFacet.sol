@@ -39,7 +39,7 @@ contract DiamondCutFacet is IDiamondCut {
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
 
         // Ensure the caller has the UPGRADER role
-        require(ds.accessController.hasRole(UPGRADER, EIP712Lib.msgSender()), "Caller must have UPGRADER role");
+        require(ds.accessController.hasRole(UPGRADER, msg.sender), "Caller must have UPGRADER role");
 
         // Make the cuts
         JewelerLib.diamondCut(_facetCuts, _init, _calldata);

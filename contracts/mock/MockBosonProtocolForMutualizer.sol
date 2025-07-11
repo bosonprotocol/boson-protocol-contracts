@@ -4,7 +4,6 @@ pragma solidity 0.8.22;
 import { BosonTypes } from "../domain/BosonTypes.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { FundsLib } from "../protocol/libs/FundsLib.sol";
 import { IDRFeeMutualizer } from "../interfaces/IDRFeeMutualizer.sol";
 
 /**

@@ -8,7 +8,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuar
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
 import { ERC2771Context } from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
-import { FundsLib } from "../libs/FundsLib.sol";
+import { FundsBase } from "../bases/FundsBase.sol";
 import { IBosonFundsHandler } from "../../interfaces/handlers/IBosonFundsHandler.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
@@ -20,7 +20,7 @@ import { BosonErrors } from "../../domain/BosonErrors.sol";
  * @dev This contract provides dispute resolver fee mutualization with configurable agreements per seller + exchange token + dispute resolver.
  *      Each seller can have agreements for different exchange tokens and dispute resolvers. Universal agreements can be created by setting disputeResolverId=0.
  */
-contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, Ownable {
+contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, Ownable, FundsBase {
     using SafeERC20 for IERC20;
 
     // Custom errors
@@ -195,7 +195,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
 
         feeInfoByExchange[_exchangeId] = FeeInfo({ token: _tokenAddress, amount: _feeAmount });
 
-        FundsLib.transferFundsOut(_tokenAddress, payable(BOSON_PROTOCOL), _feeAmount);
+        transferFundsOut(_tokenAddress, payable(BOSON_PROTOCOL), _feeAmount);
 
         emit DRFeeProvided(_exchangeId, _sellerId, _feeAmount);
         return true;
@@ -224,7 +224,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
 
         // Fee is being returned, add back to pool (if any)
         if (_returnedFeeAmount > 0) {
-            FundsLib.validateIncomingPayment(feeInfo.token, _returnedFeeAmount);
+            validateIncomingPayment(feeInfo.token, _returnedFeeAmount);
             poolBalances[feeInfo.token] += _returnedFeeAmount;
         }
 
@@ -257,7 +257,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
             if (msg.value != _amount) revert BosonErrors.InsufficientValueReceived();
         } else {
             if (msg.value != 0) revert BosonErrors.NativeNotAllowed();
-            FundsLib.transferFundsIn(_tokenAddress, msgSender, _amount);
+            transferFundsIn(_tokenAddress, msgSender, _amount);
         }
 
         poolBalances[_tokenAddress] += _amount;
@@ -287,7 +287,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
             poolBalances[_tokenAddress] -= _amount;
         }
 
-        FundsLib.transferFundsOut(_tokenAddress, _to, _amount);
+        transferFundsOut(_tokenAddress, _to, _amount);
 
         emit FundsWithdrawn(_to, _tokenAddress, _amount);
     }
@@ -465,7 +465,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
             if (msg.value != agreement.premium) revert BosonErrors.InsufficientValueReceived();
         } else {
             if (msg.value != 0) revert BosonErrors.NativeNotAllowed();
-            FundsLib.transferFundsIn(agreement.tokenAddress, _msgSender(), agreement.premium);
+            transferFundsIn(agreement.tokenAddress, _msgSender(), agreement.premium);
         }
         poolBalances[agreement.tokenAddress] += agreement.premium;
         agreement.startTime = currentTime;

@@ -6,7 +6,6 @@ import { IBosonFundsHandler } from "../../interfaces/handlers/IBosonFundsHandler
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
-import { FundsLib } from "../libs/FundsLib.sol";
 import { IERC20Metadata } from "../../interfaces/IERC20Metadata.sol";
 
 /**
@@ -63,13 +62,13 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         } else {
             // Transfer tokens from the caller
             if (_tokenAddress == address(0)) revert InvalidAddress();
-            FundsLib.transferFundsIn(_tokenAddress, _amount);
+            transferFundsIn(_tokenAddress, _amount);
         }
 
         // Increase available funds
-        FundsLib.increaseAvailableFunds(_sellerId, _tokenAddress, _amount);
+        increaseAvailableFunds(_sellerId, _tokenAddress, _amount);
 
-        emit FundsDeposited(_sellerId, msgSender(), _tokenAddress, _amount);
+        emit FundsDeposited(_sellerId, _msgSender(), _tokenAddress, _amount);
     }
 
     /**
@@ -275,7 +274,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             for (uint256 i = 0; i < tokenList.length; ) {
                 // Get available funds from storage
                 uint256 availableFunds = entityFunds[tokenList[i]];
-                FundsLib.transferFundsOut(_entityId, tokenList[i], _destinationAddress, availableFunds);
+                transferFundsOut(_entityId, tokenList[i], _destinationAddress, availableFunds);
 
                 unchecked {
                     i++;
@@ -287,7 +286,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
                 if (_tokenAmounts[i] == 0) revert NothingToWithdraw();
 
                 // Transfer funds
-                FundsLib.transferFundsOut(_entityId, _tokenList[i], _destinationAddress, _tokenAmounts[i]);
+                transferFundsOut(_entityId, _tokenList[i], _destinationAddress, _tokenAmounts[i]);
 
                 unchecked {
                     i++;
@@ -306,7 +305,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * @return destinationAddress - address where the funds are withdrawn
      */
     function getDestinationAddress(uint256 _entityId) internal view returns (address payable destinationAddress) {
-        address payable sender = payable(msgSender());
+        address payable sender = payable(_msgSender());
 
         // First check if the caller is a buyer
         (bool exists, uint256 callerId) = getBuyerIdByWallet(sender);

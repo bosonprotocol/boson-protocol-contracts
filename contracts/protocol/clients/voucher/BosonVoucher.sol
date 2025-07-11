@@ -4,12 +4,15 @@ pragma solidity 0.8.22;
 import "../../../domain/BosonConstants.sol";
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
-import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
+import {
+    IERC721MetadataUpgradeable
+} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
 import { IERC2981Upgradeable } from "@openzeppelin/contracts-upgradeable/interfaces/IERC2981Upgradeable.sol";
 import { IERC165Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import { ERC2771ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/metatx/ERC2771ContextUpgradeable.sol";
+import { Context } from "@openzeppelin/contracts/utils/Context.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -463,7 +466,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
             }
         }
 
-        // solhint-disable-next-line custom-errors
+        // solhint-disable-next-line gas-custom-errors
         require(exists, ERC721_INVALID_TOKEN_ID); // not using Custom Errors here to match OZ 4.9.* errors
         return offer.metadataUri;
     }
@@ -492,7 +495,7 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
     function transferOwnership(
         address _newOwner
     ) public override(IBosonVoucher, OwnableUpgradeable) onlyRole(PROTOCOL) {
-        // solhint-disable-next-line custom-errors
+        // solhint-disable-next-line gas-custom-errors
         require(_newOwner != address(0), OWNABLE_ZERO_ADDRESS); // not using Custom Errors here to match OZ 4.9.* errors
 
         _transferOwnership(_newOwner);
@@ -547,7 +550,6 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         try IERC20(_to).balanceOf(address(this)) returns (uint256) {
             revert InteractionNotAllowed();
         } catch {}
-
         return _to.functionCallWithValue(_data, msg.value, FUNCTION_CALL_NOT_SUCCESSFUL);
     }
 
@@ -791,8 +793,29 @@ contract BosonVoucherBase is IBosonVoucher, BeaconClientBase, OwnableUpgradeable
         // If token is committable, it is a pre-minted token
         bool committable = isTokenCommittable(_tokenId);
 
-        // solhint-disable-next-line custom-errors
+        // solhint-disable-next-line gas-custom-errors
         require(_exists(_tokenId) || committable, "ERC721: invalid token ID"); // not using Custom Errors here to match OZ 4.9.* errors
+    }
+
+    /**
+     * @notice This function returns the calldata of the current message.
+     */
+    function _msgData() internal view virtual override(Context, ContextUpgradeable) returns (bytes calldata) {
+        return ContextUpgradeable._msgData();
+    }
+
+    /**
+     * @notice This function returns the sender of the current message.
+     */
+    function _msgSender() internal view virtual override(Context, ContextUpgradeable) returns (address sender) {
+        return ContextUpgradeable._msgSender();
+    }
+
+    /**
+     * @notice This function specifies the context as being a single address (20 bytes).
+     */
+    function _contextSuffixLength() internal view virtual override(Context, ContextUpgradeable) returns (uint256) {
+        return ContextUpgradeable._contextSuffixLength();
     }
 }
 
@@ -824,7 +847,7 @@ contract BosonVoucher is BosonVoucherBase, ERC2771ContextUpgradeable {
      * @notice This function returns the calldata of the current message.
      * @dev It is an override of the ERC2771ContextUpgradeable._msgData() function which allows meta transactions.
      */
-    function _msgData() internal view override(ContextUpgradeable, ERC2771ContextUpgradeable) returns (bytes calldata) {
+    function _msgData() internal view override(BosonVoucherBase, ERC2771ContextUpgradeable) returns (bytes calldata) {
         return ERC2771ContextUpgradeable._msgData();
     }
 
@@ -832,12 +855,7 @@ contract BosonVoucher is BosonVoucherBase, ERC2771ContextUpgradeable {
      * @notice This function returns the sender of the current message.
      * @dev It is an override of the ERC2771ContextUpgradeable._msgSender() function which allows meta transactions.
      */
-    function _msgSender()
-        internal
-        view
-        override(ContextUpgradeable, ERC2771ContextUpgradeable)
-        returns (address sender)
-    {
+    function _msgSender() internal view override(BosonVoucherBase, ERC2771ContextUpgradeable) returns (address sender) {
         return ERC2771ContextUpgradeable._msgSender();
     }
 
@@ -848,7 +866,7 @@ contract BosonVoucher is BosonVoucherBase, ERC2771ContextUpgradeable {
     function _contextSuffixLength()
         internal
         view
-        override(ContextUpgradeable, ERC2771ContextUpgradeable)
+        override(BosonVoucherBase, ERC2771ContextUpgradeable)
         returns (uint256)
     {
         return ERC2771ContextUpgradeable._contextSuffixLength();

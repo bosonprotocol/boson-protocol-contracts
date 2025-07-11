@@ -7,7 +7,6 @@ import { IWrappedNative } from "../../interfaces/IWrappedNative.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { IBosonPriceDiscovery } from "../../interfaces/clients/IBosonPriceDiscovery.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
-import { FundsLib } from "../libs/FundsLib.sol";
 
 /**
  * @title PriceDiscoveryBase
@@ -126,14 +125,14 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         // Transfer buyers funds to protocol and forward them to price discovery contract
         if (_exchangeToken == address(0)) _exchangeToken = address(wNative);
-        FundsLib.validateIncomingPayment(_exchangeToken, _priceDiscovery.price);
-        FundsLib.transferFundsOut(_exchangeToken, payable(bosonPriceDiscovery), _priceDiscovery.price);
+        validateIncomingPayment(_exchangeToken, _priceDiscovery.price);
+        transferFundsOut(_exchangeToken, payable(bosonPriceDiscovery), _priceDiscovery.price);
 
         actualPrice = IBosonPriceDiscovery(bosonPriceDiscovery).fulfilAskOrder(
             _exchangeToken,
             _priceDiscovery,
             _bosonVoucher,
-            payable(msgSender())
+            payable(_msgSender())
         );
 
         _tokenId = getAndVerifyTokenId(_tokenId);
@@ -149,7 +148,7 @@ contract PriceDiscoveryBase is ProtocolBase {
 
         // Price discovery should send funds to the seller.
         // The seller must approve the protocol to transfer the funds before the order is fulfilled.
-        FundsLib.transferFundsIn(_exchangeToken, _seller, actualPrice);
+        transferFundsIn(_exchangeToken, _seller, actualPrice);
     }
 
     /**
@@ -175,7 +174,7 @@ contract PriceDiscoveryBase is ProtocolBase {
     ) internal returns (uint256 actualPrice) {
         if (_tokenId == 0) revert TokenIdMandatory();
 
-        address sender = msgSender();
+        address sender = _msgSender();
         if (_seller != sender) revert NotVoucherHolder();
 
         // Cache price discovery contract address
