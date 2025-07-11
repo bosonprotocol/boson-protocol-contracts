@@ -10,7 +10,7 @@ import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x91b54fdc
+ * The ERC-165 identifier for this interface is: 0x44f68f71
  */
 interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
     /**
@@ -48,7 +48,7 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
-     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
+     * @param _drParameters - the id of chosen dispute resolver (can be 0) and mutualizer address (0 for self-mutualization)
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
      */
@@ -56,7 +56,7 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates,
         BosonTypes.OfferDurations calldata _offerDurations,
-        uint256 _disputeResolverId,
+        BosonTypes.DRParameters calldata _drParameters,
         uint256 _agentId,
         uint256 _feeLimit
     ) external;
@@ -68,7 +68,7 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      *
      * Reverts if:
      * - The offers region of protocol is paused
-     * - Number of elements in offers, offerDates, offerDurations, disputeResolverIds, agentIds and feeLimits do not match
+     * - Number of elements in offers, offerDates, offerDurations, disputeResolverIds, agentIds, feeLimits and mutualizerAddresses do not match
      * - For any offer:
      *   - Caller is not an assistant
      *   - Valid from date is greater than valid until date
@@ -97,7 +97,7 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
      * @param _offerDates - the array of fully populated offer dates structs
      * @param _offerDurations - the array of fully populated offer durations structs
-     * @param _disputeResolverIds - the array of ids of chosen dispute resolvers (can be 0)
+     * @param _drParameters - the array of ids of chosen dispute resolvers (can be 0) and mutualizer address (0 for self-mutualization)
      * @param _agentIds - the array of ids of agents
      * @param _feeLimits - the array of maximum fees that seller is willing to pay per exchange (for static offers)
      */
@@ -105,7 +105,7 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
         BosonTypes.Offer[] calldata _offers,
         BosonTypes.OfferDates[] calldata _offerDates,
         BosonTypes.OfferDurations[] calldata _offerDurations,
-        uint256[] calldata _disputeResolverIds,
+        BosonTypes.DRParameters[] calldata _drParameters,
         uint256[] calldata _agentIds,
         uint256[] calldata _feeLimits
     ) external;
@@ -236,6 +236,22 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
         uint256[] calldata _offerIds,
         BosonTypes.RoyaltyInfo calldata _royaltyInfo
     ) external;
+
+    /**
+     * @notice Updates the mutualizer address for an offer.
+     *
+     * Emits an OfferMutualizerUpdated event if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - Offer does not exist
+     * - Caller is not the assistant of the offer
+     * - Offer has already been voided
+     *
+     * @param _offerId - the id of the offer to update
+     * @param _newMutualizer - the new mutualizer address (can be zero for self-mutualization)
+     */
+    function updateOfferMutualizer(uint256 _offerId, address _newMutualizer) external;
 
     /**
      * @notice Gets the details about a given offer.

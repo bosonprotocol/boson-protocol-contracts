@@ -91,7 +91,7 @@ describe("IBosonFundsHandler", function () {
     expectedRoyaltyRecipientsAvailableFunds;
   let tokenListSeller, tokenListBuyer, tokenAmountsSeller, tokenAmountsBuyer, tokenList, tokenAmounts;
   let tx, txReceipt, txCost, event;
-  let disputeResolverFees, disputeResolver, disputeResolverId;
+  let disputeResolverFees, disputeResolver, drParams;
   let buyerPercentBasisPoints;
   let resolutionType, customSignatureType, message, signature;
   let disputedDate, escalatedDate, timeout;
@@ -115,6 +115,7 @@ describe("IBosonFundsHandler", function () {
   let offerFeeLimit;
   let bosonErrors;
   let bpd;
+  let drFeeMutualizer;
 
   before(async function () {
     accountId.next(true);
@@ -201,6 +202,11 @@ describe("IBosonFundsHandler", function () {
     priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
     await priceDiscoveryContract.waitForDeployment();
 
+    // Deploy DRFeeMutualizer
+    const DRFeeMutualizerFactory = await ethers.getContractFactory("DRFeeMutualizer");
+    drFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolDiamondAddress, ZeroAddress);
+    await drFeeMutualizer.waitForDeployment();
+
     // Get the beacon proxy address
     beaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
 
@@ -253,6 +259,16 @@ describe("IBosonFundsHandler", function () {
 
       // approve protocol to transfer the tokens
       await mockToken.connect(assistant).approve(protocolDiamondAddress, "1000000");
+
+      // top up drFeeMutualizer with non-native token
+      await mockToken.mint(deployer.address, "1000000000000000000");
+      await mockToken.connect(deployer).approve(await drFeeMutualizer.getAddress(), "1000000000000000000");
+      await drFeeMutualizer.connect(deployer).deposit(await mockToken.getAddress(), "1000000000000000000");
+
+      // top up drFeeMutualizer with native token
+      await drFeeMutualizer
+        .connect(deployer)
+        .deposit(ZeroAddress, "1000000000000000000", { value: "1000000000000000000" });
 
       // set the deposit amount
       depositAmount = 100n;
@@ -459,6 +475,7 @@ describe("IBosonFundsHandler", function () {
       beforeEach(async function () {
         // Initial ids for all the things
         exchangeId = "1";
+        const drFeeAmount = parseUnits("0.001", "ether");
 
         // Create a valid dispute resolver
         disputeResolver = mockDisputeResolver(
@@ -472,8 +489,8 @@ describe("IBosonFundsHandler", function () {
 
         //Create DisputeResolverFee array so offer creation will succeed
         disputeResolverFees = [
-          new DisputeResolverFee(ZeroAddress, "Native", "0"),
-          new DisputeResolverFee(await mockToken.getAddress(), "mockToken", "0"),
+          new DisputeResolverFee(ZeroAddress, "Native", drFeeAmount.toString()), // 0.001 ETH in wei
+          new DisputeResolverFee(await mockToken.getAddress(), "mockToken", drFeeAmount.toString()), // 0.001 tokens
         ];
 
         // Make empty seller list, so every seller is allowed
@@ -485,7 +502,7 @@ describe("IBosonFundsHandler", function () {
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
         // Mock offer
-        const { offer, offerDates, offerDurations, disputeResolverId, offerFees } = await mockOffer();
+        const { offer, offerDates, offerDurations, drParams, offerFees } = await mockOffer();
         offer.quantityAvailable = "2";
         offer.id = "0";
         offerNative = offer;
@@ -493,7 +510,7 @@ describe("IBosonFundsHandler", function () {
         offerToken = offer.clone();
         offerToken.id = "0";
         offerToken.exchangeToken = await mockToken.getAddress();
-
+        drParams.mutualizerAddress = await drFeeMutualizer.getAddress();
         // Check if domains are valid
         expect(offerNative.isValid()).is.true;
         expect(offerToken.isValid()).is.true;
@@ -504,17 +521,62 @@ describe("IBosonFundsHandler", function () {
         voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
 
         // Create both offers
-
         offerNative.id = await offerHandler
           .connect(assistant)
-          .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+          .createOffer(offerNative, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
             getOfferId: true,
           });
         offerToken.id = await offerHandler
           .connect(assistant)
-          .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+          .createOffer(offerToken, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
             getOfferId: true,
           });
+
+        // Create DR fee mutualizer agreement for the seller for the two offers
+        const maxAmountPerTx = parseUnits("0.01", "ether"); // 0.01 ETH max per transaction
+        const maxAmountTotal = parseUnits("0.1", "ether"); // 0.1 ETH total max
+        const timePeriod = 30 * 24 * 60 * 60; // 30 days
+        const premium = parseUnits("0.005", "ether"); // 0.005 ETH premium
+        const refundOnCancel = true;
+        const tokenAddress = await mockToken.getAddress();
+
+        // Create agreement for non-native currency offer
+        const nonNativeTokenAgreementId = 1;
+        await drFeeMutualizer
+          .connect(deployer)
+          .newAgreement(
+            seller.id,
+            tokenAddress,
+            disputeResolver.id,
+            maxAmountPerTx.toString(),
+            maxAmountTotal.toString(),
+            timePeriod.toString(),
+            premium.toString(),
+            refundOnCancel
+          );
+
+        // Create agreement for native currency offer
+        const nativeTokenAgreementId = 2;
+        await drFeeMutualizer
+          .connect(deployer)
+          .newAgreement(
+            seller.id,
+            ZeroAddress,
+            disputeResolver.id,
+            maxAmountPerTx.toString(),
+            maxAmountTotal.toString(),
+            timePeriod.toString(),
+            premium.toString(),
+            refundOnCancel
+          );
+
+        // pay premium for the non-native token offer agreement
+        await mockToken.mint(deployer.address, premium);
+        await mockToken.connect(deployer).approve(await drFeeMutualizer.getAddress(), premium);
+        await drFeeMutualizer.connect(deployer).payPremium(nonNativeTokenAgreementId, seller.id);
+
+        // pay premium for the native token offer agreement
+        await drFeeMutualizer.connect(deployer).payPremium(nativeTokenAgreementId, seller.id, { value: premium });
 
         // Set used variables
         price = offerToken.price;
@@ -555,7 +617,7 @@ describe("IBosonFundsHandler", function () {
       });
 
       context("👉 withdrawFunds()", async function () {
-        context("singe exchange", async function () {
+        context("single exchange", async function () {
           beforeEach(async function () {
             // cancel the voucher, so both seller and buyer have something to withdraw
             await exchangeHandler.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
@@ -785,7 +847,7 @@ describe("IBosonFundsHandler", function () {
               await accountHandler.connect(rando).createAgent(agent);
 
               // Mock offer
-              const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+              const { offer, offerDates, offerDurations, drParams } = await mockOffer();
               agentOffer = offer.clone();
               agentOffer.id = "0";
               exchangeId = "3";
@@ -794,7 +856,7 @@ describe("IBosonFundsHandler", function () {
               // Create offer with agent
               agentOffer.id = await offerHandler
                 .connect(assistant)
-                .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+                .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                   getOfferId: true,
                 });
 
@@ -1855,24 +1917,25 @@ describe("IBosonFundsHandler", function () {
       offerDurations = mo.offerDurations;
       expect(offerDurations.isValid()).is.true;
 
-      disputeResolverId = mo.disputeResolverId;
+      drParams = mo.drParams;
+      drParams.mutualizer = await drFeeMutualizer.getAddress();
 
       agentId = "0"; // agent id is optional while creating an offer
       offerFeeLimit = MaxUint256;
       // Create both offers
       offerNative.id = await offerHandler
         .connect(assistant)
-        .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+        .createOffer(offerNative, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
           getOfferId: true,
         });
       offerToken.id = await offerHandler
         .connect(assistant)
-        .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+        .createOffer(offerToken, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
           getOfferId: true,
         });
       offerPriceDiscovery.id = await offerHandler
         .connect(assistant)
-        .createOffer(offerPriceDiscovery, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+        .createOffer(offerPriceDiscovery, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
           getOfferId: true,
         });
       expect(offerNative.isValid()).is.true;
@@ -2282,7 +2345,7 @@ describe("IBosonFundsHandler", function () {
             ]);
           offerToken.id = await offerHandler
             .connect(assistant)
-            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+            .createOffer(offerToken, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
               getOfferId: true,
             });
 
@@ -2305,7 +2368,7 @@ describe("IBosonFundsHandler", function () {
 
           offerToken.id = await offerHandler
             .connect(assistant)
-            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+            .createOffer(offerToken, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
               getOfferId: true,
             });
 
@@ -2338,7 +2401,7 @@ describe("IBosonFundsHandler", function () {
 
           offerToken.id = await offerHandler
             .connect(assistant)
-            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+            .createOffer(offerToken, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
               getOfferId: true,
             });
 
@@ -2352,7 +2415,7 @@ describe("IBosonFundsHandler", function () {
 
           offerNative.id = await offerHandler
             .connect(assistant)
-            .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+            .createOffer(offerNative, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
               getOfferId: true,
             });
 
@@ -2410,7 +2473,7 @@ describe("IBosonFundsHandler", function () {
           DRFee = parseUnits("0", "ether").toString();
           await accountHandler
             .connect(adminDR)
-            .addFeesToDisputeResolver(disputeResolverId, [
+            .addFeesToDisputeResolver(drParams.disputeResolverId, [
               new DisputeResolverFee(await Foreign20WithFee.getAddress(), "Foreign20WithFee", DRFee),
             ]);
 
@@ -2422,7 +2485,7 @@ describe("IBosonFundsHandler", function () {
           // Create a new offer
           offerToken.id = await offerHandler
             .connect(assistant)
-            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit, {
+            .createOffer(offerToken, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
               getOfferId: true,
             });
 
@@ -2558,7 +2621,7 @@ describe("IBosonFundsHandler", function () {
             // Create Agent offer
             agentOffer.id = await offerHandler
               .connect(assistant)
-              .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+              .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                 getOfferId: true,
               });
 
@@ -2752,7 +2815,7 @@ describe("IBosonFundsHandler", function () {
             // Create Agent offer
             agentOffer.id = await offerHandler
               .connect(assistant)
-              .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+              .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                 getOfferId: true,
               });
 
@@ -2935,7 +2998,7 @@ describe("IBosonFundsHandler", function () {
             // Create Agent offer
             agentOffer.id = await offerHandler
               .connect(assistant)
-              .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+              .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                 getOfferId: true,
               });
 
@@ -3146,7 +3209,7 @@ describe("IBosonFundsHandler", function () {
               exchangeId = "2";
               agentOffer.id = await offerHandler
                 .connect(assistant)
-                .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+                .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                   getOfferId: true,
                 });
               await exchangeHandler
@@ -3321,7 +3384,7 @@ describe("IBosonFundsHandler", function () {
               // Create Agent offer
               agentOffer.id = await offerHandler
                 .connect(assistant)
-                .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+                .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                   getOfferId: true,
                 });
 
@@ -3544,7 +3607,7 @@ describe("IBosonFundsHandler", function () {
               // Create Agent offer
               agentOffer.id = await offerHandler
                 .connect(assistant)
-                .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+                .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                   getOfferId: true,
                 });
 
@@ -3772,7 +3835,7 @@ describe("IBosonFundsHandler", function () {
               exchangeId = "2";
               agentOffer.id = await offerHandler
                 .connect(assistant)
-                .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+                .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                   getOfferId: true,
                 });
 
@@ -3962,7 +4025,7 @@ describe("IBosonFundsHandler", function () {
               // Create Agent offer
               agentOffer.id = await offerHandler
                 .connect(assistant)
-                .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+                .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                   getOfferId: true,
                 });
 
@@ -4174,7 +4237,7 @@ describe("IBosonFundsHandler", function () {
               // Create Agent offer
               agentOffer.id = await offerHandler
                 .connect(assistant)
-                .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+                .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                   getOfferId: true,
                 });
 
@@ -4362,7 +4425,7 @@ describe("IBosonFundsHandler", function () {
                 // Create Agent offer
                 agentOffer.id = await offerHandler
                   .connect(assistant)
-                  .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+                  .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                     getOfferId: true,
                   });
 
@@ -4559,7 +4622,7 @@ describe("IBosonFundsHandler", function () {
                 // Create Agent offer
                 agentOffer.id = await offerHandler
                   .connect(assistant)
-                  .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+                  .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                     getOfferId: true,
                   });
 
@@ -4737,7 +4800,7 @@ describe("IBosonFundsHandler", function () {
             // Create Agent Offer before setting new protocol fee as 3%
             agentOffer.id = await offerHandler
               .connect(assistant)
-              .createOffer(agentOffer, offerDates, offerDurations, disputeResolverId, agent.id, offerFeeLimit, {
+              .createOffer(agentOffer, offerDates, offerDurations, drParams, agent.id, offerFeeLimit, {
                 getOfferId: true,
               });
 
@@ -4949,7 +5012,7 @@ describe("IBosonFundsHandler", function () {
 
                 offer.id = await offerHandler
                   .connect(assistant)
-                  .createOffer(offer, offerDates, offerDurations, disputeResolverId, 0, offerFeeLimit, {
+                  .createOffer(offer, offerDates, offerDurations, drParams, 0, offerFeeLimit, {
                     getOfferId: true,
                   });
 
@@ -5710,7 +5773,7 @@ describe("IBosonFundsHandler", function () {
 
               offer.id = await offerHandler
                 .connect(assistant)
-                .createOffer(offer, offerDates, offerDurations, disputeResolverId, 0, offerFeeLimit, {
+                .createOffer(offer, offerDates, offerDurations, drParams, 0, offerFeeLimit, {
                   getOfferId: true,
                 });
 

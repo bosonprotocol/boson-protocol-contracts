@@ -30,7 +30,7 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
   let offerDates, offerDurations;
   let buyerEscalationDepositPercentage;
   let exchangeId;
-  let disputeResolver, disputeResolverId;
+  let disputeResolver, drParams;
   let buyerPercentBasisPoints;
   let buyerEscalationDepositNative;
   let emptyAuthToken;
@@ -132,7 +132,7 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       buyerEscalationDepositNative = applyPercentage(DRFeeNative, buyerEscalationDepositPercentage);
 
       // Mock offer
-      ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+      ({ offer, offerDates, offerDurations, drParams } = await mockOffer());
       offer.quantityAvailable = "5";
 
       // Check if domains are valid
@@ -141,10 +141,10 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       expect(offerDurations.isValid()).is.true;
 
       // Create the offer
-      disputeResolverId = disputeResolver.id;
+      drParams.disputeResolverId = disputeResolver.id;
       await offerHandler
         .connect(assistant)
-        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+        .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
 
       // Set used variables
       const price = offer.price;
@@ -201,10 +201,10 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
         exchangeId = 2;
 
         await expect(
-          accountHandler.connect(adminDR).removeSellersFromAllowList(disputeResolverId, allowedSellersToRemove)
+          accountHandler.connect(adminDR).removeSellersFromAllowList(drParams.disputeResolverId, allowedSellersToRemove)
         )
           .to.emit(accountHandler, "AllowedSellersRemoved")
-          .withArgs(disputeResolverId, allowedSellersToRemove, await adminDR.getAddress());
+          .withArgs(drParams.disputeResolverId, allowedSellersToRemove, await adminDR.getAddress());
 
         // Decide the dispute
         await expect(disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints))
@@ -216,10 +216,10 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
         exchangeId = 3;
 
         await expect(
-          accountHandler.connect(adminDR).removeSellersFromAllowList(disputeResolverId, allowedSellersToRemove)
+          accountHandler.connect(adminDR).removeSellersFromAllowList(drParams.disputeResolverId, allowedSellersToRemove)
         )
           .to.emit(accountHandler, "AllowedSellersRemoved")
-          .withArgs(disputeResolverId, allowedSellersToRemove, await adminDR.getAddress());
+          .withArgs(drParams.disputeResolverId, allowedSellersToRemove, await adminDR.getAddress());
 
         // Decide the dispute
         await expect(disputeHandler.connect(assistantDR).decideDispute(exchangeId, buyerPercentBasisPoints))
@@ -251,10 +251,10 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
         exchangeId = 2;
 
         await expect(
-          accountHandler.connect(adminDR).removeSellersFromAllowList(disputeResolverId, allowedSellersToRemove)
+          accountHandler.connect(adminDR).removeSellersFromAllowList(drParams.disputeResolverId, allowedSellersToRemove)
         )
           .to.emit(accountHandler, "AllowedSellersRemoved")
-          .withArgs(disputeResolverId, allowedSellersToRemove, await adminDR.getAddress());
+          .withArgs(drParams.disputeResolverId, allowedSellersToRemove, await adminDR.getAddress());
 
         // Refuse the escalated dispute, testing for the event
         await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId))
@@ -266,10 +266,10 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
         exchangeId = 3;
 
         await expect(
-          accountHandler.connect(adminDR).removeSellersFromAllowList(disputeResolverId, allowedSellersToRemove)
+          accountHandler.connect(adminDR).removeSellersFromAllowList(drParams.disputeResolverId, allowedSellersToRemove)
         )
           .to.emit(accountHandler, "AllowedSellersRemoved")
-          .withArgs(disputeResolverId, allowedSellersToRemove, await adminDR.getAddress());
+          .withArgs(drParams.disputeResolverId, allowedSellersToRemove, await adminDR.getAddress());
 
         // Refuse the escalated dispute, testing for the event
         await expect(disputeHandler.connect(assistantDR).refuseEscalatedDispute(exchangeId))

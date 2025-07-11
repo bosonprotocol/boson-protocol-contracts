@@ -460,6 +460,58 @@ describe("DisputeResolverHandler", function () {
         );
         expect(valid).is.true;
       });
+      it("Should allow creation with non-zero fee amounts", async function () {
+        const disputeResolverFeesWithNonZeroAmount = [
+          new DisputeResolverFee(await other1.getAddress(), "MockToken1", "100"),
+          new DisputeResolverFee(await other2.getAddress(), "MockToken2", "250"),
+          new DisputeResolverFee(await other3.getAddress(), "MockToken3", "500"),
+        ];
+
+        const disputeResolverFeeListWithNonZeroAmount = new DisputeResolverFeeList(
+          disputeResolverFeesWithNonZeroAmount
+        );
+
+        // Create a dispute resolver with non-zero fee amounts
+        const tx = await accountHandler
+          .connect(admin)
+          .createDisputeResolver(disputeResolver, disputeResolverFeesWithNonZeroAmount, sellerAllowList);
+
+        const valid = await isValidDisputeResolverEvent(
+          tx,
+          "DisputeResolverCreated",
+          expectedDisputeResolver.id,
+          expectedDisputeResolverStruct,
+          disputeResolverFeeListWithNonZeroAmount,
+          2,
+          sellerAllowList,
+          await admin.getAddress()
+        );
+        expect(valid).is.true;
+
+        // Get the dispute resolver data as structs
+        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
+          .connect(rando)
+          .getDisputeResolver(disputeResolver.id);
+
+        // Parse into entity
+        let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
+        let returnedDisputeResolverFeeList = DisputeResolverFeeList.fromStruct(disputeResolverFeeListStruct);
+        expect(returnedDisputeResolver.isValid()).is.true;
+        expect(returnedDisputeResolverFeeList.isValid()).is.true;
+
+        // Returned values should match the expectedDisputeResolver
+        for ([key, value] of Object.entries(expectedDisputeResolver)) {
+          expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
+        }
+
+        assert.equal(
+          returnedDisputeResolverFeeList.toString(),
+          disputeResolverFeeListWithNonZeroAmount.toString(),
+          "Dispute Resolver Fee List is incorrect"
+        );
+
+        expect(returnedSellerAllowList.toString()).to.eql(sellerAllowList.toString(), "Allowed list wrong");
+      });
 
       context("💔 Revert Reasons", async function () {
         it("The dispute resolvers region of protocol is paused", async function () {
@@ -605,15 +657,6 @@ describe("DisputeResolverHandler", function () {
           await expect(
             accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.MUST_BE_ACTIVE);
-        });
-
-        it("Fee amount is not 0", async function () {
-          disputeResolverFees[0].feeAmount = "200";
-
-          // Attempt to Create a DR, expecting revert
-          await expect(
-            accountHandler.connect(admin).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_AMOUNT_NOT_YET_SUPPORTED);
         });
       });
     });
@@ -1210,6 +1253,50 @@ describe("DisputeResolverHandler", function () {
             await other1.getAddress()
           );
       });
+      it("Should allow non-zero fee amounts", async function () {
+        const disputeResolverFeesWithNonZeroAmount = [
+          new DisputeResolverFee(await other4.getAddress(), "MockToken4", "200"),
+          new DisputeResolverFee(await other5.getAddress(), "MockToken5", "500"),
+        ];
+
+        // Add fees to dispute resolver with non-zero amounts
+        await accountHandler
+          .connect(admin)
+          .addFeesToDisputeResolver(disputeResolver.id, disputeResolverFeesWithNonZeroAmount);
+
+        // Get the dispute resolver data as structs
+        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
+          .connect(rando)
+          .getDisputeResolver(disputeResolver.id);
+
+        // Parse into entity
+        let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
+        let returnedDisputeResolverFeeList = DisputeResolverFeeList.fromStruct(disputeResolverFeeListStruct);
+        expect(returnedDisputeResolver.isValid()).is.true;
+        expect(returnedDisputeResolverFeeList.isValid()).is.true;
+
+        // Returned values should match expectedDisputeResolver
+        for ([key, value] of Object.entries(expectedDisputeResolver)) {
+          expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Verify that the non-zero fee amounts are stored correctly
+        const expectedDisputeResolverFees = [
+          new DisputeResolverFee(await other1.getAddress(), "MockToken1", "0"),
+          new DisputeResolverFee(await other2.getAddress(), "MockToken2", "0"),
+          new DisputeResolverFee(await other3.getAddress(), "MockToken3", "0"),
+          new DisputeResolverFee(await other4.getAddress(), "MockToken4", "200"),
+          new DisputeResolverFee(await other5.getAddress(), "MockToken5", "500"),
+        ];
+        const expectedDisputeResolverFeeList = new DisputeResolverFeeList(expectedDisputeResolverFees);
+        assert.equal(
+          returnedDisputeResolverFeeList.toString(),
+          expectedDisputeResolverFeeList.toString(),
+          "Dispute Resolver Fee List is incorrect"
+        );
+
+        expect(returnedSellerAllowList.toString()).to.eql(sellerAllowList.toString(), "Allowed list wrong");
+      });
 
       context("💔 Revert Reasons", async function () {
         it("The dispute resolvers region of protocol is paused", async function () {
@@ -1521,15 +1608,6 @@ describe("DisputeResolverHandler", function () {
           await expect(
             accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.DUPLICATE_DISPUTE_RESOLVER_FEES);
-        });
-
-        it("Fee amount is not 0", async function () {
-          disputeResolverFees = [new DisputeResolverFee(await other4.getAddress(), "MockToken4", "200")];
-
-          // Attempt to Create a DR, expecting revert
-          await expect(
-            accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.FEE_AMOUNT_NOT_YET_SUPPORTED);
         });
       });
     });
