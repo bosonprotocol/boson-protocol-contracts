@@ -5,6 +5,8 @@ import { IBosonOfferEvents } from "../../interfaces/events/IBosonOfferEvents.sol
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
+import { IERC165 } from "../../interfaces/IERC165.sol";
+import { IDRFeeMutualizer } from "../../interfaces/clients/IDRFeeMutualizer.sol";
 import "./../../domain/BosonConstants.sol";
 
 /**
@@ -193,6 +195,19 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                             (feeAmount * fees.buyerEscalationDepositPercentage) /
                             HUNDRED_PERCENT;
                         disputeResolutionTerms.mutualizerAddress = _drParameters.mutualizerAddress;
+
+                        // Validate mutualizer interface if address is not zero (non-zero means external mutualizer)
+                        if (_drParameters.mutualizerAddress != address(0)) {
+                            try
+                                IERC165(_drParameters.mutualizerAddress).supportsInterface(
+                                    type(IDRFeeMutualizer).interfaceId
+                                )
+                            returns (bool supported) {
+                                if (!supported) revert UnsupportedMutualizer();
+                            } catch {
+                                revert UnsupportedMutualizer();
+                            }
+                        }
                     }
                     protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
                 }

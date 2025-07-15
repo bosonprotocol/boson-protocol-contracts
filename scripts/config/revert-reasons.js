@@ -190,6 +190,7 @@ exports.RevertReasons = {
 
   // Dispute related
   DISPUTE_PERIOD_HAS_ELAPSED: "DisputePeriodHasElapsed",
+  UNSUPPORTED_MUTUALIZER: "UnsupportedMutualizer",
   DISPUTE_HAS_EXPIRED: "DisputeHasExpired",
   INVALID_BUYER_PERCENT: "InvalidBuyerPercent",
   DISPUTE_STILL_VALID: "DisputeStillValid",
@@ -256,4 +257,5 @@ exports.RevertReasons = {
   AGREEMENT_ALREADY_EXISTS: "AgreementAlreadyExists",
   AGREEMENT_ALREADY_VOIDED: "AgreementAlreadyVoided",
   SELLER_NOT_FOUND: "SellerNotFound",
+  SAME_MUTUALIZER_ADDRESS: "SameMutualizerAddress",
 };

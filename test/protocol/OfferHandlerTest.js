@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { getContractAt, ZeroAddress, getSigners, MaxUint256, provider, parseUnits } = ethers;
+const { getContractAt, getContractFactory, ZeroAddress, getSigners, MaxUint256, provider, parseUnits } = ethers;
 const { assert, expect } = require("chai");
 
 const Offer = require("../../scripts/domain/Offer");
@@ -1619,6 +1619,159 @@ describe("IBosonOfferHandler", function () {
       });
     });
 
+    context("👉 createOffer() with Mutualizer", async function () {
+      let drFeeMutualizer;
+
+      beforeEach(async function () {
+        // Deploy real DRFeeMutualizer contract
+        const protocolAddress = await offerHandler.getAddress();
+
+        // Deploy mock forwarder for meta-transactions (required by DRFeeMutualizer)
+        const MockForwarder = await getContractFactory("MockForwarder");
+        const mockForwarder = await MockForwarder.deploy();
+        await mockForwarder.waitForDeployment();
+
+        const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
+        drFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolAddress, await mockForwarder.getAddress());
+        await drFeeMutualizer.waitForDeployment();
+      });
+
+      it("should emit OfferCreated event with non-zero mutualizer address", async function () {
+        // Update expected dispute resolution terms with mutualizer
+        disputeResolutionTerms.mutualizerAddress = await drFeeMutualizer.getAddress();
+        disputeResolutionTermsStruct = disputeResolutionTerms.toStruct();
+
+        // Create an offer with mutualizer
+        await expect(
+          offerHandler.connect(assistant).createOffer(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: await drFeeMutualizer.getAddress(),
+            },
+            agentId,
+            offerFeeLimit
+          )
+        )
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(
+            nextOfferId,
+            offer.sellerId,
+            compareOfferStructs.bind(offerStruct),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            offerFeesStruct,
+            agentId,
+            await assistant.getAddress()
+          );
+      });
+
+      it("should update state correctly with mutualizer address", async function () {
+        // Create an offer with mutualizer
+        await offerHandler.connect(assistant).createOffer(
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: await drFeeMutualizer.getAddress(),
+          },
+          agentId,
+          offerFeeLimit
+        );
+
+        // Get the offer as a struct
+        [, , , , disputeResolutionTermsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
+
+        // Parse dispute resolution terms
+        let returnedDisputeResolutionTerms = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
+
+        // Verify mutualizer address is stored correctly
+        expect(returnedDisputeResolutionTerms.mutualizerAddress).to.equal(await drFeeMutualizer.getAddress());
+      });
+
+      it("should work with different mutualizer addresses", async function () {
+        // Test with mutualizer address
+        await expect(
+          offerHandler.connect(assistant).createOffer(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: await drFeeMutualizer.getAddress(),
+            },
+            agentId,
+            offerFeeLimit
+          )
+        ).to.emit(offerHandler, "OfferCreated");
+
+        // Update offer id for next test
+        offer.id = nextOfferId.toString();
+        nextOfferId++;
+
+        // Test with zero address (no mutualizer - should still create offer)
+        await expect(
+          offerHandler.connect(assistant).createOffer(
+            offer,
+            offerDates,
+            offerDurations,
+            {
+              disputeResolverId: disputeResolver.id,
+              mutualizerAddress: ZeroAddress,
+            },
+            agentId,
+            offerFeeLimit
+          )
+        ).to.emit(offerHandler, "OfferCreated");
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("should revert with UnsupportedMutualizer for EOA addresses", async function () {
+          const randomAddress = await rando.getAddress();
+
+          await expect(
+            offerHandler.connect(assistant).createOffer(
+              { ...offer, id: "999" }, // Use different ID to avoid conflicts
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: randomAddress,
+              },
+              agentId,
+              offerFeeLimit
+            )
+          ).to.be.reverted;
+        });
+
+        it("should revert with UnsupportedMutualizer if mutualizer doesn't support IDRFeeMutualizer interface", async function () {
+          // Deploy a contract that doesn't implement IDRFeeMutualizer
+          const MockTokenFactory = await getContractFactory("Foreign20");
+          const mockToken = await MockTokenFactory.deploy();
+          await mockToken.waitForDeployment();
+
+          // Creating offer with non-mutualizer contract should revert
+          await expect(
+            offerHandler.connect(assistant).createOffer(
+              { ...offer, id: "998" }, // Use different ID to avoid conflicts
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolver.id,
+                mutualizerAddress: await mockToken.getAddress(),
+              },
+              agentId,
+              offerFeeLimit
+            )
+          ).to.be.revertedWithCustomError(offerHandler, "UnsupportedMutualizer");
+        });
+      });
+    });
+
     context("👉 voidOffer()", async function () {
       beforeEach(async function () {
         // Create an offer
@@ -2110,6 +2263,62 @@ describe("IBosonOfferHandler", function () {
             offerHandler.connect(assistant).updateOfferRoyaltyRecipients(id, newRoyaltyInfo)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_ROYALTY_PERCENTAGE);
         });
+      });
+    });
+
+    context("👉 updateOfferMutualizer()", async function () {
+      let drFeeMutualizer, newDrFeeMutualizer;
+
+      beforeEach(async function () {
+        // Deploy mock forwarder for meta-transactions
+        const MockForwarder = await getContractFactory("MockForwarder");
+        const mockForwarder = await MockForwarder.deploy();
+        await mockForwarder.waitForDeployment();
+
+        // Create first DRFeeMutualizer contract
+        const protocolAddress = await offerHandler.getAddress();
+        const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
+        drFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolAddress, await mockForwarder.getAddress());
+        await drFeeMutualizer.waitForDeployment();
+
+        // Create an offer with mutualizer
+        await offerHandler.connect(assistant).createOffer(
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: await drFeeMutualizer.getAddress(),
+          },
+          agentId,
+          offerFeeLimit
+        );
+      });
+
+      it("should update offer mutualizer successfully", async function () {
+        // Deploy mock forwarder for the new mutualizer
+        const MockForwarder = await getContractFactory("MockForwarder");
+        const mockForwarder = await MockForwarder.deploy();
+        await mockForwarder.waitForDeployment();
+
+        // Create new mutualizer
+        const protocolAddress = await offerHandler.getAddress();
+        const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
+        newDrFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolAddress, await mockForwarder.getAddress());
+        await newDrFeeMutualizer.waitForDeployment();
+
+        // Update the mutualizer
+        await expect(
+          offerHandler.connect(assistant).updateOfferMutualizer(offer.id, await newDrFeeMutualizer.getAddress())
+        )
+          .to.emit(offerHandler, "OfferMutualizerUpdated")
+          .withArgs(offer.id, offer.sellerId, await newDrFeeMutualizer.getAddress(), await assistant.getAddress());
+      });
+
+      it("should revert when new mutualizer is the same as current", async function () {
+        await expect(
+          offerHandler.connect(assistant).updateOfferMutualizer(offer.id, await drFeeMutualizer.getAddress())
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.SAME_MUTUALIZER_ADDRESS);
       });
     });
 

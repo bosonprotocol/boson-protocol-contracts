@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.22;
 
+import { IERC165 } from "../IERC165.sol";
+
 /**
  * @title IDRFeeMutualizer
  * @notice Interface for dispute resolver fee mutualization
- * @dev This interface defines the core functionality for mutualizing dispute resolver fees
+ *
+ * The ERC-165 identifier for this interface is: 0x1e0b3a78
  */
-interface IDRFeeMutualizer {
+interface IDRFeeMutualizer is IERC165 {
     /**
      * @notice Checks if a seller is covered for a specific DR fee
      * @param _sellerId The seller ID
@@ -33,6 +36,8 @@ interface IDRFeeMutualizer {
      * @return success True if the request was successful, false otherwise
      * @dev Only callable by the Boson protocol. Returns false if seller is not covered.
      *
+     * Emits a {DRFeeProvided} event if successful.
+     *
      * Reverts if:
      * - Caller is not the Boson protocol
      * - feeAmount is 0
@@ -52,6 +57,8 @@ interface IDRFeeMutualizer {
      * @param _exchangeId The exchange ID
      * @param _feeAmount The amount being returned (0 means protocol kept all fees)
      * @dev Only callable by the Boson protocol. For native currency, feeAmount must equal msg.value.
+     *
+     * Emits a {DRFeeReturned} event.
      *
      * Reverts if:
      * - Caller is not the Boson protocol

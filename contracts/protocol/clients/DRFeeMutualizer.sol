@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.22;
 
-import { IDRFeeMutualizer } from "../../interfaces/IDRFeeMutualizer.sol";
+import { IDRFeeMutualizer } from "../../interfaces/clients/IDRFeeMutualizer.sol";
+import { IERC165 } from "../../interfaces/IERC165.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -144,7 +145,6 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         // Basic agreement validation
         if (agreement.startTime == 0 || agreement.isVoided) return false;
         if (block.timestamp > agreement.startTime + agreement.timePeriod) return false;
-        if (agreement.tokenAddress != _tokenAddress) return false;
         if (_feeAmount > agreement.maxAmountPerTx) return false;
         if (agreement.totalMutualized + _feeAmount > agreement.maxAmountTotal) return false;
 
@@ -546,5 +546,14 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
      */
     function _contextSuffixLength() internal view override(Context, ERC2771Context) returns (uint256) {
         return ERC2771Context._contextSuffixLength();
+    }
+
+    /**
+     * @notice ERC165 interface detection
+     * @param interfaceId The interface identifier
+     * @return True if the contract implements the interface, false otherwise
+     */
+    function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
+        return interfaceId == type(IDRFeeMutualizer).interfaceId || interfaceId == type(IERC165).interfaceId;
     }
 }

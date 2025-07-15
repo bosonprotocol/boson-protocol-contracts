@@ -304,6 +304,8 @@ interface BosonErrors {
     // Dispute related
     // Dispute cannot be raised since the period to do it has elapsed
     error DisputePeriodHasElapsed();
+    // Mutualizer address does not implement the required interface
+    error UnsupportedMutualizer();
     // Dispute cannot be resolved anymore and must be finalized with expireDispute
     error DisputeHasExpired();
     // Buyer gets more than 100% of the total pot

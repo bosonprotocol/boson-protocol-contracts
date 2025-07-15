@@ -959,6 +959,41 @@ describe("DRFeeMutualizer", function () {
         );
         expect(isCovered).to.be.true;
       });
+
+      it("should return false when agreement token doesn't match requested token", async function () {
+        const isCovered = await drFeeMutualizer.isSellerCovered(
+          sellerId,
+          ZERO_POINT_FIVE_ETHER,
+          await mockToken.getAddress(), // Different token than agreement
+          disputeResolverId
+        );
+        expect(isCovered).to.be.false;
+      });
+
+      it("should return false when total mutualized would exceed maxAmountTotal", async function () {
+        // Create a new agreement with smaller limits for easier testing
+        const tx = await drFeeMutualizer.connect(owner).newAgreement(
+          sellerId,
+          ZeroAddress,
+          999, // Different dispute resolver to avoid conflicts
+          parseUnits("5", "ether"), // maxAmountPerTx
+          parseUnits("10", "ether"), // maxAmountTotal (smaller limit)
+          THIRTY_DAYS,
+          ZERO_POINT_ONE_ETHER,
+          true
+        );
+        const receipt = await tx.wait();
+        const newAgreementId = receipt.logs[0].args[0];
+        await drFeeMutualizer.connect(seller).payPremium(newAgreementId, sellerId, { value: ZERO_POINT_ONE_ETHER });
+
+        const isCovered = await drFeeMutualizer.isSellerCovered(
+          sellerId,
+          parseUnits("11", "ether"), // This exceeds maxAmountTotal of 10 ETH
+          ZeroAddress,
+          999 // Use the new dispute resolver
+        );
+        expect(isCovered).to.be.false;
+      });
     });
 
     context("👉 requestDRFee()", async function () {
@@ -1970,6 +2005,187 @@ describe("DRFeeMutualizer", function () {
       await expect(mockForwarder.execute(forwardRequest, signature, { value: amount })).to.be.revertedWith(
         "MockForwarder: signature does not match request"
       );
+    });
+
+    it("Test context in DRFeeMutualizer", async function () {
+      const MockDRFeeMutualizer = await getContractFactory("MockDRFeeMutualizer");
+      const mockDRFeeMutualizer = await MockDRFeeMutualizer.deploy(await mockProtocol.getAddress(), forwarderAddress);
+
+      const data = mockDRFeeMutualizer.interface.encodeFunctionData("testMsgData", ["0xdeadbeef"]);
+      const tx = await mockDRFeeMutualizer.testMsgData("0xdeadbeef");
+
+      // Verify the event
+      await expect(tx)
+        .to.emit(mockDRFeeMutualizer, "IncomingData")
+        .withArgs(await owner.getAddress(), data, 20);
+
+      // Verify the state
+      expect(await mockDRFeeMutualizer.data()).to.equal(data);
+      expect(await mockDRFeeMutualizer.sender()).to.equal(await owner.getAddress());
+    });
+  });
+
+  context("📋 isSellerCovered()", async function () {
+    it("should return true when seller is covered", async function () {
+      const sellerId = 1;
+      const disputeResolverId = 1;
+      const { drFeeMutualizer } = await setupMockProtocolAndMutualizer(sellerId, await seller.getAddress());
+
+      // Create and activate agreement
+      await drFeeMutualizer
+        .connect(owner)
+        .newAgreement(
+          sellerId,
+          ZeroAddress,
+          disputeResolverId,
+          ONE_ETHER,
+          TEN_ETHER,
+          THIRTY_DAYS,
+          ZERO_POINT_ONE_ETHER,
+          true
+        );
+      await drFeeMutualizer.connect(seller).payPremium(1, sellerId, { value: ZERO_POINT_ONE_ETHER });
+      await drFeeMutualizer.connect(owner).deposit(ZeroAddress, FIVE_ETHER, { value: FIVE_ETHER });
+
+      const isCovered = await drFeeMutualizer.isSellerCovered(
+        sellerId,
+        ZERO_POINT_FIVE_ETHER,
+        ZeroAddress,
+        disputeResolverId
+      );
+
+      expect(isCovered).to.be.true;
+    });
+
+    it("should return false when agreement token address doesn't match", async function () {
+      const sellerId = 1;
+      const disputeResolverId = 1;
+      const { drFeeMutualizer } = await setupMockProtocolAndMutualizer(sellerId, await seller.getAddress());
+
+      // Create agreement for native currency
+      await drFeeMutualizer.connect(owner).newAgreement(
+        sellerId,
+        ZeroAddress, // Native currency
+        disputeResolverId,
+        ONE_ETHER,
+        TEN_ETHER,
+        THIRTY_DAYS,
+        ZERO_POINT_ONE_ETHER,
+        true
+      );
+      await drFeeMutualizer.connect(seller).payPremium(1, sellerId, { value: ZERO_POINT_ONE_ETHER });
+      await drFeeMutualizer.connect(owner).deposit(ZeroAddress, FIVE_ETHER, { value: FIVE_ETHER });
+
+      // Try to check coverage for ERC20 token (different from agreement)
+      const isCovered = await drFeeMutualizer.isSellerCovered(
+        sellerId,
+        ZERO_POINT_FIVE_ETHER,
+        await mockToken.getAddress(), // Different token than agreement
+        disputeResolverId
+      );
+
+      expect(isCovered).to.be.false;
+    });
+
+    it("should return false when fee amount would exceed max total", async function () {
+      const sellerId = 1;
+      const disputeResolverId = 1;
+      const { mockProtocol, drFeeMutualizer } = await setupMockProtocolAndMutualizer(
+        sellerId,
+        await seller.getAddress()
+      );
+
+      // Create agreement with maxAmountPerTx > maxAmountTotal to test total limit
+      const maxTotal = ONE_ETHER;
+      await drFeeMutualizer.connect(owner).newAgreement(
+        sellerId,
+        ZeroAddress,
+        disputeResolverId,
+        ONE_ETHER, // maxAmountPerTx - higher than what we'll test
+        maxTotal, // maxAmountTotal - low limit
+        THIRTY_DAYS,
+        ZERO_POINT_ONE_ETHER,
+        true
+      );
+      await drFeeMutualizer.connect(seller).payPremium(1, sellerId, { value: ZERO_POINT_ONE_ETHER });
+      await drFeeMutualizer.connect(owner).deposit(ZeroAddress, FIVE_ETHER, { value: FIVE_ETHER });
+
+      await mockProtocol.callRequestDRFee(
+        await drFeeMutualizer.getAddress(),
+        ZERO_POINT_FIVE_ETHER,
+        sellerId,
+        ZeroAddress,
+        EXCHANGE_ID_1,
+        disputeResolverId
+      );
+
+      const agreement = await drFeeMutualizer.getAgreement(1);
+      expect(agreement.totalMutualized).to.equal(ZERO_POINT_FIVE_ETHER);
+
+      const isCovered = await drFeeMutualizer.isSellerCovered(
+        sellerId,
+        ZERO_POINT_FIVE_ETHER + 1n, // This exceeds maxAmountTotal when added to totalMutualized
+        ZeroAddress,
+        disputeResolverId
+      );
+
+      expect(isCovered).to.be.false;
+    });
+  });
+
+  context("📋 payPremium()", async function () {
+    context("💔 Revert Reasons", async function () {
+      it("should revert when sellerId does not match agreement", async function () {
+        const sellerId = 1;
+        const wrongSellerId = 2;
+        const disputeResolverId = 1;
+        const { drFeeMutualizer } = await setupMockProtocolAndMutualizer(sellerId, await seller.getAddress());
+
+        // Create agreement for sellerId = 1
+        await drFeeMutualizer
+          .connect(owner)
+          .newAgreement(
+            sellerId,
+            ZeroAddress,
+            disputeResolverId,
+            ONE_ETHER,
+            TEN_ETHER,
+            THIRTY_DAYS,
+            ZERO_POINT_ONE_ETHER,
+            true
+          );
+
+        // Try to pay premium with wrong sellerId
+        await expect(
+          drFeeMutualizer.connect(seller).payPremium(1, wrongSellerId, { value: ZERO_POINT_ONE_ETHER })
+        ).to.be.revertedWithCustomError(drFeeMutualizer, "InvalidSellerId");
+      });
+
+      it("should revert when time period would cause overflow", async function () {
+        const sellerId = 1;
+        const disputeResolverId = 1;
+        const { drFeeMutualizer } = await setupMockProtocolAndMutualizer(sellerId, await seller.getAddress());
+
+        // Create agreement with maximum time period that would cause overflow
+        const maxTimePeriod = ethers.MaxUint256;
+        await drFeeMutualizer
+          .connect(owner)
+          .newAgreement(
+            sellerId,
+            ZeroAddress,
+            disputeResolverId,
+            ONE_ETHER,
+            TEN_ETHER,
+            maxTimePeriod,
+            ZERO_POINT_ONE_ETHER,
+            true
+          );
+
+        // Try to pay premium which would cause overflow in time calculation
+        await expect(
+          drFeeMutualizer.connect(seller).payPremium(1, sellerId, { value: ZERO_POINT_ONE_ETHER })
+        ).to.be.revertedWithCustomError(drFeeMutualizer, "AgreementTimePeriodTooLong");
+      });
     });
   });
 });

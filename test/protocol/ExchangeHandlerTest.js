@@ -899,6 +899,182 @@ describe("IBosonExchangeHandler", function () {
       });
     });
 
+    context("👉 commitToOffer() with Mutualizer", async function () {
+      let drFeeMutualizer;
+      let mutualizerOfferId, mutualizerExchangeId;
+
+      beforeEach(async function () {
+        // Deploy real DRFeeMutualizer contract
+        const protocolAddress = await exchangeHandler.getAddress();
+
+        // Deploy mock forwarder for meta-transactions (required by DRFeeMutualizer)
+        const MockForwarder = await getContractFactory("MockForwarder");
+        const mockForwarder = await MockForwarder.deploy();
+        await mockForwarder.waitForDeployment();
+
+        const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
+        drFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolAddress, await mockForwarder.getAddress());
+        await drFeeMutualizer.waitForDeployment();
+
+        // Fund mutualizer with ETH for testing using the deposit function
+        await drFeeMutualizer.deposit(ZeroAddress, parseUnits("2", "ether"), {
+          value: parseUnits("2", "ether"),
+        });
+
+        // Create a simple agreement for the seller to be covered
+        const sellerId = "1"; // Standard seller ID
+        const maxAmountPerTx = parseUnits("1", "ether");
+        const maxAmountTotal = parseUnits("10", "ether");
+        const timePeriod = 365 * 24 * 60 * 60; // 1 year
+        const premium = parseUnits("0.1", "ether");
+
+        // Create agreement for native currency (ZeroAddress) with universal dispute resolver (0)
+        const tx = await drFeeMutualizer.newAgreement(
+          sellerId,
+          ZeroAddress,
+          0, // Universal dispute resolver
+          maxAmountPerTx,
+          maxAmountTotal,
+          timePeriod,
+          premium,
+          false // refundOnCancel
+        );
+
+        // Get the agreement ID from the event
+        const receipt = await tx.wait();
+        const agreementCreatedEvent = receipt.logs.find(
+          (log) => log.fragment && log.fragment.name === "AgreementCreated"
+        );
+        const agreementId = agreementCreatedEvent.args.agreementId;
+
+        // Pay premium to activate the agreement
+        await drFeeMutualizer.payPremium(agreementId, sellerId, {
+          value: premium,
+        });
+
+        // Create offer with mutualizer
+        mutualizerOfferId = await offerHandler.getNextOfferId();
+        await offerHandler.connect(assistant).createOffer(
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: await drFeeMutualizer.getAddress(),
+          },
+          agentId,
+          offerFeeLimit
+        );
+
+        mutualizerExchangeId = await exchangeHandler.getNextExchangeId();
+      });
+
+      it("should emit BuyerCommitted event with mutualizer configured", async function () {
+        // Commit to offer with mutualizer (mutualizer won't provide fee without agreement, but offer should still work)
+        const tx = await exchangeHandler
+          .connect(buyer)
+          .commitToOffer(await buyer.getAddress(), mutualizerOfferId, { value: price });
+
+        await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+      });
+
+      it("should successfully commit when mutualizer is configured", async function () {
+        // Commit to offer with mutualizer (mutualizer won't provide fee without agreement, but offer should still work)
+        await exchangeHandler
+          .connect(buyer)
+          .commitToOffer(await buyer.getAddress(), mutualizerOfferId, { value: price });
+
+        // Verify exchange was created
+        const [exists] = await exchangeHandler.getExchange(mutualizerExchangeId);
+        expect(exists).to.be.true;
+      });
+
+      it("should store mutualizer address correctly in offer", async function () {
+        // Verify the offer has the correct mutualizer address stored
+        const [exists, , , , disputeResolutionTerms] = await offerHandler.getOffer(mutualizerOfferId);
+        expect(exists).to.be.true;
+        expect(disputeResolutionTerms.mutualizerAddress).to.equal(await drFeeMutualizer.getAddress());
+      });
+
+      it("should work with zero address mutualizer", async function () {
+        // Create offer without mutualizer
+        const noMutualizerOfferId = await offerHandler.getNextOfferId();
+        await offerHandler.connect(assistant).createOffer(
+          { ...offer, id: noMutualizerOfferId.toString() },
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolver.id,
+            mutualizerAddress: ZeroAddress,
+          },
+          agentId,
+          offerFeeLimit
+        );
+
+        // Commit should work normally without mutualizer
+        await expect(
+          exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), noMutualizerOfferId, { value: price })
+        ).to.emit(exchangeHandler, "BuyerCommitted");
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("should revert when mutualizer doesn't provide fees", async function () {
+          // Update the existing dispute resolver to have non-zero DR fees
+          const drFeeAmount = parseUnits("0.1", "ether");
+          const testDRFee = drFeeAmount.toString();
+
+          // Use a default value for buyer escalation deposit percentage (10%)
+          const buyerEscalationDepositPercentage = "1000"; // 10% in basis points
+
+          // Remove existing zero fees and add non-zero fees (following FundsHandlerTest pattern)
+          const feeTokenAddresses = [ZeroAddress];
+          await accountHandler.connect(adminDR).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddresses);
+
+          const testDisputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", testDRFee)];
+
+          // Add the non-zero DR fees
+          await accountHandler.connect(adminDR).addFeesToDisputeResolver(disputeResolver.id, testDisputeResolverFees);
+
+          // Create an offer with DR fees and mutualizer
+          const {
+            offer: offerWithFee,
+            offerDates: offerDatesWithFee,
+            offerDurations: offerDurationsWithFee,
+          } = await mockOffer();
+          offerWithFee.id = await offerHandler.getNextOfferId();
+          offerWithFee.royaltyInfo[0].bps[0] = voucherInitValues.royaltyPercentage;
+
+          await offerHandler.connect(assistant).createOffer(
+            offerWithFee,
+            offerDatesWithFee,
+            offerDurationsWithFee,
+            {
+              disputeResolverId: disputeResolver.id,
+              escalationResponsePeriod: disputeResolver.escalationResponsePeriod,
+              feeAmount: testDRFee,
+              buyerEscalationDeposit: applyPercentage(testDRFee, buyerEscalationDepositPercentage),
+              mutualizerAddress: await drFeeMutualizer.getAddress(),
+            },
+            agentId,
+            offerFeeLimit
+          );
+
+          const mutualizerOfferIdWithFee = offerWithFee.id;
+
+          // Drain the mutualizer pool to make it unable to provide coverage
+          const currentBalance = await drFeeMutualizer.getPoolBalance(ZeroAddress);
+          await drFeeMutualizer.connect(deployer).withdraw(ZeroAddress, currentBalance, await deployer.getAddress());
+
+          // Now attempting to commit should revert because mutualizer can't provide coverage
+          await expect(
+            exchangeHandler
+              .connect(buyer)
+              .commitToOffer(await buyer.getAddress(), mutualizerOfferIdWithFee, { value: price })
+          ).to.be.revertedWithCustomError(bosonErrors, "DRFeeMutualizerCannotProvideCoverage");
+        });
+      });
+    });
+
     context("👉 commitToConditionalOffer()", async function () {
       context("✋ Threshold ERC20", async function () {
         beforeEach(async function () {
