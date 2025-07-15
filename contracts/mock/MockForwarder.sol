@@ -47,7 +47,7 @@ contract MockForwarder is EIP712 {
         require(verify(req, signature), "MockForwarder: signature does not match request");
         _nonces[req.from] = req.nonce + 1;
 
-        (bool success, bytes memory returndata) = req.to.call(abi.encodePacked(req.data, req.from));
+        (bool success, bytes memory returndata) = req.to.call{ value: msg.value }(abi.encodePacked(req.data, req.from));
         require(success, "MockForwarder: call reverted");
 
         return (success, returndata);

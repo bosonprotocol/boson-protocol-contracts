@@ -92,8 +92,6 @@ interface BosonErrors {
     error InexistentDisputeResolverFees();
     // Trying to add a fee that already exists
     error DuplicateDisputeResolverFees();
-    // Trying to add a fee with non-zero amount
-    error FeeAmountNotYetSupported();
     // Trying to remove a fee that does not exist
     error DisputeResolverFeeNotFound();
     // Trying to approve a seller that is already approved (list of sellers that DR will handle disputes for)
@@ -182,6 +180,8 @@ interface BosonErrors {
     error WrongDefaultRecipient();
     // Price discovery offer has non zero price
     error InvalidPriceDiscoveryPrice();
+    // Trying to set the same mutualizer as the existing one
+    error SameMutualizerAddress();
 
     // Group related
     // Group does not exist
@@ -285,6 +285,10 @@ interface BosonErrors {
     // Trying to deposit zero amount
     error ZeroDepositNotAllowed();
 
+    // DR Fee related
+    // DR fee mutualizer cannot provide coverage for the fee
+    error DRFeeMutualizerCannotProvideCoverage();
+
     // Meta-Transactions related
     // Meta-transaction nonce is invalid
     error NonceUsedAlready();
@@ -300,6 +304,8 @@ interface BosonErrors {
     // Dispute related
     // Dispute cannot be raised since the period to do it has elapsed
     error DisputePeriodHasElapsed();
+    // Mutualizer address does not implement the required interface
+    error UnsupportedMutualizer();
     // Dispute cannot be resolved anymore and must be finalized with expireDispute
     error DisputeHasExpired();
     // Buyer gets more than 100% of the total pot

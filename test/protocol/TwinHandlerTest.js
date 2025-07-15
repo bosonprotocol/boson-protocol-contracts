@@ -777,7 +777,10 @@ describe("IBosonTwinHandler", function () {
 
           // Create an absolute zero offer without DR
           offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = "0";
-          let disputeResolverId = "0";
+          let drParams = {
+            disputeResolverId: "0",
+            mutualizerAddress: ZeroAddress,
+          };
           let agentId = "0"; // agent id is optional while creating an offer
           let offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
 
@@ -789,7 +792,7 @@ describe("IBosonTwinHandler", function () {
           // Create the offer
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+            .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
 
           // Bundle: Required constructor params
           bundleId = "1";

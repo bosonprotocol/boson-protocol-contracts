@@ -88,7 +88,6 @@ exports.RevertReasons = {
   INEXISTENT_DISPUTE_RESOLVER_FEES: "InexistentDisputeResolverFees",
   DUPLICATE_DISPUTE_RESOLVER_FEES: "DuplicateDisputeResolverFees",
   DISPUTE_RESOLVER_FEE_NOT_FOUND: "DisputeResolverFeeNotFound",
-  FEE_AMOUNT_NOT_YET_SUPPORTED: "FeeAmountNotYetSupported",
   INVALID_AUTH_TOKEN_TYPE: "InvalidAuthTokenType",
   ADMIN_OR_AUTH_TOKEN: "AdminOrAuthToken",
   AUTH_TOKEN_MUST_BE_UNIQUE: "AuthTokenMustBeUnique",
@@ -191,6 +190,7 @@ exports.RevertReasons = {
 
   // Dispute related
   DISPUTE_PERIOD_HAS_ELAPSED: "DisputePeriodHasElapsed",
+  UNSUPPORTED_MUTUALIZER: "UnsupportedMutualizer",
   DISPUTE_HAS_EXPIRED: "DisputeHasExpired",
   INVALID_BUYER_PERCENT: "InvalidBuyerPercent",
   DISPUTE_STILL_VALID: "DisputeStillValid",
@@ -239,4 +239,23 @@ exports.RevertReasons = {
 
   //Fee Table related
   FEE_TABLE_ASSET_NOT_SUPOPRTED: "FeeTableAssetNotSupported",
+
+  // DR Fee Mutualizer related
+  DEPOSITS_RESTRICTED_TO_OWNER: "DepositsRestrictedToOwner",
+  INVALID_RECIPIENT: "InvalidRecipient",
+  INSUFFICIENT_POOL_BALANCE: "InsufficientPoolBalance",
+  INVALID_SELLER_ID: "InvalidSellerId",
+  MAX_AMOUNT_PER_TX_MUST_BE_GREATER_THAN_ZERO: "MaxAmountPerTxMustBeGreaterThanZero",
+  MAX_TOTAL_MUST_BE_GREATER_THAN_OR_EQUAL_TO_MAX_PER_TX: "MaxTotalMustBeGreaterThanOrEqualToMaxPerTx",
+  TIME_PERIOD_MUST_BE_GREATER_THAN_ZERO: "TimePeriodMustBeGreaterThanZero",
+  AGREEMENT_ALREADY_ACTIVE: "AgreementAlreadyActive",
+  AGREEMENT_IS_VOIDED: "AgreementIsVoided",
+  INVALID_AGREEMENT_ID: "InvalidAgreementId",
+  ONLY_PROTOCOL: "OnlyProtocol",
+  INVALID_PROTOCOL_ADDRESS: "InvalidProtocolAddress",
+  INVALID_EXCHANGE_ID: "InvalidExchangeId",
+  AGREEMENT_ALREADY_EXISTS: "AgreementAlreadyExists",
+  AGREEMENT_ALREADY_VOIDED: "AgreementAlreadyVoided",
+  SELLER_NOT_FOUND: "SellerNotFound",
+  SAME_MUTUALIZER_ADDRESS: "SameMutualizerAddress",
 };

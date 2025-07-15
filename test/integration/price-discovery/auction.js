@@ -76,15 +76,15 @@ describe("[@skip-on-coverage] auction integration", function () {
 
     await accountHandler.connect(DR).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
-    let offerDurations, disputeResolverId;
-    ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+    let offerDurations, drParams;
+    ({ offer, offerDates, offerDurations, drParams } = await mockOffer());
     offer.quantityAvailable = 10;
     offer.priceType = PriceType.Discovery;
     // offer.exchangeToken = weth.address;
 
     await offerHandler
       .connect(assistant)
-      .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, "0");
+      .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), drParams, "0");
 
     const beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
     const voucherAddress = calculateCloneAddress(await accountHandler.getAddress(), beaconProxyAddress, seller.admin);
