@@ -5,16 +5,17 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonExchangeEvents } from "../events/IBosonExchangeEvents.sol";
 import { IBosonTwinEvents } from "../events/IBosonTwinEvents.sol";
-import { IBosonFundsBaseEvents } from "../events/IBosonFundsEvents.sol";
 
 /**
- * @title IBosonExchangeHandler
+ * @title IBosonExchangeManagementHandler
  *
- * @notice Handles exchange management and voucher lifecycle within the protocol.
+ * @notice Handles exchange lifecycle management within the protocol.
+ * This interface contains functions for managing existing exchanges including voucher lifecycle,
+ * completion, and query operations.
  *
  * The ERC-165 identifier for this interface is: 0xcbd6d60c
  */
-interface IBosonExchangeHandler is BosonErrors, IBosonExchangeEvents, IBosonFundsBaseEvents, IBosonTwinEvents {
+interface IBosonExchangeManagementHandler is BosonErrors, IBosonExchangeEvents, IBosonTwinEvents {
     /**
      * @notice Completes an exchange.
      *

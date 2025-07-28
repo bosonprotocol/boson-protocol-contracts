@@ -2,6 +2,7 @@
 pragma solidity 0.8.22;
 
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
+import { IBosonExchangeCommitHandler } from "../../interfaces/handlers/IBosonExchangeCommitHandler.sol";
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
@@ -252,13 +253,17 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
             require(msg.value == offer.price, "Incorrect payment amount");
 
             // Commit to the offer, passing the message value (native)
-            IBosonExchangeHandler(protocol).commitToConditionalOffer{ value: msg.value }(_buyer, _offerId, _tokenId);
+            IBosonExchangeCommitHandler(protocol).commitToConditionalOffer{ value: msg.value }(
+                _buyer,
+                _offerId,
+                _tokenId
+            );
         } else {
             // Transfer the price into custody of this contract and approve protocol to transfer
             transferFundsToGateAndApproveProtocol(offer.exchangeToken, offer.price);
 
             // Commit to the offer on behalf of the buyer
-            IBosonExchangeHandler(protocol).commitToConditionalOffer(_buyer, _offerId, _tokenId);
+            IBosonExchangeCommitHandler(protocol).commitToConditionalOffer(_buyer, _offerId, _tokenId);
         }
 
         // Remove the transaction details

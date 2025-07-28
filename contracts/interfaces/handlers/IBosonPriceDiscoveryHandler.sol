@@ -18,7 +18,7 @@ interface IBosonPriceDiscoveryHandler is BosonErrors, IBosonExchangeEvents, IBos
     /**
      * @notice Commits to a price discovery offer (first step of an exchange).
      *
-     * Emits a BuyerCommitted event if successful.
+     * Emits a BuyerCommitted or SellerCommitted event if successful.
      * Issues a voucher to the buyer address.
      *
      * Reverts if:
@@ -29,18 +29,18 @@ interface IBosonPriceDiscoveryHandler is BosonErrors, IBosonExchangeEvents, IBos
      * - Offer has been voided
      * - Offer has expired
      * - Offer is not yet available for commits
-     * - Buyer address is zero
-     * - Buyer account is inactive
+     * - Committer address is zero
+     * - Committer account is inactive
      * - Buyer is token-gated (conditional commit requirements not met or already used)
      * - Any reason that PriceDiscoveryBase fulfilOrder reverts. See PriceDiscoveryBase.fulfilOrder
      * - Any reason that ExchangeHandler onPremintedVoucherTransfer reverts. See ExchangeHandler.onPremintedVoucherTransfer
      *
-     * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
+     * @param _committer - the seller's or the buyer's address. The caller can commit on behalf of a buyer or a seller.
      * @param _tokenIdOrOfferId - the id of the offer to commit to or the id of the voucher (if pre-minted)
      * @param _priceDiscovery - price discovery data (if applicable). See BosonTypes.PriceDiscovery
      */
     function commitToPriceDiscoveryOffer(
-        address payable _buyer,
+        address payable _committer,
         uint256 _tokenIdOrOfferId,
         BosonTypes.PriceDiscovery calldata _priceDiscovery
     ) external payable;

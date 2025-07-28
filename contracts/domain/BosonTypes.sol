@@ -95,6 +95,11 @@ contract BosonTypes {
         Discovery
     }
 
+    enum OfferCreator {
+        Seller, // Default should always be at index 0. Never change this value.
+        Buyer
+    }
+
     struct AuthToken {
         uint256 tokenId;
         AuthTokenType tokenType;
@@ -167,6 +172,8 @@ contract BosonTypes {
         bool voided;
         uint256 collectionIndex;
         RoyaltyInfo[] royaltyInfo;
+        OfferCreator creator;
+        uint256 buyerId; // For buyer-created offers, stores the buyer who created the offer
     }
 
     struct DRParameters {

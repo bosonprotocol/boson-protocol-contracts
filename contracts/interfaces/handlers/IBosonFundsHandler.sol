@@ -15,14 +15,14 @@ import { IBosonFundsBaseEvents } from "../events/IBosonFundsEvents.sol";
  */
 interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsBaseEvents, BosonErrors {
     /**
-     * @notice Receives funds from the caller, maps funds to the seller id and stores them so they can be used during the commitToOffer.
+     * @notice Receives funds from the caller, maps funds to the entity id and stores them so they can be used during the commitToOffer.
      *
      * Emits FundsDeposited event if successful.
      *
      * Reverts if:
      * - The funds region of protocol is paused
      * - Amount to deposit is zero
-     * - Seller id does not exist
+     * - Entity id does not exist
      * - It receives some native currency (e.g. ETH), but token address is not zero
      * - It receives some native currency (e.g. ETH), and the amount does not match msg.value
      * - It receives no native currency, but token address is zero
@@ -30,11 +30,11 @@ interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsBaseEvents, BosonE
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      * - Received ERC20 token amount differs from the expected value
      *
-     * @param _sellerId - id of the seller that will be credited
+     * @param _entityId - id of the entity that will be credited
      * @param _tokenAddress - contract address of token that is being deposited (0 for native currency)
      * @param _amount - amount to be credited
      */
-    function depositFunds(uint256 _sellerId, address _tokenAddress, uint256 _amount) external payable;
+    function depositFunds(uint256 _entityId, address _tokenAddress, uint256 _amount) external payable;
 
     /**
      * @notice Withdraws the specified funds. Can be called for seller, buyer or agent.

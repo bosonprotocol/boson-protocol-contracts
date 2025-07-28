@@ -60,10 +60,31 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         uint256 _agentId,
         uint256 _feeLimit
     ) internal {
-        // get seller id, make sure it exists and store it to incoming struct
-        (bool exists, uint256 sellerId) = getSellerIdByAssistant(_msgSender());
-        if (!exists) revert NotAssistant();
-        _offer.sellerId = sellerId;
+        address sender = _msgSender();
+
+        // Check if caller is a seller assistant
+        (bool isAssistant, uint256 sellerId) = getSellerIdByAssistant(sender);
+
+        if (isAssistant) {
+            // Seller-created offer
+            _offer.sellerId = sellerId;
+            _offer.creator = OfferCreator.Seller;
+        } else {
+            // Check if caller is a buyer
+            (bool isBuyer, uint256 buyerId) = getBuyerIdByWallet(sender);
+            if (!isBuyer) revert NotAssistant(); // Keep existing error for backward compatibility
+
+            // Buyer-created offers have specific validations
+            if (_offer.sellerId != 0) revert InvalidOffer(); // Buyer cannot specify sellerId
+            if (_offer.collectionIndex != 0) revert InvalidCollectionIndex(); // Buyer cannot specify collection
+            if (_offer.royaltyInfo.length > 0) revert InvalidRoyaltyInfo(); // Buyer cannot set royalties
+
+            // Set buyer-created offer fields
+            _offer.sellerId = 0; // No seller assigned yet
+            _offer.creator = OfferCreator.Buyer;
+            _offer.buyerId = buyerId; // Store the buyer who created the offer
+        }
+
         // Get the next offerId and increment the counter
         uint256 offerId = protocolCounters().nextOfferId++;
         _offer.id = offerId;

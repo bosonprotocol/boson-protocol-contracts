@@ -122,6 +122,10 @@ interface BosonErrors {
     // Offer related
     // Offer does not exist
     error NoSuchOffer();
+    // Offer parameters are invalid
+    error InvalidOffer();
+    // Collection index is invalid for the context
+    error InvalidCollectionIndex();
     // Offer finishes in the past or it starts after it finishes
     error InvalidOfferPeriod();
     // Buyer cancellation penalty is higher than the item price

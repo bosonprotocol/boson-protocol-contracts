@@ -35,7 +35,7 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
     /**
      * @notice Commits to a price discovery offer (first step of an exchange).
      *
-     * Emits a BuyerCommitted event if successful.
+     * Emits a BuyerCommitted or SellerCommitted event if successful.
      * Issues a voucher to the buyer address.
      *
      * Reverts if:
@@ -46,23 +46,23 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
      * - Offer has been voided
      * - Offer has expired
      * - Offer is not yet available for commits
-     * - Buyer address is zero
-     * - Buyer account is inactive
+     * - Committer address is zero
+     * - Committer account is inactive
      * - Buyer is token-gated (conditional commit requirements not met or already used)
      * - Any reason that PriceDiscoveryBase fulfilOrder reverts. See PriceDiscoveryBase.fulfilOrder
      * - Any reason that ExchangeHandler onPremintedVoucherTransfer reverts. See ExchangeHandler.onPremintedVoucherTransfer
      *
-     * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
+     * @param _committer - the seller's or the buyer's address. The caller can commit on behalf of a buyer or a seller.
      * @param _tokenIdOrOfferId - the id of the offer to commit to or the id of the voucher (if pre-minted)
      * @param _priceDiscovery - price discovery data (if applicable). See BosonTypes.PriceDiscovery
      */
     function commitToPriceDiscoveryOffer(
-        address payable _buyer,
+        address payable _committer,
         uint256 _tokenIdOrOfferId,
         PriceDiscovery calldata _priceDiscovery
-    ) external payable override exchangesNotPaused buyersNotPaused nonReentrant {
-        // Make sure buyer address is not zero address
-        if (_buyer == address(0)) revert InvalidAddress();
+    ) external payable override exchangesNotPaused buyersNotPaused sellersNotPaused nonReentrant {
+        // Make sure committer address is not zero address
+        if (_committer == address(0)) revert InvalidAddress();
 
         bool isTokenId;
         uint256 offerId = _tokenIdOrOfferId >> 128;
@@ -86,15 +86,46 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
         if (offer.priceType != PriceType.Discovery) revert InvalidPriceType();
         uint256 sellerId = offer.sellerId;
 
+        // Determine buyer and seller addresses based on offer creator
+        address payable buyerAddress;
+        address sellerAddress;
+
+        if (offer.creator == OfferCreator.Buyer) {
+            // Buyer-created offer: seller is committing
+            // Validate seller and get seller address
+            (bool sellerExists, uint256 sellerIdFromCommitter) = getSellerIdByAssistant(_committer);
+            if (!sellerExists) revert NotAssistant();
+
+            // Update offer with actual seller ID
+            offer.sellerId = sellerIdFromCommitter;
+            sellerId = sellerIdFromCommitter;
+
+            // Get seller address
+            (, Seller storage seller, ) = fetchSeller(sellerId);
+            sellerAddress = seller.assistant;
+
+            // Get buyer address from stored buyerId
+            (, Buyer storage buyer) = fetchBuyer(offer.buyerId);
+            buyerAddress = buyer.wallet;
+        } else {
+            // Seller-created offer: buyer is committing (existing logic)
+            buyerAddress = _committer;
+
+            // Get seller address
+            (, Seller storage seller, ) = fetchSeller(sellerId);
+            sellerAddress = seller.assistant;
+        }
+
         uint256 actualPrice;
         {
-            // Get seller address
-            address _seller;
-            (, Seller storage seller, ) = fetchSeller(sellerId);
-            _seller = seller.assistant;
-
             // Calls price discovery contract and gets the actual price. Use token id if caller has provided one, otherwise use offer id and accepts any voucher.
-            actualPrice = fulfilOrder(isTokenId ? _tokenIdOrOfferId : 0, offer, _priceDiscovery, _seller, _buyer);
+            actualPrice = fulfilOrder(
+                isTokenId ? _tokenIdOrOfferId : 0,
+                offer,
+                _priceDiscovery,
+                sellerAddress,
+                buyerAddress
+            );
         }
 
         // Fetch token id on protocol status
@@ -131,7 +162,7 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
         // Clear incoming voucher id and incoming voucher address
         clearPriceDiscoveryStorage();
 
-        (, uint256 buyerId) = getBuyerIdByWallet(_buyer);
+        (, uint256 buyerId) = getBuyerIdByWallet(buyerAddress);
         if (actualPrice > 0) {
             // If exchange token is 0, we need to unwrap it
             if (exchangeToken == address(0)) {
