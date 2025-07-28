@@ -10,7 +10,7 @@ import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xf4ef45cb
+ * The ERC-165 identifier for this interface is: 0xeaace31f
  */
 interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
     /**
