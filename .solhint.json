@@ -19,6 +19,7 @@
     "no-empty-blocks": "off",
     "no-global-import": "off",
     "one-contract-per-file": "off",
-    "immutable-vars-naming": "off"
+    "immutable-vars-naming": "off",
+    "gas-small-strings": "off"
   }
 }

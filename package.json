@@ -28,7 +28,7 @@
     "check:contracts": "solhint 'contracts/**/*.sol' && prettier --list-different contracts/**",
     "check:scripts": "eslint test/** scripts/** '*.js' && prettier --list-different test/** scripts/** '*.js'",
     "docgen": "npx truffle compile --contracts_directory contracts/interfaces && npx truffle compile --contracts_directory contracts/domain && rm -rf contract_docs && npx solidoc && rm -rf build",
-    "tidy:contracts": "solhint --fix contracts/**/*.sol && prettier --write contracts/**",
+    "tidy:contracts": "solhint --fix 'contracts/**/*.sol' && prettier --write contracts/**",
     "tidy:scripts": "eslint --fix test/** scripts/** '*.js' && prettier --write test/** scripts/** '*.js'",
     "size": "npx hardhat size-contracts",
     "coverage": "npx hardhat clean && npx hardhat coverage --testfiles '{test/access/*.js,test/protocol/*.js,test/protocol/clients/*.js}'",

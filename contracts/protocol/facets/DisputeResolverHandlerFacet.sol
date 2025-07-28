@@ -489,8 +489,7 @@ contract DisputeResolverHandlerFacet is IBosonDisputeResolverHandler, IBosonAcco
                 DisputeResolverFee memory disputeResolverFeeToMove = disputeResolverFees[lastTokenIndex];
                 disputeResolverFees[disputeResolverFeeArrayIndex] = disputeResolverFeeToMove; // Copy the last DisputeResolverFee struct in the array to this index to fill the gap
                 lookups.disputeResolverFeeTokenIndex[_disputeResolverId][disputeResolverFeeToMove.tokenAddress] =
-                    disputeResolverFeeArrayIndex +
-                    1; // Reset index mapping. Should be index in disputeResolverFees array + 1
+                    disputeResolverFeeArrayIndex + 1; // Reset index mapping. Should be index in disputeResolverFees array + 1
             }
             disputeResolverFees.pop(); // Delete last DisputeResolverFee struct in the array, which was just moved to fill the gap
             delete lookups.disputeResolverFeeTokenIndex[_disputeResolverId][_feeTokenAddresses[i]]; // Delete from index mapping
