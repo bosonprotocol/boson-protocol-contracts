@@ -444,6 +444,7 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
     "AgentHandlerFacet",
     "DisputeResolverHandlerFacet",
     "ExchangeHandlerFacet",
+    "ExchangeCommitFacet",
     "OfferHandlerFacet",
     "GroupHandlerFacet",
     "TwinHandlerFacet",

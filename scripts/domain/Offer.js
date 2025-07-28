@@ -6,6 +6,7 @@ const {
   enumIsValid,
 } = require("../util/validations.js");
 const PriceType = require("./PriceType.js");
+const OfferCreator = require("./OfferCreator.js");
 const { RoyaltyInfo, RoyaltyInfoList } = require("./RoyaltyInfo.js");
 
 /**
@@ -29,6 +30,8 @@ class Offer {
             bool voided;
             uint256 collectionIndex;            
             RoyaltyInfo[] royaltyInfo;
+            OfferCreator creator;
+            uint256 buyerId;
         }
     */
 
@@ -45,7 +48,9 @@ class Offer {
     metadataHash,
     voided,
     collectionIndex,
-    royaltyInfo
+    royaltyInfo,
+    creator,
+    buyerId
   ) {
     this.id = id;
     this.sellerId = sellerId;
@@ -60,6 +65,8 @@ class Offer {
     this.voided = voided;
     this.collectionIndex = collectionIndex;
     this.royaltyInfo = royaltyInfo;
+    this.creator = creator;
+    this.buyerId = buyerId;
   }
 
   /**
@@ -82,6 +89,8 @@ class Offer {
       voided,
       collectionIndex,
       royaltyInfo,
+      creator,
+      buyerId,
     } = o;
 
     return new Offer(
@@ -97,7 +106,9 @@ class Offer {
       metadataHash,
       voided,
       collectionIndex,
-      royaltyInfo.map((ri) => RoyaltyInfo.fromObject(ri))
+      (royaltyInfo || []).map((ri) => RoyaltyInfo.fromObject(ri)),
+      creator,
+      buyerId
     );
   }
 
@@ -119,7 +130,9 @@ class Offer {
       metadataHash,
       voided,
       collectionIndex,
-      royaltyInfo;
+      royaltyInfo,
+      creator,
+      buyerId;
 
     // destructure struct
     [
@@ -136,9 +149,17 @@ class Offer {
       voided,
       collectionIndex,
       royaltyInfo,
+      creator,
+      buyerId,
     ] = struct;
     if (!collectionIndex) {
       collectionIndex = 0;
+    }
+    if (typeof creator === "undefined") {
+      creator = OfferCreator.Seller; // Default to Seller for backward compatibility
+    }
+    if (!buyerId) {
+      buyerId = 0; // Default to 0 for seller-created offers
     }
 
     return Offer.fromObject({
@@ -154,7 +175,9 @@ class Offer {
       metadataHash,
       voided,
       collectionIndex: collectionIndex.toString(),
-      royaltyInfo: royaltyInfo.map((ri) => RoyaltyInfo.fromStruct(ri)),
+      royaltyInfo: (royaltyInfo || []).map((ri) => RoyaltyInfo.fromStruct(ri)),
+      creator: Number(creator),
+      buyerId: buyerId.toString(),
     });
   }
 
@@ -193,6 +216,8 @@ class Offer {
       this.voided,
       this.collectionIndex,
       new RoyaltyInfoList(this.royaltyInfo).toStruct(),
+      this.creator,
+      this.buyerId,
     ];
   }
 
@@ -330,6 +355,24 @@ class Offer {
   }
 
   /**
+   * Is this Offer instance's creator field valid?
+   * Must be a valid OfferCreator enum value
+   * @returns {boolean}
+   */
+  creatorIsValid() {
+    return enumIsValid(this.creator, OfferCreator.Types);
+  }
+
+  /**
+   * Is this Offer instance's buyerId field valid?
+   * Must be a string representation of a big number
+   * @returns {boolean}
+   */
+  buyerIdIsValid() {
+    return bigNumberIsValid(this.buyerId);
+  }
+
+  /**
    * Is this Offer instance valid?
    * @returns {boolean}
    */
@@ -347,7 +390,9 @@ class Offer {
       this.metadataHashIsValid() &&
       this.voidedIsValid() &&
       this.collectionIndexIsValid() &&
-      this.royaltyInfoIsValid()
+      this.royaltyInfoIsValid() &&
+      this.creatorIsValid() &&
+      this.buyerIdIsValid()
     );
   }
 }

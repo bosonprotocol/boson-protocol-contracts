@@ -32,7 +32,7 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 describe("[@skip-on-coverage] After facet upgrade, everything is still operational", function () {
   // Common vars
   let deployer, assistant, admin, clerk, treasury, rando, buyer, assistantDR, adminDR, clerkDR, treasuryDR;
-  let accountHandler, exchangeHandler, offerHandler, fundsHandler, disputeHandler, mockExchangeHandlerUpgrade;
+  let accountHandler, exchangeCommitHandler, offerHandler, fundsHandler, disputeHandler, mockExchangeHandlerUpgrade;
   let buyerId, offerId, seller, drParams;
   let price, sellerPool;
   let voucherRedeemableFrom;
@@ -60,14 +60,14 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     const contracts = {
       accountHandler: "IBosonAccountHandler",
       offerHandler: "IBosonOfferHandler",
-      exchangeHandler: "IBosonExchangeHandler",
+      exchangeCommitHandler: "IBosonExchangeCommitHandler",
       fundsHandler: "IBosonFundsHandler",
       disputeHandler: "IBosonDisputeHandler",
     };
 
     ({
       signers: [admin, treasury, buyer, rando, adminDR, treasuryDR],
-      contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler },
+      contractInstances: { accountHandler, offerHandler, exchangeCommitHandler, fundsHandler, disputeHandler },
       protocolConfig: [, , , , buyerEscalationDepositPercentage],
       diamondAddress: protocolDiamondAddress,
     } = await setupTestEnvironment(contracts));
@@ -225,7 +225,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     context("👉 completeExchange()", async function () {
       beforeEach(async function () {
         // Commit to offer
-        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+        await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
         // Upgrade Exchange handler facet
         await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
@@ -252,7 +252,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         for (exchangeId = 1; exchangeId <= 5; exchangeId++) {
           // Commit to offer, creating a new exchange
-          await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+          await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
         }
 
         // Upgrade Exchange handler facet
@@ -292,7 +292,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     context("👉 revokeVoucher()", async function () {
       it("should emit an VoucherRevoked2 event when seller's assistant calls", async function () {
         // Commit to offer
-        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+        await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
         // Upgrade Exchange handler facet
         await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
@@ -307,7 +307,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     context("👉 cancelVoucher()", async function () {
       it("should emit an VoucherCanceled2 event when original buyer calls", async function () {
         // Commit to offer, retrieving the event
-        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+        await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
         // Upgrade Exchange handler facet
         await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
@@ -322,7 +322,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     context("👉 expireVoucher()", async function () {
       it("should emit an VoucherExpired2 event when anyone calls and voucher has expired", async function () {
         // Commit to offer, retrieving the event
-        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+        await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
         // Upgrade Exchange handler facet
         await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
@@ -340,7 +340,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     context("👉 redeemVoucher()", async function () {
       it("should emit a VoucherRedeemed2 event when buyer calls", async function () {
         // Commit to offer
-        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+        await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
         // Upgrade Exchange handler facet
         await upgradeExchangeHandlerFacet("MockExchangeHandlerFacet");
@@ -358,7 +358,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     context("👉 extendVoucher()", async function () {
       it("should emit an VoucherExtended2 event when seller's assistant calls", async function () {
         // Commit to offer
-        const tx = await exchangeHandler
+        const tx = await exchangeCommitHandler
           .connect(buyer)
           .commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
@@ -455,7 +455,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         exchangeId = "1";
 
         // Commit to offer, creating a new exchange
-        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+        await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
         // Set time forward to the offer's voucherRedeemableFrom
         await setNextBlockTimestamp(Number(voucherRedeemableFrom));
@@ -757,8 +757,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         ]);
 
         // commit to both offers
-        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
-        await exchangeHandler
+        await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
+        await exchangeCommitHandler
           .connect(buyer)
           .commitToOffer(await buyer.getAddress(), offerNative.id, { value: offerNative.price });
 

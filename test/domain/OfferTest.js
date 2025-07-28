@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const { getSigners, parseUnits, ZeroAddress } = hre.ethers;
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
+const OfferCreator = require("../../scripts/domain/OfferCreator");
 const PriceType = require("../../scripts/domain/PriceType");
 const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo");
 
@@ -24,7 +25,9 @@ describe("Offer", function () {
     metadataHash,
     voided,
     collectionIndex,
-    royaltyInfo;
+    royaltyInfo,
+    creator,
+    buyerId;
 
   beforeEach(async function () {
     // Get a list of accounts
@@ -48,6 +51,8 @@ describe("Offer", function () {
         ["16", "32", "64"]
       ),
     ];
+    creator = OfferCreator.Seller;
+    buyerId = "0";
   });
 
   context("📋 Constructor", async function () {
@@ -66,7 +71,9 @@ describe("Offer", function () {
         metadataHash,
         voided,
         collectionIndex,
-        royaltyInfo
+        royaltyInfo,
+        creator,
+        buyerId
       );
       expect(offer.idIsValid()).is.true;
       expect(offer.sellerIdIsValid()).is.true;
@@ -81,6 +88,8 @@ describe("Offer", function () {
       expect(offer.voidedIsValid()).is.true;
       expect(offer.collectionIndexIsValid()).is.true;
       expect(offer.royaltyInfoIsValid()).is.true;
+      expect(offer.creatorIsValid()).is.true;
+      expect(offer.buyerIdIsValid()).is.true;
       expect(offer.isValid()).is.true;
     });
   });
@@ -101,7 +110,9 @@ describe("Offer", function () {
         metadataHash,
         voided,
         collectionIndex,
-        royaltyInfo
+        royaltyInfo,
+        creator,
+        buyerId
       );
       expect(offer.isValid()).is.true;
     });
@@ -426,7 +437,9 @@ describe("Offer", function () {
         metadataHash,
         voided,
         collectionIndex,
-        royaltyInfo
+        royaltyInfo,
+        creator,
+        buyerId
       );
       expect(offer.isValid()).is.true;
 
@@ -445,6 +458,8 @@ describe("Offer", function () {
         voided,
         collectionIndex,
         royaltyInfo,
+        creator,
+        buyerId,
       };
     });
 
@@ -477,6 +492,8 @@ describe("Offer", function () {
           offer.voided,
           offer.collectionIndex,
           royaltyInfo.map((ri) => ri.toStruct()),
+          offer.creator,
+          offer.buyerId,
         ];
 
         // Get struct
