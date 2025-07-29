@@ -3083,6 +3083,7 @@ describe("IBosonFundsHandler", function () {
           await expect(tx)
             .to.emit(exchangeHandler, "FundsReleased")
             .withArgs(exchangeId, buyerId, agentOffer.exchangeToken, buyerPayoff, await assistant.getAddress());
+          await expect(tx).to.not.emit(exchangeHandler, "ProtocolFeeCollected");
         },
         CANCELED: async function (tx) {
           await expect(tx)
@@ -3203,6 +3204,8 @@ describe("IBosonFundsHandler", function () {
             await expect(tx)
               .to.emit(action.handler, "ProtocolFeeCollected")
               .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, action.wallet.address);
+          } else {
+            await expect(tx).to.not.emit(exchangeHandler, "ProtocolFeeCollected");
           }
         },
         REVOKED: async function (tx, action) {
@@ -3211,6 +3214,7 @@ describe("IBosonFundsHandler", function () {
               .to.emit(action.handler, "FundsReleased")
               .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, action.wallet.address);
           }
+          await expect(tx).to.not.emit(exchangeHandler, "ProtocolFeeCollected");
         },
         CANCELED: async function (tx, action) {
           await expect(tx)
@@ -6032,6 +6036,7 @@ describe("IBosonFundsHandler", function () {
               buyerPayoff,
               await assistant.getAddress()
             );
+          await expect(tx).to.not.emit(exchangeHandler, "ProtocolFeeCollected");
         },
         CANCELED: async function (tx) {
           await expect(tx)
@@ -6041,6 +6046,7 @@ describe("IBosonFundsHandler", function () {
           await expect(tx)
             .to.emit(exchangeHandler, "FundsReleased")
             .withArgs(exchangeId, seller.id, offerPriceDiscovery.exchangeToken, sellerPayoff, await buyer.getAddress());
+          await expect(tx).to.not.emit(exchangeHandler, "ProtocolFeeCollected");
         },
       };
 
