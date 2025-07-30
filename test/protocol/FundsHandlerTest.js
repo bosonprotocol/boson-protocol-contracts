@@ -38,6 +38,13 @@ const {
 } = require("../util/mock");
 const PriceType = require("../../scripts/domain/PriceType.js");
 
+// Helper function to get fund amount for a participant (global utility)
+const getFundsForParticipant = async (fundsHandler, participantId, tokenAddress) => {
+  const funds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(participantId));
+  const found = funds.funds.find((fund) => fund.tokenAddress === tokenAddress);
+  return BigInt(found?.availableAmount || "0");
+};
+
 /**
  *  Test the Boson Funds Handler interface
  */
@@ -2796,109 +2803,37 @@ describe("IBosonFundsHandler", function () {
         COMPLETED: async function () {
           await setNextBlockTimestamp(Number(voucherRedeemableFrom) + 10);
           await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+          return {};
         },
-        REVOKED: async function () {
-          // No additional setup needed for REVOKED
+        REVOKED: function () {
+          return {};
         },
-        CANCELED: async function () {
-          // No additional setup needed for CANCELED
+        CANCELED: function () {
+          return {};
         },
-        "DISPUTED-RETRACTED": async function () {
-          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-          await disputeHandler.connect(buyer).raiseDispute(exchangeId);
+        "DISPUTED-RETRACTED": function () {
+          return {};
         },
-        "DISPUTED-RETRACTED-EXPIRED": async function () {
-          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-          const tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
-
-          // Calculate timeout from dispute timestamp (like original test)
-          const blockNumber = tx.blockNumber;
-          const block = await provider.getBlock(blockNumber);
-          const disputedDate = block.timestamp.toString();
-          const timeout = BigInt(disputedDate) + BigInt(resolutionPeriod);
-
-          // Set time to expire the dispute
-          await setNextBlockTimestamp(Number(timeout) + 1);
+        "DISPUTED-RETRACTED-EXPIRED": function () {
+          return { expired: true };
         },
-        "DISPUTED-RESOLVED": async function () {
-          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-          await disputeHandler.connect(buyer).raiseDispute(exchangeId);
-
-          // Prepare signature for agent dispute resolution (like original test)
-          const buyerPercentBasisPoints = "5566"; // 55.66%
-          const resolutionType = [
-            { name: "exchangeId", type: "uint256" },
-            { name: "buyerPercentBasisPoints", type: "uint256" },
-          ];
-          const customSignatureType = { Resolution: resolutionType };
-          const message = { exchangeId: exchangeId, buyerPercentBasisPoints };
-
-          // Store signature in global scope for finalization access (reuse same signature)
-          global.disputeSignature = await prepareDataSignature(
-            buyer,
-            customSignatureType,
-            "Resolution",
-            message,
-            await disputeHandler.getAddress()
-          );
-          global.buyerPercentBasisPoints = buyerPercentBasisPoints;
+        "DISPUTED-RESOLVED": function () {
+          return { prepareDataSignature: true };
         },
-        "DISPUTED-ESCALATED-RETRACTED": async function () {
-          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-          await disputeHandler.connect(buyer).raiseDispute(exchangeId);
-          await disputeHandler.connect(buyer).escalateDispute(exchangeId);
+        "DISPUTED-ESCALATED-RETRACTED": function () {
+          return { escalateDispute: true };
         },
-        "DISPUTED-ESCALATED-RESOLVED": async function () {
-          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-          await disputeHandler.connect(buyer).raiseDispute(exchangeId);
-          await disputeHandler.connect(buyer).escalateDispute(exchangeId);
-
-          // Prepare signature for agent escalated dispute resolution
-          const buyerPercentBasisPoints = "5566"; // 55.66%
-          const resolutionType = [
-            { name: "exchangeId", type: "uint256" },
-            { name: "buyerPercentBasisPoints", type: "uint256" },
-          ];
-          const customSignatureType = { Resolution: resolutionType };
-          const message = { exchangeId: exchangeId, buyerPercentBasisPoints };
-
-          // Store signature in global scope for finalization access (reuse same signature)
-          global.disputeSignature = await prepareDataSignature(
-            buyer,
-            customSignatureType,
-            "Resolution",
-            message,
-            await disputeHandler.getAddress()
-          );
-          global.buyerPercentBasisPoints = buyerPercentBasisPoints;
+        "DISPUTED-ESCALATED-RESOLVED": function () {
+          return { escalateDispute: true, prepareDataSignature: true };
         },
-        "DISPUTED-ESCALATED-DECIDED": async function () {
-          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-          await disputeHandler.connect(buyer).raiseDispute(exchangeId);
-          await disputeHandler.connect(buyer).escalateDispute(exchangeId);
-
-          // Store buyer percentage for agent escalated dispute decision (no signature needed)
-          const buyerPercentBasisPoints = "5566"; // 55.66%
-          global.buyerPercentBasisPoints = buyerPercentBasisPoints;
+        "DISPUTED-ESCALATED-DECIDED": function () {
+          return { escalateDispute: true };
         },
-        "DISPUTED-ESCALATED-EXPIRED": async function () {
-          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-          await disputeHandler.connect(buyer).raiseDispute(exchangeId);
-          const tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId);
-
-          // Calculate timeout from escalation timestamp (like original test)
-          const blockNumber = tx.blockNumber;
-          const block = await provider.getBlock(blockNumber);
-          const escalatedDate = block.timestamp.toString();
-          const timeout = BigInt(escalatedDate) + BigInt(disputeResolver.escalationResponsePeriod);
-
-          // Set time to expire the escalated dispute
-          await setNextBlockTimestamp(Number(timeout) + 1);
+        "DISPUTED-ESCALATED-EXPIRED": function () {
+          return { escalateDispute: true, expired: true };
         },
-        "DISPUTED-ESCALATED-REFUSED": async function () {
-          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-          await disputeHandler.connect(buyer).raiseDispute(exchangeId);
-          await disputeHandler.connect(buyer).escalateDispute(exchangeId);
+        "DISPUTED-ESCALATED-REFUSED": function () {
+          return { escalateDispute: true };
         },
       };
 
@@ -3192,327 +3127,176 @@ describe("IBosonFundsHandler", function () {
         },
       };
 
-      const regularEventChecks = {
-        COMPLETED: async function (tx, action) {
-          if (sellerPayoff != "0") {
+      // Unified validation function for both events and state based on expected payoffs
+      const validateStateAndEvents = async function (options = {}) {
+        const {
+          tx = null,
+          action = null,
+          expectedPayoffs = {
+            sellerPayoff: sellerPayoff || "0",
+            buyerPayoff: buyerPayoff || "0",
+            protocolPayoff: protocolPayoff || "0",
+            agentPayoff: agentPayoff || "0",
+          },
+          updatedSellersAvailableFunds = null,
+          updatedBuyerAvailableFunds = null,
+          updatedProtocolAvailableFunds = null,
+          updatedAgentAvailableFunds = null,
+        } = options;
+
+        const {
+          sellerPayoff: expSellerPayoff,
+          buyerPayoff: expBuyerPayoff,
+          protocolPayoff: expProtocolPayoff,
+          agentPayoff: expAgentPayoff,
+        } = expectedPayoffs;
+
+        // Get exchange token from the actual exchange
+        const [exchangeExists, exchange] = await exchangeHandler.getExchange(exchangeId);
+        if (!exchangeExists) {
+          throw new Error(`Exchange ${exchangeId} does not exist`);
+        }
+        const [offerExists, offer] = await offerHandler.getOffer(exchange.offerId);
+        if (!offerExists) {
+          throw new Error(`Offer ${exchange.offerId} does not exist`);
+        }
+        const exchangeToken = offer.exchangeToken;
+
+        // Event validation
+        if (tx && action) {
+          // Get seller ID from the offer
+          const sellerId = offer.sellerId;
+
+          // Seller events
+          if (expSellerPayoff != "0") {
             await expect(tx)
               .to.emit(action.handler, "FundsReleased")
-              .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, action.wallet.address);
+              .withArgs(exchangeId, sellerId, exchangeToken, expSellerPayoff, action.wallet.address);
           }
 
-          if (protocolPayoff != "0") {
+          // Buyer events
+          if (expBuyerPayoff != "0") {
+            await expect(tx)
+              .to.emit(action.handler, "FundsReleased")
+              .withArgs(exchangeId, buyerId, exchangeToken, expBuyerPayoff, action.wallet.address);
+          }
+
+          // Protocol events
+          if (expProtocolPayoff != "0") {
             await expect(tx)
               .to.emit(action.handler, "ProtocolFeeCollected")
-              .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, action.wallet.address);
+              .withArgs(exchangeId, exchangeToken, expProtocolPayoff, action.wallet.address);
           } else {
-            await expect(tx).to.not.emit(exchangeHandler, "ProtocolFeeCollected");
+            await expect(tx).to.not.emit(action.handler, "ProtocolFeeCollected");
           }
-        },
-        REVOKED: async function (tx, action) {
-          if (buyerPayoff != "0") {
-            await expect(tx)
-              .to.emit(action.handler, "FundsReleased")
-              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, action.wallet.address);
+
+          // Agent events (for agent offers only)
+          const offerAgentId = offer.agentId;
+          if (offerAgentId && offerAgentId != "0") {
+            if (expAgentPayoff != "0") {
+              await expect(tx)
+                .to.emit(action.handler, "FundsReleased")
+                .withArgs(exchangeId, offerAgentId, exchangeToken, expAgentPayoff, action.wallet.address);
+            }
           }
-          await expect(tx).to.not.emit(exchangeHandler, "ProtocolFeeCollected");
-        },
-        CANCELED: async function (tx, action) {
-          await expect(tx)
-            .to.emit(action.handler, "FundsReleased")
-            .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, action.wallet.address);
+        }
 
-          await expect(tx)
-            .to.emit(action.handler, "FundsReleased")
-            .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, action.wallet.address);
+        // State validation
+        if (
+          updatedSellersAvailableFunds ||
+          updatedBuyerAvailableFunds ||
+          updatedProtocolAvailableFunds ||
+          updatedAgentAvailableFunds
+        ) {
+          // Get seller ID from the offer for state validation
+          const sellerId = offer.sellerId;
 
-          await expect(tx).to.not.emit(action.handler, "ProtocolFeeCollected");
-        },
-        "DISPUTED-RETRACTED": async function (tx, action) {
-          await expect(tx)
-            .to.emit(action.handler, "ProtocolFeeCollected")
-            .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, action.wallet.address);
+          // Seller funds
+          if (expSellerPayoff != "0") {
+            if (updatedSellersAvailableFunds) {
+              const sellerFound = updatedSellersAvailableFunds.funds.find(
+                (fund) => fund.tokenAddress === exchangeToken
+              );
+              expect(sellerFound?.availableAmount || "0").to.equal(expSellerPayoff);
+            } else {
+              const freshSellerFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(sellerId));
+              const sellerFound = freshSellerFunds.funds.find((fund) => fund.tokenAddress === exchangeToken);
+              expect(sellerFound?.availableAmount || "0").to.equal(expSellerPayoff);
+            }
+          }
 
-          await expect(tx)
-            .to.emit(action.handler, "FundsReleased")
-            .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, action.wallet.address);
+          // Buyer funds
+          if (expBuyerPayoff != "0") {
+            if (updatedBuyerAvailableFunds) {
+              const buyerFound = updatedBuyerAvailableFunds.funds.find((fund) => fund.tokenAddress === exchangeToken);
+              expect(buyerFound?.availableAmount || "0").to.equal(expBuyerPayoff);
+            } else {
+              const freshBuyerFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
+              const buyerFound = freshBuyerFunds.funds.find((fund) => fund.tokenAddress === exchangeToken);
+              expect(buyerFound?.availableAmount || "0").to.equal(expBuyerPayoff);
+            }
+          }
 
-          // Check that FundsReleased event was NOT emitted for buyer (buyerPayoff is 0)
-          // (Original test does this check but we can skip for optimization)
-        },
-        "DISPUTED-RETRACTED-EXPIRED": async function (tx, action) {
-          await expect(tx)
-            .to.emit(action.handler, "ProtocolFeeCollected")
-            .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, action.wallet.address);
+          // Protocol funds
+          if (expProtocolPayoff != "0") {
+            if (updatedProtocolAvailableFunds) {
+              const protocolFound = updatedProtocolAvailableFunds.funds.find(
+                (fund) => fund.tokenAddress === exchangeToken
+              );
+              expect(protocolFound?.availableAmount || "0").to.equal(expProtocolPayoff);
+            } else {
+              const freshProtocolFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(protocolId));
+              const protocolFound = freshProtocolFunds.funds.find((fund) => fund.tokenAddress === exchangeToken);
+              expect(protocolFound?.availableAmount || "0").to.equal(expProtocolPayoff);
+            }
+          }
 
-          await expect(tx)
-            .to.emit(action.handler, "FundsReleased")
-            .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, action.wallet.address);
-
-          // Check that FundsReleased event was NOT emitted for buyer (buyerPayoff is 0)
-          // (Original test does this check but we can skip for optimization)
-        },
-        "DISPUTED-RESOLVED": async function (tx, action) {
-          await expect(tx)
-            .to.emit(action.handler, "FundsReleased")
-            .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, action.wallet.address);
-
-          await expect(tx)
-            .to.emit(action.handler, "FundsReleased")
-            .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, action.wallet.address);
-
-          await expect(tx).to.not.emit(action.handler, "ProtocolFeeCollected");
-        },
-        "DISPUTED-ESCALATED-RETRACTED": async function (tx, action) {
-          await expect(tx)
-            .to.emit(action.handler, "ProtocolFeeCollected")
-            .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, action.wallet.address);
-
-          await expect(tx)
-            .to.emit(action.handler, "FundsReleased")
-            .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, action.wallet.address);
-
-          // Check that FundsReleased event was NOT emitted for buyer (buyerPayoff is 0)
-        },
-        "DISPUTED-ESCALATED-RESOLVED": async function (tx, action) {
-          await expect(tx)
-            .to.emit(action.handler, "FundsReleased")
-            .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, action.wallet.address);
-
-          await expect(tx)
-            .to.emit(action.handler, "FundsReleased")
-            .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, action.wallet.address);
-
-          await expect(tx).to.not.emit(action.handler, "ProtocolFeeCollected");
-        },
-        "DISPUTED-ESCALATED-DECIDED": async function (tx, action) {
-          await expect(tx)
-            .to.emit(action.handler, "FundsReleased")
-            .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, action.wallet.address);
-
-          await expect(tx)
-            .to.emit(action.handler, "FundsReleased")
-            .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, action.wallet.address);
-
-          await expect(tx).to.not.emit(action.handler, "ProtocolFeeCollected");
-        },
-        "DISPUTED-ESCALATED-EXPIRED": async function (tx, action) {
-          await expect(tx)
-            .to.emit(action.handler, "FundsReleased")
-            .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, action.wallet.address);
-
-          await expect(tx)
-            .to.emit(action.handler, "FundsReleased")
-            .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, action.wallet.address);
-
-          await expect(tx).to.not.emit(action.handler, "ProtocolFeeCollected");
-        },
-        "DISPUTED-ESCALATED-REFUSED": async function (tx, action) {
-          await expect(tx)
-            .to.emit(action.handler, "FundsReleased")
-            .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, action.wallet.address);
-
-          await expect(tx)
-            .to.emit(action.handler, "FundsReleased")
-            .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, action.wallet.address);
-
-          await expect(tx).to.not.emit(action.handler, "ProtocolFeeCollected");
-        },
+          // Agent funds (for agent offers only)
+          const offerAgentId = offer.agentId;
+          if (offerAgentId && offerAgentId != "0" && expAgentPayoff != "0") {
+            if (updatedAgentAvailableFunds) {
+              const agentFound = updatedAgentAvailableFunds.funds.find((fund) => fund.tokenAddress === exchangeToken);
+              expect(agentFound?.availableAmount || "0").to.equal(expAgentPayoff);
+            } else {
+              const freshAgentFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(offerAgentId));
+              const agentFound = freshAgentFunds.funds.find((fund) => fund.tokenAddress === exchangeToken);
+              expect(agentFound?.availableAmount || "0").to.equal(expAgentPayoff);
+            }
+          }
+        }
       };
 
-      const regularStateValidation = {
-        COMPLETED: function (updatedSellersAvailableFunds, updatedProtocolAvailableFunds) {
-          if (sellerPayoff != "0") {
-            const sellerFound = updatedSellersAvailableFunds.funds.find(
-              (fund) => fund.tokenAddress === offerToken.exchangeToken
-            );
-            expect(sellerFound?.availableAmount).to.equal(sellerPayoff);
-          }
+      // Event validation - uses payoffs calculated by nonDisputeStatePayouts/disputeStatePayouts
+      const validateEvents = async function (tx, action) {
+        await validateStateAndEvents({
+          tx,
+          action,
+          expectedPayoffs: {
+            sellerPayoff,
+            buyerPayoff,
+            protocolPayoff,
+            agentPayoff: agentPayoff || "0",
+          },
+        });
+      };
 
-          if (protocolPayoff != "0") {
-            const protocolFound = updatedProtocolAvailableFunds.funds.find(
-              (fund) => fund.tokenAddress === offerToken.exchangeToken
-            );
-            expect(protocolFound?.availableAmount).to.equal(protocolPayoff);
-          }
-        },
-        REVOKED: async function () {
-          if (buyerPayoff != "0") {
-            const freshBuyerFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
-            const buyerFound = freshBuyerFunds.funds.find((fund) => fund.tokenAddress === offerToken.exchangeToken);
-            expect(buyerFound?.availableAmount).to.equal(buyerPayoff);
-          }
-        },
-        CANCELED: function (updatedSellersAvailableFunds, updatedProtocolAvailableFunds, updatedBuyerAvailableFunds) {
-          // For CANCELED, both buyer and seller get payoffs
-          const buyerFound = updatedBuyerAvailableFunds.funds.find(
-            (fund) => fund.tokenAddress === offerToken.exchangeToken
-          );
-          expect(buyerFound?.availableAmount).to.equal(buyerPayoff);
-
-          const sellerFound = updatedSellersAvailableFunds.funds.find(
-            (fund) => fund.tokenAddress === offerToken.exchangeToken
-          );
-          expect(sellerFound?.availableAmount).to.equal(sellerPayoff);
-        },
-        "DISPUTED-RETRACTED": function (updatedSellersAvailableFunds, updatedProtocolAvailableFunds) {
-          // For DISPUTED-RETRACTED, seller and protocol get payoffs, buyer gets 0
-          if (sellerPayoff != "0") {
-            const sellerFound = updatedSellersAvailableFunds.funds.find(
-              (fund) => fund.tokenAddress === offerToken.exchangeToken
-            );
-            expect(sellerFound?.availableAmount).to.equal(sellerPayoff);
-          }
-
-          if (protocolPayoff != "0") {
-            const protocolFound = updatedProtocolAvailableFunds.funds.find(
-              (fund) => fund.tokenAddress === offerToken.exchangeToken
-            );
-            expect(protocolFound?.availableAmount).to.equal(protocolPayoff);
-          }
-
-          // Buyer should have no payout (buyerPayoff is 0)
-        },
-        "DISPUTED-RETRACTED-EXPIRED": function (updatedSellersAvailableFunds, updatedProtocolAvailableFunds) {
-          // For DISPUTED-RETRACTED-EXPIRED, seller and protocol get payoffs, buyer gets 0 (same as DISPUTED-RETRACTED)
-          if (sellerPayoff != "0") {
-            const sellerFound = updatedSellersAvailableFunds.funds.find(
-              (fund) => fund.tokenAddress === offerToken.exchangeToken
-            );
-            expect(sellerFound?.availableAmount).to.equal(sellerPayoff);
-          }
-
-          if (protocolPayoff != "0") {
-            const protocolFound = updatedProtocolAvailableFunds.funds.find(
-              (fund) => fund.tokenAddress === offerToken.exchangeToken
-            );
-            expect(protocolFound?.availableAmount).to.equal(protocolPayoff);
-          }
-
-          // Buyer should have no payout (buyerPayoff is 0)
-        },
-        "DISPUTED-RESOLVED": async function (updatedSellersAvailableFunds) {
-          // For DISPUTED-RESOLVED, both buyer and seller get payoffs, protocol gets 0
-          if (buyerPayoff != "0") {
-            const freshBuyerFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
-            const buyerFound = freshBuyerFunds.funds.find((fund) => fund.tokenAddress === offerToken.exchangeToken);
-            expect(buyerFound?.availableAmount).to.equal(buyerPayoff.toString());
-          }
-
-          if (sellerPayoff != "0") {
-            const sellerFound = updatedSellersAvailableFunds.funds.find(
-              (fund) => fund.tokenAddress === offerToken.exchangeToken
-            );
-            expect(sellerFound?.availableAmount).to.equal(sellerPayoff.toString());
-          }
-
-          // Protocol should have no payout (protocolPayoff is 0)
-        },
-        "DISPUTED-ESCALATED-RETRACTED": function (updatedSellersAvailableFunds, updatedProtocolAvailableFunds) {
-          // For DISPUTED-ESCALATED-RETRACTED, seller and protocol get payoffs, buyer gets 0
-          if (sellerPayoff != "0") {
-            const sellerFound = updatedSellersAvailableFunds.funds.find(
-              (fund) => fund.tokenAddress === offerToken.exchangeToken
-            );
-            expect(sellerFound?.availableAmount).to.equal(sellerPayoff);
-          }
-
-          if (protocolPayoff != "0") {
-            const protocolFound = updatedProtocolAvailableFunds.funds.find(
-              (fund) => fund.tokenAddress === offerToken.exchangeToken
-            );
-            expect(protocolFound?.availableAmount).to.equal(protocolPayoff);
-          }
-
-          // Buyer should have no payout (buyerPayoff is 0)
-        },
-        "DISPUTED-ESCALATED-RESOLVED": function (
+      // State validation - uses payoffs calculated by nonDisputeStatePayouts/disputeStatePayouts
+      const validateState = async function (
+        updatedSellersAvailableFunds,
+        updatedProtocolAvailableFunds,
+        updatedBuyerAvailableFunds
+      ) {
+        await validateStateAndEvents({
+          expectedPayoffs: {
+            sellerPayoff,
+            buyerPayoff,
+            protocolPayoff,
+            agentPayoff: agentPayoff || "0",
+          },
           updatedSellersAvailableFunds,
           updatedProtocolAvailableFunds,
-          updatedBuyerAvailableFunds
-        ) {
-          // For DISPUTED-ESCALATED-RESOLVED, both buyer and seller get payoffs, protocol gets 0
-          if (buyerPayoff != "0") {
-            const buyerFound = updatedBuyerAvailableFunds.funds.find(
-              (fund) => fund.tokenAddress === offerToken.exchangeToken
-            );
-            expect(buyerFound?.availableAmount).to.equal(buyerPayoff);
-          }
-
-          if (sellerPayoff != "0") {
-            const sellerFound = updatedSellersAvailableFunds.funds.find(
-              (fund) => fund.tokenAddress === offerToken.exchangeToken
-            );
-            expect(sellerFound?.availableAmount).to.equal(sellerPayoff);
-          }
-
-          // Protocol should have no payout (protocolPayoff is 0)
-        },
-        "DISPUTED-ESCALATED-DECIDED": function (
-          updatedSellersAvailableFunds,
-          updatedProtocolAvailableFunds,
-          updatedBuyerAvailableFunds
-        ) {
-          // For DISPUTED-ESCALATED-DECIDED, both buyer and seller get payoffs, protocol gets 0
-          if (buyerPayoff != "0") {
-            const buyerFound = updatedBuyerAvailableFunds.funds.find(
-              (fund) => fund.tokenAddress === offerToken.exchangeToken
-            );
-            expect(buyerFound?.availableAmount).to.equal(buyerPayoff);
-          }
-
-          if (sellerPayoff != "0") {
-            const sellerFound = updatedSellersAvailableFunds.funds.find(
-              (fund) => fund.tokenAddress === offerToken.exchangeToken
-            );
-            expect(sellerFound?.availableAmount).to.equal(sellerPayoff);
-          }
-
-          // Protocol should have no payout (protocolPayoff is 0)
-        },
-        "DISPUTED-ESCALATED-EXPIRED": function (
-          updatedSellersAvailableFunds,
-          updatedProtocolAvailableFunds,
-          updatedBuyerAvailableFunds
-        ) {
-          // For DISPUTED-ESCALATED-EXPIRED, both buyer and seller get payoffs, protocol gets 0
-          if (buyerPayoff != "0") {
-            const buyerFound = updatedBuyerAvailableFunds.funds.find(
-              (fund) => fund.tokenAddress === offerToken.exchangeToken
-            );
-            expect(buyerFound?.availableAmount).to.equal(buyerPayoff);
-          }
-
-          if (sellerPayoff != "0") {
-            const sellerFound = updatedSellersAvailableFunds.funds.find(
-              (fund) => fund.tokenAddress === offerToken.exchangeToken
-            );
-            expect(sellerFound?.availableAmount).to.equal(sellerPayoff);
-          }
-
-          // Protocol should have no payout (protocolPayoff is 0)
-        },
-        "DISPUTED-ESCALATED-REFUSED": function (
-          updatedSellersAvailableFunds,
-          updatedProtocolAvailableFunds,
-          updatedBuyerAvailableFunds
-        ) {
-          // For DISPUTED-ESCALATED-REFUSED, both buyer and seller get payoffs, protocol gets 0
-          if (buyerPayoff != "0") {
-            const buyerFound = updatedBuyerAvailableFunds.funds.find(
-              (fund) => fund.tokenAddress === offerToken.exchangeToken
-            );
-            expect(buyerFound?.availableAmount).to.equal(buyerPayoff);
-          }
-
-          if (sellerPayoff != "0") {
-            const sellerFound = updatedSellersAvailableFunds.funds.find(
-              (fund) => fund.tokenAddress === offerToken.exchangeToken
-            );
-            expect(sellerFound?.availableAmount).to.equal(sellerPayoff);
-          }
-
-          // Protocol should have no payout (protocolPayoff is 0)
-        },
+          updatedBuyerAvailableFunds,
+        });
       };
 
       const agentStateValidation = {
@@ -3812,29 +3596,32 @@ describe("IBosonFundsHandler", function () {
             const action = nonDisputeStateFinalization[state]();
             const tx = await action.handler.connect(action.wallet)[action.method](...action.args);
 
-            await regularEventChecks[state](tx, action);
+            await validateEvents(tx, action);
           });
 
           it("should update state", async function () {
-            // commit again, so seller has nothing in available funds (matches original test)
-            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
+            // Get the exchange token from the offer
+            const [, exchange] = await exchangeHandler.getExchange(exchangeId);
+            const [, offer] = await offerHandler.getOffer(exchange.offerId);
+            const exchangeToken = offer.exchangeToken;
+
+            // Store available funds before the finalizing action
+            const sellerFundsBefore = await getFundsForParticipant(fundsHandler, seller.id, exchangeToken);
+            const buyerFundsBefore = await getFundsForParticipant(fundsHandler, buyerId, exchangeToken);
+            const protocolFundsBefore = await getFundsForParticipant(fundsHandler, protocolId, exchangeToken);
 
             const action = nonDisputeStateFinalization[state]();
             await action.handler.connect(action.wallet)[action.method](...action.args);
 
-            const updatedSellersAvailableFunds = FundsList.fromStruct(
-              await fundsHandler.getAllAvailableFunds(seller.id)
-            );
-            const updatedProtocolAvailableFunds = FundsList.fromStruct(
-              await fundsHandler.getAllAvailableFunds(protocolId)
-            );
-            const updatedBuyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
+            // Get available funds after the finalizing action
+            const sellerFundsAfter = await getFundsForParticipant(fundsHandler, seller.id, exchangeToken);
+            const buyerFundsAfter = await getFundsForParticipant(fundsHandler, buyerId, exchangeToken);
+            const protocolFundsAfter = await getFundsForParticipant(fundsHandler, protocolId, exchangeToken);
 
-            await regularStateValidation[state](
-              updatedSellersAvailableFunds,
-              updatedProtocolAvailableFunds,
-              updatedBuyerAvailableFunds
-            );
+            // Validate fund changes match expected payoffs
+            expect((sellerFundsAfter - sellerFundsBefore).toString()).to.equal(sellerPayoff.toString());
+            expect((buyerFundsAfter - buyerFundsBefore).toString()).to.equal(buyerPayoff.toString());
+            expect((protocolFundsAfter - protocolFundsBefore).toString()).to.equal(protocolPayoff.toString());
           });
 
           context("Offer has an agent", async function () {
@@ -3864,22 +3651,31 @@ describe("IBosonFundsHandler", function () {
             });
 
             it("should update state", async function () {
+              // Get the exchange token from the agent offer
+              const [, exchange] = await exchangeHandler.getExchange(exchangeId);
+              const [, offer] = await offerHandler.getOffer(exchange.offerId);
+              const exchangeToken = offer.exchangeToken;
+
+              // Store available funds before the finalizing action
+              const sellerFundsBefore = await getFundsForParticipant(fundsHandler, seller.id, exchangeToken);
+              const buyerFundsBefore = await getFundsForParticipant(fundsHandler, buyerId, exchangeToken);
+              const protocolFundsBefore = await getFundsForParticipant(fundsHandler, protocolId, exchangeToken);
+              const agentFundsBefore = await getFundsForParticipant(fundsHandler, agent.id, exchangeToken);
+
               const action = nonDisputeStateFinalization[state]();
               await action.handler.connect(action.wallet)[action.method](...action.args);
 
-              const updatedSellersAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAllAvailableFunds(seller.id)
-              );
-              const updatedProtocolAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAllAvailableFunds(protocolId)
-              );
-              const updatedBuyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
+              // Get available funds after the finalizing action
+              const sellerFundsAfter = await getFundsForParticipant(fundsHandler, seller.id, exchangeToken);
+              const buyerFundsAfter = await getFundsForParticipant(fundsHandler, buyerId, exchangeToken);
+              const protocolFundsAfter = await getFundsForParticipant(fundsHandler, protocolId, exchangeToken);
+              const agentFundsAfter = await getFundsForParticipant(fundsHandler, agent.id, exchangeToken);
 
-              await agentStateValidation[state](
-                updatedSellersAvailableFunds,
-                updatedProtocolAvailableFunds,
-                updatedBuyerAvailableFunds
-              );
+              // Validate fund changes match expected payoffs
+              expect((sellerFundsAfter - sellerFundsBefore).toString()).to.equal(sellerPayoff.toString());
+              expect((buyerFundsAfter - buyerFundsBefore).toString()).to.equal(buyerPayoff.toString());
+              expect((protocolFundsAfter - protocolFundsBefore).toString()).to.equal(protocolPayoff.toString());
+              expect((agentFundsAfter - agentFundsBefore).toString()).to.equal(agentPayoff.toString());
             });
           });
         });
@@ -3904,7 +3700,7 @@ describe("IBosonFundsHandler", function () {
               const action = disputeStateFinalization[state]();
               const tx = await action.handler.connect(action.wallet)[action.method](...action.args);
 
-              await regularEventChecks[`DISPUTED-${state}`](tx, action);
+              await validateEvents(tx, action);
             });
 
             it("should update state", async function () {
@@ -3922,7 +3718,7 @@ describe("IBosonFundsHandler", function () {
               );
               const updatedBuyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
 
-              await regularStateValidation[`DISPUTED-${state}`](
+              await validateState(
                 updatedSellersAvailableFunds,
                 updatedProtocolAvailableFunds,
                 updatedBuyerAvailableFunds
@@ -3948,13 +3744,12 @@ describe("IBosonFundsHandler", function () {
 
                 const disputeKey = `DISPUTED-${state}`;
                 if (agentStateSetup[disputeKey]) {
-                  const originalSetup = agentStateSetup[disputeKey];
-                  const setupCode = originalSetup.toString();
+                  const flags = agentStateSetup[disputeKey]();
 
-                  if (setupCode.includes("escalateDispute")) {
+                  if (flags.escalateDispute) {
                     await disputeHandler.connect(buyer).escalateDispute(exchangeId);
                   }
-                  if (setupCode.includes("prepareDataSignature")) {
+                  if (flags.prepareDataSignature) {
                     const buyerPercentBasisPoints = "5566"; // 55.66%
                     const resolutionType = [
                       { name: "exchangeId", type: "uint256" },
@@ -3972,7 +3767,7 @@ describe("IBosonFundsHandler", function () {
                     );
                     global.buyerPercentBasisPoints = buyerPercentBasisPoints;
                   }
-                  if (setupCode.includes("timeout") || setupCode.includes("expired")) {
+                  if (flags.expired) {
                     // Handle timeout logic for expired states
                     if (state.includes("ESCALATED") && state.includes("EXPIRED")) {
                       // Use current block timestamp (escalation just happened above)
@@ -5254,6 +5049,7 @@ describe("IBosonFundsHandler", function () {
 
     context("👉 releaseFunds() - Price discovery", async function () {
       let voucherCloneAddress, order;
+
       beforeEach(async function () {
         // ids
         protocolId = "0";
@@ -5336,6 +5132,7 @@ describe("IBosonFundsHandler", function () {
         REVOKED: function () {
           buyerPayoff = (BigInt(offerPriceDiscovery.sellerDeposit) + BigInt(orderPrice)).toString();
           sellerPayoff = 0;
+          sellerPayoff2 = 0;
           protocolPayoff = 0;
         },
         CANCELED: function () {
@@ -5343,6 +5140,7 @@ describe("IBosonFundsHandler", function () {
           sellerPayoff = (
             BigInt(offerPriceDiscovery.sellerDeposit) + BigInt(offerPriceDiscovery.buyerCancelPenalty)
           ).toString();
+          sellerPayoff2 = 0;
           protocolPayoff = 0;
         },
       };
@@ -5370,97 +5168,6 @@ describe("IBosonFundsHandler", function () {
             method: "cancelVoucher",
             args: [exchangeId],
           };
-        },
-      };
-      const regularStateValidation = {
-        COMPLETED: async function () {
-          // Additional commit to match original test pattern
-          const tokenId = deriveTokenId(offerPriceDiscovery.id, "2");
-          const newOrder = {
-            seller: assistant.address,
-            buyer: buyer.address,
-            voucherContract: voucherCloneAddress,
-            tokenId: tokenId,
-            exchangeToken: offerPriceDiscovery.exchangeToken,
-            price: orderPrice,
-          };
-          const priceDiscoveryData = priceDiscoveryContract.interface.encodeFunctionData("fulfilBuyOrder", [newOrder]);
-          const priceDiscovery = PriceDiscovery.fromObject({
-            price: newOrder.price,
-            side: Side.Ask,
-            priceDiscoveryContract: await priceDiscoveryContract.getAddress(),
-            conduit: await priceDiscoveryContract.getAddress(),
-            priceDiscoveryData: priceDiscoveryData,
-          });
-          await priceDiscoveryHandler
-            .connect(buyer)
-            .commitToPriceDiscoveryOffer(await buyer.getAddress(), offerPriceDiscovery.id, priceDiscovery);
-
-          // Read on chain state AFTER action has been called
-          let sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
-          let buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
-          let protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(protocolId));
-          let agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(agentId));
-
-          // Expected state after the first completion
-          const expectedSellerAvailableFunds = new FundsList([
-            new Funds(await mockToken.getAddress(), "Foreign20", BigInt(sellerPayoff) + BigInt(sellerPayoff2)),
-            new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
-          ]);
-          const expectedBuyerAvailableFunds = new FundsList([]);
-          const expectedProtocolAvailableFunds = new FundsList([
-            new Funds(await mockToken.getAddress(), "Foreign20", protocolPayoff),
-          ]);
-          const expectedAgentAvailableFunds = new FundsList([]);
-
-          expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-          expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-          expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-          expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-
-          // Complete another exchange to test funds are only updated, no new entry is created
-          await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
-          await exchangeHandler.connect(buyer).completeExchange(exchangeId);
-
-          const finalExpectedSellerAvailableFunds = new FundsList([
-            new Funds(await mockToken.getAddress(), "Foreign20", (BigInt(sellerPayoff) + BigInt(sellerPayoff2)) * 2n),
-            new Funds(ZeroAddress, "Native currency", `${2 * sellerDeposit}`),
-          ]);
-          const finalExpectedProtocolAvailableFunds = new FundsList([
-            new Funds(await mockToken.getAddress(), "Foreign20", BigInt(protocolPayoff) * 2n),
-          ]);
-
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
-          buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
-          protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(protocolId));
-          agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(agentId));
-
-          expect(sellersAvailableFunds).to.eql(finalExpectedSellerAvailableFunds);
-          expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-          expect(protocolAvailableFunds).to.eql(finalExpectedProtocolAvailableFunds);
-          expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
-        },
-        REVOKED: async function () {
-          if (buyerPayoff != "0") {
-            const freshBuyerFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
-            const buyerFound = freshBuyerFunds.funds.find(
-              (fund) => fund.tokenAddress === offerPriceDiscovery.exchangeToken
-            );
-            expect(buyerFound?.availableAmount).to.equal(buyerPayoff);
-          }
-        },
-        CANCELED: async function () {
-          const freshBuyerFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
-          const buyerFound = freshBuyerFunds.funds.find(
-            (fund) => fund.tokenAddress === offerPriceDiscovery.exchangeToken
-          );
-          expect(buyerFound?.availableAmount).to.equal(buyerPayoff);
-
-          const freshSellerFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
-          const sellerFound = freshSellerFunds.funds.find(
-            (fund) => fund.tokenAddress === offerPriceDiscovery.exchangeToken
-          );
-          expect(sellerFound?.availableAmount).to.equal((BigInt(sellerDeposit) + BigInt(sellerPayoff)).toString());
         },
       };
 
@@ -6065,10 +5772,30 @@ describe("IBosonFundsHandler", function () {
           });
 
           it("should update state", async function () {
+            // Get the exchange token from the offer
+            const [, exchange] = await exchangeHandler.getExchange(exchangeId);
+            const [, offer] = await offerHandler.getOffer(exchange.offerId);
+            const exchangeToken = offer.exchangeToken;
+
+            // Store available funds before the finalizing action
+            const sellerFundsBefore = await getFundsForParticipant(fundsHandler, offer.sellerId, exchangeToken);
+            const buyerFundsBefore = await getFundsForParticipant(fundsHandler, buyerId, exchangeToken);
+            const protocolFundsBefore = await getFundsForParticipant(fundsHandler, protocolId, exchangeToken);
+
             const action = nonDisputeStateFinalization[state]();
             await action.handler.connect(action.wallet)[action.method](...action.args);
 
-            await regularStateValidation[state]();
+            // Get available funds after the finalizing action
+            const sellerFundsAfter = await getFundsForParticipant(fundsHandler, offer.sellerId, exchangeToken);
+            const buyerFundsAfter = await getFundsForParticipant(fundsHandler, buyerId, exchangeToken);
+            const protocolFundsAfter = await getFundsForParticipant(fundsHandler, protocolId, exchangeToken);
+
+            // Validate fund changes match expected payoffs
+            // In price discovery, seller may have both sellerPayoff and sellerPayoff2
+            const totalSellerPayoff = BigInt(sellerPayoff.toString()) + BigInt(sellerPayoff2?.toString() || "0");
+            expect((sellerFundsAfter - sellerFundsBefore).toString()).to.equal(totalSellerPayoff.toString());
+            expect((buyerFundsAfter - buyerFundsBefore).toString()).to.equal(buyerPayoff.toString());
+            expect((protocolFundsAfter - protocolFundsBefore).toString()).to.equal(protocolPayoff.toString());
           });
         });
       });
