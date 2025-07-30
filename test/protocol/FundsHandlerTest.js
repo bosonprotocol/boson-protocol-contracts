@@ -869,7 +869,7 @@ describe("IBosonFundsHandler", function () {
               // retract from the dispute
               await disputeHandler.connect(buyer).retractDispute(exchangeId);
 
-              agentPayoff = ((BigInt(agentOffer.price) * BigInt(agent.feePercentage)) / 10000n).toString();
+              agentPayoff = applyPercentage(agentOffer.price, agent.feePercentage);
 
               // Check the balance BEFORE withdrawFunds()
               const feeCollectorNativeBalanceBefore = await mockToken.balanceOf(agent.wallet);
@@ -1099,7 +1099,7 @@ describe("IBosonFundsHandler", function () {
 
             await offerHandler.connect(assistant).updateOfferRoyaltyRecipients(offerToken.id, newRoyaltyInfo);
 
-            price = (BigInt(offerToken.price) * 11n) / 10n;
+            price = applyPercentage(offerToken.price, 11000);
             const expectedCloneAddress = calculateCloneAddress(
               await accountHandler.getAddress(),
               beaconProxyAddress,
@@ -2611,11 +2611,13 @@ describe("IBosonFundsHandler", function () {
           const buyerPercentBasisPoints = global.buyerPercentBasisPoints || "5566";
 
           // buyer: (price + sellerDeposit)*buyerPercentage
-          buyerPayoff =
-            ((BigInt(offerToken.price) + BigInt(offerToken.sellerDeposit)) * BigInt(buyerPercentBasisPoints)) / 10000n;
+          buyerPayoff = applyPercentage(
+            BigInt(offerToken.price) + BigInt(offerToken.sellerDeposit),
+            buyerPercentBasisPoints
+          );
 
           // seller: (price + sellerDeposit)*(1-buyerPercentage)
-          sellerPayoff = BigInt(offerToken.price) + BigInt(offerToken.sellerDeposit) - buyerPayoff;
+          sellerPayoff = BigInt(offerToken.price) + BigInt(offerToken.sellerDeposit) - BigInt(buyerPayoff);
 
           // protocol: 0
           protocolPayoff = 0;
@@ -2840,7 +2842,7 @@ describe("IBosonFundsHandler", function () {
       const agentStatePayouts = {
         COMPLETED: function () {
           buyerPayoff = 0;
-          agentFee = (BigInt(agentOffer.price) * BigInt(agentFeePercentage)) / 10000n;
+          agentFee = applyPercentage(agentOffer.price, agentFeePercentage);
           agentPayoff = agentFee;
           sellerPayoff = (
             BigInt(agentOffer.sellerDeposit) +
@@ -2864,7 +2866,7 @@ describe("IBosonFundsHandler", function () {
         },
         "DISPUTED-RETRACTED": function () {
           buyerPayoff = 0;
-          agentFee = (BigInt(agentOffer.price) * BigInt(agentFeePercentage)) / 10000n;
+          agentFee = applyPercentage(agentOffer.price, agentFeePercentage);
           agentPayoff = agentFee;
           sellerPayoff = (
             BigInt(agentOffer.sellerDeposit) +
@@ -2876,7 +2878,7 @@ describe("IBosonFundsHandler", function () {
         },
         "DISPUTED-RETRACTED-EXPIRED": function () {
           buyerPayoff = 0;
-          agentFee = (BigInt(agentOffer.price) * BigInt(agentFeePercentage)) / 10000n;
+          agentFee = applyPercentage(agentOffer.price, agentFeePercentage);
           agentPayoff = agentFee;
           sellerPayoff = (
             BigInt(agentOffer.sellerDeposit) +
@@ -2909,7 +2911,7 @@ describe("IBosonFundsHandler", function () {
           buyerPayoff = 0;
 
           // agentPayoff: agentFee
-          agentFee = (BigInt(agentOffer.price) * BigInt(agentFeePercentage)) / 10000n;
+          agentFee = applyPercentage(agentOffer.price, agentFeePercentage);
           agentPayoff = agentFee;
 
           // seller: sellerDeposit + price - protocolFee - agentFee + buyerEscalationDeposit
@@ -3896,7 +3898,7 @@ describe("IBosonFundsHandler", function () {
             buyerPayoff = 0;
 
             // agentPayoff: agentFee
-            agentFee = ((BigInt(agentOffer.price) * BigInt(agentFeePercentage)) / 10000n).toString();
+            agentFee = applyPercentage(agentOffer.price, agentFeePercentage);
             agentPayoff = agentFee;
 
             // seller: sellerDeposit + price - protocolFee - agentFee
@@ -5222,15 +5224,16 @@ describe("IBosonFundsHandler", function () {
         RESOLVED: function () {
           const buyerPercentBasisPoints = "5566"; // 55.66%
 
-          buyerPayoff = (BigInt(order.price) * BigInt(buyerPercentBasisPoints)) / 10000n;
-          buyerPayoff += (BigInt(offerPriceDiscovery.sellerDeposit) * BigInt(buyerPercentBasisPoints)) / 10000n;
+          buyerPayoff = BigInt(applyPercentage(order.price, buyerPercentBasisPoints));
+          buyerPayoff += BigInt(applyPercentage(offerPriceDiscovery.sellerDeposit, buyerPercentBasisPoints));
 
           const sellerPercentBasisPoints = 10000n - BigInt(buyerPercentBasisPoints);
-          sellerPayoff =
-            (BigInt(offerPriceDiscovery.sellerDeposit) * (10000n - BigInt(buyerPercentBasisPoints))) / 10000n;
+          sellerPayoff = BigInt(
+            applyPercentage(offerPriceDiscovery.sellerDeposit, 10000n - BigInt(buyerPercentBasisPoints))
+          );
 
-          const sellerPricePart = BigInt(order.price) - (BigInt(order.price) * sellerPercentBasisPoints) / 10000n;
-          const sellerProtocolFeePart = (BigInt(priceDiscoveryProtocolFee) * sellerPercentBasisPoints) / 10000n;
+          const sellerPricePart = BigInt(order.price) - BigInt(applyPercentage(order.price, sellerPercentBasisPoints));
+          const sellerProtocolFeePart = BigInt(applyPercentage(priceDiscoveryProtocolFee, sellerPercentBasisPoints));
           sellerPayoff2 = BigInt(order.price) - sellerPricePart - sellerProtocolFeePart;
 
           protocolPayoff = sellerProtocolFeePart;
@@ -5244,16 +5247,17 @@ describe("IBosonFundsHandler", function () {
         "ESCALATED-RESOLVED": function () {
           const buyerPercentBasisPoints = "5566"; // 55.66%
 
-          buyerPayoff = (BigInt(order.price) * BigInt(buyerPercentBasisPoints)) / 10000n;
-          buyerPayoff += (BigInt(offerPriceDiscovery.sellerDeposit) * BigInt(buyerPercentBasisPoints)) / 10000n;
+          buyerPayoff = BigInt(applyPercentage(order.price, buyerPercentBasisPoints));
+          buyerPayoff += BigInt(applyPercentage(offerPriceDiscovery.sellerDeposit, buyerPercentBasisPoints));
           buyerPayoff += BigInt(buyerEscalationDeposit);
 
           const sellerPercentBasisPoints = 10000n - BigInt(buyerPercentBasisPoints);
-          sellerPayoff =
-            (BigInt(offerPriceDiscovery.sellerDeposit) * (10000n - BigInt(buyerPercentBasisPoints))) / 10000n;
+          sellerPayoff = BigInt(
+            applyPercentage(offerPriceDiscovery.sellerDeposit, 10000n - BigInt(buyerPercentBasisPoints))
+          );
 
-          const sellerPricePart = BigInt(order.price) - (BigInt(order.price) * sellerPercentBasisPoints) / 10000n;
-          const sellerProtocolFeePart = (BigInt(priceDiscoveryProtocolFee) * sellerPercentBasisPoints) / 10000n;
+          const sellerPricePart = BigInt(order.price) - BigInt(applyPercentage(order.price, sellerPercentBasisPoints));
+          const sellerProtocolFeePart = BigInt(applyPercentage(priceDiscoveryProtocolFee, sellerPercentBasisPoints));
           sellerPayoff2 = BigInt(order.price) - sellerPricePart - sellerProtocolFeePart;
 
           protocolPayoff = sellerProtocolFeePart;
@@ -5261,16 +5265,17 @@ describe("IBosonFundsHandler", function () {
         "ESCALATED-DECIDED": function () {
           const buyerPercentBasisPoints = "5566"; // 55.66%
 
-          buyerPayoff = (BigInt(order.price) * BigInt(buyerPercentBasisPoints)) / 10000n;
-          buyerPayoff += (BigInt(offerPriceDiscovery.sellerDeposit) * BigInt(buyerPercentBasisPoints)) / 10000n;
+          buyerPayoff = BigInt(applyPercentage(order.price, buyerPercentBasisPoints));
+          buyerPayoff += BigInt(applyPercentage(offerPriceDiscovery.sellerDeposit, buyerPercentBasisPoints));
           buyerPayoff += BigInt(buyerEscalationDeposit);
 
           const sellerPercentBasisPoints = 10000n - BigInt(buyerPercentBasisPoints);
-          sellerPayoff =
-            (BigInt(offerPriceDiscovery.sellerDeposit) * (10000n - BigInt(buyerPercentBasisPoints))) / 10000n;
+          sellerPayoff = BigInt(
+            applyPercentage(offerPriceDiscovery.sellerDeposit, 10000n - BigInt(buyerPercentBasisPoints))
+          );
 
-          const sellerPricePart = BigInt(order.price) - (BigInt(order.price) * sellerPercentBasisPoints) / 10000n;
-          const sellerProtocolFeePart = (BigInt(priceDiscoveryProtocolFee) * sellerPercentBasisPoints) / 10000n;
+          const sellerPricePart = BigInt(order.price) - BigInt(applyPercentage(order.price, sellerPercentBasisPoints));
+          const sellerProtocolFeePart = BigInt(applyPercentage(priceDiscoveryProtocolFee, sellerPercentBasisPoints));
           sellerPayoff2 = BigInt(order.price) - sellerPricePart - sellerProtocolFeePart;
 
           protocolPayoff = sellerProtocolFeePart;
