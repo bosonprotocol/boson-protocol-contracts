@@ -2492,7 +2492,7 @@ describe("IBosonFundsHandler", function () {
           // Get the current block timestamp as dispute timestamp (just raised in parent)
           const currentBlock = await provider.getBlock("latest");
           const disputedDate = currentBlock.timestamp;
-          const timeout = BigInt(disputedDate) + BigInt(resolutionPeriod);
+          const timeout = disputedDate + Number(resolutionPeriod);
 
           // Set time to expire the dispute
           await setNextBlockTimestamp(Number(timeout) + 1);
@@ -2556,7 +2556,7 @@ describe("IBosonFundsHandler", function () {
           const blockNumber = tx.blockNumber;
           const block = await provider.getBlock(blockNumber);
           const escalatedDate = block.timestamp;
-          const timeout = BigInt(escalatedDate) + BigInt(disputeResolver.escalationResponsePeriod);
+          const timeout = escalatedDate + Number(disputeResolver.escalationResponsePeriod);
 
           // Set time to expire the escalated dispute
           await setNextBlockTimestamp(Number(timeout) + 1);
@@ -2589,24 +2589,8 @@ describe("IBosonFundsHandler", function () {
       };
 
       const disputeStatePayouts = {
-        RETRACTED: function () {
-          buyerPayoff = 0;
-          sellerPayoff = (
-            BigInt(offerToken.sellerDeposit) +
-            BigInt(offerToken.price) -
-            BigInt(offerTokenProtocolFee)
-          ).toString();
-          protocolPayoff = offerTokenProtocolFee;
-        },
-        "RETRACTED-EXPIRED": function () {
-          buyerPayoff = 0;
-          sellerPayoff = (
-            BigInt(offerToken.sellerDeposit) +
-            BigInt(offerToken.price) -
-            BigInt(offerTokenProtocolFee)
-          ).toString();
-          protocolPayoff = offerTokenProtocolFee;
-        },
+        RETRACTED: nonDisputeStatePayouts.COMPLETED,
+        "RETRACTED-EXPIRED": nonDisputeStatePayouts.COMPLETED,
         RESOLVED: function () {
           const buyerPercentBasisPoints = global.buyerPercentBasisPoints || "5566";
 
