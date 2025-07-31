@@ -3214,55 +3214,47 @@ describe("IBosonFundsHandler", function () {
           const sellerId = offer.sellerId;
 
           // Seller funds
-          if (expSellerPayoff != "0") {
-            if (updatedSellersAvailableFunds) {
-              const sellerFound = updatedSellersAvailableFunds.funds.find(
-                (fund) => fund.tokenAddress === exchangeToken
-              );
-              expect(sellerFound?.availableAmount || "0").to.equal(expSellerPayoff);
-            } else {
-              const freshSellerFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(sellerId));
-              const sellerFound = freshSellerFunds.funds.find((fund) => fund.tokenAddress === exchangeToken);
-              expect(sellerFound?.availableAmount || "0").to.equal(expSellerPayoff);
-            }
+          if (updatedSellersAvailableFunds) {
+            const sellerFound = updatedSellersAvailableFunds.funds.find((fund) => fund.tokenAddress === exchangeToken);
+            expect(sellerFound?.availableAmount || "0").to.equal(expSellerPayoff.toString());
+          } else {
+            const freshSellerFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(sellerId));
+            const sellerFound = freshSellerFunds.funds.find((fund) => fund.tokenAddress === exchangeToken);
+            expect(sellerFound?.availableAmount || "0").to.equal(expSellerPayoff.toString());
           }
 
           // Buyer funds
-          if (expBuyerPayoff != "0") {
-            if (updatedBuyerAvailableFunds) {
-              const buyerFound = updatedBuyerAvailableFunds.funds.find((fund) => fund.tokenAddress === exchangeToken);
-              expect(buyerFound?.availableAmount || "0").to.equal(expBuyerPayoff);
-            } else {
-              const freshBuyerFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
-              const buyerFound = freshBuyerFunds.funds.find((fund) => fund.tokenAddress === exchangeToken);
-              expect(buyerFound?.availableAmount || "0").to.equal(expBuyerPayoff);
-            }
+          if (updatedBuyerAvailableFunds) {
+            const buyerFound = updatedBuyerAvailableFunds.funds.find((fund) => fund.tokenAddress === exchangeToken);
+            expect(buyerFound?.availableAmount || "0").to.equal(expBuyerPayoff.toString());
+          } else {
+            const freshBuyerFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(buyerId));
+            const buyerFound = freshBuyerFunds.funds.find((fund) => fund.tokenAddress === exchangeToken);
+            expect(buyerFound?.availableAmount || "0").to.equal(expBuyerPayoff.toString());
           }
 
           // Protocol funds
-          if (expProtocolPayoff != "0") {
-            if (updatedProtocolAvailableFunds) {
-              const protocolFound = updatedProtocolAvailableFunds.funds.find(
-                (fund) => fund.tokenAddress === exchangeToken
-              );
-              expect(protocolFound?.availableAmount || "0").to.equal(expProtocolPayoff);
-            } else {
-              const freshProtocolFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(protocolId));
-              const protocolFound = freshProtocolFunds.funds.find((fund) => fund.tokenAddress === exchangeToken);
-              expect(protocolFound?.availableAmount || "0").to.equal(expProtocolPayoff);
-            }
+          if (updatedProtocolAvailableFunds) {
+            const protocolFound = updatedProtocolAvailableFunds.funds.find(
+              (fund) => fund.tokenAddress === exchangeToken
+            );
+            expect(protocolFound?.availableAmount || "0").to.equal(expProtocolPayoff.toString());
+          } else {
+            const freshProtocolFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(protocolId));
+            const protocolFound = freshProtocolFunds.funds.find((fund) => fund.tokenAddress === exchangeToken);
+            expect(protocolFound?.availableAmount || "0").to.equal(expProtocolPayoff.toString());
           }
 
           // Agent funds (for agent offers only)
           const offerAgentId = offer.agentId;
-          if (offerAgentId && offerAgentId != "0" && expAgentPayoff != "0") {
+          if (offerAgentId && offerAgentId != "0") {
             if (updatedAgentAvailableFunds) {
               const agentFound = updatedAgentAvailableFunds.funds.find((fund) => fund.tokenAddress === exchangeToken);
-              expect(agentFound?.availableAmount || "0").to.equal(expAgentPayoff);
+              expect(agentFound?.availableAmount || "0").to.equal(expAgentPayoff.toString());
             } else {
               const freshAgentFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(offerAgentId));
               const agentFound = freshAgentFunds.funds.find((fund) => fund.tokenAddress === exchangeToken);
-              expect(agentFound?.availableAmount || "0").to.equal(expAgentPayoff);
+              expect(agentFound?.availableAmount || "0").to.equal(expAgentPayoff.toString());
             }
           }
         }
