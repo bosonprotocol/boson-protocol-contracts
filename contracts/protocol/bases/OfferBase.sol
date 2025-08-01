@@ -3,6 +3,7 @@ pragma solidity 0.8.22;
 
 import { IBosonOfferEvents } from "../../interfaces/events/IBosonOfferEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
+import { BuyerBase } from "./../bases/BuyerBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { IERC165 } from "../../interfaces/IERC165.sol";
@@ -14,7 +15,7 @@ import "./../../domain/BosonConstants.sol";
  *
  * @dev Provides methods for offer creation that can be shared across facets.
  */
-contract OfferBase is ProtocolBase, IBosonOfferEvents {
+contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
     /**
      * @notice Creates offer. Can be reused among different facets.
      *
@@ -66,20 +67,18 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         (bool isAssistant, uint256 sellerId) = getSellerIdByAssistant(sender);
 
         if (isAssistant) {
-            // Seller-created offer
+            // Caller is seller assistant - create seller offer
             _offer.sellerId = sellerId;
             _offer.creator = OfferCreator.Seller;
         } else {
-            // Check if caller is a buyer
-            (bool isBuyer, uint256 buyerId) = getBuyerIdByWallet(sender);
-            if (!isBuyer) revert NotAssistant(); // Keep existing error for backward compatibility
+            // Caller is not seller assistant - check if this looks like a seller offer attempt
+            if (_offer.sellerId != 0 || _offer.collectionIndex != 0 || _offer.royaltyInfo.length > 0) {
+                // Non-assistant trying to create offer with seller-specific fields - treat as unauthorized seller offer attempt
+                revert NotAssistant();
+            }
 
-            // Buyer-created offers have specific validations
-            if (_offer.sellerId != 0) revert InvalidOffer(); // Buyer cannot specify sellerId
-            if (_offer.collectionIndex != 0) revert InvalidCollectionIndex(); // Buyer cannot specify collection
-            if (_offer.royaltyInfo.length > 0) revert InvalidRoyaltyInfo(); // Buyer cannot set royalties
-
-            // Set buyer-created offer fields
+            // Create buyer-initiated offer
+            uint256 buyerId = getValidBuyer(payable(sender));
             _offer.sellerId = 0; // No seller assigned yet
             _offer.creator = OfferCreator.Buyer;
             _offer.buyerId = buyerId; // Store the buyer who created the offer
@@ -294,8 +293,13 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             // Make sure that supplied royalties ok
             // Operate in a block to avoid "stack too deep" error
             {
-                if (_offer.royaltyInfo.length != 1) revert InvalidRoyaltyInfo();
-                validateRoyaltyInfo(lookups, limits, _offer.sellerId, _offer.royaltyInfo[0]);
+                // Buyer-created offers can have 0 royalties, seller-created offers must have 1
+                if (_offer.creator == OfferCreator.Buyer) {
+                    if (_offer.royaltyInfo.length != 0) revert InvalidRoyaltyInfo();
+                } else {
+                    if (_offer.royaltyInfo.length != 1) revert InvalidRoyaltyInfo();
+                    validateRoyaltyInfo(lookups, limits, _offer.sellerId, _offer.royaltyInfo[0]);
+                }
             }
         }
         // Get storage location for offer
@@ -314,7 +318,12 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         offer.metadataHash = _offer.metadataHash;
         offer.collectionIndex = _offer.collectionIndex;
         offer.priceType = _offer.priceType;
-        offer.royaltyInfo.push(_offer.royaltyInfo[0]);
+        offer.creator = _offer.creator;
+        offer.buyerId = _offer.buyerId;
+        // Only push royalty info if it exists (seller-created offers)
+        if (_offer.royaltyInfo.length > 0) {
+            offer.royaltyInfo.push(_offer.royaltyInfo[0]);
+        }
 
         // Get storage location for offer dates
         OfferDates storage offerDates = fetchOfferDates(_offer.id);
