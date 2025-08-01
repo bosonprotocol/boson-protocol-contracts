@@ -229,7 +229,7 @@ abstract contract FundsBase is Context {
         }
 
         if (payoff.protocol > 0) {
-            increaseAvailableFunds(0, exchangeToken, payoff.protocol);
+            increaseAvailableFunds(PROTOCOL_ENTITY_ID, exchangeToken, payoff.protocol);
             emit IBosonFundsBaseEvents.ProtocolFeeCollected(_exchangeId, exchangeToken, payoff.protocol, sender);
         }
         if (payoff.agent > 0) {

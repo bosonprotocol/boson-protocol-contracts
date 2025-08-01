@@ -198,13 +198,14 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
 
                         // Validate mutualizer interface if address is not zero (non-zero means external mutualizer)
                         if (_drParameters.mutualizerAddress != address(0)) {
-                            try
-                                IERC165(_drParameters.mutualizerAddress).supportsInterface(
+                            (bool success, bytes memory data) = _drParameters.mutualizerAddress.staticcall(
+                                abi.encodeWithSelector(
+                                    IERC165.supportsInterface.selector,
                                     type(IDRFeeMutualizer).interfaceId
                                 )
-                            returns (bool supported) {
-                                if (!supported) revert UnsupportedMutualizer();
-                            } catch {
+                            );
+
+                            if (!success || data.length != 32 || abi.decode(data, (bool)) == false) {
                                 revert UnsupportedMutualizer();
                             }
                         }

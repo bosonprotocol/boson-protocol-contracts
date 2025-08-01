@@ -1522,7 +1522,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
             exchangeToken,
             _drFeeAmount,
             _disputeTerms.mutualizerAddress,
-            msg.sender
+            _msgSender()
         );
     }
 }
