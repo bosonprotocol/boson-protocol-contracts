@@ -3,6 +3,7 @@ pragma solidity 0.8.22;
 
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
+import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { OfferBase } from "../bases/OfferBase.sol";
 import "../../domain/BosonConstants.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
@@ -216,6 +217,77 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     }
 
     /**
+     * @notice Voids a non-listed offer. (offers used in `createOfferAndCommit`)
+     * It prevents the offer from being used in future exchanges even if it was already signed.
+     *
+     * Emits an OfferVoided event if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - Caller is not the authorized to void the offer
+     * - Offer has already been voided
+     *
+     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
+     * @param _drParameters - the id of chosen dispute resolver (can be 0) and mutualizer address (0 for self-mutualization)
+     * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     */
+    function voidNonListedOffer(
+        BosonTypes.Offer memory _offer,
+        BosonTypes.OfferDates calldata _offerDates,
+        BosonTypes.OfferDurations calldata _offerDurations,
+        BosonTypes.DRParameters calldata _drParameters,
+        uint256 _agentId,
+        uint256 _feeLimit
+    ) external override offersNotPaused nonReentrant {
+        voidNonListedOfferInternal(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit);
+    }
+
+    /**
+     * @notice Voids multiple a non-listed offer. (offers used in `createOfferAndCommit`)
+     * It prevents the offers from being used in future exchanges even if they were already signed.
+     *
+     * Emits an OfferVoided events if successful.
+     *
+     * Reverts if:
+     * - The number of elements in offers, offerDates, offerDurations, disputeResolverIds, agentIds and feeLimits do not match
+     * - The offers region of protocol is paused
+     * - Caller is not the authorized to void the offer
+     * - Offer has already been voided
+     *
+     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
+     * @param _drParameters - the id of chosen dispute resolver (can be 0) and mutualizer address (0 for self-mutualization)
+     * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     */
+    function voidNonListedOfferBatch(
+        BosonTypes.Offer[] calldata _offer,
+        BosonTypes.OfferDates[] calldata _offerDates,
+        BosonTypes.OfferDurations[] calldata _offerDurations,
+        BosonTypes.DRParameters[] calldata _drParameters,
+        uint256[] calldata _agentId,
+        uint256[] calldata _feeLimit
+    ) external override offersNotPaused nonReentrant {
+        if (
+            _offer.length != _offerDates.length ||
+            _offer.length != _offerDurations.length ||
+            _offer.length != _drParameters.length ||
+            _offer.length != _agentId.length ||
+            _offer.length != _feeLimit.length
+        ) {
+            revert ArrayLengthMismatch();
+        }
+
+        for (uint256 i; i < _offer.length; ++i) {
+            voidNonListedOfferInternal(_offer[i], _offerDates[i], _offerDurations[i], _drParameters[i], _agentId[i], _feeLimit[i]);
+        }    
+    }
+
+    /**
      * @notice Sets new valid until date.
      *
      * Emits an OfferExtended event if successful.
@@ -357,6 +429,54 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
 
         // Notify listeners of state change - emit creatorId as the "sellerId" parameter for consistency
         emit OfferVoided(_offerId, creatorId, _msgSender());
+    }
+
+    /**
+     * @notice Voids a non-listed offer. (offers used in `createOfferAndCommit`)
+     * It prevents the offer from being used in future exchanges even if it was already signed.
+     *
+     * Emits an OfferVoided event if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - Caller is not the authorized to void the offer
+     * - Offer has already been voided
+     *
+     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
+     * @param _drParameters - the id of chosen dispute resolver (can be 0) and mutualizer address (0 for self-mutualization)
+     * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     */
+    function voidNonListedOfferInternal(
+        BosonTypes.Offer memory _offer,
+        BosonTypes.OfferDates calldata _offerDates,
+        BosonTypes.OfferDurations calldata _offerDurations,
+        BosonTypes.DRParameters calldata _drParameters,
+        uint256 _agentId,
+        uint256 _feeLimit
+    ) internal {
+        // Make sure the caller is authorized to void the offer
+        address sender = _msgSender();
+        if (_offer.creator == BosonTypes.OfferCreator.Seller) {
+            (, Seller storage seller, ) = fetchSeller(_offer.sellerId);
+            if (seller.assistant != sender) revert NotAssistant();
+        } else {
+            uint256 buyerId = getValidBuyer(payable(sender));
+            if (_offer.buyerId != buyerId) {
+                revert NotBuyerWallet();
+            }
+        }
+
+        bytes32 offerHash = getOfferHash(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit);
+
+        ProtocolLib.ProtocolLookups storage pl = protocolLookups();
+        if (pl.isOfferVoided[offerHash]) {
+            revert OfferHasBeenVoided();
+        }
+
+        pl.isOfferVoided[offerHash] = true;
     }
 
     /**

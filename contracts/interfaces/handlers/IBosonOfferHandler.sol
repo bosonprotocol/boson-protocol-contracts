@@ -171,6 +171,61 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
     function voidOfferBatch(uint256[] calldata _offerIds) external;
 
     /**
+     * @notice Voids a non-listed offer. (offers used in `createOfferAndCommit`)
+     * It prevents the offer from being used in future exchanges even if it was already signed.
+     *
+     * Emits an OfferVoided event if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - Caller is not the assistant of the offer
+     * - Offer has already been voided
+     *
+     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
+     * @param _drParameters - the id of chosen dispute resolver (can be 0) and mutualizer address (0 for self-mutualization)
+     * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     */
+    function voidNonListedOffer(
+        BosonTypes.Offer memory _offer,
+        BosonTypes.OfferDates calldata _offerDates,
+        BosonTypes.OfferDurations calldata _offerDurations,
+        BosonTypes.DRParameters calldata _drParameters,
+        uint256 _agentId,
+        uint256 _feeLimit
+    ) external;
+
+    /**
+     * @notice Voids multiple a non-listed offer. (offers used in `createOfferAndCommit`)
+     * It prevents the offers from being used in future exchanges even if they were already signed.
+     *
+     * Emits an OfferVoided events if successful.
+     *
+     * Reverts if:
+     * - The number of elements in offers, offerDates, offerDurations, disputeResolverIds, agentIds and feeLimits do not match
+     * - The offers region of protocol is paused
+     * - Caller is not the authorized to void the offer
+     * - Offer has already been voided
+     *
+     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
+     * @param _drParameters - the id of chosen dispute resolver (can be 0) and mutualizer address (0 for self-mutualization)
+     * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     */
+    function voidNonListedOfferBatch(
+        BosonTypes.Offer[] calldata _offer,
+        BosonTypes.OfferDates[] calldata _offerDates,
+        BosonTypes.OfferDurations[] calldata _offerDurations,
+        BosonTypes.DRParameters[] calldata _drParameters,
+        uint256[] calldata _agentId,
+        uint256[] calldata _feeLimit
+    ) external;
+
+    /**
      * @notice Sets new valid until date.
      *
      * Emits an OfferExtended event if successful.
