@@ -64,18 +64,22 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
         OfferDurations calldata _offerDurations,
         BosonTypes.DRParameters calldata _drParameters,
         uint256 _agentId,
-        uint256 _feeLimit
+        uint256 _feeLimit,
+        bool _authenticate
     ) internal {
         address sender = _msgSender();
 
         if (_offer.creator == OfferCreator.Seller) {
-            // Validate caller is seller assistant
-            (bool isAssistant, uint256 sellerId) = getSellerIdByAssistant(sender);
-            if (!isAssistant) {
-                revert NotAssistant();
-            }
             if (_offer.buyerId != 0) revert InvalidBuyerOfferFields();
-            _offer.sellerId = sellerId;
+
+            // Validate caller is seller assistant
+            if (_authenticate) {
+                (bool isAssistant, uint256 sellerId) = getSellerIdByAssistant(sender);
+                if (!isAssistant) {
+                    revert NotAssistant();
+                }
+                _offer.sellerId = sellerId;
+            }
         } else if (_offer.creator == OfferCreator.Buyer) {
             if (
                 _offer.sellerId != 0 ||
@@ -89,8 +93,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
             ) {
                 revert InvalidBuyerOfferFields();
             }
-            uint256 buyerId = getValidBuyer(payable(sender));
-            _offer.buyerId = buyerId;
+            if (_authenticate) _offer.buyerId = getValidBuyer(payable(sender));
         }
 
         // Get the next offerId and increment the counter

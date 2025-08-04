@@ -30,6 +30,34 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
     using Address for address;
     using Address for address payable;
 
+    string private constant OFFER_TYPE =
+        "Offer(uint256 sellerId,uint256 price,uint256 sellerDeposit,uint256 buyerCancelPenalty,address exchangeToken,string metadataUri,string metadataHash,uint256 collectionIndex,RoyaltyInfo royaltyInfo,uint8 creator,uint256 buyerId)";
+    string private constant ROYALTY_INFO_TYPE = "RoyaltyInfo(address[] recipients,uint256[] bps)";
+    string private constant OFFER_DATES_TYPE =
+        "OfferDates(uint256 validFrom,uint256 validUntil,uint256 voucherRedeemableFrom,uint256 voucherRedeemableUntil)";
+    string private constant OFFER_DURATIONS_TYPE =
+        "OfferDurations(uint256 disputePeriod,uint256 voucherValid,uint256 resolutionPeriod)";
+    string private constant DR_PARAMETERS_TYPE = "DRParameters(uint256 disputeResolverId,address mutualizerAddress)";
+
+    bytes32 private immutable OFFER_TYPEHASH = keccak256(bytes(string.concat(OFFER_TYPE, ROYALTY_INFO_TYPE)));
+    bytes32 private constant ROYALTY_INFO_TYPEHASH = keccak256(bytes(ROYALTY_INFO_TYPE));
+    bytes32 private constant OFFER_DATES_TYPEHASH = keccak256(bytes(OFFER_DATES_TYPE));
+    bytes32 private constant OFFER_DURATIONS_TYPEHASH = keccak256(bytes(OFFER_DURATIONS_TYPE));
+    bytes32 private constant DR_PARAMETERS_TYPEHASH = keccak256(bytes(DR_PARAMETERS_TYPE));
+    bytes32 private immutable FULL_OFFER_TYPEHASH =
+        keccak256(
+            bytes(
+                string.concat(
+                    "FullOffer(Offer offer,OfferDates offerDates,OfferDurations offerDurations,DRParameters drParameters,uint256 agentId,uint256 feeLimit)",
+                    DR_PARAMETERS_TYPE,
+                    OFFER_TYPE,
+                    OFFER_DATES_TYPE,
+                    OFFER_DURATIONS_TYPE,
+                    ROYALTY_INFO_TYPE
+                )
+            )
+        );
+
     /**
      * @notice Initializes facet.
      * This function is callable only once.
@@ -227,7 +255,8 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
     }
 
     /**
-     * @notice Creates an offer.
+     * @notice Creates an offer and commits to it immediately.
+     * The caller is the committer and must provide the offer creator's signature.
      *
      * Emits an OfferCreated, FundsEncumbered, BuyerCommitted and SellerCommitted event if successful.
      *
@@ -264,8 +293,8 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
      * @param _drParameters - the id of chosen dispute resolver (can be 0) and mutualizer address (0 for self-mutualization)
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _offerCreator - the address of the other party
      * @param _committer - the address of the committer (buyer for seller-created offers, seller for buyer-created offers)
-     * @param _otherCommitter - the address of the other party
      * @param _signature - signature of the other party. If the signer is EOA, it must be ECDSA signature in the format of (r,s,v) struct, otherwise, it must be a valid ERC1271 signature.
      */
     function createOfferAndCommit(
@@ -275,10 +304,10 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
         BosonTypes.DRParameters calldata _drParameters,
         uint256 _agentId,
         uint256 _feeLimit,
+        address _offerCreator,
         address payable _committer,
-        address _otherCommitter,
         bytes calldata _signature
-    ) external payable override exchangesNotPaused buyersNotPaused sellersNotPaused nonReentrant {
+    ) external payable override exchangesNotPaused buyersNotPaused sellersNotPaused {
         // verify signature and potential cancellation
         verifyOffer(
             _offer,
@@ -287,34 +316,34 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
             _drParameters,
             _agentId,
             _feeLimit,
-            _otherCommitter,
+            _offerCreator,
             _signature
         );
 
         // create an offer
-        createOfferInternal(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit, false);
 
         // Deposit other committer's funds if needed
-        uint256 otherCommitterId;
-        uint256 otherCommitterAmount;
+        uint256 offerCreatorId;
+        uint256 offerCreatorAmount;
         if (_offer.creator == BosonTypes.OfferCreator.Buyer) {
             // Buyer-created offer: committer is the seller
-            otherCommitterId = _offer.buyerId;
-            otherCommitterAmount = _offer.price;
+            offerCreatorId = _offer.buyerId;
+            offerCreatorAmount = _offer.price;
         } else {
             // Seller-created offer: committer is the buyer
-            otherCommitterId = _offer.sellerId;
-            otherCommitterAmount = _offer.sellerDeposit;
+            offerCreatorId = _offer.sellerId;
+            offerCreatorAmount = _offer.sellerDeposit;
         }
 
-        if (otherCommitterAmount > 0) {
-            transferFundsIn(_offer.exchangeToken, _otherCommitter, otherCommitterAmount);
-            increaseAvailableFunds(otherCommitterId, _offer.exchangeToken, otherCommitterAmount);
+        if (offerCreatorAmount > 0) {
+            transferFundsIn(_offer.exchangeToken, _offerCreator, offerCreatorAmount);
+            increaseAvailableFunds(offerCreatorId, _offer.exchangeToken, offerCreatorAmount);
             emit IBosonFundsEvents.FundsDeposited(
-                otherCommitterId,
-                _otherCommitter,
+                offerCreatorId,
+                _offerCreator,
                 _offer.exchangeToken,
-                otherCommitterAmount
+                offerCreatorAmount
             );
         }
 
@@ -322,6 +351,23 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
         commitToOffer(_committer, _offer.id);
     }
 
+    /**
+     * @notice Verifies the offer and its signature.
+     *
+     * Reverts if:
+     * - Offer is not valid
+     * - Offer has been voided
+     * - Signature is invalid
+     *
+     * @param _offer - the offer to verify
+     * @param _offerDates - the offer dates to verify
+     * @param _offerDurations - the offer durations to verify
+     * @param _drParameters - the dispute resolver parameters to verify
+     * @param _agentId - the agent id to verify
+     * @param _feeLimit - the fee limit to verify
+     * @param _offerCreator - the address of the offer creator
+     * @param _signature - the signature of the offer creator
+     */
     function verifyOffer(
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates,
@@ -329,42 +375,39 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
         BosonTypes.DRParameters calldata _drParameters,
         uint256 _agentId,
         uint256 _feeLimit,
-        address _otherCommitter,
+        address _offerCreator,
         bytes calldata _signature
     ) internal {
-        // add data validation, i.e. offer id should be 0
+        // `_offer.voided` is checked in createOfferInternal
+        if (
+            _offer.id != 0 ||
+            _offer.quantityAvailable != 1 ||
+            _offer.royaltyInfo.length != 1 ||
+            _offer.priceType != BosonTypes.PriceType.Static
+        ) revert InvalidOffer();
 
         bytes32 offerHash = getOfferHash(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit);
 
-        return;
-
-        EIP712Lib.verify(_otherCommitter, offerHash, _signature);
-
-        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-        if (lookups.isOfferVoided[offerHash]) {
+        // Check if the offer non-listed offer has been voided via `voidOffer`
+        // Does not apply to already listed offers, with `voided` set to true
+        if (protocolLookups().isOfferVoided[offerHash]) {
             revert OfferHasBeenVoided();
         }
+
+        EIP712Lib.verify(_offerCreator, offerHash, _signature);
     }
 
-    // bytes32 private constant FULL_OFFER_TYPEHASH =
-    // keccak256("Resolution(uint256 exchangeId,uint256 buyerPercentBasisPoints)");
-
-    bytes32 private constant DR_PARAMETERS_TYPEHASH = keccak256("DRParameters(uint256 id,address mutualizer)");
-    bytes32 private constant OFFER_TYPEHASH =
-        keccak256(
-            "Offer(uint256 id,uint256 sellerId,uint256 price,uint256 sellerDeposit,uint256 buyerCancelPenalty,uint256 quantityAvailable,address exchangeToken,uint8 priceType,string metadataUri,string metadataHash,bool voided,uint256 collectionIndex,RoyaltyInfo[] royaltyInfo,uint8 creator,uint256 buyerId)RoyaltyInfo(address recipient,uint256 percentage)"
-        );
-    bytes32 private constant OFFER_DATES_TYPEHASH =
-        keccak256(
-            "OfferDates(uint256 validFrom,uint256 validUntil,uint256 voucherRedeemableFrom,uint256 voucherRedeemableUntil)"
-        );
-    bytes32 private constant OFFER_DURATIONS_TYPEHASH =
-        keccak256("OfferDurations(uint256 disputePeriod,uint256 voucherValid,uint256 resolutionPeriod)");
-    bytes32 private constant FULL_OFFER_TYPEHASH =
-        keccak256(
-            "FullOffer(Offer offer,OfferDates offerDates,OfferDurations offerDurations,DRParameters drParameters,uint256 agentId,uint256 feeLimit)"
-        );
-
+    /**
+     * @notice Computes the EIP712 hash of the full offer parameters.
+     *
+     * @param _offer - the offer to hash
+     * @param _offerDates - the offer dates to hash
+     * @param _offerDurations - the offer durations to hash
+     * @param _drParameters - the dispute resolver parameters to hash
+     * @param _agentId - the agent id to hash
+     * @param _feeLimit - the fee limit to hash
+     * @return - the hash of the complete offer
+     */
     function getOfferHash(
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates,
@@ -372,19 +415,52 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
         BosonTypes.DRParameters calldata _drParameters,
         uint256 _agentId,
         uint256 _feeLimit
-    ) internal pure returns (bytes32) {
-        // offer id should be 0
+    ) internal view returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    FULL_OFFER_TYPEHASH,
+                    hashOffer(_offer),
+                    keccak256(abi.encode(OFFER_DATES_TYPEHASH, _offerDates)),
+                    keccak256(abi.encode(OFFER_DURATIONS_TYPEHASH, _offerDurations)),
+                    keccak256(abi.encode(DR_PARAMETERS_TYPEHASH, _drParameters)),
+                    _agentId,
+                    _feeLimit
+                )
+            );
+    }
 
+    /**
+     * @notice Hashes the modified offer struct for EIP712.
+     *
+     * It does not include the id, priceType, quantityAvailable since they are constant and validated elsewhere.
+     * RoyaltyInfo is also simplified to a single recipients and bps list (this is also enforced in createOfferInternal).
+     *
+     * @param _offer - the offer to hash
+     * @return - the hash of the offer
+     */
+    function hashOffer(BosonTypes.Offer memory _offer) internal view returns (bytes32) {
         return
             keccak256(
                 abi.encode(
                     OFFER_TYPEHASH,
-                    keccak256(abi.encode(_offer)),
-                    keccak256(abi.encode(_offerDates)),
-                    keccak256(abi.encode(_offerDurations)),
-                    keccak256(abi.encode(_drParameters)),
-                    _agentId,
-                    _feeLimit
+                    _offer.sellerId,
+                    _offer.price,
+                    _offer.sellerDeposit,
+                    _offer.buyerCancelPenalty,
+                    _offer.exchangeToken,
+                    keccak256(bytes(_offer.metadataUri)),
+                    keccak256(bytes(_offer.metadataHash)),
+                    _offer.collectionIndex,
+                    keccak256(
+                        abi.encode(
+                            ROYALTY_INFO_TYPEHASH,
+                            keccak256(abi.encodePacked(_offer.royaltyInfo[0].recipients)),
+                            keccak256(abi.encodePacked(_offer.royaltyInfo[0].bps))
+                        )
+                    ),
+                    _offer.creator,
+                    _offer.buyerId
                 )
             );
     }

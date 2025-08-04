@@ -12,7 +12,7 @@ import { IBosonFundsBaseEvents } from "../events/IBosonFundsEvents.sol";
  * @notice Handles exchange commitment and creation within the protocol.
  * This interface contains functions for committing to offers and creating new exchanges.
  *
- * The ERC-165 identifier for this interface is: 0xcdafde08
+ * The ERC-165 identifier for this interface is: 0x9298f00f
  */
 interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBosonFundsBaseEvents {
     /**
@@ -112,6 +112,49 @@ interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBos
      */
     function commitToConditionalOffer(address payable _buyer, uint256 _offerId, uint256 _tokenId) external payable;
 
+    /**
+     * @notice Creates an offer and commits to it immediately.
+     * The caller is the committer and must provide the offer creator's signature.
+     *
+     * Emits an OfferCreated, FundsEncumbered, BuyerCommitted and SellerCommitted event if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - Valid from date is greater than valid until date
+     * - Valid until date is not in the future
+     * - Both voucher expiration date and voucher expiration period are defined
+     * - Neither of voucher expiration date and voucher expiration period are defined
+     * - Voucher redeemable period is fixed, but it ends before it starts
+     * - Voucher redeemable period is fixed, but it ends before offer expires
+     * - Dispute period is less than minimum dispute period
+     * - Resolution period is not between the minimum and the maximum resolution period
+     * - Voided is set to true
+     * - Available quantity is 0
+     * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     * - Seller is not on dispute resolver's seller allow list
+     * - Dispute resolver does not accept fees in the exchange token
+     * - Buyer cancel penalty is greater than price
+     * - Collection does not exist
+     * - When agent id is non zero:
+     *   - If Agent does not exist
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
+     * - Royalty recipient is not on seller's allow list
+     * - Royalty percentage is less than the value decided by the admin
+     * - Total royalty percentage is more than max royalty percentage
+     * - Not enough funds can be encumbered
+     *
+     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
+     * @param _drParameters - the id of chosen dispute resolver (can be 0) and mutualizer address (0 for self-mutualization)
+     * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _offerCreator - the address of the other party
+     * @param _committer - the address of the committer (buyer for seller-created offers, seller for buyer-created offers)
+     * @param _signature - signature of the other party. If the signer is EOA, it must be ECDSA signature in the format of (r,s,v) struct, otherwise, it must be a valid ERC1271 signature.
+     */
     function createOfferAndCommit(
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates,
@@ -119,8 +162,8 @@ interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBos
         BosonTypes.DRParameters calldata _drParameters,
         uint256 _agentId,
         uint256 _feeLimit,
+        address _offerCreator,
         address payable _committer,
-        address _otherCommitter,
         bytes calldata _signature
     ) external payable;
 
