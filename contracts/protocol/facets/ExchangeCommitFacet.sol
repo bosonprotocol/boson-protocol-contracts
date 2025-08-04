@@ -6,12 +6,14 @@ import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonExchangeCommitHandler } from "../../interfaces/handlers/IBosonExchangeCommitHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { IDRFeeMutualizer } from "../../interfaces/clients/IDRFeeMutualizer.sol";
-import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
+import { IBosonFundsEvents, IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BuyerBase } from "../bases/BuyerBase.sol";
+import { OfferBase } from "../bases/OfferBase.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
 import { OfferBase } from "../bases/OfferBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
+import { EIP712Lib } from "../libs/EIP712Lib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
@@ -70,7 +72,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
     function commitToOffer(
         address payable _committer,
         uint256 _offerId
-    ) external payable override exchangesNotPaused buyersNotPaused sellersNotPaused nonReentrant {
+    ) public payable override exchangesNotPaused buyersNotPaused sellersNotPaused nonReentrant {
         // Make sure committer address is not zero address
         if (_committer == address(0)) revert InvalidAddress();
 
@@ -222,6 +224,169 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
 
         // Store the condition to be returned afterward on getReceipt function
         protocolLookups().exchangeCondition[exchangeId] = condition;
+    }
+
+    /**
+     * @notice Creates an offer.
+     *
+     * Emits an OfferCreated, FundsEncumbered, BuyerCommitted and SellerCommitted event if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - Valid from date is greater than valid until date
+     * - Valid until date is not in the future
+     * - Both voucher expiration date and voucher expiration period are defined
+     * - Neither of voucher expiration date and voucher expiration period are defined
+     * - Voucher redeemable period is fixed, but it ends before it starts
+     * - Voucher redeemable period is fixed, but it ends before offer expires
+     * - Dispute period is less than minimum dispute period
+     * - Resolution period is not between the minimum and the maximum resolution period
+     * - Voided is set to true
+     * - Available quantity is 0
+     * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     * - Seller is not on dispute resolver's seller allow list
+     * - Dispute resolver does not accept fees in the exchange token
+     * - Buyer cancel penalty is greater than price
+     * - Collection does not exist
+     * - When agent id is non zero:
+     *   - If Agent does not exist
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
+     * - Royalty recipient is not on seller's allow list
+     * - Royalty percentage is less than the value decided by the admin
+     * - Total royalty percentage is more than max royalty percentage
+     * - Not enough funds can be encumbered
+     *
+     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
+     * @param _drParameters - the id of chosen dispute resolver (can be 0) and mutualizer address (0 for self-mutualization)
+     * @param _agentId - the id of agent
+     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _committer - the address of the committer (buyer for seller-created offers, seller for buyer-created offers)
+     * @param _otherCommitter - the address of the other party
+     * @param _signature - signature of the other party. If the signer is EOA, it must be ECDSA signature in the format of (r,s,v) struct, otherwise, it must be a valid ERC1271 signature.
+     */
+    function createOfferAndCommit(
+        BosonTypes.Offer memory _offer,
+        BosonTypes.OfferDates calldata _offerDates,
+        BosonTypes.OfferDurations calldata _offerDurations,
+        BosonTypes.DRParameters calldata _drParameters,
+        uint256 _agentId,
+        uint256 _feeLimit,
+        address payable _committer,
+        address _otherCommitter,
+        bytes calldata _signature
+    ) external payable override exchangesNotPaused buyersNotPaused sellersNotPaused nonReentrant {
+        // verify signature and potential cancellation
+        verifyOffer(
+            _offer,
+            _offerDates,
+            _offerDurations,
+            _drParameters,
+            _agentId,
+            _feeLimit,
+            _otherCommitter,
+            _signature
+        );
+
+        // create an offer
+        createOfferInternal(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit);
+
+        // Deposit other committer's funds if needed
+        uint256 otherCommitterId;
+        uint256 otherCommitterAmount;
+        if (_offer.creator == BosonTypes.OfferCreator.Buyer) {
+            // Buyer-created offer: committer is the seller
+            otherCommitterId = _offer.buyerId;
+            otherCommitterAmount = _offer.price;
+        } else {
+            // Seller-created offer: committer is the buyer
+            otherCommitterId = _offer.sellerId;
+            otherCommitterAmount = _offer.sellerDeposit;
+        }
+
+        if (otherCommitterAmount > 0) {
+            transferFundsIn(_offer.exchangeToken, _otherCommitter, otherCommitterAmount);
+            increaseAvailableFunds(otherCommitterId, _offer.exchangeToken, otherCommitterAmount);
+            emit IBosonFundsEvents.FundsDeposited(
+                otherCommitterId,
+                _otherCommitter,
+                _offer.exchangeToken,
+                otherCommitterAmount
+            );
+        }
+
+        // commit to the offer
+        commitToOffer(_committer, _offer.id);
+    }
+
+    function verifyOffer(
+        BosonTypes.Offer memory _offer,
+        BosonTypes.OfferDates calldata _offerDates,
+        BosonTypes.OfferDurations calldata _offerDurations,
+        BosonTypes.DRParameters calldata _drParameters,
+        uint256 _agentId,
+        uint256 _feeLimit,
+        address _otherCommitter,
+        bytes calldata _signature
+    ) internal {
+        // add data validation, i.e. offer id should be 0
+
+        bytes32 offerHash = getOfferHash(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit);
+
+        return;
+
+        EIP712Lib.verify(_otherCommitter, offerHash, _signature);
+
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+        if (lookups.isOfferVoided[offerHash]) {
+            revert OfferHasBeenVoided();
+        }
+    }
+
+    // bytes32 private constant FULL_OFFER_TYPEHASH =
+    // keccak256("Resolution(uint256 exchangeId,uint256 buyerPercentBasisPoints)");
+
+    bytes32 private constant DR_PARAMETERS_TYPEHASH = keccak256("DRParameters(uint256 id,address mutualizer)");
+    bytes32 private constant OFFER_TYPEHASH =
+        keccak256(
+            "Offer(uint256 id,uint256 sellerId,uint256 price,uint256 sellerDeposit,uint256 buyerCancelPenalty,uint256 quantityAvailable,address exchangeToken,uint8 priceType,string metadataUri,string metadataHash,bool voided,uint256 collectionIndex,RoyaltyInfo[] royaltyInfo,uint8 creator,uint256 buyerId)RoyaltyInfo(address recipient,uint256 percentage)"
+        );
+    bytes32 private constant OFFER_DATES_TYPEHASH =
+        keccak256(
+            "OfferDates(uint256 validFrom,uint256 validUntil,uint256 voucherRedeemableFrom,uint256 voucherRedeemableUntil)"
+        );
+    bytes32 private constant OFFER_DURATIONS_TYPEHASH =
+        keccak256("OfferDurations(uint256 disputePeriod,uint256 voucherValid,uint256 resolutionPeriod)");
+    bytes32 private constant FULL_OFFER_TYPEHASH =
+        keccak256(
+            "FullOffer(Offer offer,OfferDates offerDates,OfferDurations offerDurations,DRParameters drParameters,uint256 agentId,uint256 feeLimit)"
+        );
+
+    function getOfferHash(
+        BosonTypes.Offer memory _offer,
+        BosonTypes.OfferDates calldata _offerDates,
+        BosonTypes.OfferDurations calldata _offerDurations,
+        BosonTypes.DRParameters calldata _drParameters,
+        uint256 _agentId,
+        uint256 _feeLimit
+    ) internal pure returns (bytes32) {
+        // offer id should be 0
+
+        return
+            keccak256(
+                abi.encode(
+                    OFFER_TYPEHASH,
+                    keccak256(abi.encode(_offer)),
+                    keccak256(abi.encode(_offerDates)),
+                    keccak256(abi.encode(_offerDurations)),
+                    keccak256(abi.encode(_drParameters)),
+                    _agentId,
+                    _feeLimit
+                )
+            );
     }
 
     /**

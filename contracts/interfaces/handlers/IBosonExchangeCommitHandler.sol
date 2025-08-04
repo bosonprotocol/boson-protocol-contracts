@@ -112,6 +112,18 @@ interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBos
      */
     function commitToConditionalOffer(address payable _buyer, uint256 _offerId, uint256 _tokenId) external payable;
 
+    function createOfferAndCommit(
+        BosonTypes.Offer memory _offer,
+        BosonTypes.OfferDates calldata _offerDates,
+        BosonTypes.OfferDurations calldata _offerDurations,
+        BosonTypes.DRParameters calldata _drParameters,
+        uint256 _agentId,
+        uint256 _feeLimit,
+        address payable _committer,
+        address _otherCommitter,
+        bytes calldata _signature
+    ) external payable;
+
     /**
      * @notice Handle pre-minted voucher transfer
      *
