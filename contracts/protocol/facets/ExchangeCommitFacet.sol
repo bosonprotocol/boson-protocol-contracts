@@ -390,9 +390,12 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
 
         // Check if the offer non-listed offer has been voided via `voidOffer`
         // Does not apply to already listed offers, with `voided` set to true
-        if (protocolLookups().isOfferVoided[offerHash]) {
+        ProtocolLib.ProtocolLookups storage pl = protocolLookups();
+        if (pl.isOfferUsed[offerHash]) {
             revert OfferHasBeenVoided();
         }
+
+        pl.isOfferUsed[offerHash] = true;
 
         EIP712Lib.verify(_offerCreator, offerHash, _signature);
     }
