@@ -43,7 +43,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
                 )
             )
         );
-        
+
     /**
      * @notice Creates offer. Can be reused among different facets.
      *

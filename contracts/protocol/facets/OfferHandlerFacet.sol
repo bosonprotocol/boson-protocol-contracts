@@ -131,7 +131,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         ) {
             revert ArrayLengthMismatch();
         }
-        for (uint256 i; i < _offers.length; ) {
+        for (uint256 i; i < _offers.length; ++i) {
             // Create offer and update structs values to represent true state
             createOfferInternal(
                 _offers[i],
@@ -142,9 +142,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
                 _feeLimits[i],
                 true
             );
-            unchecked {
-                i++;
-            }
         }
     }
 
@@ -207,12 +204,8 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @param _offerIds - list of ids of offers to void
      */
     function voidOfferBatch(uint256[] calldata _offerIds) external override offersNotPaused nonReentrant {
-        for (uint256 i = 0; i < _offerIds.length; ) {
+        for (uint256 i; i < _offerIds.length; ++i) {
             voidOfferInternal(_offerIds[i]);
-
-            unchecked {
-                i++;
-            }
         }
     }
 
@@ -283,8 +276,15 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         }
 
         for (uint256 i; i < _offer.length; ++i) {
-            voidNonListedOfferInternal(_offer[i], _offerDates[i], _offerDurations[i], _drParameters[i], _agentId[i], _feeLimit[i]);
-        }    
+            voidNonListedOfferInternal(
+                _offer[i],
+                _offerDates[i],
+                _offerDurations[i],
+                _drParameters[i],
+                _agentId[i],
+                _feeLimit[i]
+            );
+        }
     }
 
     /**
@@ -326,12 +326,8 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         uint256[] calldata _offerIds,
         uint256 _validUntilDate
     ) external override offersNotPaused nonReentrant {
-        for (uint256 i = 0; i < _offerIds.length; ) {
+        for (uint256 i; i < _offerIds.length; ++i) {
             extendOfferInternal(_offerIds[i], _validUntilDate);
-
-            unchecked {
-                i++;
-            }
         }
     }
 
@@ -375,12 +371,8 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         uint256[] calldata _offerIds,
         BosonTypes.RoyaltyInfo calldata _royaltyInfo
     ) external override offersNotPaused nonReentrant {
-        for (uint256 i = 0; i < _offerIds.length; ) {
+        for (uint256 i; i < _offerIds.length; ++i) {
             updateOfferRoyaltyRecipientsInternal(_offerIds[i], _royaltyInfo);
-
-            unchecked {
-                i++;
-            }
         }
     }
 
