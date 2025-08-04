@@ -59,29 +59,32 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
         OfferDurations calldata _offerDurations,
         BosonTypes.DRParameters calldata _drParameters,
         uint256 _agentId,
-        uint256 _feeLimit
+        uint256 _feeLimit,
+        bool _authenticate
     ) internal {
         address sender = _msgSender();
 
-        // Check if caller is a seller assistant
-        (bool isAssistant, uint256 sellerId) = getSellerIdByAssistant(sender);
+        if (_authenticate) {
+            // Check if caller is a seller assistant
+            (bool isAssistant, uint256 sellerId) = getSellerIdByAssistant(sender);
 
-        if (isAssistant) {
-            // Caller is seller assistant - create seller offer
-            _offer.sellerId = sellerId;
-            _offer.creator = OfferCreator.Seller;
-        } else {
-            // Caller is not seller assistant - check if this looks like a seller offer attempt
-            if (_offer.sellerId != 0 || _offer.collectionIndex != 0 || _offer.royaltyInfo.length > 0) {
-                // Non-assistant trying to create offer with seller-specific fields - treat as unauthorized seller offer attempt
-                revert NotAssistant();
+            if (isAssistant) {
+                // Caller is seller assistant - create seller offer
+                _offer.sellerId = sellerId;
+                _offer.creator = OfferCreator.Seller;
+            } else {
+                // Caller is not seller assistant - check if this looks like a seller offer attempt
+                if (_offer.sellerId != 0 || _offer.collectionIndex != 0 || _offer.royaltyInfo.length > 0) {
+                    // Non-assistant trying to create offer with seller-specific fields - treat as unauthorized seller offer attempt
+                    revert NotAssistant();
+                }
+
+                // Create buyer-initiated offer
+                uint256 buyerId = getValidBuyer(payable(sender));
+                _offer.sellerId = 0; // No seller assigned yet
+                _offer.creator = OfferCreator.Buyer;
+                _offer.buyerId = buyerId; // Store the buyer who created the offer
             }
-
-            // Create buyer-initiated offer
-            uint256 buyerId = getValidBuyer(payable(sender));
-            _offer.sellerId = 0; // No seller assigned yet
-            _offer.creator = OfferCreator.Buyer;
-            _offer.buyerId = buyerId; // Store the buyer who created the offer
         }
 
         // Get the next offerId and increment the counter

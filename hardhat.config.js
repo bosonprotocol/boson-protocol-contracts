@@ -284,8 +284,8 @@ module.exports = {
     ],
   },
   gasReporter: {
+    enabled: (process.env.REPORT_GAS) ? true : false,
     currency: "USD",
-    enabled: true,
     gasPrice: 300,
     coinmarketcap: environments.coinmarketcap.apiKey,
     showTimeSpent: true,

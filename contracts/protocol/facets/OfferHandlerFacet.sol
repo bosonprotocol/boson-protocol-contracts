@@ -68,7 +68,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         uint256 _agentId,
         uint256 _feeLimit
     ) external override offersNotPaused nonReentrant {
-        createOfferInternal(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit, true);
     }
 
     /**
@@ -138,7 +138,8 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
                 _offerDurations[i],
                 _drParameters[i],
                 _agentIds[i],
-                _feeLimits[i]
+                _feeLimits[i],
+                true
             );
             unchecked {
                 i++;

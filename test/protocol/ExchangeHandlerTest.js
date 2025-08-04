@@ -8253,6 +8253,216 @@ describe("IBosonExchangeHandler", function () {
     });
   });
 
+  context("CreateOfferAndCommit", async function () {
+    beforeEach(async function () {
+      // Initial ids for all the things
+      exchangeId = offerId = "1";
+      agentId = "0"; // agent id is optional while creating an offer
+      offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
+
+      // Create a valid seller
+      seller = mockSeller(
+        await assistant.getAddress(),
+        await admin.getAddress(),
+        clerk.address,
+        await treasury.getAddress()
+      );
+
+      // AuthToken
+      emptyAuthToken = mockAuthToken();
+      // VoucherInitValues
+      seller1Treasury = seller.treasury;
+      royaltyPercentage1 = "500"; // 5%
+      voucherInitValues = mockVoucherInitValues();
+      voucherInitValues.royaltyPercentage = royaltyPercentage1;
+
+      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+      expectedCloneAddress = calculateCloneAddress(
+        await accountHandler.getAddress(),
+        beaconProxyAddress,
+        admin.address
+      );
+
+      // Create a valid dispute resolver
+      disputeResolver = mockDisputeResolver(
+        await assistantDR.getAddress(),
+        await adminDR.getAddress(),
+        clerkDR.address,
+        await treasuryDR.getAddress(),
+        true
+      );
+
+      //Create DisputeResolverFee array so offer creation will succeed
+      disputeResolverFees = [
+        new DisputeResolverFee(ZeroAddress, "Native", "0"),
+        new DisputeResolverFee(await foreign20.getAddress(), "ERC20", "0"),
+      ];
+
+      // Make empty seller list, so every seller is allowed
+      const sellerAllowList = [];
+
+      // Register the dispute resolver
+      await accountHandler
+        .connect(adminDR)
+        .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+    });
+
+    it("should emit a BuyerCommitted event", async function () {
+      sellerPool = parseUnits("15", "ether").toString();
+
+      // Create the offer
+      const mo = await mockOffer();
+      ({ offerDates, offerDurations, drParams } = mo);
+      offer = mo.offer;
+      offer.exchangeToken = await foreign20.getAddress();
+      offer.sellerDeposit = "0";
+      offer.id = "0";
+      offer.quantityAvailable = "1";
+
+      offerFees = mo.offerFees;
+
+      offerFees.protocolFee = applyPercentage(offer.price, protocolFeePercentage);
+
+      offer.quantityAvailable = "1";
+      disputeResolverId = drParams.disputeResolverId;
+      offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
+
+      offerDurations.voucherValid = (oneMonth * 12n).toString();
+
+      // Set used variables
+      price = offer.price;
+      voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+      voucherValid = offerDurations.voucherValid;
+      disputePeriod = offerDurations.disputePeriod;
+
+      // // Required voucher constructor params
+      voucher = mockVoucher();
+      voucher.redeemedDate = "0";
+
+      // // Mock exchange
+      exchange = mockExchange();
+
+      buyerId = accountId.next().value;
+      exchange.buyerId = buyerId;
+      exchange.finalizedDate = "0";
+
+      // erc20token
+      await foreign20.connect(assistant).mint(assistant.address, sellerPool);
+      await foreign20.connect(assistant).approve(protocolDiamondAddress, sellerPool);
+
+      await foreign20.connect(buyer).mint(buyer.address, price);
+      await foreign20.connect(buyer).approve(protocolDiamondAddress, price);
+
+      // prepare the signature
+      // Set the message Type
+      const fullOfferType = [
+        { name: "offer", type: "Offer" },
+        { name: "offerDates", type: "OfferDates" },
+        { name: "offerDurations", type: "OfferDurations" },
+        { name: "drParameters", type: "DRParameters" },
+        { name: "agentId", type: "uint256" },
+        { name: "feeLimit", type: "uint256" },
+      ];
+
+      let customTransactionType = {
+        FullOffer: fullOfferType,
+        DRParameters: [
+          { name: "disputeResolverId", type: "uint256" },
+          { name: "mutualizerAddress", type: "address" },
+        ],
+        OfferDurations: [
+          { name: "disputePeriod", type: "uint256" },
+          { name: "voucherValid", type: "uint256" },
+          { name: "resolutionPeriod", type: "uint256" },
+        ],
+        OfferDates: [
+          { name: "validFrom", type: "uint256" },
+          { name: "validUntil", type: "uint256" },
+          { name: "voucherRedeemableFrom", type: "uint256" },
+          { name: "voucherRedeemableUntil", type: "uint256" },
+        ],
+        Offer: [
+          { name: "sellerId", type: "uint256" },
+          { name: "price", type: "uint256" },
+          { name: "sellerDeposit", type: "uint256" },
+          { name: "buyerCancelPenalty", type: "uint256" },
+          { name: "exchangeToken", type: "address" },
+          { name: "metadataUri", type: "string" },
+          { name: "metadataHash", type: "string" },
+          { name: "collectionIndex", type: "uint256" },
+          { name: "royaltyInfo", type: "RoyaltyInfo" },
+          { name: "creator", type: "uint8" },
+          { name: "buyerId", type: "uint256" },
+        ],
+        RoyaltyInfo: [
+          { name: "recipients", type: "address[]" },
+          { name: "bps", type: "uint256[]" },
+        ],
+      };
+
+      const modifiedOffer = offer.clone();
+      modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+
+      // Prepare the message
+      let message = {};
+      message.offer = modifiedOffer;
+      message.offerDates = offerDates;
+      message.offerDurations = offerDurations;
+      message.drParameters = drParams;
+      message.agentId = agentId.toString();
+      message.feeLimit = offerFeeLimit.toString();
+
+      // Collect the signature components
+      let signature = await prepareDataSignature(
+        assistant,
+        customTransactionType,
+        "FullOffer",
+        message,
+        await exchangeCommitHandler.getAddress()
+      );
+      // Commit to offer, retrieving the event
+      tx = await exchangeCommitHandler
+        .connect(buyer)
+        .createOfferAndCommit(
+          offer,
+          offerDates,
+          offerDurations,
+          drParams,
+          agentId,
+          offerFeeLimit,
+          assistant.address,
+          buyer.address,
+          signature
+        );
+      txReceipt = await tx.wait();
+      event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
+
+      // Get the block timestamp of the confirmed tx
+      blockNumber = tx.blockNumber;
+      block = await provider.getBlock(blockNumber);
+
+      // Update the committed date in the expected exchange struct with the block timestamp of the tx
+      voucher.committedDate = block.timestamp.toString();
+
+      // Update the validUntilDate date in the expected exchange struct
+      voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+
+      // Examine event
+      assert.equal(event.exchangeId.toString(), exchangeId, "Exchange id is incorrect");
+      assert.equal(event.offerId.toString(), offerId, "Offer id is incorrect");
+      assert.equal(event.buyerId.toString(), buyerId, "Buyer id is incorrect");
+
+      // Examine the exchange struct
+      assert.equal(Exchange.fromStruct(event.exchange).toString(), exchange.toString(), "Exchange struct is incorrect");
+
+      // Examine the voucher struct
+      assert.equal(Voucher.fromStruct(event.voucher).toString(), voucher.toString(), "Voucher struct is incorrect");
+
+      // Unconditional offer should not emit a ConditionalCommitAuthorized event
+      await expect(tx).to.not.emit(exchangeHandler, "ConditionalCommitAuthorized");
+    });
+  });
+
   // Internal functions, tested with TestExchangeHandlerFacet
   context("📋 Internal Exchange Handler Methods", async function () {
     let testExchangeHandler;
