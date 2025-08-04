@@ -464,11 +464,11 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         bytes32 offerHash = getOfferHash(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit);
 
         ProtocolLib.ProtocolLookups storage pl = protocolLookups();
-        if (pl.isOfferVoided[offerHash]) {
+        if (pl.isOfferUsed[offerHash]) {
             revert OfferHasBeenVoided();
         }
 
-        pl.isOfferVoided[offerHash] = true;
+        pl.isOfferUsed[offerHash] = true;
     }
 
     /**
