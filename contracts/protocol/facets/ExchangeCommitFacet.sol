@@ -332,27 +332,29 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
         }
 
         // Deposit other committer's funds if needed
-        uint256 offerCreatorId;
-        uint256 offerCreatorAmount;
-        if (_fullOffer.offer.creator == BosonTypes.OfferCreator.Buyer) {
-            // Buyer-created offer: committer is the seller
-            offerCreatorId = _fullOffer.offer.buyerId;
-            offerCreatorAmount = _fullOffer.offer.price;
-        } else {
-            // Seller-created offer: committer is the buyer
-            offerCreatorId = _fullOffer.offer.sellerId;
-            offerCreatorAmount = _fullOffer.offer.sellerDeposit;
-        }
+        if (!_fullOffer.useDepositedFunds) {
+            uint256 offerCreatorId;
+            uint256 offerCreatorAmount;
+            if (_fullOffer.offer.creator == BosonTypes.OfferCreator.Buyer) {
+                // Buyer-created offer: committer is the seller
+                offerCreatorId = _fullOffer.offer.buyerId;
+                offerCreatorAmount = _fullOffer.offer.price;
+            } else {
+                // Seller-created offer: committer is the buyer
+                offerCreatorId = _fullOffer.offer.sellerId;
+                offerCreatorAmount = _fullOffer.offer.sellerDeposit;
+            }
 
-        if (offerCreatorAmount > 0) {
-            transferFundsIn(_fullOffer.offer.exchangeToken, _offerCreator, offerCreatorAmount);
-            increaseAvailableFunds(offerCreatorId, _fullOffer.offer.exchangeToken, offerCreatorAmount);
-            emit IBosonFundsEvents.FundsDeposited(
-                offerCreatorId,
-                _offerCreator,
-                _fullOffer.offer.exchangeToken,
-                offerCreatorAmount
-            );
+            if (offerCreatorAmount > 0) {
+                transferFundsIn(_fullOffer.offer.exchangeToken, _offerCreator, offerCreatorAmount);
+                increaseAvailableFunds(offerCreatorId, _fullOffer.offer.exchangeToken, offerCreatorAmount);
+                emit IBosonFundsEvents.FundsDeposited(
+                    offerCreatorId,
+                    _offerCreator,
+                    _fullOffer.offer.exchangeToken,
+                    offerCreatorAmount
+                );
+            }
         }
 
         if (_fullOffer.condition.method != BosonTypes.EvaluationMethod.None) {

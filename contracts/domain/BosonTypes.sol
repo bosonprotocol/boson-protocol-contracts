@@ -202,6 +202,7 @@ contract BosonTypes {
         Condition condition;
         uint256 agentId;
         uint256 feeLimit;
+        bool useDepositedFunds;
     }
 
     struct Group {

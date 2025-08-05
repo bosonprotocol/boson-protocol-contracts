@@ -26,8 +26,10 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
     string private constant DR_PARAMETERS_TYPE = "DRParameters(uint256 disputeResolverId,address mutualizerAddress)";
     string private constant CONDITION_TYPE =
         "Condition(uint8 method,uint8 tokenType,address tokenAddress,uint8 gating,uint256 minTokenId,uint256 threshold,uint256 maxCommits,uint256 maxTokenId)";
+    string private constant FULL_OFFER_TYPE =
+        "FullOffer(Offer offer,OfferDates offerDates,OfferDurations offerDurations,DRParameters drParameters,Condition condition,uint256 agentId,uint256 feeLimit,bool useDepositedFunds)";
 
-    bytes32 private immutable OFFER_TYPEHASH = keccak256(bytes(string.concat(OFFER_TYPE, ROYALTY_INFO_TYPE)));
+    bytes32 private immutable OFFER_TYPEHASH = keccak256(abi.encodePacked(OFFER_TYPE, ROYALTY_INFO_TYPE));
     bytes32 private constant ROYALTY_INFO_TYPEHASH = keccak256(bytes(ROYALTY_INFO_TYPE));
     bytes32 private constant OFFER_DATES_TYPEHASH = keccak256(bytes(OFFER_DATES_TYPE));
     bytes32 private constant OFFER_DURATIONS_TYPEHASH = keccak256(bytes(OFFER_DURATIONS_TYPE));
@@ -35,16 +37,13 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
     bytes32 private constant CONDITION_TYPEHASH = keccak256(bytes(CONDITION_TYPE));
     bytes32 private immutable FULL_OFFER_TYPEHASH =
         keccak256(
-            bytes(
-                string.concat(
-                    "FullOffer(Offer offer,OfferDates offerDates,OfferDurations offerDurations,DRParameters drParameters,Condition condition,uint256 agentId,uint256 feeLimit)",
-                    CONDITION_TYPE,
-                    DR_PARAMETERS_TYPE,
-                    OFFER_TYPE,
-                    OFFER_DATES_TYPE,
-                    OFFER_DURATIONS_TYPE,
-                    ROYALTY_INFO_TYPE
-                )
+            abi.encodePacked(
+                abi.encodePacked(FULL_OFFER_TYPE, CONDITION_TYPE), // nested abi.encodePacked due to stack-too-deep error
+                DR_PARAMETERS_TYPE,
+                OFFER_TYPE,
+                OFFER_DATES_TYPE,
+                OFFER_DURATIONS_TYPE,
+                ROYALTY_INFO_TYPE
             )
         );
 
@@ -518,7 +517,8 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
                     keccak256(abi.encode(DR_PARAMETERS_TYPEHASH, _fullOffer.drParameters)),
                     keccak256(abi.encode(CONDITION_TYPEHASH, _fullOffer.condition)),
                     _fullOffer.agentId,
-                    _fullOffer.feeLimit
+                    _fullOffer.feeLimit,
+                    _fullOffer.useDepositedFunds
                 )
             );
     }
