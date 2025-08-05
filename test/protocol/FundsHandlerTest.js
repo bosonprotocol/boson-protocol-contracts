@@ -45,6 +45,16 @@ const getFundsForParticipant = async (fundsHandler, participantId, tokenAddress)
   return BigInt(found?.availableAmount || "0");
 };
 
+// Helper function to get dispute resolver ID for an exchange (if dispute exists)
+const getDisputeResolverIdIfDisputed = async (exchangeHandler, offerHandler, disputeHandler, exchangeId) => {
+  const [disputeExists] = await disputeHandler.getDispute(exchangeId);
+  if (!disputeExists) return null;
+
+  const [, exchange] = await exchangeHandler.getExchange(exchangeId);
+  const [, , , , disputeResolutionTerms] = await offerHandler.getOffer(exchange.offerId);
+  return disputeResolutionTerms.disputeResolverId;
+};
+
 /**
  *  Test the Boson Funds Handler interface
  */
@@ -3153,17 +3163,16 @@ describe("IBosonFundsHandler", function () {
             .withArgs(exchangeId, agentId, agentOffer.exchangeToken, agentPayoff, await buyer.getAddress());
 
           if (drPayoff && drPayoff != "0") {
-            const [disputeExists, dispute] = await disputeHandler.getDispute(exchangeId);
-            if (disputeExists && dispute.disputeResolverId != "0") {
+            const disputeResolverId = await getDisputeResolverIdIfDisputed(
+              exchangeHandler,
+              offerHandler,
+              disputeHandler,
+              exchangeId
+            );
+            if (disputeResolverId && disputeResolverId != "0") {
               await expect(tx)
                 .to.emit(disputeHandler, "FundsReleased")
-                .withArgs(
-                  exchangeId,
-                  dispute.disputeResolverId,
-                  agentOffer.exchangeToken,
-                  drPayoff,
-                  await buyer.getAddress()
-                );
+                .withArgs(exchangeId, disputeResolverId, agentOffer.exchangeToken, drPayoff, await buyer.getAddress());
             }
           }
         },
@@ -3190,13 +3199,18 @@ describe("IBosonFundsHandler", function () {
           await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
 
           if (drPayoff && drPayoff != "0") {
-            const [disputeExists, dispute] = await disputeHandler.getDispute(exchangeId);
-            if (disputeExists && dispute.disputeResolverId != "0") {
+            const disputeResolverId = await getDisputeResolverIdIfDisputed(
+              exchangeHandler,
+              offerHandler,
+              disputeHandler,
+              exchangeId
+            );
+            if (disputeResolverId && disputeResolverId != "0") {
               await expect(tx)
                 .to.emit(disputeHandler, "FundsReleased")
                 .withArgs(
                   exchangeId,
-                  dispute.disputeResolverId,
+                  disputeResolverId,
                   agentOffer.exchangeToken,
                   drPayoff,
                   await assistantDR.getAddress()
@@ -3306,11 +3320,16 @@ describe("IBosonFundsHandler", function () {
 
           // DR events (for dispute resolution only)
           if (expDRPayoff != "0") {
-            const [disputeExists, dispute] = await disputeHandler.getDispute(exchangeId);
-            if (disputeExists && dispute.disputeResolverId != "0") {
+            const disputeResolverId = await getDisputeResolverIdIfDisputed(
+              exchangeHandler,
+              offerHandler,
+              disputeHandler,
+              exchangeId
+            );
+            if (disputeResolverId && disputeResolverId != "0") {
               await expect(tx)
                 .to.emit(action.handler, "FundsReleased")
-                .withArgs(exchangeId, dispute.disputeResolverId, exchangeToken, expDRPayoff, action.wallet.address);
+                .withArgs(exchangeId, disputeResolverId, exchangeToken, expDRPayoff, action.wallet.address);
             }
           }
         }
@@ -3372,18 +3391,20 @@ describe("IBosonFundsHandler", function () {
           }
 
           // DR funds (for dispute resolution only)
-            const [disputeExists, dispute] = await disputeHandler.getDispute(exchangeId);
-            if (disputeExists && dispute.disputeResolverId != "0") {
-              if (expectedDRAvailableFunds) {
-                const drFound = expectedDRAvailableFunds.funds.find((fund) => fund.tokenAddress === exchangeToken);
-                expect(drFound?.availableAmount || "0").to.equal(expDRPayoff.toString());
-              } else {
-                const freshDRFunds = FundsList.fromStruct(
-                  await fundsHandler.getAllAvailableFunds(dispute.disputeResolverId)
-                );
-                const drFound = freshDRFunds.funds.find((fund) => fund.tokenAddress === exchangeToken);
-                expect(drFound?.availableAmount || "0").to.equal(expDRPayoff.toString());
-              }
+          const disputeResolverId = await getDisputeResolverIdIfDisputed(
+            exchangeHandler,
+            offerHandler,
+            disputeHandler,
+            exchangeId
+          );
+          if (disputeResolverId && disputeResolverId != "0") {
+            if (expectedDRAvailableFunds) {
+              const drFound = expectedDRAvailableFunds.funds.find((fund) => fund.tokenAddress === exchangeToken);
+              expect(drFound?.availableAmount || "0").to.equal(expDRPayoff.toString());
+            } else {
+              const freshDRFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(disputeResolverId));
+              const drFound = freshDRFunds.funds.find((fund) => fund.tokenAddress === exchangeToken);
+              expect(drFound?.availableAmount || "0").to.equal(expDRPayoff.toString());
             }
           }
         }
@@ -3586,16 +3607,20 @@ describe("IBosonFundsHandler", function () {
           expect(agentFound?.availableAmount).to.equal(agentPayoff);
 
           // DR gets fee for escalated retracted dispute
-            const [disputeExists, dispute] = await disputeHandler.getDispute(exchangeId);
-            if (disputeExists && dispute.disputeResolverId != "0") {
-              const updatedDRAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAllAvailableFunds(dispute.disputeResolverId)
-              );
-              const drFound = updatedDRAvailableFunds.funds.find(
-                (fund) => fund.tokenAddress === agentOffer.exchangeToken
-              );
-              expect(drFound?.availableAmount || "0").to.equal(drPayoff);
-            }
+          const disputeResolverId = await getDisputeResolverIdIfDisputed(
+            exchangeHandler,
+            offerHandler,
+            disputeHandler,
+            exchangeId
+          );
+          if (disputeResolverId && disputeResolverId != "0") {
+            const updatedDRAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAllAvailableFunds(disputeResolverId)
+            );
+            const drFound = updatedDRAvailableFunds.funds.find(
+              (fund) => fund.tokenAddress === agentOffer.exchangeToken
+            );
+            expect(drFound?.availableAmount || "0").to.equal(drPayoff);
           }
         },
         "DISPUTED-ESCALATED-RESOLVED": async function (
@@ -3661,16 +3686,20 @@ describe("IBosonFundsHandler", function () {
           expect(agentFound?.availableAmount || "0").to.equal("0");
 
           // DR gets fee for escalated decided dispute
-            const [disputeExists, dispute] = await disputeHandler.getDispute(exchangeId);
-            if (disputeExists && dispute.disputeResolverId != "0") {
-              const updatedDRAvailableFunds = FundsList.fromStruct(
-                await fundsHandler.getAllAvailableFunds(dispute.disputeResolverId)
-              );
-              const drFound = updatedDRAvailableFunds.funds.find(
-                (fund) => fund.tokenAddress === agentOffer.exchangeToken
-              );
-              expect(drFound?.availableAmount || "0").to.equal(drPayoff);
-            }
+          const disputeResolverId = await getDisputeResolverIdIfDisputed(
+            exchangeHandler,
+            offerHandler,
+            disputeHandler,
+            exchangeId
+          );
+          if (disputeResolverId && disputeResolverId != "0") {
+            const updatedDRAvailableFunds = FundsList.fromStruct(
+              await fundsHandler.getAllAvailableFunds(disputeResolverId)
+            );
+            const drFound = updatedDRAvailableFunds.funds.find(
+              (fund) => fund.tokenAddress === agentOffer.exchangeToken
+            );
+            expect(drFound?.availableAmount || "0").to.equal(drPayoff);
           }
         },
         "DISPUTED-ESCALATED-EXPIRED": async function (
