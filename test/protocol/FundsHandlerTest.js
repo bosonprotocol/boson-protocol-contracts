@@ -2478,7 +2478,7 @@ describe("IBosonFundsHandler", function () {
           const [Foreign20WithFee] = await deployMockTokens(["Foreign20WithFee"]);
 
           // add to DR fees
-          DRFee = parseUnits("0", "ether").toString();
+          DRFee = parseUnits("0.1", "ether").toString();
           await accountHandler
             .connect(adminDR)
             .addFeesToDisputeResolver(drParams.disputeResolverId, [
@@ -3372,7 +3372,6 @@ describe("IBosonFundsHandler", function () {
           }
 
           // DR funds (for dispute resolution only)
-          if (expDRPayoff != "0") {
             const [disputeExists, dispute] = await disputeHandler.getDispute(exchangeId);
             if (disputeExists && dispute.disputeResolverId != "0") {
               if (expectedDRAvailableFunds) {
@@ -3587,7 +3586,6 @@ describe("IBosonFundsHandler", function () {
           expect(agentFound?.availableAmount).to.equal(agentPayoff);
 
           // DR gets fee for escalated retracted dispute
-          if (drPayoff && drPayoff != "0") {
             const [disputeExists, dispute] = await disputeHandler.getDispute(exchangeId);
             if (disputeExists && dispute.disputeResolverId != "0") {
               const updatedDRAvailableFunds = FundsList.fromStruct(
@@ -3663,7 +3661,6 @@ describe("IBosonFundsHandler", function () {
           expect(agentFound?.availableAmount || "0").to.equal("0");
 
           // DR gets fee for escalated decided dispute
-          if (drPayoff && drPayoff != "0") {
             const [disputeExists, dispute] = await disputeHandler.getDispute(exchangeId);
             if (disputeExists && dispute.disputeResolverId != "0") {
               const updatedDRAvailableFunds = FundsList.fromStruct(
