@@ -219,7 +219,7 @@ describe("Buyer-Initiated Exchange", function () {
 
     //Valid buyer-created offer
     buyerCreatedOffer = offer.clone();
-    buyerCreatedOffer.sellerId = "0"; 
+    buyerCreatedOffer.sellerId = "0";
     buyerCreatedOffer.creator = OfferCreator.Buyer;
     buyerCreatedOffer.buyerId = buyerId;
     buyerCreatedOffer.collectionIndex = "0";
@@ -564,7 +564,6 @@ describe("Buyer-Initiated Exchange", function () {
       await fundsHandler.connect(buyer1).depositFunds(actualBuyerId, ZeroAddress, price, {
         value: price,
       });
-
     });
 
     context("👉 commitToOffer() - Seller Commits", async function () {
@@ -715,11 +714,9 @@ describe("Buyer-Initiated Exchange", function () {
 
         it("should revert if non-seller tries to commit to buyer offer", async function () {
           await expect(
-            exchangeCommitHandler
-              .connect(rando)
-              .commitToOffer(await rando.getAddress(), nextOfferId, {
-                value: sellerDeposit,
-              })
+            exchangeCommitHandler.connect(rando).commitToOffer(await rando.getAddress(), nextOfferId, {
+              value: sellerDeposit,
+            })
           ).to.be.revertedWithCustomError(exchangeCommitHandler, "NotAssistant");
         });
       });
@@ -780,8 +777,8 @@ describe("Buyer-Initiated Exchange", function () {
         sellerFundsArray = await fundsHandler.getAllAvailableFunds(sellerId);
 
         // Funds should be encumbered
-        expect(buyerFundsArray.length).to.equal(0); 
-        expect(sellerFundsArray.length).to.equal(0); 
+        expect(buyerFundsArray.length).to.equal(0);
+        expect(sellerFundsArray.length).to.equal(0);
       });
     });
 
