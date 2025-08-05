@@ -213,7 +213,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @notice Voids a non-listed offer. (offers used in `createOfferAndCommit`)
      * It prevents the offer from being used in future exchanges even if it was already signed.
      *
-     * Emits an OfferVoided event if successful.
+     * Emits a NonListedOfferVoided event if successful.
      *
      * Reverts if:
      * - The offers region of protocol is paused
@@ -232,7 +232,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @notice Voids multiple a non-listed offer. (offers used in `createOfferAndCommit`)
      * It prevents the offers from being used in future exchanges even if they were already signed.
      *
-     * Emits an OfferVoided events if successful.
+     * Emits NonListedOfferVoided events if successful.
      *
      * Reverts if:
      * - The number of elements in offers, offerDates, offerDurations, disputeResolverIds, agentIds and feeLimits do not match
@@ -402,12 +402,14 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     function voidNonListedOfferInternal(BosonTypes.FullOffer calldata _fullOffer) internal {
         // Make sure the caller is authorized to void the offer
         address sender = _msgSender();
+        uint256 offerCreatorId;
         if (_fullOffer.offer.creator == BosonTypes.OfferCreator.Seller) {
-            (, Seller storage seller, ) = fetchSeller(_fullOffer.offer.sellerId);
+            offerCreatorId = _fullOffer.offer.sellerId;
+            (, Seller storage seller, ) = fetchSeller(offerCreatorId);
             if (seller.assistant != sender) revert NotAssistant();
         } else {
-            uint256 buyerId = getValidBuyer(payable(sender));
-            if (_fullOffer.offer.buyerId != buyerId) {
+            offerCreatorId = getValidBuyer(payable(sender));
+            if (_fullOffer.offer.buyerId != offerCreatorId) {
                 revert NotBuyerWallet();
             }
         }
@@ -420,6 +422,8 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         }
 
         pl.offerIdByHash[offerHash] = VOIDED_OFFER_ID;
+
+        emit NonListedOfferVoided(offerHash, offerCreatorId, sender);
     }
 
     /**
