@@ -220,22 +220,12 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * - Caller is not the authorized to void the offer
      * - Offer has already been voided
      *
-     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-     * @param _offerDates - the fully populated offer dates struct
-     * @param _offerDurations - the fully populated offer durations struct
-     * @param _drParameters - the id of chosen dispute resolver (can be 0) and mutualizer address (0 for self-mutualization)
-     * @param _agentId - the id of agent
-     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
      */
     function voidNonListedOffer(
-        BosonTypes.Offer memory _offer,
-        BosonTypes.OfferDates calldata _offerDates,
-        BosonTypes.OfferDurations calldata _offerDurations,
-        BosonTypes.DRParameters calldata _drParameters,
-        uint256 _agentId,
-        uint256 _feeLimit
+        BosonTypes.FullOffer calldata _fullOffer
     ) external override offersNotPaused nonReentrant {
-        voidNonListedOfferInternal(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit);
+        voidNonListedOfferInternal(_fullOffer);
     }
 
     /**
@@ -250,40 +240,13 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * - Caller is not the authorized to void the offer
      * - Offer has already been voided
      *
-     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-     * @param _offerDates - the fully populated offer dates struct
-     * @param _offerDurations - the fully populated offer durations struct
-     * @param _drParameters - the id of chosen dispute resolver (can be 0) and mutualizer address (0 for self-mutualization)
-     * @param _agentId - the id of agent
-     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _fullOffers - the list fully populated structs containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
      */
     function voidNonListedOfferBatch(
-        BosonTypes.Offer[] calldata _offer,
-        BosonTypes.OfferDates[] calldata _offerDates,
-        BosonTypes.OfferDurations[] calldata _offerDurations,
-        BosonTypes.DRParameters[] calldata _drParameters,
-        uint256[] calldata _agentId,
-        uint256[] calldata _feeLimit
+        BosonTypes.FullOffer[] calldata _fullOffers
     ) external override offersNotPaused nonReentrant {
-        if (
-            _offer.length != _offerDates.length ||
-            _offer.length != _offerDurations.length ||
-            _offer.length != _drParameters.length ||
-            _offer.length != _agentId.length ||
-            _offer.length != _feeLimit.length
-        ) {
-            revert ArrayLengthMismatch();
-        }
-
-        for (uint256 i; i < _offer.length; ++i) {
-            voidNonListedOfferInternal(
-                _offer[i],
-                _offerDates[i],
-                _offerDurations[i],
-                _drParameters[i],
-                _agentId[i],
-                _feeLimit[i]
-            );
+        for (uint256 i; i < _fullOffers.length; ++i) {
+            voidNonListedOfferInternal(_fullOffers[i]);
         }
     }
 
@@ -434,34 +397,22 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * - Caller is not the authorized to void the offer
      * - Offer has already been voided
      *
-     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-     * @param _offerDates - the fully populated offer dates struct
-     * @param _offerDurations - the fully populated offer durations struct
-     * @param _drParameters - the id of chosen dispute resolver (can be 0) and mutualizer address (0 for self-mutualization)
-     * @param _agentId - the id of agent
-     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
      */
-    function voidNonListedOfferInternal(
-        BosonTypes.Offer memory _offer,
-        BosonTypes.OfferDates calldata _offerDates,
-        BosonTypes.OfferDurations calldata _offerDurations,
-        BosonTypes.DRParameters calldata _drParameters,
-        uint256 _agentId,
-        uint256 _feeLimit
-    ) internal {
+    function voidNonListedOfferInternal(BosonTypes.FullOffer calldata _fullOffer) internal {
         // Make sure the caller is authorized to void the offer
         address sender = _msgSender();
-        if (_offer.creator == BosonTypes.OfferCreator.Seller) {
-            (, Seller storage seller, ) = fetchSeller(_offer.sellerId);
+        if (_fullOffer.offer.creator == BosonTypes.OfferCreator.Seller) {
+            (, Seller storage seller, ) = fetchSeller(_fullOffer.offer.sellerId);
             if (seller.assistant != sender) revert NotAssistant();
         } else {
             uint256 buyerId = getValidBuyer(payable(sender));
-            if (_offer.buyerId != buyerId) {
+            if (_fullOffer.offer.buyerId != buyerId) {
                 revert NotBuyerWallet();
             }
         }
 
-        bytes32 offerHash = getOfferHash(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit);
+        bytes32 offerHash = getOfferHash(_fullOffer);
 
         ProtocolLib.ProtocolLookups storage pl = protocolLookups();
         if (pl.isOfferUsed[offerHash]) {
