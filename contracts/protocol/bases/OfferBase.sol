@@ -22,7 +22,11 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
      * Emits an OfferCreated event if successful.
      *
      * Reverts if:
-     * - Caller is not an assistant
+     * - Caller is not an assistant in case of seller-initiated offer
+     * - sellerId is not 0 when buyer-initiated offer is created
+     * - collectionIndex is not 0 when buyer-initiated offer is created
+     * - royaltyInfo is not empty when buyer-initiated offer is created
+     * - Invalid offer creator value specified (OfferCreator.Seller or OfferCreator.Buyer)
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
      * - Both voucher expiration date and voucher expiration period are defined

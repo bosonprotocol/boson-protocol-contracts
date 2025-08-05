@@ -67,14 +67,15 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
      * - Offer is not yet available for commits
      * - Offer's quantity available is zero
      * - Committer address is zero
-     * - Committer account is inactive
+     * - Committer is not a buyer account when committing to seller-created offer
+     * - Committer is not a seller assistant when committing to buyer-created offer
      * - Offer exchange token is in native token and caller does not send enough
      * - Offer exchange token is in some ERC20 token and caller also sends native currency
      * - Contract at token address does not support ERC20 function transferFrom
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      * - Received ERC20 token amount differs from the expected value
-     * - Seller has less funds available than sellerDeposit if offer was created by the seller
-     * - Buyer has less funds available than price if offer was created by the buyer
+     * - For seller-created offers: Buyer has less funds available than offer price
+     * - For buyer-created offers: Seller has less funds available than seller deposit
      * - Offer belongs to a group with a condition
      *
      * @param _committer - the seller's or the buyer's address. The caller can commit on behalf of a buyer or a seller.
@@ -173,7 +174,8 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
      * - Offer has expired
      * - Offer is not yet available for commits
      * - Offer's quantity available is zero [for non preminted offers]
-     * - Committer account is inactive
+     * - Committer is not a buyer account when committing to seller-created offer
+     * - Committer is not a seller assistant when committing to buyer-created offer
      * - Buyer is token-gated (conditional commit requirements not met or already used)
      * - For non preminted offers:
      *   - Offer exchange token is in native token and caller does not send enough
@@ -181,8 +183,8 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
      *   - Contract at token address does not support ERC20 function transferFrom
      *   - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      *   - Received ERC20 token amount differs from the expected value
-     *   - Seller has less funds available than sellerDeposit if offer was created by the seller
-     *   - Buyer has less funds available than price if offer was created by the buyer
+     *   - For seller-created offers: Buyer has less funds available than offer price
+     *   - For buyer-created offers: Seller has less funds available than seller deposit
      * - For preminted offers:
      *   - Exchange aldready exists
      *   - Seller has less funds available than sellerDeposit and price for preminted offers that price type is static
