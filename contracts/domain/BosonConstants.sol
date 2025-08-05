@@ -14,6 +14,7 @@ bytes32 constant FEE_COLLECTOR = keccak256("FEE_COLLECTOR"); // Role for collect
 // Generic
 uint256 constant HUNDRED_PERCENT = 10000; // 100% in basis points
 uint256 constant PROTOCOL_ENTITY_ID = 0; // Entity ID for the protocol itself
+uint256 constant VOIDED_OFFER_ID = type(uint256).max; // Offer ID for voided non-listed offers
 
 // Pause Handler
 uint256 constant ALL_REGIONS_MASK = (1 << (uint256(type(BosonTypes.PausableRegion).max) + 1)) - 1;

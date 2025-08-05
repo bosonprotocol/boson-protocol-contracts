@@ -302,18 +302,21 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
         uint256 conditionalTokenId
     ) external payable override exchangesNotPaused buyersNotPaused sellersNotPaused {
         // verify signature and potential cancellation
-        verifyOffer(_fullOffer, _offerCreator, _signature);
+        (bytes32 offerHash, uint256 offerId) = verifyOffer(_fullOffer, _offerCreator, _signature);
 
         // create an offer
-        uint256 offerId = createOfferInternal(
-            _fullOffer.offer,
-            _fullOffer.offerDates,
-            _fullOffer.offerDurations,
-            _fullOffer.drParameters,
-            _fullOffer.agentId,
-            _fullOffer.feeLimit,
-            false
-        );
+        if (offerId == 0) {
+            offerId = createOfferInternal(
+                _fullOffer.offer,
+                _fullOffer.offerDates,
+                _fullOffer.offerDurations,
+                _fullOffer.drParameters,
+                _fullOffer.agentId,
+                _fullOffer.feeLimit,
+                false
+            );
+            protocolLookups().offerIdByHash[offerHash] = offerId;
+        }
 
         // Deposit other committer's funds if needed
         uint256 offerCreatorId;
@@ -372,7 +375,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
         BosonTypes.FullOffer calldata _fullOffer,
         address _offerCreator,
         bytes calldata _signature
-    ) internal {
+    ) internal returns (bytes32 offerHash, uint256 offerId) {
         // `_fullOffer.offer.voided` is checked in createOfferInternal
         if (
             _fullOffer.offer.id != 0 ||
@@ -381,18 +384,17 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
             _fullOffer.offer.priceType != BosonTypes.PriceType.Static
         ) revert InvalidOffer();
 
-        bytes32 offerHash = getOfferHash(_fullOffer);
+        offerHash = getOfferHash(_fullOffer);
 
         // Check if the offer non-listed offer has been voided via `voidOffer`
         // Does not apply to already listed offers, with `voided` set to true
-        ProtocolLib.ProtocolLookups storage pl = protocolLookups();
-        if (pl.isOfferUsed[offerHash]) {
+        offerId = protocolLookups().offerIdByHash[offerHash];
+        if (offerId == 0) {
+            EIP712Lib.verify(_offerCreator, offerHash, _signature);
+        } else if (offerId == VOIDED_OFFER_ID) {
+            // Offer is voided
             revert OfferHasBeenVoided();
         }
-
-        pl.isOfferUsed[offerHash] = true;
-
-        EIP712Lib.verify(_offerCreator, offerHash, _signature);
     }
 
     /**

@@ -17,7 +17,7 @@ import "./../../domain/BosonConstants.sol";
  */
 contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
     string private constant OFFER_TYPE =
-        "Offer(uint256 sellerId,uint256 price,uint256 sellerDeposit,uint256 buyerCancelPenalty,address exchangeToken,string metadataUri,string metadataHash,uint256 collectionIndex,RoyaltyInfo royaltyInfo,uint8 creator,uint256 buyerId)";
+        "Offer(uint256 sellerId,uint256 price,uint256 sellerDeposit,uint256 buyerCancelPenalty,uint256 quantityAvailable,address exchangeToken,string metadataUri,string metadataHash,uint256 collectionIndex,RoyaltyInfo royaltyInfo,uint8 creator,uint256 buyerId)";
     string private constant ROYALTY_INFO_TYPE = "RoyaltyInfo(address[] recipients,uint256[] bps)";
     string private constant OFFER_DATES_TYPE =
         "OfferDates(uint256 validFrom,uint256 validUntil,uint256 voucherRedeemableFrom,uint256 voucherRedeemableUntil)";
@@ -540,6 +540,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
                     _offer.price,
                     _offer.sellerDeposit,
                     _offer.buyerCancelPenalty,
+                    _offer.quantityAvailable,
                     _offer.exchangeToken,
                     keccak256(bytes(_offer.metadataUri)),
                     keccak256(bytes(_offer.metadataHash)),

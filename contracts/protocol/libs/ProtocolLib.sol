@@ -213,8 +213,8 @@ library ProtocolLib {
         mapping(uint256 => mapping(address => uint256)) royaltyRecipientIndexBySellerAndRecipient;
         // royalty recipient wallet address => agentId
         mapping(address => uint256) royaltyRecipientIdByWallet;
-        // offer hash -> used/voided
-        mapping(bytes32 => bool) isOfferUsed;
+        // offer hash -> offer id
+        mapping(bytes32 => uint256) offerIdByHash;
     }
 
     // Incrementing id counters
