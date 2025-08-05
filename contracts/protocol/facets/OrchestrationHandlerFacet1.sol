@@ -262,7 +262,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         _group.offerIds[0] = _offer.id;
 
         // Create group and update structs values to represent true state
-        createGroupInternal(_group, _condition);
+        // authentication can be skipped here, since it is already done in createOfferInternal
+        createGroupInternal(_group, _condition, false);
     }
 
     /**

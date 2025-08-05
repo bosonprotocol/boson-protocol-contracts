@@ -89,6 +89,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
      * @param _drParameters - the id of chosen dispute resolver (can be 0) and mutualizer address (0 for self-mutualization)
      * @param _agentId - the id of agent
      * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _authenticate - whether to authenticate the caller. Use false when called from a handler that already authenticated the caller.
      */
     function createOfferInternal(
         Offer memory _offer,

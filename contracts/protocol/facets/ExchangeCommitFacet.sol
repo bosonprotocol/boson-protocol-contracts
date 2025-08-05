@@ -316,6 +316,19 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
                 false
             );
             protocolLookups().offerIdByHash[offerHash] = offerId;
+
+            if (_fullOffer.condition.method != BosonTypes.EvaluationMethod.None) {
+                // Construct new group
+                // - group id is 0, and it is ignored
+                // - note that _offer fields are updated during createOfferInternal, so they represent correct values
+                Group memory group;
+                group.sellerId = _fullOffer.offer.sellerId;
+                group.offerIds = new uint256[](1);
+                group.offerIds[0] = offerId;
+
+                // Create group and update structs values to represent true state
+                createGroupInternal(group, _fullOffer.condition, false);
+            }
         }
 
         // Deposit other committer's funds if needed
@@ -343,16 +356,6 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
         }
 
         if (_fullOffer.condition.method != BosonTypes.EvaluationMethod.None) {
-            // Construct new group
-            // - group id is 0, and it is ignored
-            // - note that _offer fields are updated during createOfferInternal, so they represent correct values
-            Group memory group;
-            group.sellerId = _fullOffer.offer.sellerId;
-            group.offerIds = new uint256[](1);
-            group.offerIds[0] = _fullOffer.offer.id;
-
-            // Create group and update structs values to represent true state
-            createGroupInternal(group, _fullOffer.condition);
             commitToConditionalOffer(_committer, offerId, conditionalTokenId);
         } else {
             commitToOffer(_committer, offerId);
@@ -379,7 +382,6 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
         // `_fullOffer.offer.voided` is checked in createOfferInternal
         if (
             _fullOffer.offer.id != 0 ||
-            _fullOffer.offer.quantityAvailable != 1 ||
             _fullOffer.offer.royaltyInfo.length != 1 ||
             _fullOffer.offer.priceType != BosonTypes.PriceType.Static
         ) revert InvalidOffer();
