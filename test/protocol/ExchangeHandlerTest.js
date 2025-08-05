@@ -8329,6 +8329,8 @@ describe("IBosonExchangeHandler", function () {
 
       offerDurations.voucherValid = (oneMonth * 12n).toString();
 
+      const condition = mockCondition({ method: EvaluationMethod.None, threshold: "0", maxCommits: "0" });
+
       // Set used variables
       price = offer.price;
       voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
@@ -8360,12 +8362,23 @@ describe("IBosonExchangeHandler", function () {
         { name: "offerDates", type: "OfferDates" },
         { name: "offerDurations", type: "OfferDurations" },
         { name: "drParameters", type: "DRParameters" },
+        { name: "condition", type: "Condition" },
         { name: "agentId", type: "uint256" },
         { name: "feeLimit", type: "uint256" },
       ];
 
       let customTransactionType = {
         FullOffer: fullOfferType,
+        Condition: [
+          { name: "method", type: "uint8" },
+          { name: "tokenType", type: "uint8" },
+          { name: "tokenAddress", type: "address" },
+          { name: "gating", type: "uint8" },
+          { name: "minTokenId", type: "uint256" },
+          { name: "threshold", type: "uint256" },
+          { name: "maxCommits", type: "uint256" },
+          { name: "maxTokenId", type: "uint256" },
+        ],
         DRParameters: [
           { name: "disputeResolverId", type: "uint256" },
           { name: "mutualizerAddress", type: "address" },
@@ -8409,6 +8422,7 @@ describe("IBosonExchangeHandler", function () {
       message.offerDates = offerDates;
       message.offerDurations = offerDurations;
       message.drParameters = drParams;
+      message.condition = condition;
       message.agentId = agentId.toString();
       message.feeLimit = offerFeeLimit.toString();
 
@@ -8424,15 +8438,11 @@ describe("IBosonExchangeHandler", function () {
       tx = await exchangeCommitHandler
         .connect(buyer)
         .createOfferAndCommit(
-          offer,
-          offerDates,
-          offerDurations,
-          drParams,
-          agentId,
-          offerFeeLimit,
+          [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit],
           assistant.address,
           buyer.address,
-          signature
+          signature,
+          "0"
         );
       txReceipt = await tx.wait();
       event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");

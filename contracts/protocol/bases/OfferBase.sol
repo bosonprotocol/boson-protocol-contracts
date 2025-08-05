@@ -24,17 +24,21 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
     string private constant OFFER_DURATIONS_TYPE =
         "OfferDurations(uint256 disputePeriod,uint256 voucherValid,uint256 resolutionPeriod)";
     string private constant DR_PARAMETERS_TYPE = "DRParameters(uint256 disputeResolverId,address mutualizerAddress)";
+    string private constant CONDITION_TYPE =
+        "Condition(uint8 method,uint8 tokenType,address tokenAddress,uint8 gating,uint256 minTokenId,uint256 threshold,uint256 maxCommits,uint256 maxTokenId)";
 
     bytes32 private immutable OFFER_TYPEHASH = keccak256(bytes(string.concat(OFFER_TYPE, ROYALTY_INFO_TYPE)));
     bytes32 private constant ROYALTY_INFO_TYPEHASH = keccak256(bytes(ROYALTY_INFO_TYPE));
     bytes32 private constant OFFER_DATES_TYPEHASH = keccak256(bytes(OFFER_DATES_TYPE));
     bytes32 private constant OFFER_DURATIONS_TYPEHASH = keccak256(bytes(OFFER_DURATIONS_TYPE));
     bytes32 private constant DR_PARAMETERS_TYPEHASH = keccak256(bytes(DR_PARAMETERS_TYPE));
+    bytes32 private constant CONDITION_TYPEHASH = keccak256(bytes(CONDITION_TYPE));
     bytes32 private immutable FULL_OFFER_TYPEHASH =
         keccak256(
             bytes(
                 string.concat(
-                    "FullOffer(Offer offer,OfferDates offerDates,OfferDurations offerDurations,DRParameters drParameters,uint256 agentId,uint256 feeLimit)",
+                    "FullOffer(Offer offer,OfferDates offerDates,OfferDurations offerDurations,DRParameters drParameters,Condition condition,uint256 agentId,uint256 feeLimit)",
+                    CONDITION_TYPE,
                     DR_PARAMETERS_TYPE,
                     OFFER_TYPE,
                     OFFER_DATES_TYPE,
@@ -94,7 +98,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
         uint256 _agentId,
         uint256 _feeLimit,
         bool _authenticate
-    ) internal {
+    ) internal returns (uint256 offerId) {
         address sender = _msgSender();
 
         if (_offer.creator == OfferCreator.Seller) {
@@ -125,7 +129,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
         }
 
         // Get the next offerId and increment the counter
-        uint256 offerId = protocolCounters().nextOfferId++;
+        offerId = protocolCounters().nextOfferId++;
         _offer.id = offerId;
 
         // Store the offer
@@ -499,32 +503,21 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
     /**
      * @notice Computes the EIP712 hash of the full offer parameters.
      *
-     * @param _offer - the offer to hash
-     * @param _offerDates - the offer dates to hash
-     * @param _offerDurations - the offer durations to hash
-     * @param _drParameters - the dispute resolver parameters to hash
-     * @param _agentId - the agent id to hash
-     * @param _feeLimit - the fee limit to hash
+     * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
      * @return - the hash of the complete offer
      */
-    function getOfferHash(
-        BosonTypes.Offer memory _offer,
-        BosonTypes.OfferDates calldata _offerDates,
-        BosonTypes.OfferDurations calldata _offerDurations,
-        BosonTypes.DRParameters calldata _drParameters,
-        uint256 _agentId,
-        uint256 _feeLimit
-    ) internal view returns (bytes32) {
+    function getOfferHash(BosonTypes.FullOffer calldata _fullOffer) internal view returns (bytes32) {
         return
             keccak256(
                 abi.encode(
                     FULL_OFFER_TYPEHASH,
-                    hashOffer(_offer),
-                    keccak256(abi.encode(OFFER_DATES_TYPEHASH, _offerDates)),
-                    keccak256(abi.encode(OFFER_DURATIONS_TYPEHASH, _offerDurations)),
-                    keccak256(abi.encode(DR_PARAMETERS_TYPEHASH, _drParameters)),
-                    _agentId,
-                    _feeLimit
+                    hashOffer(_fullOffer.offer),
+                    keccak256(abi.encode(OFFER_DATES_TYPEHASH, _fullOffer.offerDates)),
+                    keccak256(abi.encode(OFFER_DURATIONS_TYPEHASH, _fullOffer.offerDurations)),
+                    keccak256(abi.encode(DR_PARAMETERS_TYPEHASH, _fullOffer.drParameters)),
+                    keccak256(abi.encode(CONDITION_TYPEHASH, _fullOffer.condition)),
+                    _fullOffer.agentId,
+                    _fullOffer.feeLimit
                 )
             );
     }

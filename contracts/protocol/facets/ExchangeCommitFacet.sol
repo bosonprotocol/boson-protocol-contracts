@@ -12,6 +12,7 @@ import { BuyerBase } from "../bases/BuyerBase.sol";
 import { OfferBase } from "../bases/OfferBase.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
 import { OfferBase } from "../bases/OfferBase.sol";
+import { GroupBase } from "../bases/GroupBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -26,7 +27,7 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
  * This facet contains all functions related to committing to offers and creating new exchanges,
  * including buyer-initiated offers where sellers commit to buyer-created offers.
  */
-contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchangeCommitHandler {
+contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IBosonExchangeCommitHandler {
     using Address for address;
     using Address for address payable;
 
@@ -227,7 +228,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
         address payable _buyer,
         uint256 _offerId,
         uint256 _tokenId
-    ) external payable override exchangesNotPaused buyersNotPaused nonReentrant {
+    ) public payable override exchangesNotPaused buyersNotPaused nonReentrant {
         // Make sure buyer address is not zero address
         if (_buyer == address(0)) revert InvalidAddress();
 
@@ -287,68 +288,72 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
      * - Total royalty percentage is more than max royalty percentage
      * - Not enough funds can be encumbered
      *
-     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-     * @param _offerDates - the fully populated offer dates struct
-     * @param _offerDurations - the fully populated offer durations struct
-     * @param _drParameters - the id of chosen dispute resolver (can be 0) and mutualizer address (0 for self-mutualization)
-     * @param _agentId - the id of agent
-     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
      * @param _offerCreator - the address of the other party
      * @param _committer - the address of the committer (buyer for seller-created offers, seller for buyer-created offers)
      * @param _signature - signature of the other party. If the signer is EOA, it must be ECDSA signature in the format of (r,s,v) struct, otherwise, it must be a valid ERC1271 signature.
+     * @param conditionalTokenId - the token id to use for the conditional commit, if applicable
      */
     function createOfferAndCommit(
-        BosonTypes.Offer memory _offer,
-        BosonTypes.OfferDates calldata _offerDates,
-        BosonTypes.OfferDurations calldata _offerDurations,
-        BosonTypes.DRParameters calldata _drParameters,
-        uint256 _agentId,
-        uint256 _feeLimit,
+        BosonTypes.FullOffer calldata _fullOffer,
         address _offerCreator,
         address payable _committer,
-        bytes calldata _signature
+        bytes calldata _signature,
+        uint256 conditionalTokenId
     ) external payable override exchangesNotPaused buyersNotPaused sellersNotPaused {
         // verify signature and potential cancellation
-        verifyOffer(
-            _offer,
-            _offerDates,
-            _offerDurations,
-            _drParameters,
-            _agentId,
-            _feeLimit,
-            _offerCreator,
-            _signature
-        );
+        verifyOffer(_fullOffer, _offerCreator, _signature);
 
         // create an offer
-        createOfferInternal(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit, false);
+        uint256 offerId = createOfferInternal(
+            _fullOffer.offer,
+            _fullOffer.offerDates,
+            _fullOffer.offerDurations,
+            _fullOffer.drParameters,
+            _fullOffer.agentId,
+            _fullOffer.feeLimit,
+            false
+        );
 
         // Deposit other committer's funds if needed
         uint256 offerCreatorId;
         uint256 offerCreatorAmount;
-        if (_offer.creator == BosonTypes.OfferCreator.Buyer) {
+        if (_fullOffer.offer.creator == BosonTypes.OfferCreator.Buyer) {
             // Buyer-created offer: committer is the seller
-            offerCreatorId = _offer.buyerId;
-            offerCreatorAmount = _offer.price;
+            offerCreatorId = _fullOffer.offer.buyerId;
+            offerCreatorAmount = _fullOffer.offer.price;
         } else {
             // Seller-created offer: committer is the buyer
-            offerCreatorId = _offer.sellerId;
-            offerCreatorAmount = _offer.sellerDeposit;
+            offerCreatorId = _fullOffer.offer.sellerId;
+            offerCreatorAmount = _fullOffer.offer.sellerDeposit;
         }
 
         if (offerCreatorAmount > 0) {
-            transferFundsIn(_offer.exchangeToken, _offerCreator, offerCreatorAmount);
-            increaseAvailableFunds(offerCreatorId, _offer.exchangeToken, offerCreatorAmount);
+            transferFundsIn(_fullOffer.offer.exchangeToken, _offerCreator, offerCreatorAmount);
+            increaseAvailableFunds(offerCreatorId, _fullOffer.offer.exchangeToken, offerCreatorAmount);
             emit IBosonFundsEvents.FundsDeposited(
                 offerCreatorId,
                 _offerCreator,
-                _offer.exchangeToken,
+                _fullOffer.offer.exchangeToken,
                 offerCreatorAmount
             );
         }
 
-        // commit to the offer
-        commitToOffer(_committer, _offer.id);
+        if (_fullOffer.condition.method != BosonTypes.EvaluationMethod.None) {
+            // Construct new group
+            // - group id is 0, and it is ignored
+            // - note that _offer fields are updated during createOfferInternal, so they represent correct values
+            Group memory group;
+            group.sellerId = _fullOffer.offer.sellerId;
+            group.offerIds = new uint256[](1);
+            group.offerIds[0] = _fullOffer.offer.id;
+
+            // Create group and update structs values to represent true state
+            createGroupInternal(group, _fullOffer.condition);
+            commitToConditionalOffer(_committer, offerId, conditionalTokenId);
+        } else {
+            commitToOffer(_committer, offerId);
+        }
     }
 
     /**
@@ -359,34 +364,24 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
      * - Offer has been voided
      * - Signature is invalid
      *
-     * @param _offer - the offer to verify
-     * @param _offerDates - the offer dates to verify
-     * @param _offerDurations - the offer durations to verify
-     * @param _drParameters - the dispute resolver parameters to verify
-     * @param _agentId - the agent id to verify
-     * @param _feeLimit - the fee limit to verify
+     * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
      * @param _offerCreator - the address of the offer creator
      * @param _signature - the signature of the offer creator
      */
     function verifyOffer(
-        BosonTypes.Offer memory _offer,
-        BosonTypes.OfferDates calldata _offerDates,
-        BosonTypes.OfferDurations calldata _offerDurations,
-        BosonTypes.DRParameters calldata _drParameters,
-        uint256 _agentId,
-        uint256 _feeLimit,
+        BosonTypes.FullOffer calldata _fullOffer,
         address _offerCreator,
         bytes calldata _signature
     ) internal {
-        // `_offer.voided` is checked in createOfferInternal
+        // `_fullOffer.offer.voided` is checked in createOfferInternal
         if (
-            _offer.id != 0 ||
-            _offer.quantityAvailable != 1 ||
-            _offer.royaltyInfo.length != 1 ||
-            _offer.priceType != BosonTypes.PriceType.Static
+            _fullOffer.offer.id != 0 ||
+            _fullOffer.offer.quantityAvailable != 1 ||
+            _fullOffer.offer.royaltyInfo.length != 1 ||
+            _fullOffer.offer.priceType != BosonTypes.PriceType.Static
         ) revert InvalidOffer();
 
-        bytes32 offerHash = getOfferHash(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit);
+        bytes32 offerHash = getOfferHash(_fullOffer);
 
         // Check if the offer non-listed offer has been voided via `voidOffer`
         // Does not apply to already listed offers, with `voided` set to true

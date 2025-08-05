@@ -12,7 +12,7 @@ import { IBosonFundsBaseEvents } from "../events/IBosonFundsEvents.sol";
  * @notice Handles exchange commitment and creation within the protocol.
  * This interface contains functions for committing to offers and creating new exchanges.
  *
- * The ERC-165 identifier for this interface is: 0x9298f00f
+ * The ERC-165 identifier for this interface is: 0x1b7fe10c
  */
 interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBosonFundsBaseEvents {
     /**
@@ -145,26 +145,18 @@ interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBos
      * - Total royalty percentage is more than max royalty percentage
      * - Not enough funds can be encumbered
      *
-     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-     * @param _offerDates - the fully populated offer dates struct
-     * @param _offerDurations - the fully populated offer durations struct
-     * @param _drParameters - the id of chosen dispute resolver (can be 0) and mutualizer address (0 for self-mutualization)
-     * @param _agentId - the id of agent
-     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
      * @param _offerCreator - the address of the other party
      * @param _committer - the address of the committer (buyer for seller-created offers, seller for buyer-created offers)
      * @param _signature - signature of the other party. If the signer is EOA, it must be ECDSA signature in the format of (r,s,v) struct, otherwise, it must be a valid ERC1271 signature.
+     * @param conditionalTokenId - the token id to use for the conditional commit, if applicable
      */
     function createOfferAndCommit(
-        BosonTypes.Offer memory _offer,
-        BosonTypes.OfferDates calldata _offerDates,
-        BosonTypes.OfferDurations calldata _offerDurations,
-        BosonTypes.DRParameters calldata _drParameters,
-        uint256 _agentId,
-        uint256 _feeLimit,
+        BosonTypes.FullOffer calldata _fullOffer,
         address _offerCreator,
         address payable _committer,
-        bytes calldata _signature
+        bytes calldata _signature,
+        uint256 conditionalTokenId
     ) external payable;
 
     /**

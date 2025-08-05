@@ -194,6 +194,16 @@ contract BosonTypes {
         uint256 resolutionPeriod;
     }
 
+    struct FullOffer {
+        Offer offer;
+        OfferDates offerDates;
+        OfferDurations offerDurations;
+        DRParameters drParameters;
+        Condition condition;
+        uint256 agentId;
+        uint256 feeLimit;
+    }
+
     struct Group {
         uint256 id;
         uint256 sellerId;

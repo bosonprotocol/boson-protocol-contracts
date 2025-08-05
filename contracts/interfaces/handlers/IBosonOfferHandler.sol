@@ -10,7 +10,7 @@ import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x002b2835
+ * The ERC-165 identifier for this interface is: 0x9462b526
  */
 interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
     /**
@@ -181,21 +181,9 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      * - Caller is not the assistant of the offer
      * - Offer has already been voided
      *
-     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-     * @param _offerDates - the fully populated offer dates struct
-     * @param _offerDurations - the fully populated offer durations struct
-     * @param _drParameters - the id of chosen dispute resolver (can be 0) and mutualizer address (0 for self-mutualization)
-     * @param _agentId - the id of agent
-     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
      */
-    function voidNonListedOffer(
-        BosonTypes.Offer memory _offer,
-        BosonTypes.OfferDates calldata _offerDates,
-        BosonTypes.OfferDurations calldata _offerDurations,
-        BosonTypes.DRParameters calldata _drParameters,
-        uint256 _agentId,
-        uint256 _feeLimit
-    ) external;
+    function voidNonListedOffer(BosonTypes.FullOffer calldata _fullOffer) external;
 
     /**
      * @notice Voids multiple a non-listed offer. (offers used in `createOfferAndCommit`)
@@ -209,21 +197,9 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      * - Caller is not the authorized to void the offer
      * - Offer has already been voided
      *
-     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-     * @param _offerDates - the fully populated offer dates struct
-     * @param _offerDurations - the fully populated offer durations struct
-     * @param _drParameters - the id of chosen dispute resolver (can be 0) and mutualizer address (0 for self-mutualization)
-     * @param _agentId - the id of agent
-     * @param _feeLimit - the maximum fee that seller is willing to pay per exchange (for static offers)
+     * @param _fullOffers - the list fully populated structs containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
      */
-    function voidNonListedOfferBatch(
-        BosonTypes.Offer[] calldata _offer,
-        BosonTypes.OfferDates[] calldata _offerDates,
-        BosonTypes.OfferDurations[] calldata _offerDurations,
-        BosonTypes.DRParameters[] calldata _drParameters,
-        uint256[] calldata _agentId,
-        uint256[] calldata _feeLimit
-    ) external;
+    function voidNonListedOfferBatch(BosonTypes.FullOffer[] calldata _fullOffers) external;
 
     /**
      * @notice Sets new valid until date.
