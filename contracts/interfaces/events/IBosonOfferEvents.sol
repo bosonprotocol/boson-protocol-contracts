@@ -27,6 +27,7 @@ interface IBosonOfferEvents {
         address indexed executedBy
     );
     event OfferVoided(uint256 indexed offerId, uint256 indexed creatorId, address indexed executedBy);
+    event NonListedOfferVoided(bytes32 offerHash, uint256 indexed offererId, address indexed executedBy);
     event RangeReserved(
         uint256 indexed offerId,
         uint256 indexed sellerId,

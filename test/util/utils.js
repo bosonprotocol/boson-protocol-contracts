@@ -204,7 +204,8 @@ async function prepareDataSignature(
   forwarderAddress,
   domainName = "Boson Protocol",
   domainVersion = "V2",
-  type = "Protocol"
+  type = "Protocol",
+  hashOnly = false
 ) {
   // Initialize data
   const domainType =
@@ -243,12 +244,19 @@ async function prepareDataSignature(
   metaTxTypes = Object.assign({}, metaTxTypes, customTransactionTypes);
 
   // Prepare the data to sign
-  let dataToSign = JSON.stringify({
-    types: metaTxTypes,
+  const typedData = {
+    types: hashOnly ? customTransactionTypes : metaTxTypes,
     domain: domainData,
     primaryType: primaryType,
     message: message,
-  });
+  };
+
+  if (hashOnly) {
+    // If only the hash is needed, return it
+    const typedDataEncoder = new ethers.TypedDataEncoder(typedData.types);
+    return typedDataEncoder.hash(typedData.message);
+  }
+  let dataToSign = JSON.stringify(typedData);
 
   // Sign the data
   const signature = await provider.send("eth_signTypedData_v4", [await user.getAddress(), dataToSign]);

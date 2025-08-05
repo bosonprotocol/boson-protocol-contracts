@@ -8365,6 +8365,7 @@ describe("IBosonExchangeHandler", function () {
           { name: "condition", type: "Condition" },
           { name: "agentId", type: "uint256" },
           { name: "feeLimit", type: "uint256" },
+          { name: "useDepositedFunds", type: "bool" },
         ];
 
         customTransactionType = {
@@ -8421,6 +8422,7 @@ describe("IBosonExchangeHandler", function () {
         message.condition = condition;
         message.agentId = agentId.toString();
         message.feeLimit = offerFeeLimit.toString();
+        message.useDepositedFunds = false;
       });
 
       afterEach(async function () {
@@ -8447,7 +8449,7 @@ describe("IBosonExchangeHandler", function () {
         tx = await exchangeCommitHandler
           .connect(buyer)
           .createOfferAndCommit(
-            [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit],
+            [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
             assistant.address,
             buyer.address,
             signature,
@@ -8493,8 +8495,6 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("non zero seller deposit and erc20 token", async function () {
-        sellerPool = parseUnits("15", "ether").toString();
-
         offer.exchangeToken = await foreign20.getAddress();
         offer.sellerDeposit = parseUnits("0.1", "ether").toString();
 
@@ -8509,14 +8509,7 @@ describe("IBosonExchangeHandler", function () {
         modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
 
         // Prepare the message
-        let message = {};
         message.offer = modifiedOffer;
-        message.offerDates = offerDates;
-        message.offerDurations = offerDurations;
-        message.drParameters = drParams;
-        message.condition = condition;
-        message.agentId = agentId.toString();
-        message.feeLimit = offerFeeLimit.toString();
 
         // Collect the signature components
         let signature = await prepareDataSignature(
@@ -8530,7 +8523,7 @@ describe("IBosonExchangeHandler", function () {
         tx = await exchangeCommitHandler
           .connect(buyer)
           .createOfferAndCommit(
-            [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit],
+            [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
             assistant.address,
             buyer.address,
             signature,
@@ -8579,6 +8572,74 @@ describe("IBosonExchangeHandler", function () {
         await expect(tx).to.not.emit(groupHandler, "GroupCreated");
       });
 
+      it("use offer creator's deposited funds", async function () {
+        offer.sellerDeposit = parseUnits("0.1", "ether").toString();
+        await fundsHandler
+          .connect(assistant)
+          .depositFunds(seller.id, ethers.ZeroAddress, offer.sellerDeposit, { value: offer.sellerDeposit });
+
+        const modifiedOffer = offer.clone();
+        modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+        message.offer = modifiedOffer;
+        message.useDepositedFunds = true;
+
+        // Collect the signature components
+        let signature = await prepareDataSignature(
+          assistant,
+          customTransactionType,
+          "FullOffer",
+          message,
+          await exchangeCommitHandler.getAddress()
+        );
+        // Commit to offer, retrieving the event
+        tx = await exchangeCommitHandler
+          .connect(buyer)
+          .createOfferAndCommit(
+            [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, true],
+            assistant.address,
+            buyer.address,
+            signature,
+            "0",
+            { value: price }
+          );
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        voucher.committedDate = block.timestamp.toString();
+        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "BuyerCommitted")
+          .withArgs(offerId, buyerId, exchangeId, exchange.toStruct(), voucher.toStruct(), buyer.address);
+
+        offer.id = offerId;
+        await expect(tx)
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(
+            offerId,
+            seller.id,
+            offer.toStruct(),
+            offerDates.toStruct(),
+            offerDurations.toStruct(),
+            disputeResolutionTerms.toStruct(),
+            offerFees.toStruct(),
+            agentId,
+            buyer.address
+          );
+
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsEncumbered")
+          .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
+        await expect(tx).to.not.emit(fundsHandler, "FundsDeposited");
+
+        // Unconditional offer should not emit events
+        await expect(tx).to.not.emit(exchangeHandler, "ConditionalCommitAuthorized");
+        await expect(tx).to.not.emit(groupHandler, "GroupCreated");
+      });
+
       it("quantity available greater than 1", async function () {
         offer.sellerDeposit = "0";
         offer.quantityAvailable = "2";
@@ -8599,7 +8660,7 @@ describe("IBosonExchangeHandler", function () {
         tx = await exchangeCommitHandler
           .connect(buyer)
           .createOfferAndCommit(
-            [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit],
+            [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
             assistant.address,
             buyer.address,
             signature,
@@ -8611,7 +8672,7 @@ describe("IBosonExchangeHandler", function () {
         tx = await exchangeCommitHandler
           .connect(buyer)
           .createOfferAndCommit(
-            [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit],
+            [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
             assistant.address,
             buyer.address,
             signature,
@@ -8680,7 +8741,7 @@ describe("IBosonExchangeHandler", function () {
         tx = await exchangeCommitHandler
           .connect(buyer)
           .createOfferAndCommit(
-            [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit],
+            [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
             assistant.address,
             buyer.address,
             signature,
@@ -8752,7 +8813,7 @@ describe("IBosonExchangeHandler", function () {
             exchangeCommitHandler
               .connect(buyer)
               .createOfferAndCommit(
-                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit],
+                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
                 assistant.address,
                 buyer.address,
                 signature,
@@ -8780,7 +8841,7 @@ describe("IBosonExchangeHandler", function () {
             exchangeCommitHandler
               .connect(buyer)
               .createOfferAndCommit(
-                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit],
+                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
                 assistant.address,
                 buyer.address,
                 signature,
@@ -8794,7 +8855,16 @@ describe("IBosonExchangeHandler", function () {
 
           await offerHandler
             .connect(assistant)
-            .voidNonListedOffer([offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit]);
+            .voidNonListedOffer([
+              offer,
+              offerDates,
+              offerDurations,
+              drParams,
+              condition,
+              agentId,
+              offerFeeLimit,
+              false,
+            ]);
 
           const modifiedOffer = offer.clone();
           modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
@@ -8812,7 +8882,7 @@ describe("IBosonExchangeHandler", function () {
             exchangeCommitHandler
               .connect(buyer)
               .createOfferAndCommit(
-                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit],
+                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
                 assistant.address,
                 buyer.address,
                 signature,
@@ -8838,7 +8908,7 @@ describe("IBosonExchangeHandler", function () {
           await exchangeCommitHandler
             .connect(buyer)
             .createOfferAndCommit(
-              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit],
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
               assistant.address,
               buyer.address,
               signature,
@@ -8851,7 +8921,7 @@ describe("IBosonExchangeHandler", function () {
             exchangeCommitHandler
               .connect(buyer)
               .createOfferAndCommit(
-                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit],
+                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
                 assistant.address,
                 buyer.address,
                 signature,
@@ -8874,7 +8944,7 @@ describe("IBosonExchangeHandler", function () {
           exchangeCommitHandler
             .connect(buyer)
             .createOfferAndCommit(
-              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit],
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
               assistant.address,
               buyer.address,
               signature,
@@ -8895,7 +8965,7 @@ describe("IBosonExchangeHandler", function () {
           exchangeCommitHandler
             .connect(buyer)
             .createOfferAndCommit(
-              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit],
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
               assistant.address,
               buyer.address,
               signature,
@@ -8916,7 +8986,7 @@ describe("IBosonExchangeHandler", function () {
           exchangeCommitHandler
             .connect(buyer)
             .createOfferAndCommit(
-              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit],
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
               assistant.address,
               buyer.address,
               signature,
@@ -8936,7 +9006,7 @@ describe("IBosonExchangeHandler", function () {
           exchangeCommitHandler
             .connect(buyer)
             .createOfferAndCommit(
-              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit],
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
               assistant.address,
               buyer.address,
               signature,
@@ -8955,7 +9025,7 @@ describe("IBosonExchangeHandler", function () {
           exchangeCommitHandler
             .connect(buyer)
             .createOfferAndCommit(
-              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit],
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
               assistant.address,
               buyer.address,
               signature,
@@ -8970,7 +9040,7 @@ describe("IBosonExchangeHandler", function () {
           exchangeCommitHandler
             .connect(buyer)
             .createOfferAndCommit(
-              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit],
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
               assistant.address,
               buyer.address,
               signature,
@@ -8988,7 +9058,7 @@ describe("IBosonExchangeHandler", function () {
           exchangeCommitHandler
             .connect(buyer)
             .createOfferAndCommit(
-              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit],
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
               assistant.address,
               buyer.address,
               signature,

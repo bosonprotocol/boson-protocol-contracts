@@ -174,7 +174,7 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      * @notice Voids a non-listed offer. (offers used in `createOfferAndCommit`)
      * It prevents the offer from being used in future exchanges even if it was already signed.
      *
-     * Emits an OfferVoided event if successful.
+     * Emits a NonListedOfferVoided event if successful.
      *
      * Reverts if:
      * - The offers region of protocol is paused
@@ -189,7 +189,7 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      * @notice Voids multiple a non-listed offer. (offers used in `createOfferAndCommit`)
      * It prevents the offers from being used in future exchanges even if they were already signed.
      *
-     * Emits an OfferVoided events if successful.
+     * Emits NonListedOfferVoided events if successful.
      *
      * Reverts if:
      * - The number of elements in offers, offerDates, offerDurations, disputeResolverIds, agentIds and feeLimits do not match
