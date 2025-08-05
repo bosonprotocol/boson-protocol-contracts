@@ -10,6 +10,7 @@ import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BuyerBase } from "../bases/BuyerBase.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
+import { OfferBase } from "../bases/OfferBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -23,7 +24,7 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
  * This facet contains all functions related to committing to offers and creating new exchanges,
  * including buyer-initiated offers where sellers commit to buyer-created offers.
  */
-contract ExchangeCommitFacet is DisputeBase, BuyerBase, IBosonExchangeCommitHandler {
+contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchangeCommitHandler {
     using Address for address;
     using Address for address payable;
 
@@ -230,6 +231,26 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, IBosonExchangeCommitHand
 
             // Set sellerId in offer (this assigns the seller to the buyer-created offer)
             _offer.sellerId = sellerId;
+
+            {
+                ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+                RoyaltyRecipientInfo[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[sellerId];
+
+                address payable[] memory recipients = new address payable[](royaltyRecipients.length);
+                uint256[] memory bps = new uint256[](royaltyRecipients.length);
+
+                for (uint256 i = 0; i < royaltyRecipients.length; i++) {
+                    recipients[i] = royaltyRecipients[i].wallet;
+                    bps[i] = royaltyRecipients[i].minRoyaltyPercentage;
+                }
+
+                RoyaltyInfo memory royaltyInfo = RoyaltyInfo(recipients, bps);
+
+                validateRoyaltyInfo(lookups, protocolLimits(), sellerId, royaltyInfo);
+
+                (, Offer storage storedOffer) = fetchOffer(_offerId);
+                storedOffer.royaltyInfo.push(royaltyInfo);
+            }
 
             // For buyer-created offers, the buyer is stored in the offer
             buyerId = _offer.buyerId;
