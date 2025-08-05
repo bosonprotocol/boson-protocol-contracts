@@ -32,6 +32,7 @@ exports.RevertReasons = {
   // Offer related
   NOT_ASSISTANT: "NotAssistant",
   NO_SUCH_OFFER: "NoSuchOffer",
+  INVALID_OFFER: "InvalidOffer",
   OFFER_HAS_BEEN_VOIDED: "OfferHasBeenVoided",
   OFFER_PERIOD_INVALID: "InvalidOfferPeriod",
   OFFER_PENALTY_INVALID: "InvalidOfferPenalty",
