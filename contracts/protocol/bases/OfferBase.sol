@@ -109,15 +109,16 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
                 }
                 _offer.sellerId = sellerId;
             } else if (_offer.creator == OfferCreator.Buyer) {
-                if (_offer.sellerId != 0 || _offer.collectionIndex != 0) {
-                    revert InvalidBuyerOfferFields();
-                }
                 uint256 buyerId = getValidBuyer(payable(sender));
                 _offer.buyerId = buyerId;
                 _offer.quantityAvailable = 1;
             } else {
                 revert InvalidOfferCreator();
             }
+        }
+
+        if (_offer.creator == OfferCreator.Buyer && (_offer.sellerId != 0 || _offer.collectionIndex != 0)) {
+            revert InvalidBuyerOfferFields();
         }
 
         // Get the next offerId and increment the counter
