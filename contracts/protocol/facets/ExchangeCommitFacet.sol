@@ -220,17 +220,17 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
      * - Seller has less funds available than sellerDeposit
      * - Condition has a range and the token id is not within the range
      *
-     * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
+     * @param _committer - the seller's or the buyer's address. The caller can commit on behalf of a buyer or a seller.
      * @param _offerId - the id of the offer to commit to
      * @param _tokenId - the id of the token to use for the conditional commit
      */
     function commitToConditionalOffer(
-        address payable _buyer,
+        address payable _committer,
         uint256 _offerId,
         uint256 _tokenId
     ) public payable override exchangesNotPaused buyersNotPaused nonReentrant {
-        // Make sure buyer address is not zero address
-        if (_buyer == address(0)) revert InvalidAddress();
+        // Make sure committer address is not zero address
+        if (_committer == address(0)) revert InvalidAddress();
 
         Offer storage offer = getValidOffer(_offerId);
         if (offer.priceType != PriceType.Static) revert InvalidPriceType();
@@ -247,9 +247,16 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
         // Make sure the tokenId is in range
         validateConditionRange(condition, _tokenId);
 
-        authorizeCommit(_buyer, condition, groupId, _tokenId, _offerId);
+        address buyerAddress;
+        if (offer.creator == BosonTypes.OfferCreator.Seller) {
+            buyerAddress = _committer;
+        } else {
+            (, BosonTypes.Buyer storage buyer) = fetchBuyer(offer.buyerId);
+            buyerAddress = buyer.wallet;
+        }
+        authorizeCommit(buyerAddress, condition, groupId, _tokenId, _offerId);
 
-        uint256 exchangeId = commitToOfferInternal(_buyer, offer, 0, false);
+        uint256 exchangeId = commitToOfferInternal(_committer, offer, 0, false);
 
         // Store the condition to be returned afterward on getReceipt function
         protocolLookups().exchangeCondition[exchangeId] = condition;
@@ -322,7 +329,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
                 // - group id is 0, and it is ignored
                 // - note that _offer fields are updated during createOfferInternal, so they represent correct values
                 Group memory group;
-                group.sellerId = _fullOffer.offer.sellerId;
+                group.sellerId = _fullOffer.offer.sellerId; // ToDo: is ok this is 0?
                 group.offerIds = new uint256[](1);
                 group.offerIds[0] = offerId;
 
@@ -394,6 +401,18 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
         // Does not apply to already listed offers, with `voided` set to true
         offerId = protocolLookups().offerIdByHash[offerHash];
         if (offerId == 0) {
+            if (_fullOffer.offer.creator == OfferCreator.Seller) {
+                // Validate caller is seller assistant
+                (, uint256 sellerId) = getSellerIdByAssistant(_offerCreator);
+                if (sellerId != _fullOffer.offer.sellerId) {
+                    revert NotAssistant();
+                }
+            } else if (_fullOffer.offer.creator == OfferCreator.Buyer) {
+                uint256 buyerId = getValidBuyer(payable(_offerCreator));
+                if (buyerId != _fullOffer.offer.buyerId) {
+                    revert NotBuyerWallet();
+                }
+            }
             EIP712Lib.verify(_offerCreator, offerHash, _signature);
         } else if (offerId == VOIDED_OFFER_ID) {
             // Offer is voided
