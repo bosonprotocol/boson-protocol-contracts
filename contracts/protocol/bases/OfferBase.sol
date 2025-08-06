@@ -109,7 +109,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
                 }
                 _offer.sellerId = sellerId;
             } else if (_offer.creator == OfferCreator.Buyer) {
-                if (_offer.sellerId != 0 || _offer.collectionIndex != 0 || _offer.royaltyInfo.length > 0) {
+                if (_offer.sellerId != 0 || _offer.collectionIndex != 0) {
                     revert InvalidBuyerOfferFields();
                 }
                 uint256 buyerId = getValidBuyer(payable(sender));
@@ -331,7 +331,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
             {
                 // Buyer-created offers can have 0 royalties, seller-created offers must have 1
                 if (_offer.creator == OfferCreator.Buyer) {
-                    if (_offer.royaltyInfo.length != 0) revert InvalidRoyaltyInfo();
+                    // if (_offer.royaltyInfo.length != 0) revert InvalidRoyaltyInfo();
                 } else {
                     if (_offer.royaltyInfo.length != 1) revert InvalidRoyaltyInfo();
                     validateRoyaltyInfo(lookups, limits, _offer.sellerId, _offer.royaltyInfo[0]);
