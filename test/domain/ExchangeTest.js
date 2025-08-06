@@ -10,7 +10,7 @@ describe("Exchange", function () {
   // Suite-wide scope
   let object, promoted, clone, dehydrated, rehydrated, key, value, struct;
   let id, offerId, buyerId;
-  let exchange, finalizedDate, state, mutualizerAddress, requestedDRFeeAmount;
+  let exchange, finalizedDate, state, mutualizerAddress;
 
   beforeEach(async function () {
     // Required exchange constructor params
@@ -20,20 +20,18 @@ describe("Exchange", function () {
     finalizedDate = "1661447000";
     state = ExchangeState.Completed;
     mutualizerAddress = ZeroAddress;
-    requestedDRFeeAmount = "0";
-    exchange = new Exchange(id, offerId, buyerId, finalizedDate, state, mutualizerAddress, requestedDRFeeAmount);
+    exchange = new Exchange(id, offerId, buyerId, finalizedDate, state, mutualizerAddress);
   });
 
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated Exchange instance", async function () {
-      exchange = new Exchange(id, offerId, buyerId, finalizedDate, state, mutualizerAddress, requestedDRFeeAmount);
+      exchange = new Exchange(id, offerId, buyerId, finalizedDate, state, mutualizerAddress);
       expect(exchange.idIsValid()).is.true;
       expect(exchange.offerIdIsValid()).is.true;
       expect(exchange.buyerIdIsValid()).is.true;
       expect(exchange.finalizedDateIsValid()).is.true;
       expect(exchange.stateIsValid()).is.true;
       expect(exchange.mutualizerAddressIsValid()).is.true;
-      expect(exchange.requestedDRFeeAmountIsValid()).is.true;
       expect(exchange.isValid()).is.true;
     });
   });
@@ -41,7 +39,7 @@ describe("Exchange", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid exchange, then set fields in tests directly
-      exchange = new Exchange(id, offerId, buyerId, finalizedDate, state, mutualizerAddress, requestedDRFeeAmount);
+      exchange = new Exchange(id, offerId, buyerId, finalizedDate, state, mutualizerAddress);
       expect(exchange.isValid()).is.true;
     });
 
@@ -164,34 +162,12 @@ describe("Exchange", function () {
       expect(exchange.mutualizerAddressIsValid()).is.true;
       expect(exchange.isValid()).is.true;
     });
-
-    it("Always present, requestedDRFeeAmount must be the string representation of a BigNumber >= 0", async function () {
-      // Invalid field value
-      exchange.requestedDRFeeAmount = "notanumber";
-      expect(exchange.requestedDRFeeAmountIsValid()).is.false;
-      expect(exchange.isValid()).is.false;
-
-      // Invalid field value
-      exchange.requestedDRFeeAmount = "-1";
-      expect(exchange.requestedDRFeeAmountIsValid()).is.false;
-      expect(exchange.isValid()).is.false;
-
-      // Valid field value
-      exchange.requestedDRFeeAmount = "0";
-      expect(exchange.requestedDRFeeAmountIsValid()).is.true;
-      expect(exchange.isValid()).is.true;
-
-      // Valid field value
-      exchange.requestedDRFeeAmount = "126";
-      expect(exchange.requestedDRFeeAmountIsValid()).is.true;
-      expect(exchange.isValid()).is.true;
-    });
   });
 
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid exchange, then set fields in tests directly
-      exchange = new Exchange(id, offerId, buyerId, finalizedDate, state, mutualizerAddress, requestedDRFeeAmount);
+      exchange = new Exchange(id, offerId, buyerId, finalizedDate, state, mutualizerAddress);
       expect(exchange.isValid()).is.true;
 
       // Get plain object
@@ -202,11 +178,10 @@ describe("Exchange", function () {
         finalizedDate,
         state,
         mutualizerAddress,
-        requestedDRFeeAmount,
       };
 
       // Struct representation
-      struct = [id, offerId, buyerId, finalizedDate, state, mutualizerAddress, requestedDRFeeAmount];
+      struct = [id, offerId, buyerId, finalizedDate, state, mutualizerAddress];
     });
 
     context("👉 Static", async function () {

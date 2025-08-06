@@ -236,7 +236,6 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
             if (drFeeAmount > 0) {
                 handleDRFeeCollection(_exchangeId, _offer, disputeTerms, drFeeAmount);
                 exchange.mutualizerAddress = disputeTerms.mutualizerAddress;
-                exchange.requestedDRFeeAmount = drFeeAmount;
             }
         }
 

@@ -211,7 +211,6 @@ contract BosonTypes {
         uint256 finalizedDate;
         ExchangeState state;
         address payable mutualizerAddress;
-        uint256 requestedDRFeeAmount;
     }
 
     struct ExchangeCosts {
