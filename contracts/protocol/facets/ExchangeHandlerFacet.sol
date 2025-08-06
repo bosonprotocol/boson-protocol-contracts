@@ -219,24 +219,26 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
         encumberFunds(_offerId, buyerId, _offer.price, _isPreminted, _offer.priceType);
 
         // Handle DR fee collection
+        Exchange storage exchange = protocolEntities().exchanges[_exchangeId];
         {
             // Get dispute resolution terms to get the dispute resolver ID
             DisputeResolutionTerms storage disputeTerms = fetchDisputeResolutionTerms(_offerId);
 
             uint256 drFeeAmount = disputeTerms.feeAmount;
 
+            // Create and store a new exchange
+            exchange.id = _exchangeId;
+            exchange.offerId = _offerId;
+            exchange.buyerId = buyerId;
+            exchange.state = ExchangeState.Committed;
+
             // Handle DR fee collection if fee exists
             if (drFeeAmount > 0) {
                 handleDRFeeCollection(_exchangeId, _offer, disputeTerms, drFeeAmount);
+                exchange.mutualizerAddress = disputeTerms.mutualizerAddress;
+                exchange.requestedDRFeeAmount = drFeeAmount;
             }
         }
-
-        // Create and store a new exchange
-        Exchange storage exchange = protocolEntities().exchanges[_exchangeId];
-        exchange.id = _exchangeId;
-        exchange.offerId = _offerId;
-        exchange.buyerId = buyerId;
-        exchange.state = ExchangeState.Committed;
 
         // Create and store a new voucher
         Voucher storage voucher = protocolEntities().vouchers[_exchangeId];

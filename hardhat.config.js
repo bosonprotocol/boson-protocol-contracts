@@ -160,6 +160,7 @@ module.exports = {
       accounts: { mnemonic: environments.hardhat.mnemonic },
       gasPrice: 0,
       initialBaseFeePerGas: 0,
+      allowUnlimitedContractSize: true,
     },
     localhost: {
       url: environments.localhost.txNode || "http://127.0.0.1:8545",

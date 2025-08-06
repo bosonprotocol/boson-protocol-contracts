@@ -283,10 +283,12 @@ describe("DRFeeMutualizer", function () {
 
   context("📋 Agreement Management", async function () {
     let drFeeMutualizer;
+    let mockProtocol;
     const sellerId = 1;
 
     beforeEach(async function () {
       const setup = await setupMockProtocolAndMutualizer(sellerId, seller.address);
+      mockProtocol = setup.mockProtocol;
       drFeeMutualizer = setup.drFeeMutualizer;
     });
 
@@ -331,7 +333,7 @@ describe("DRFeeMutualizer", function () {
       });
 
       context("💔 Revert Reasons", async function () {
-        it("should revert when sellerId is zero", async function () {
+        it("should revert when seller is not found", async function () {
           await expect(
             drFeeMutualizer
               .connect(owner)
@@ -419,6 +421,220 @@ describe("DRFeeMutualizer", function () {
           ).to.be.revertedWith(RevertReasons.OWNABLE_NOT_OWNER);
         });
       });
+
+      context("Race Condition Prevention (payPremium & newAgreement)", async function () {
+        const disputeResolverId = 1;
+
+        it("should automatically void existing non-started agreement when creating new one", async function () {
+          // Create first agreement but don't pay premium
+          const firstTx = await drFeeMutualizer
+            .connect(owner)
+            .newAgreement(
+              sellerId,
+              ZeroAddress,
+              disputeResolverId,
+              ONE_ETHER,
+              TEN_ETHER,
+              THIRTY_DAYS,
+              ZERO_POINT_ONE_ETHER,
+              true
+            );
+          const firstReceipt = await firstTx.wait();
+          const firstAgreementId = firstReceipt.logs[0].args[0];
+
+          // Verify first agreement is in mapping and not voided
+          let mappedId = await drFeeMutualizer.getAgreementId(sellerId, ZeroAddress, disputeResolverId);
+          expect(mappedId).to.equal(firstAgreementId);
+          let firstAgreement = await drFeeMutualizer.getAgreement(firstAgreementId);
+          expect(firstAgreement.isVoided).to.be.false;
+          expect(firstAgreement.startTime).to.equal(0);
+
+          // Create second agreement for same seller/token/disputeResolver - should void first and create second
+          await expect(
+            drFeeMutualizer
+              .connect(owner)
+              .newAgreement(
+                sellerId,
+                ZeroAddress,
+                disputeResolverId,
+                TWO_ETHER,
+                TWENTY_ETHER,
+                THIRTY_DAYS,
+                ZERO_POINT_TWO_ETHER,
+                true
+              )
+          )
+            .to.emit(drFeeMutualizer, "AgreementVoided")
+            .withArgs(firstAgreementId, false, 0)
+            .and.to.emit(drFeeMutualizer, "AgreementCreated")
+            .withArgs(2, sellerId, ZeroAddress, disputeResolverId);
+
+          // Verify first agreement is now voided
+          firstAgreement = await drFeeMutualizer.getAgreement(firstAgreementId);
+          expect(firstAgreement.isVoided).to.be.true;
+
+          // Verify mapping now points to second agreement
+          mappedId = await drFeeMutualizer.getAgreementId(sellerId, ZeroAddress, disputeResolverId);
+          expect(mappedId).to.equal(2);
+        });
+
+        it("should prevent payPremium on voided agreement after newAgreement replaces it", async function () {
+          // Create first agreement
+          const firstTx = await drFeeMutualizer
+            .connect(owner)
+            .newAgreement(
+              sellerId,
+              ZeroAddress,
+              disputeResolverId,
+              ONE_ETHER,
+              TEN_ETHER,
+              THIRTY_DAYS,
+              ZERO_POINT_ONE_ETHER,
+              true
+            );
+          const firstReceipt = await firstTx.wait();
+          const firstAgreementId = firstReceipt.logs[0].args[0];
+
+          // Create replacement agreement (should void first one)
+          await drFeeMutualizer
+            .connect(owner)
+            .newAgreement(
+              sellerId,
+              ZeroAddress,
+              disputeResolverId,
+              TWO_ETHER,
+              TWENTY_ETHER,
+              THIRTY_DAYS,
+              ZERO_POINT_TWO_ETHER,
+              true
+            );
+
+          // Try to pay premium on first (now voided) agreement
+          const premium = ZERO_POINT_ONE_ETHER;
+          await expect(
+            drFeeMutualizer.connect(seller).payPremium(firstAgreementId, sellerId, { value: premium })
+          ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.AGREEMENT_IS_VOIDED);
+        });
+
+        it("should not void existing started agreement when trying to create duplicate", async function () {
+          // Create and activate first agreement
+          const firstTx = await drFeeMutualizer
+            .connect(owner)
+            .newAgreement(
+              sellerId,
+              ZeroAddress,
+              disputeResolverId,
+              ONE_ETHER,
+              TEN_ETHER,
+              THIRTY_DAYS,
+              ZERO_POINT_ONE_ETHER,
+              true
+            );
+          const firstReceipt = await firstTx.wait();
+          const firstAgreementId = firstReceipt.logs[0].args[0];
+          await drFeeMutualizer.connect(seller).payPremium(firstAgreementId, sellerId, { value: ZERO_POINT_ONE_ETHER });
+
+          // Try to create duplicate - should revert, not void the active one
+          await expect(
+            drFeeMutualizer
+              .connect(owner)
+              .newAgreement(
+                sellerId,
+                ZeroAddress,
+                disputeResolverId,
+                TWO_ETHER,
+                TWENTY_ETHER,
+                THIRTY_DAYS,
+                ZERO_POINT_TWO_ETHER,
+                true
+              )
+          ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.AGREEMENT_ALREADY_EXISTS);
+
+          // Verify first agreement is still active and not voided
+          const agreement = await drFeeMutualizer.getAgreement(firstAgreementId);
+          expect(agreement.isVoided).to.be.false;
+          expect(agreement.startTime).to.be.greaterThan(0);
+        });
+
+        it("should handle replacing expired non-started agreement", async function () {
+          // Create first agreement with short time period but don't activate it
+          const firstTx = await drFeeMutualizer.connect(owner).newAgreement(
+            sellerId,
+            ZeroAddress,
+            disputeResolverId,
+            ONE_ETHER,
+            TEN_ETHER,
+            ONE_DAY, // Short period
+            ZERO_POINT_ONE_ETHER,
+            true
+          );
+          const firstReceipt = await firstTx.wait();
+          const firstAgreementId = firstReceipt.logs[0].args[0];
+
+          // Fast forward time beyond the period (but agreement never started, so not really expired)
+          const currentBlock = await ethers.provider.getBlock("latest");
+          const futureTimestamp = currentBlock.timestamp + TWO_DAYS;
+          await setNextBlockTimestamp(futureTimestamp, true);
+
+          // Create replacement - should still void the non-started agreement
+          await expect(
+            drFeeMutualizer
+              .connect(owner)
+              .newAgreement(
+                sellerId,
+                ZeroAddress,
+                disputeResolverId,
+                TWO_ETHER,
+                TWENTY_ETHER,
+                THIRTY_DAYS,
+                ZERO_POINT_TWO_ETHER,
+                true
+              )
+          )
+            .to.emit(drFeeMutualizer, "AgreementVoided")
+            .withArgs(firstAgreementId, false, 0);
+        });
+
+        it("should handle replacing already-voided non-started agreement", async function () {
+          // Create first agreement
+          const firstTx = await drFeeMutualizer
+            .connect(owner)
+            .newAgreement(
+              sellerId,
+              ZeroAddress,
+              disputeResolverId,
+              ONE_ETHER,
+              TEN_ETHER,
+              THIRTY_DAYS,
+              ZERO_POINT_ONE_ETHER,
+              true
+            );
+          const firstReceipt = await firstTx.wait();
+          const firstAgreementId = firstReceipt.logs[0].args[0];
+
+          // Manually void the first agreement
+          await drFeeMutualizer.connect(seller).voidAgreement(firstAgreementId);
+
+          // Create replacement - should not emit AgreementVoided since already voided
+          await expect(
+            drFeeMutualizer
+              .connect(owner)
+              .newAgreement(
+                sellerId,
+                ZeroAddress,
+                disputeResolverId,
+                TWO_ETHER,
+                TWENTY_ETHER,
+                THIRTY_DAYS,
+                ZERO_POINT_TWO_ETHER,
+                true
+              )
+          )
+            .to.emit(drFeeMutualizer, "AgreementCreated")
+            .withArgs(2, sellerId, ZeroAddress, disputeResolverId)
+            .and.not.to.emit(drFeeMutualizer, "AgreementVoided");
+        });
+      });
     });
 
     context("👉 payPremium()", async function () {
@@ -498,6 +714,9 @@ describe("DRFeeMutualizer", function () {
         const erc20DisputeResolverId = 2;
         const erc20AgreementId = 2;
         beforeEach(async function () {
+          // Register seller ID 2 with the mock protocol
+          await mockProtocol.setSeller(erc20SellerId, seller.address);
+
           await drFeeMutualizer
             .connect(owner)
             .newAgreement(
@@ -700,29 +919,21 @@ describe("DRFeeMutualizer", function () {
 
         it("should revert when seller not found", async function () {
           const nonExistentSellerId = 999;
-          const tx = await drFeeMutualizer
-            .connect(owner)
-            .newAgreement(
-              nonExistentSellerId,
-              ZeroAddress,
-              disputeResolverId,
-              TWO_ETHER,
-              TWENTY_ETHER,
-              THIRTY_DAYS,
-              ZERO_POINT_ONE_ETHER,
-              true
-            );
-          const receipt = await tx.wait();
-          const agreementId = receipt.logs[0].args[0];
-          await drFeeMutualizer
-            .connect(seller)
-            .payPremium(agreementId, nonExistentSellerId, { value: ZERO_POINT_ONE_ETHER });
-
-          // Mock protocol will return seller not found for nonExistentSellerId
-          await expect(drFeeMutualizer.connect(seller).voidAgreement(agreementId)).to.be.revertedWithCustomError(
-            drFeeMutualizer,
-            RevertReasons.SELLER_NOT_FOUND
-          );
+          // Now that seller validation happens in newAgreement, this should fail immediately
+          await expect(
+            drFeeMutualizer
+              .connect(owner)
+              .newAgreement(
+                nonExistentSellerId,
+                ZeroAddress,
+                disputeResolverId,
+                TWO_ETHER,
+                TWENTY_ETHER,
+                THIRTY_DAYS,
+                ZERO_POINT_ONE_ETHER,
+                true
+              )
+          ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INVALID_SELLER_ID);
         });
       });
     });
@@ -1078,6 +1289,9 @@ describe("DRFeeMutualizer", function () {
         const erc20SellerId = 2;
         const erc20DisputeResolverId = 2;
         const erc20AgreementId = 2;
+        // Register seller ID 2 with the mock protocol
+        await mockProtocol.setSeller(erc20SellerId, seller.address);
+
         await drFeeMutualizer
           .connect(owner)
           .newAgreement(
@@ -1207,6 +1421,9 @@ describe("DRFeeMutualizer", function () {
         const erc20SellerId = 2;
         const erc20DisputeResolverId = 2;
         const erc20AgreementId = 2;
+        // Register seller ID 2 with the mock protocol
+        await mockProtocol.setSeller(erc20SellerId, seller.address);
+
         await drFeeMutualizer
           .connect(owner)
           .newAgreement(
@@ -1261,6 +1478,9 @@ describe("DRFeeMutualizer", function () {
         it("should revert when native currency sent for ERC20 token", async function () {
           const erc20SellerId = 2;
           const erc20DisputeResolverId = 2;
+          // Register seller ID 2 with the mock protocol
+          await mockProtocol.setSeller(erc20SellerId, seller.address);
+
           const tx = await drFeeMutualizer
             .connect(owner)
             .newAgreement(
@@ -1321,6 +1541,9 @@ describe("DRFeeMutualizer", function () {
       const erc20SellerId = 2;
       const erc20DisputeResolverId = 2;
       const erc20TokenAddress = await mockToken.getAddress();
+      // Register seller ID 2 with the mock protocol
+      await mockProtocol.setSeller(erc20SellerId, seller.address);
+
       const tx = await drFeeMutualizer
         .connect(owner)
         .newAgreement(
