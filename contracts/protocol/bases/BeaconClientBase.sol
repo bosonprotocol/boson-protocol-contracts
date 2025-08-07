@@ -9,6 +9,8 @@ import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHan
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { BeaconClientLib } from "../libs/BeaconClientLib.sol";
 import { IClientExternalAddresses } from "../../interfaces/clients/IClientExternalAddresses.sol";
+import { IAccessControl } from "../../interfaces/IAccessControl.sol";
+import { Context } from "@openzeppelin/contracts/utils/Context.sol";
 
 /**
  * @title BeaconClientBase
@@ -19,7 +21,7 @@ import { IClientExternalAddresses } from "../../interfaces/clients/IClientExtern
  *
  * Boson client contracts include BosonVoucher
  */
-abstract contract BeaconClientBase is BosonTypes, BosonErrors {
+abstract contract BeaconClientBase is BosonTypes, BosonErrors, Context {
     /**
      * @dev Modifier that checks that the caller has a specific role.
      *
@@ -31,8 +33,26 @@ abstract contract BeaconClientBase is BosonTypes, BosonErrors {
      * @param _role - the role to check
      */
     modifier onlyRole(bytes32 _role) {
-        if (!BeaconClientLib.hasRole(_role)) revert AccessDenied();
+        if (!hasRole(_role)) revert AccessDenied();
         _;
+    }
+
+    /**
+     * @notice Checks that the caller has a specific role.
+     *
+     * Reverts if caller doesn't have role.
+     *
+     * See: {AccessController.hasRole}
+     *
+     * @param _role - the role to check
+     * @return whether caller has role
+     */
+    function hasRole(bytes32 _role) internal view returns (bool) {
+        // retrieve accessController from Beacon
+        IAccessControl accessController = IClientExternalAddresses(BeaconClientLib._beacon()).getAccessController();
+
+        // forward the check to accessController
+        return accessController.hasRole(_role, _msgSender());
     }
 
     /**

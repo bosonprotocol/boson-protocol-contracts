@@ -8,7 +8,6 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BuyerBase } from "../bases/BuyerBase.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
-import { FundsLib } from "../libs/FundsLib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
@@ -214,7 +213,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
         uint256 buyerId = getValidBuyer(_buyer);
 
         // Encumber funds
-        FundsLib.encumberFunds(_offerId, buyerId, _offer.price, _isPreminted, _offer.priceType);
+        encumberFunds(_offerId, buyerId, _offer.price, _isPreminted, _offer.priceType);
 
         // Create and store a new exchange
         Exchange storage exchange = protocolEntities().exchanges[_exchangeId];
@@ -266,7 +265,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
         }
 
         // Notify watchers of state change
-        emit BuyerCommitted(_offerId, buyerId, _exchangeId, exchange, voucher, msgSender());
+        emit BuyerCommitted(_offerId, buyerId, _exchangeId, exchange, voucher, _msgSender());
 
         return _exchangeId;
     }
@@ -294,7 +293,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
         (, offer) = fetchOffer(offerId);
 
         // Get message sender
-        address sender = msgSender();
+        address sender = _msgSender();
 
         // Is this the buyer?
         bool buyerExists;
@@ -360,7 +359,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
         // Get seller id associated with caller
         bool sellerExists;
         uint256 sellerId;
-        (sellerExists, sellerId) = getSellerIdByAssistant(msgSender());
+        (sellerExists, sellerId) = getSellerIdByAssistant(_msgSender());
 
         // Get the offer, which will definitely exist
         uint256 offerId = exchange.offerId;
@@ -373,7 +372,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
         finalizeExchange(exchange, ExchangeState.Revoked);
 
         // Notify watchers of state change
-        emit VoucherRevoked(offerId, _exchangeId, msgSender());
+        emit VoucherRevoked(offerId, _exchangeId, _msgSender());
     }
 
     /**
@@ -400,7 +399,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
         finalizeExchange(exchange, ExchangeState.Canceled);
 
         // Notify watchers of state change
-        emit VoucherCanceled(exchange.offerId, _exchangeId, msgSender());
+        emit VoucherCanceled(exchange.offerId, _exchangeId, _msgSender());
     }
 
     /**
@@ -430,7 +429,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
         voucher.expired = true;
 
         // Notify watchers of state change
-        emit VoucherExpired(exchange.offerId, _exchangeId, msgSender());
+        emit VoucherExpired(exchange.offerId, _exchangeId, _msgSender());
     }
 
     /**
@@ -458,7 +457,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
         (, offer) = fetchOffer(offerId);
 
         // Get message sender
-        address sender = msgSender();
+        address sender = _msgSender();
 
         // Get seller id associated with caller
         bool sellerExists;
@@ -524,7 +523,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
         transferTwins(exchange, voucher);
 
         // Notify watchers of state change
-        emit VoucherRedeemed(offerId, _exchangeId, msgSender());
+        emit VoucherRedeemed(offerId, _exchangeId, _msgSender());
     }
 
     /**
@@ -542,7 +541,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
      * - New buyer's existing account is deactivated
      *
      * N.B. This method is not protected with reentrancy guard, since it clashes with price discovery flows.
-     * Given that it does not rely on msgSender() for authentication and it does not modify it, it is safe to leave it unprotected.
+     * Given that it does not rely on _msgSender() for authentication and it does not modify it, it is safe to leave it unprotected.
      * In case of reentrancy the only inconvenience that could happen is that `executedBy` field in `VoucherTransferred` event would not be set correctly.
      *
      * @param _tokenId - the voucher id
@@ -593,7 +592,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
         }
 
         // Notify watchers of state change
-        emit VoucherTransferred(exchange.offerId, exchangeId, buyerId, msgSender());
+        emit VoucherTransferred(exchange.offerId, exchangeId, buyerId, _msgSender());
     }
 
     /**
@@ -608,7 +607,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
      * - Any reason that ExchangeHandler commitToOfferInternal reverts. See ExchangeHandler.commitToOfferInternal
      *
      * N.B. This method is not protected with reentrancy guard, since it clashes with price discovery flows.
-     * Given that it does not rely on msgSender() for authentication and it does not modify it, it is safe to leave it unprotected.
+     * Given that it does not rely on _msgSender() for authentication and it does not modify it, it is safe to leave it unprotected.
      * In case of reentrancy the only inconvenience that could happen is that `executedBy` field in `BuyerCommitted` event would not be set correctly.
      *
      * @param _tokenId - the voucher id
@@ -961,7 +960,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
         if (_targetState != ExchangeState.Completed) burnVoucher(_exchange);
 
         // Release the funds
-        FundsLib.releaseFunds(_exchange.id);
+        releaseFunds(_exchange.id);
     }
 
     /**
@@ -1028,7 +1027,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeHandler {
         // Transfer the twins
         {
             // Cache values
-            address sender = msgSender();
+            address sender = _msgSender();
             uint256 twinCount = twinIds.length;
 
             // SINGLE_TWIN_RESERVED_GAS = 160000

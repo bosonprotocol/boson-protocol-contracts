@@ -4,7 +4,6 @@ pragma solidity 0.8.22;
 import { IBosonSequentialCommitHandler } from "../../interfaces/handlers/IBosonSequentialCommitHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { PriceDiscoveryBase } from "../bases/PriceDiscoveryBase.sol";
-import { FundsLib } from "../libs/FundsLib.sol";
 import "../../domain/BosonConstants.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -165,7 +164,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
             }
 
             if (immediatePayout > 0) {
-                FundsLib.transferFundsFromProtocol(exchangeToken, payable(seller), immediatePayout);
+                transferFundsFromProtocol(exchangeToken, payable(seller), immediatePayout);
             }
         }
 
@@ -173,7 +172,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
 
         // Since exchange and voucher are passed by reference, they are updated
         uint256 buyerId = exchange.buyerId;
-        address sender = msgSender();
+        address sender = _msgSender();
         if (thisExchangeCost.price > 0) emit FundsEncumbered(buyerId, exchangeToken, thisExchangeCost.price, sender);
         if (immediatePayout > 0) {
             emit FundsReleased(exchangeId, thisExchangeCost.resellerId, exchangeToken, immediatePayout, sender);

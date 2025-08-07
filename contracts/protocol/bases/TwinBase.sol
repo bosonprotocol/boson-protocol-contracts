@@ -38,7 +38,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // get message sender
-        address sender = msgSender();
+        address sender = _msgSender();
 
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByAssistant(sender);

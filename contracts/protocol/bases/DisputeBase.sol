@@ -2,9 +2,8 @@
 pragma solidity 0.8.22;
 
 import { IBosonDisputeEvents } from "../../interfaces/events/IBosonDisputeEvents.sol";
-import { IBosonFundsLibEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
+import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
-import { FundsLib } from "./../libs/FundsLib.sol";
 import "../../domain/BosonConstants.sol";
 
 /**
@@ -12,7 +11,7 @@ import "../../domain/BosonConstants.sol";
  * @title DisputeBase
  * @notice Provides methods for dispute that can be shared across facets.
  */
-contract DisputeBase is ProtocolBase, IBosonDisputeEvents, IBosonFundsLibEvents {
+contract DisputeBase is ProtocolBase, IBosonDisputeEvents, IBosonFundsBaseEvents {
     /**
      * @notice Raises a dispute
      *
@@ -51,7 +50,7 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents, IBosonFundsLibEvents 
         disputeDates.timeout = block.timestamp + offerDurations.resolutionPeriod;
 
         // Notify watchers of state change
-        emit DisputeRaised(_exchange.id, _exchange.buyerId, _sellerId, msgSender());
+        emit DisputeRaised(_exchange.id, _exchange.buyerId, _sellerId, _msgSender());
     }
 
     /**
@@ -108,7 +107,7 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents, IBosonFundsLibEvents 
         // make sure buyer sent enough funds to proceed
         address exchangeToken = offer.exchangeToken;
         uint256 buyerEscalationDeposit = disputeResolutionTerms.buyerEscalationDeposit;
-        FundsLib.validateIncomingPayment(exchangeToken, buyerEscalationDeposit);
+        validateIncomingPayment(exchangeToken, buyerEscalationDeposit);
 
         // fetch the escalation period from the storage
         uint256 escalationResponsePeriod = disputeResolutionTerms.escalationResponsePeriod;
@@ -121,8 +120,7 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents, IBosonFundsLibEvents 
         dispute.state = DisputeState.Escalated;
 
         // Notify watchers of state change
-        address sender = msgSender();
-
+        address sender = _msgSender();
         if (buyerEscalationDeposit > 0) emit FundsEncumbered(buyerId, exchangeToken, buyerEscalationDeposit, sender);
         emit DisputeEscalated(_exchangeId, disputeResolutionTerms.disputeResolverId, sender);
     }
