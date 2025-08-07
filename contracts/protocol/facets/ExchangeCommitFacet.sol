@@ -253,6 +253,9 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
         } else {
             (, BosonTypes.Buyer storage buyer) = fetchBuyer(offer.buyerId);
             buyerAddress = buyer.wallet;
+
+            // For buyer-created offers, group sellerId is originally 0, so it needs to be updated
+            protocolEntities().groups[groupId].sellerId = offer.sellerId;
         }
         authorizeCommit(buyerAddress, condition, groupId, _tokenId, _offerId);
 
@@ -327,9 +330,8 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
             if (_fullOffer.condition.method != BosonTypes.EvaluationMethod.None) {
                 // Construct new group
                 // - group id is 0, and it is ignored
-                // - note that _offer fields are updated during createOfferInternal, so they represent correct values
                 Group memory group;
-                group.sellerId = _fullOffer.offer.sellerId; // ToDo: is ok this is 0?
+                group.sellerId = _fullOffer.offer.sellerId;
                 group.offerIds = new uint256[](1);
                 group.offerIds[0] = offerId;
 
