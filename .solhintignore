@@ -2,3 +2,5 @@
 /contracts/diamond/**
 /contracts/mock/**
 /contracts/example/**
+/contracts/interfaces/**
+/contracts/domain/**

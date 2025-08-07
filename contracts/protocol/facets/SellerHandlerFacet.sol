@@ -169,8 +169,7 @@ contract SellerHandlerFacet is IBosonSellerHandler, SellerBase {
                     if (royaltyRecipientId != lastRoyaltyRecipientsId) {
                         royaltyRecipients[royaltyRecipientId] = royaltyRecipients[lastRoyaltyRecipientsId];
                         royaltyRecipientIndexBySellerAndRecipient[royaltyRecipients[royaltyRecipientId].wallet] =
-                            royaltyRecipientId +
-                            1;
+                            royaltyRecipientId + 1;
                     }
                     royaltyRecipients.pop();
 
