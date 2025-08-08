@@ -121,7 +121,7 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents, IBosonFundsBaseEvents
 
         // Notify watchers of state change
         address sender = _msgSender();
-        emit FundsEncumbered(buyerId, exchangeToken, buyerEscalationDeposit, sender);
+        if (buyerEscalationDeposit > 0) emit FundsEncumbered(buyerId, exchangeToken, buyerEscalationDeposit, sender);
         emit DisputeEscalated(_exchangeId, disputeResolutionTerms.disputeResolverId, sender);
     }
 }
