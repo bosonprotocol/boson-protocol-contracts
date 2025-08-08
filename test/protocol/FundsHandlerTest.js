@@ -1904,7 +1904,6 @@ describe("IBosonFundsHandler", function () {
       );
       expect(disputeResolver.isValid()).is.true;
 
-
       //Create DisputeResolverFee array so offer creation will succeed
       DRFee = parseUnits("0.01", "ether").toString();
       disputeResolverFees = [
