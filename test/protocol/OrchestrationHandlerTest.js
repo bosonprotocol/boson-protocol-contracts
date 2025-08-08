@@ -217,7 +217,7 @@ describe("IBosonOrchestrationHandler", function () {
       disputeResolverId = disputeResolver.id;
 
       // Create DisputeResolverFee array so offer creation will succeed
-      DRFeeNative = "0";
+      DRFeeNative = parseUnits("0.33", "ether").toString();
       DRFeeToken = "0";
       disputeResolverFees = [
         new DisputeResolverFee(ZeroAddress, "Native", DRFeeNative),
@@ -312,7 +312,7 @@ describe("IBosonOrchestrationHandler", function () {
         const [mockToken] = await deployMockTokens(["Foreign20"]);
 
         // add to DR fees
-        DRFeeToken = "0";
+        DRFeeToken = parseUnits("0.25", "ether").toString();
         await accountHandler
           .connect(adminDR)
           .addFeesToDisputeResolver(disputeResolverId, [
@@ -337,13 +337,18 @@ describe("IBosonOrchestrationHandler", function () {
           offerFeeLimit
         );
 
+        // mint tokens to buyer and deposit to the protocol
+        await mockToken.mint(assistant.address, DRFeeToken);
+        await mockToken.connect(assistant).approve(protocolDiamondAddress, DRFeeToken);
+        await fundsHandler.connect(assistant).depositFunds(seller.id, offer.exchangeToken, DRFeeToken);
+
         // mint tokens to buyer and approve the protocol
         buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
-        await mockToken.mint(await buyer.getAddress(), buyerEscalationDepositToken);
+        await mockToken.mint(buyer.address, buyerEscalationDepositToken);
         await mockToken.connect(buyer).approve(protocolDiamondAddress, buyerEscalationDepositToken);
 
         // Commit to offer and put exchange all the way to dispute
-        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id);
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
         await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
 
         return mockToken;
@@ -378,7 +383,7 @@ describe("IBosonOrchestrationHandler", function () {
         escalationPeriod = disputeResolver.escalationResponsePeriod;
 
         // Deposit seller funds so the commit will succeed
-        const fundsToDeposit = BigInt(sellerDeposit) * BigInt(quantityAvailable);
+        const fundsToDeposit = (BigInt(sellerDeposit) + BigInt(DRFeeNative)) * BigInt(quantityAvailable);
         await fundsHandler
           .connect(assistant)
           .depositFunds(seller.id, ZeroAddress, fundsToDeposit, { value: fundsToDeposit });
@@ -587,7 +592,9 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("exchange is not in a redeemed state - disputed already", async function () {
           // Raise a dispute, put it into DISPUTED state
-          await orchestrationHandler.connect(buyer).raiseAndEscalateDispute(exchangeId);
+          await orchestrationHandler
+            .connect(buyer)
+            .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative });
 
           // Attempt to raise a dispute, expecting revert
           await expect(

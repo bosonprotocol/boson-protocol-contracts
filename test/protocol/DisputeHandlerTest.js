@@ -61,14 +61,7 @@ describe("IBosonDisputeHandler", function () {
     adminDR,
     clerkDR,
     treasuryDR;
-  let erc165,
-    protocolDiamond,
-    accountHandler,
-    exchangeHandler,
-    offerHandler,
-    fundsHandler,
-    disputeHandler,
-    pauseHandler;
+  let erc165, accountHandler, exchangeHandler, offerHandler, fundsHandler, disputeHandler, pauseHandler;
   let buyerId, offer, offerId, seller;
   let block, blockNumber, tx;
   let support, newTime;
@@ -86,7 +79,7 @@ describe("IBosonDisputeHandler", function () {
     disputesToExpire;
   let disputeDates, disputeDatesStruct;
   let exists, response;
-  let disputeResolver, disputeResolverFees, disputeResolverId;
+  let disputeResolver, disputeResolverFees;
   let buyerPercentBasisPoints;
   let resolutionType, customSignatureType, message, signature;
   let returnedDispute, returnedDisputeDates;
@@ -196,7 +189,7 @@ describe("IBosonDisputeHandler", function () {
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
-      DRFeeNative = parseUnits("0.5", "ether").toString();
+      DRFeeNative = parseUnits("0.25", "ether").toString();
       disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", DRFeeNative)];
 
       // Make empty seller list, so every seller is allowed
@@ -234,7 +227,7 @@ describe("IBosonDisputeHandler", function () {
       escalationPeriod = disputeResolver.escalationResponsePeriod;
 
       // Deposit seller funds so the commit will succeed
-      const fundsToDeposit = BigInt(sellerDeposit) * BigInt(quantityAvailable);
+      const fundsToDeposit = (BigInt(sellerDeposit) + BigInt(DRFeeNative)) * BigInt(quantityAvailable);
       await fundsHandler
         .connect(assistant)
         .depositFunds(seller.id, ZeroAddress, fundsToDeposit, { value: fundsToDeposit });
@@ -1773,9 +1766,7 @@ describe("IBosonDisputeHandler", function () {
               const data = accountHandler.interface.encodeFunctionData("updateBuyer", [
                 { id: buyerId, wallet: await test2Facet.getAddress(), active: true },
               ]);
-              await contractWallet.forwardCall(disputeHandler.getAddress(), data, {
-                value: buyerEscalationDepositNative,
-              });
+              await contractWallet.forwardCall(await accountHandler.getAddress(), data);
 
               // Contract wallet returns wrong magic value
               await expect(
@@ -1811,6 +1802,11 @@ describe("IBosonDisputeHandler", function () {
           await offerHandler
             .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
+
+          const fundsToDeposit = (BigInt(offer.sellerDeposit) + BigInt(DRFeeToken)) * BigInt(offer.quantityAvailable);
+          await mockToken.mint(assistant.address, fundsToDeposit);
+          await mockToken.connect(assistant).approve(await fundsHandler.getAddress(), fundsToDeposit);
+          await fundsHandler.connect(assistant).depositFunds(seller.id, offer.exchangeToken, fundsToDeposit);
 
           // mint tokens to buyer and approve the protocol
           buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
@@ -1855,15 +1851,32 @@ describe("IBosonDisputeHandler", function () {
           DRFeeNative = "0";
           buyerEscalationDepositNative = "0";
 
-          await accountHandler.connect(adminDR).removeFeesFromDisputeResolver(disputeResolverId, [ZeroAddress]);
           await accountHandler
             .connect(adminDR)
-            .addFeesToDisputeResolver(disputeResolverId, [new DisputeResolverFee(ZeroAddress, "Native", DRFeeNative)]);
+            .removeFeesFromDisputeResolver(drParams.disputeResolverId, [ZeroAddress]);
+          await accountHandler
+            .connect(adminDR)
+            .addFeesToDisputeResolver(drParams.disputeResolverId, [
+              new DisputeResolverFee(ZeroAddress, "Native", DRFeeNative),
+            ]);
+
+          offer.sellerDeposit = offer.price = offer.buyerCancelPenalty = "0";
+          offer.id++;
+
+          // create an offer with erc20 exchange token
+          await offerHandler
+            .connect(assistant)
+            .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
+
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
+          await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
+          await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
           // Escalate the dispute, testing for the event
-          await expect(
-            disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative })
-          ).to.not.emit(disputeHandler, "FundsEncumbered");
+          await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.not.emit(
+            disputeHandler,
+            "FundsEncumbered"
+          );
         });
 
         it("should update state", async function () {
@@ -1936,20 +1949,30 @@ describe("IBosonDisputeHandler", function () {
         });
 
         it("Does not emit FundsEncumbered if buyerEscalationDeposit is 0", async function () {
-          const mockToken = await createDisputeExchangeWithToken();
+          const [mockToken] = await deployMockTokens(["Foreign20"]);
 
           DRFeeToken = "0";
           buyerEscalationDepositToken = "0";
 
-          await mockToken.connect(buyer).approve(await disputeHandler.getAddress(), buyerEscalationDepositToken);
           await accountHandler
             .connect(adminDR)
-            .removeFeesFromDisputeResolver(disputeResolverId, [await mockToken.getAddress()]);
-          await accountHandler
-            .connect(adminDR)
-            .addFeesToDisputeResolver(disputeResolverId, [
-              new DisputeResolverFee(await mockToken.getAddress(), "Native", DRFeeNative),
+            .addFeesToDisputeResolver(drParams.disputeResolverId, [
+              new DisputeResolverFee(await mockToken.getAddress(), "MockToken", DRFeeToken),
             ]);
+
+          // create an offer with a mock token contract
+          offer.exchangeToken = await mockToken.getAddress();
+          offer.sellerDeposit = offer.price = offer.buyerCancelPenalty = "0";
+          offer.id++;
+
+          // create an offer with erc20 exchange token
+          await offerHandler
+            .connect(assistant)
+            .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
+
+          await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id);
+          await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
+          await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
           // Escalate the dispute, testing for the event
           await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.not.emit(
@@ -2080,7 +2103,7 @@ describe("IBosonDisputeHandler", function () {
             // not approved
             await mockToken
               .connect(buyer)
-              .approve(await protocolDiamond.getAddress(), BigInt(buyerEscalationDepositToken) - "1".toString());
+              .approve(await disputeHandler.getAddress(), (BigInt(buyerEscalationDepositToken) - 1n).toString());
 
             // Attempt to commit to an offer, expecting revert
             await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
@@ -2096,8 +2119,8 @@ describe("IBosonDisputeHandler", function () {
             DRFeeToken = parseUnits("2", "ether").toString();
             await accountHandler
               .connect(adminDR)
-              .addFeesToDisputeResolver(disputeResolverId, [
-                new DisputeResolverFee(await Foreign20WithFee.getAddress(), "Foreign20WithFee", "0"),
+              .addFeesToDisputeResolver(drParams.disputeResolverId, [
+                new DisputeResolverFee(await Foreign20WithFee.getAddress(), "Foreign20WithFee", DRFeeToken),
               ]);
 
             // Create an offer with ERC20 with fees
@@ -2112,25 +2135,31 @@ describe("IBosonDisputeHandler", function () {
               offerDates,
               offerDurations,
               {
-                disputeResolverId: disputeResolverId,
+                disputeResolverId: drParams.disputeResolverId,
                 mutualizerAddress: ZeroAddress,
               },
               agentId,
               offerFeeLimit
             );
 
+            await Foreign20WithFee.setFee("0");
+            await Foreign20WithFee.mint(assistant.address, DRFeeToken);
+            await Foreign20WithFee.connect(assistant).approve(await disputeHandler.getAddress(), DRFeeToken);
+            await fundsHandler.connect(assistant).depositFunds(seller.id, offer.exchangeToken, DRFeeToken);
+
             // mint tokens and approve
             buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
-            await Foreign20WithFee.mint(await buyer.getAddress(), buyerEscalationDepositToken);
+            await Foreign20WithFee.mint(buyer.address, buyerEscalationDepositToken);
             await Foreign20WithFee.connect(buyer).approve(
-              await protocolDiamond.getAddress(),
+              await disputeHandler.getAddress(),
               buyerEscalationDepositToken
             );
 
             // Commit to offer and put exchange all the way to dispute
-            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id);
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
             await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
             await disputeHandler.connect(buyer).raiseDispute(exchangeId);
+            await Foreign20WithFee.setFee("10");
 
             // Attempt to escalate the dispute, expecting revert
             await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWithCustomError(
