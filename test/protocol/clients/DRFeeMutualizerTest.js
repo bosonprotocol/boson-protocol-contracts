@@ -919,7 +919,6 @@ describe("DRFeeMutualizer", function () {
 
         it("should revert when seller not found", async function () {
           const nonExistentSellerId = 999;
-          // Now that seller validation happens in newAgreement, this should fail immediately
           await expect(
             drFeeMutualizer
               .connect(owner)

@@ -55,6 +55,56 @@ const getDisputeResolverIdIfDisputed = async (exchangeHandler, offerHandler, dis
   return disputeResolutionTerms.disputeResolverId;
 };
 
+// sets agreements for native and non-native tokens
+const setupUniversalAgreements = async (sellerId, deployer, drFeeMutualizer, mockToken) => {
+  const maxAmountPerTx = parseUnits("0.1", "ether"); // 0.1 ETH max per transaction
+  const maxAmountTotal = parseUnits("1", "ether"); // 1 ETH total max
+  const timePeriod = 365 * 24 * 60 * 60; // 30 days
+  const premium = parseUnits("0.005", "ether"); // 0.005 ETH premium
+  const refundOnCancel = true;
+  const tokenAddress = await mockToken.getAddress();
+
+  // Create universal agreement for non-native currency
+  await drFeeMutualizer.connect(deployer).newAgreement(
+    sellerId,
+    tokenAddress,
+    0, // Universal agreement (dispute resolver ID = 0)
+    maxAmountPerTx.toString(),
+    maxAmountTotal.toString(),
+    timePeriod.toString(),
+    premium.toString(),
+    refundOnCancel
+  );
+
+  // Create universal agreement for native currency
+  await drFeeMutualizer.connect(deployer).newAgreement(
+    sellerId,
+    ZeroAddress,
+    0, // Universal agreement (dispute resolver ID = 0)
+    maxAmountPerTx.toString(),
+    maxAmountTotal.toString(),
+    timePeriod.toString(),
+    premium.toString(),
+    refundOnCancel
+  );
+
+  // Mint tokens and pay premiums
+  await mockToken.mint(deployer.address, premium + maxAmountTotal);
+  await mockToken.connect(deployer).approve(await drFeeMutualizer.getAddress(), premium + maxAmountTotal);
+
+  // Get the agreement IDs (they should be sequential)
+  const nonNativeAgreementId = await drFeeMutualizer.getAgreementId(sellerId, tokenAddress, 0);
+  const nativeAgreementId = await drFeeMutualizer.getAgreementId(sellerId, ZeroAddress, 0);
+
+  // Deposit tokens to the pool
+  await drFeeMutualizer.connect(deployer).deposit(tokenAddress, maxAmountTotal);
+  await drFeeMutualizer.connect(deployer).deposit(ZeroAddress, maxAmountTotal, { value: maxAmountTotal });
+
+  // Pay premiums
+  await drFeeMutualizer.connect(deployer).payPremium(nonNativeAgreementId, sellerId);
+  await drFeeMutualizer.connect(deployer).payPremium(nativeAgreementId, sellerId, { value: premium });
+};
+
 /**
  *  Test the Boson Funds Handler interface
  */
@@ -286,6 +336,9 @@ describe("IBosonFundsHandler", function () {
       await drFeeMutualizer
         .connect(deployer)
         .deposit(ZeroAddress, "1000000000000000000", { value: "1000000000000000000" });
+
+      // Setup universal agreements for DR fee mutualizer
+      await setupUniversalAgreements(seller.id, deployer, drFeeMutualizer, mockToken);
 
       // set the deposit amount
       depositAmount = 100n;
@@ -549,52 +602,6 @@ describe("IBosonFundsHandler", function () {
           .createOffer(offerToken, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
             getOfferId: true,
           });
-
-        // Create DR fee mutualizer agreement for the seller for the two offers
-        const maxAmountPerTx = parseUnits("0.01", "ether"); // 0.01 ETH max per transaction
-        const maxAmountTotal = parseUnits("0.1", "ether"); // 0.1 ETH total max
-        const timePeriod = 30 * 24 * 60 * 60; // 30 days
-        const premium = parseUnits("0.005", "ether"); // 0.005 ETH premium
-        const refundOnCancel = true;
-        const tokenAddress = await mockToken.getAddress();
-
-        // Create agreement for non-native currency offer
-        const nonNativeTokenAgreementId = 1;
-        await drFeeMutualizer
-          .connect(deployer)
-          .newAgreement(
-            seller.id,
-            tokenAddress,
-            disputeResolver.id,
-            maxAmountPerTx.toString(),
-            maxAmountTotal.toString(),
-            timePeriod.toString(),
-            premium.toString(),
-            refundOnCancel
-          );
-
-        // Create agreement for native currency offer
-        const nativeTokenAgreementId = 2;
-        await drFeeMutualizer
-          .connect(deployer)
-          .newAgreement(
-            seller.id,
-            ZeroAddress,
-            disputeResolver.id,
-            maxAmountPerTx.toString(),
-            maxAmountTotal.toString(),
-            timePeriod.toString(),
-            premium.toString(),
-            refundOnCancel
-          );
-
-        // pay premium for the non-native token offer agreement
-        await mockToken.mint(deployer.address, premium);
-        await mockToken.connect(deployer).approve(await drFeeMutualizer.getAddress(), premium);
-        await drFeeMutualizer.connect(deployer).payPremium(nonNativeTokenAgreementId, seller.id);
-
-        // pay premium for the native token offer agreement
-        await drFeeMutualizer.connect(deployer).payPremium(nativeTokenAgreementId, seller.id, { value: premium });
 
         // Set used variables
         price = offerToken.price;
@@ -1897,13 +1904,15 @@ describe("IBosonFundsHandler", function () {
       );
       expect(disputeResolver.isValid()).is.true;
 
+      //const tokenAddress = await mockToken.getAddress();
+
       //Create DisputeResolverFee array so offer creation will succeed
-      DRFee = parseUnits("0", "ether").toString();
+      DRFee = parseUnits("0.01", "ether").toString();
       disputeResolverFees = [
-        new DisputeResolverFee(ZeroAddress, "Native", "0"),
+        new DisputeResolverFee(ZeroAddress, "Native", DRFee),
         new DisputeResolverFee(await mockToken.getAddress(), "mockToken", DRFee),
       ];
-
+      await setupUniversalAgreements(seller.id, deployer, drFeeMutualizer, mockToken);
       // Make empty seller list, so every seller is allowed
       const sellerAllowList = [];
       buyerEscalationDeposit = applyPercentage(DRFee, buyerEscalationDepositPercentage);
@@ -1936,7 +1945,7 @@ describe("IBosonFundsHandler", function () {
       expect(offerDurations.isValid()).is.true;
 
       drParams = mo.drParams;
-      drParams.mutualizer = await drFeeMutualizer.getAddress();
+      drParams.mutualizerAddress = await drFeeMutualizer.getAddress();
 
       agentId = "0"; // agent id is optional while creating an offer
       offerFeeLimit = MaxUint256;
@@ -2048,7 +2057,7 @@ describe("IBosonFundsHandler", function () {
         // contract token balance should increase for the incoming price
         // seller's deposit was already held in the contract's pool before
         expect(contractTokenBalanceAfter - contractTokenBalanceBefore).to.eql(
-          BigInt(price),
+          BigInt(price) + BigInt(DRFee),
           "Token wrong balance increase"
         );
 
@@ -2065,10 +2074,10 @@ describe("IBosonFundsHandler", function () {
 
         // check that native currency balance increased
         const contractNativeBalanceAfter = await provider.getBalance(protocolDiamondAddress);
-        // contract token balance should increase for the incoming price
+        // contract token balance should increase for the incoming price and DR fee requested
         // seller's deposit was already held in the contract's pool before
         expect(contractNativeBalanceAfter - contractNativeBalanceBefore).to.eql(
-          BigInt(price),
+          BigInt(price) + BigInt(DRFee),
           "Native currency wrong balance increase"
         );
 
@@ -2263,11 +2272,24 @@ describe("IBosonFundsHandler", function () {
           .connect(assistant)
           .transferFrom(await assistant.getAddress(), await buyer.getAddress(), tokenId);
 
-        // it should emit FundsEncumbered event with amount equal to sellerDeposit + price
+        // it should emit FundsEncumbered event with amount equal to sellerDeposit + price + dr fee
         let encumberedFunds = BigInt(sellerDeposit) + BigInt(price);
         await expect(tx)
           .to.emit(exchangeHandler, "FundsEncumbered")
           .withArgs(seller.id, await mockToken.getAddress(), encumberedFunds, await bosonVoucher.getAddress());
+
+        if (BigInt(DRFee) > BigInt(0)) {
+          // check that DR fee was deducted
+          await expect(tx)
+            .to.emit(exchangeHandler, "DRFeeRequested")
+            .withArgs(
+              exchangeId,
+              await mockToken.getAddress(),
+              BigInt(DRFee),
+              await drFeeMutualizer.getAddress(),
+              await bosonVoucher.getAddress()
+            );
+        }
 
         // Check that seller's pool balance was reduced
         let sellersAvailableFundsAfter = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
@@ -3929,7 +3951,7 @@ describe("IBosonFundsHandler", function () {
                   const flags = agentStateSetup[disputeKey]();
 
                   if (flags.escalateDispute) {
-                    await disputeHandler.connect(buyer).escalateDispute(exchangeId);
+                    await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDeposit });
                   }
                   if (flags.prepareDataSignature) {
                     const buyerPercentBasisPoints = "5566"; // 55.66%
@@ -4207,11 +4229,12 @@ describe("IBosonFundsHandler", function () {
           mutualizerAddress: await drFeeMutualizer.getAddress(),
         };
 
+        await setupUniversalAgreements(seller.id, deployer, drFeeMutualizer, mockToken);
+
         await offerHandler
           .connect(assistant)
           .createOffer(mutualizerOffer, offerDates, offerDurations, mutualizerDRParams, agentId, offerFeeLimit);
 
-        // Commit to the mutualizer offer (will work even without agreement - buyer pays DR fee)
         await exchangeHandler
           .connect(buyer)
           .commitToOffer(await buyer.getAddress(), mutualizerOfferId, { value: price });
@@ -4426,8 +4449,9 @@ describe("IBosonFundsHandler", function () {
                   );
 
                   // voucher owner approves protocol to transfer the tokens
-                  await mockToken.mint(voucherOwner.address, order.price);
-                  await mockToken.connect(voucherOwner).approve(protocolDiamondAddress, order.price);
+                  const totalAmount = order.price + DRFee;
+                  await mockToken.mint(voucherOwner.address, totalAmount);
+                  await mockToken.connect(voucherOwner).approve(protocolDiamondAddress, totalAmount);
 
                   // Voucher owner approves PriceDiscovery contract to transfer the tokens
                   await bosonVoucherClone
@@ -4435,8 +4459,8 @@ describe("IBosonFundsHandler", function () {
                     .setApprovalForAll(await priceDiscoveryContract.getAddress(), true);
 
                   // Buyer approves protocol to transfer the tokens
-                  await mockToken.mint(trade.buyer.address, order.price);
-                  await mockToken.connect(trade.buyer).approve(protocolDiamondAddress, order.price);
+                  await mockToken.mint(trade.buyer.address, totalAmount);
+                  await mockToken.connect(trade.buyer).approve(protocolDiamondAddress, totalAmount);
 
                   // commit to offer
                   await sequentialCommitHandler
@@ -4571,6 +4595,21 @@ describe("IBosonFundsHandler", function () {
                   await finalStateSetup["DISPUTED-ESCALATED"]();
                 },
               };
+
+              // Helper function for escalated dispute payoff calculations (RESOLVED and DECIDED)
+              async function calculateEscalatedDisputePayoffs() {
+                await finalStatePayouts["DISPUTED-RESOLVED"]();
+                const buyerEscalationDepositShare = BigInt(
+                  applyPercentage(buyerEscalationDeposit, buyerPercentBasisPoints)
+                );
+                const sellerEscalationDepositShare = BigInt(buyerEscalationDeposit) - buyerEscalationDepositShare;
+
+                buyerPayoff = (BigInt(buyerPayoff) + buyerEscalationDepositShare).toString();
+                sellerPayoff = (BigInt(sellerPayoff) + sellerEscalationDepositShare).toString();
+
+                // DR gets paid the escalation fee
+                drPayoff = (10n * BigInt(buyerEscalationDeposit)).toString();
+              }
 
               let resellerPayoffs;
               const finalStatePayouts = {
@@ -4789,16 +4828,16 @@ describe("IBosonFundsHandler", function () {
                   ];
                 },
                 "DISPUTED-ESCALATED-RETRACTED": async function () {
-                  // Payoffs are the same as in the COMPLETED state
+                  // Start with COMPLETED state logic, then add escalation-specific changes
                   await finalStatePayouts["COMPLETED"]();
+                  sellerPayoff = (BigInt(sellerPayoff) + BigInt(buyerEscalationDeposit)).toString();
+                  drPayoff = (10n * BigInt(buyerEscalationDeposit)).toString();
                 },
                 "DISPUTED-ESCALATED-RESOLVED": async function () {
-                  // Payoffs are the same as in the "DISPUTED-RESOLVED" state
-                  await finalStatePayouts["DISPUTED-RESOLVED"]();
+                  await calculateEscalatedDisputePayoffs();
                 },
                 "DISPUTED-ESCALATED-DECIDED": async function () {
-                  // Payoffs are the same as in the "DISPUTED-RESOLVED" state
-                  await finalStatePayouts["DISPUTED-RESOLVED"]();
+                  await calculateEscalatedDisputePayoffs();
                 },
                 "DISPUTED-ESCALATED-EXPIRED": async function () {
                   // expected payoffs
@@ -4940,6 +4979,7 @@ describe("IBosonFundsHandler", function () {
                     };
                     royaltiesPerExchange = [];
                     resellerPayoffs = [];
+                    drPayoff = "0";
                     await finalStatePayouts[state]();
                   });
 
@@ -4998,6 +5038,13 @@ describe("IBosonFundsHandler", function () {
                       }
                     }
 
+                    if (drPayoff != "0" && state.includes("ESCALATED")) {
+                      expectedEventCount++;
+                      await expect(tx)
+                        .to.emit(handler, "FundsReleased")
+                        .withArgs(exchangeId, disputeResolver.id, offer.exchangeToken, drPayoff, action.wallet.address);
+                    }
+
                     // Make sure exact number of FundsReleased events was emitted
                     const eventCount = (await tx.wait()).logs.filter((e) => e.eventName == "FundsReleased").length;
                     expect(eventCount).to.equal(expectedEventCount);
@@ -5029,6 +5076,7 @@ describe("IBosonFundsHandler", function () {
                     expectedSellerAvailableFunds = new FundsList([]);
                     expectedBuyerAvailableFunds = new FundsList([]);
                     expectedProtocolAvailableFunds = new FundsList([]);
+
                     expectedAgentAvailableFunds = new FundsList([]);
                     expectedResellersAvailableFunds = new Array(resellerPayoffs.length).fill(new FundsList([]));
                     expectedRoyaltyRecipientsAvailableFunds = new Array(royaltyRecipientsPayoffs.length).fill(
@@ -5087,6 +5135,7 @@ describe("IBosonFundsHandler", function () {
                       BigInt(sellerPayoff) +
                       BigInt(buyerPayoff) +
                       BigInt(protocolPayoff) +
+                      (state.includes("ESCALATED") ? BigInt(drPayoff || "0") : 0n) +
                       BigInt(resellerPayoffs.reduce((acc, r) => acc + BigInt(r.payoff), 0n)) +
                       BigInt(royaltyRecipientsPayoffs.reduce((acc, r) => acc + BigInt(r.payoff), 0n));
 
@@ -5198,15 +5247,16 @@ describe("IBosonFundsHandler", function () {
                 );
 
                 // voucher owner approves protocol to transfer the tokens
-                await mockToken.mint(voucherOwner.address, order.price);
-                await mockToken.connect(voucherOwner).approve(protocolDiamondAddress, order.price);
+                const totalAmount = order.price + DRFee;
+                await mockToken.mint(voucherOwner.address, totalAmount);
+                await mockToken.connect(voucherOwner).approve(protocolDiamondAddress, totalAmount);
 
                 // Voucher owner approves PriceDiscovery contract to transfer the tokens
                 await bosonVoucherClone.connect(voucherOwner).setApprovalForAll(priceDiscoveryContractAddress, true);
 
                 // Buyer approves protocol to transfer the tokens
-                await mockToken.mint(trade.buyer.address, order.price);
-                await mockToken.connect(trade.buyer).approve(protocolDiamondAddress, order.price);
+                await mockToken.mint(trade.buyer.address, totalAmount);
+                await mockToken.connect(trade.buyer).approve(protocolDiamondAddress, totalAmount);
 
                 // commit to offer
                 await sequentialCommitHandler
@@ -5499,19 +5549,20 @@ describe("IBosonFundsHandler", function () {
           buyerPayoff = 0;
           protocolPayoff = BigInt(priceDiscoveryProtocolFee).toString();
           sellerPayoff = BigInt(order.price) - BigInt(protocolPayoff);
-          sellerPayoff2 = BigInt(offerPriceDiscovery.sellerDeposit);
+          sellerPayoff2 = BigInt(offerPriceDiscovery.sellerDeposit) + BigInt(buyerEscalationDeposit);
         },
         "ESCALATED-RESOLVED": function () {
           const buyerPercentBasisPoints = "5566"; // 55.66%
 
           buyerPayoff = BigInt(applyPercentage(order.price, buyerPercentBasisPoints));
           buyerPayoff += BigInt(applyPercentage(offerPriceDiscovery.sellerDeposit, buyerPercentBasisPoints));
-          buyerPayoff += BigInt(buyerEscalationDeposit);
+          buyerPayoff += BigInt(applyPercentage(buyerEscalationDeposit, buyerPercentBasisPoints));
 
           const sellerPercentBasisPoints = 10000n - BigInt(buyerPercentBasisPoints);
           sellerPayoff = BigInt(
             applyPercentage(offerPriceDiscovery.sellerDeposit, 10000n - BigInt(buyerPercentBasisPoints))
           );
+          sellerPayoff += BigInt(applyPercentage(buyerEscalationDeposit, sellerPercentBasisPoints));
 
           const sellerPricePart = BigInt(order.price) - BigInt(applyPercentage(order.price, sellerPercentBasisPoints));
           const sellerProtocolFeePart = BigInt(applyPercentage(priceDiscoveryProtocolFee, sellerPercentBasisPoints));
@@ -5524,12 +5575,13 @@ describe("IBosonFundsHandler", function () {
 
           buyerPayoff = BigInt(applyPercentage(order.price, buyerPercentBasisPoints));
           buyerPayoff += BigInt(applyPercentage(offerPriceDiscovery.sellerDeposit, buyerPercentBasisPoints));
-          buyerPayoff += BigInt(buyerEscalationDeposit);
+          buyerPayoff += BigInt(applyPercentage(buyerEscalationDeposit, buyerPercentBasisPoints));
 
           const sellerPercentBasisPoints = 10000n - BigInt(buyerPercentBasisPoints);
           sellerPayoff = BigInt(
             applyPercentage(offerPriceDiscovery.sellerDeposit, 10000n - BigInt(buyerPercentBasisPoints))
           );
+          sellerPayoff += BigInt(applyPercentage(buyerEscalationDeposit, sellerPercentBasisPoints));
 
           const sellerPricePart = BigInt(order.price) - BigInt(applyPercentage(order.price, sellerPercentBasisPoints));
           const sellerProtocolFeePart = BigInt(applyPercentage(priceDiscoveryProtocolFee, sellerPercentBasisPoints));

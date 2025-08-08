@@ -136,7 +136,7 @@ abstract contract FundsBase is Context {
             // scope to avoid stack too deep errors
             BosonTypes.ExchangeState exchangeState = exchange.state;
             uint256 sellerDeposit = offer.sellerDeposit;
-            uint256 isEscalated = pe.disputeDates[_exchangeId].escalated;
+            bool isEscalated = pe.disputeDates[_exchangeId].escalated != 0;
 
             if (exchangeState == BosonTypes.ExchangeState.Completed) {
                 // COMPLETED
@@ -157,7 +157,7 @@ abstract contract FundsBase is Context {
                 // DISPUTED
                 // determine if buyerEscalationDeposit was encumbered or not
                 // if dispute was escalated, disputeDates.escalated is populated
-                uint256 buyerEscalationDeposit = isEscalated != 0
+                uint256 buyerEscalationDeposit = isEscalated
                     ? pe.disputeResolutionTerms[exchange.offerId].buyerEscalationDeposit
                     : 0;
 
@@ -178,9 +178,7 @@ abstract contract FundsBase is Context {
                         buyerEscalationDeposit;
 
                     // DR is paid if dispute was escalated
-                    payoff.disputeResolver = isEscalated != 0
-                        ? pe.disputeResolutionTerms[exchange.offerId].feeAmount
-                        : 0;
+                    payoff.disputeResolver = isEscalated ? pe.disputeResolutionTerms[exchange.offerId].feeAmount : 0;
                 } else if (disputeState == BosonTypes.DisputeState.Refused) {
                     // REFUSED
                     payoff.seller = sellerDeposit;
@@ -196,7 +194,7 @@ abstract contract FundsBase is Context {
                     payoff.seller = payoff.seller + offerPrice - applyPercent(offerPrice, dispute.buyerPercent);
 
                     // DR is always paid for escalated disputes (Decided or Resolved with escalation)
-                    if (isEscalated != 0) {
+                    if (isEscalated) {
                         payoff.disputeResolver = pe.disputeResolutionTerms[exchange.offerId].feeAmount;
                     }
                 }
