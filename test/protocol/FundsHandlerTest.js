@@ -1904,7 +1904,6 @@ describe("IBosonFundsHandler", function () {
       );
       expect(disputeResolver.isValid()).is.true;
 
-      //const tokenAddress = await mockToken.getAddress();
 
       //Create DisputeResolverFee array so offer creation will succeed
       DRFee = parseUnits("0.01", "ether").toString();
@@ -4607,8 +4606,8 @@ describe("IBosonFundsHandler", function () {
                 buyerPayoff = (BigInt(buyerPayoff) + buyerEscalationDepositShare).toString();
                 sellerPayoff = (BigInt(sellerPayoff) + sellerEscalationDepositShare).toString();
 
-                // DR gets paid the escalation fee
-                drPayoff = (10n * BigInt(buyerEscalationDeposit)).toString();
+                // DR gets paid the DRFee
+                drPayoff = DRFee.toString();
               }
 
               let resellerPayoffs;
@@ -4831,7 +4830,7 @@ describe("IBosonFundsHandler", function () {
                   // Start with COMPLETED state logic, then add escalation-specific changes
                   await finalStatePayouts["COMPLETED"]();
                   sellerPayoff = (BigInt(sellerPayoff) + BigInt(buyerEscalationDeposit)).toString();
-                  drPayoff = (10n * BigInt(buyerEscalationDeposit)).toString();
+                  drPayoff = DRFee.toString();
                 },
                 "DISPUTED-ESCALATED-RESOLVED": async function () {
                   await calculateEscalatedDisputePayoffs();
