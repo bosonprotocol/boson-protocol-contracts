@@ -164,7 +164,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
             }
 
             if (immediatePayout > 0) {
-                transferFundsFromProtocol(exchangeToken, payable(seller), immediatePayout);
+                transferFundsOut(exchangeToken, payable(seller), immediatePayout);
             }
         }
 

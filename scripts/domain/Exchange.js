@@ -14,15 +14,17 @@ class Exchange {
             uint256 buyerId;
             uint256 finalizedDate;
             ExchangeState state;
+            address payable mutualizerAddress;
       }
    */
 
-  constructor(id, offerId, buyerId, finalizedDate, state) {
+  constructor(id, offerId, buyerId, finalizedDate, state, mutualizerAddress) {
     this.id = id;
     this.offerId = offerId;
     this.buyerId = buyerId;
     this.finalizedDate = finalizedDate;
     this.state = state;
+    this.mutualizerAddress = mutualizerAddress;
   }
 
   /**
@@ -31,8 +33,8 @@ class Exchange {
    * @returns {Exchange}
    */
   static fromObject(o) {
-    const { id, offerId, buyerId, finalizedDate, state } = o;
-    return new Exchange(id, offerId, buyerId, finalizedDate, state);
+    const { id, offerId, buyerId, finalizedDate, state, mutualizerAddress } = o;
+    return new Exchange(id, offerId, buyerId, finalizedDate, state, mutualizerAddress);
   }
 
   /**
@@ -41,10 +43,10 @@ class Exchange {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let id, offerId, buyerId, finalizedDate, state;
+    let id, offerId, buyerId, finalizedDate, state, mutualizerAddress;
 
     // destructure struct
-    [id, offerId, buyerId, finalizedDate, state] = struct;
+    [id, offerId, buyerId, finalizedDate, state, mutualizerAddress] = struct;
 
     return Exchange.fromObject({
       id: id.toString(),
@@ -52,6 +54,7 @@ class Exchange {
       buyerId: buyerId.toString(),
       finalizedDate: finalizedDate.toString(),
       state: Number(state),
+      mutualizerAddress: mutualizerAddress,
     });
   }
 
@@ -76,7 +79,7 @@ class Exchange {
    * @returns {string}
    */
   toStruct() {
-    return [this.id, this.offerId, this.buyerId, this.finalizedDate, this.state];
+    return [this.id, this.offerId, this.buyerId, this.finalizedDate, this.state, this.mutualizerAddress];
   }
 
   /**
@@ -133,6 +136,16 @@ class Exchange {
   }
 
   /**
+   * Is this Exchange instance's mutualizerAddress field valid?
+   * Must be a valid ethereum address
+   * @returns {boolean}
+   */
+  mutualizerAddressIsValid() {
+    const { isAddress } = require("@ethersproject/address");
+    return isAddress(this.mutualizerAddress);
+  }
+
+  /**
    * Is this Exchange instance valid?
    * @returns {boolean}
    */
@@ -142,7 +155,8 @@ class Exchange {
       this.offerIdIsValid() &&
       this.buyerIdIsValid() &&
       this.finalizedDateIsValid() &&
-      this.stateIsValid()
+      this.stateIsValid() &&
+      this.mutualizerAddressIsValid()
     );
   }
 }

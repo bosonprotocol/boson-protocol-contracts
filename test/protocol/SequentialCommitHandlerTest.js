@@ -52,7 +52,7 @@ describe("IBosonSequentialCommitHandler", function () {
     configHandler,
     sequentialCommitHandler;
   let bosonVoucherClone;
-  let buyerId, offerId, seller, disputeResolverId;
+  let buyerId, offerId, seller, drParams;
   let block, blockNumber, tx;
   let support;
   let price, sellerPool;
@@ -226,7 +226,7 @@ describe("IBosonSequentialCommitHandler", function () {
       offerFees.protocolFee = applyPercentage(offer.price, protocolFeePercentage);
 
       offer.quantityAvailable = "10";
-      disputeResolverId = mo.disputeResolverId;
+      drParams = mo.drParams;
 
       offerDurations.voucherValid = (oneMonth * 12n).toString();
 
@@ -238,7 +238,7 @@ describe("IBosonSequentialCommitHandler", function () {
       // Create the offer
       await offerHandler
         .connect(assistant)
-        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+        .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
 
       // Set used variables
       price = BigInt(offer.price);

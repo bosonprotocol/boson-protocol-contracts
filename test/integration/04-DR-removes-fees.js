@@ -33,7 +33,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
   let assistant, admin, clerk, treasury, buyer, assistantDR, adminDR, clerkDR, treasuryDR;
   let buyerEscalationDepositPercentage;
   let buyerAccount, seller, disputeResolver;
-  let offer, offerDates, offerDurations, disputeResolverId;
+  let offer, offerDates, offerDurations, drParams;
   let exchangeId;
   let disputeResolverFeeNative;
   let snapshotId;
@@ -111,7 +111,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     await accountHandler.connect(adminDR).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
     // Create a seller account
-    ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+    ({ offer, offerDates, offerDurations, drParams } = await mockOffer());
     offer.quantityAvailable = "3";
 
     // Check if domains are valid
@@ -122,7 +122,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     // Create the offer
     await offerHandler
       .connect(assistant)
-      .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+      .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
 
     // Deposit seller funds so the commit will succeed
     const fundsToDeposit = BigInt(offer.sellerDeposit) * BigInt(offer.quantityAvailable);
