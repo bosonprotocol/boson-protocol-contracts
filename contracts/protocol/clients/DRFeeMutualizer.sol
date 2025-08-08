@@ -42,7 +42,6 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
     error AgreementIsVoided();
     error DepositsRestrictedToOwner();
     error AccessDenied();
-    error SellerNotFound();
     error InsufficientValueReceived();
     error NativeNotAllowed();
     error AgreementTimePeriodTooLong();
@@ -335,11 +334,11 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         uint256 _premium,
         bool _refundOnCancel
     ) external onlyOwner returns (uint256 agreementId) {
-        if (_sellerId == 0) revert InvalidSellerId();
+        (bool exists, , ) = IBosonAccountHandler(BOSON_PROTOCOL).getSeller(_sellerId);
+        if (!exists) revert InvalidSellerId();
         if (_maxAmountPerTx == 0) revert MaxAmountPerTxMustBeGreaterThanZero();
         if (_maxAmountTotal < _maxAmountPerTx) revert MaxTotalMustBeGreaterThanOrEqualToMaxPerTx();
         if (_timePeriod == 0) revert TimePeriodMustBeGreaterThanZero();
-
         uint256 existingAgreementId = sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][
             _disputeResolverId
         ];
@@ -351,6 +350,12 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
                 block.timestamp <= existingAgreement.startTime + existingAgreement.timePeriod
             ) {
                 revert AgreementAlreadyExists();
+            }
+
+            // Void existing non-started agreement to prevent race conditions
+            if (existingAgreement.startTime == 0 && !existingAgreement.isVoided) {
+                existingAgreement.isVoided = true;
+                emit AgreementVoided(existingAgreementId, false, 0);
             }
         }
 
@@ -386,7 +391,6 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
      * - Agreement is already voided
      * - Caller is not authorized
      * - ERC20 or native currency transfer fails
-     * - Seller not found
      */
     function voidAgreement(uint256 _agreementId) external {
         if (_agreementId == 0 || _agreementId >= agreements.length) revert InvalidAgreementId();
@@ -394,10 +398,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         Agreement storage agreement = agreements[_agreementId];
         if (agreement.isVoided) revert AgreementAlreadyVoided();
 
-        (bool exists, BosonTypes.Seller memory seller, ) = IBosonAccountHandler(BOSON_PROTOCOL).getSeller(
-            agreement.sellerId
-        );
-        if (!exists) revert SellerNotFound();
+        (, BosonTypes.Seller memory seller, ) = IBosonAccountHandler(BOSON_PROTOCOL).getSeller(agreement.sellerId);
 
         // Check authorization: either owner (if refundOnCancel is true) or the seller admin
         if (_msgSender() != seller.admin && !(_msgSender() == owner() && agreement.refundOnCancel)) {

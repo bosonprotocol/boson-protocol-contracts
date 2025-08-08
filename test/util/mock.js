@@ -232,13 +232,14 @@ function mockVoucher({ committedDate, validUntilDate, redeemedDate, expired } = 
   );
 }
 
-function mockExchange({ id, offerId, buyerId, finalizedDate, state } = {}) {
+function mockExchange({ id, offerId, buyerId, finalizedDate, state, mutualizerAddress } = {}) {
   return new Exchange(
     id ?? "1",
     offerId ?? "1",
     buyerId ?? "1",
     finalizedDate ?? "1661447000",
-    state ?? ExchangeState.Committed
+    state ?? ExchangeState.Committed,
+    mutualizerAddress ?? ZeroAddress
   );
 }
 

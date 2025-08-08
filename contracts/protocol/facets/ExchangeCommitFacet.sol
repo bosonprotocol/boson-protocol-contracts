@@ -267,6 +267,13 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
             encumberFunds(_offerId, buyerId, _offer.price, _isPreminted, _offer.priceType);
         }
 
+        // Create and store a new exchange
+        Exchange storage exchange = protocolEntities().exchanges[_exchangeId];
+        exchange.id = _exchangeId;
+        exchange.offerId = _offerId;
+        exchange.buyerId = buyerId;
+        exchange.state = ExchangeState.Committed;
+
         // Handle DR fee collection
         {
             // Get dispute resolution terms to get the dispute resolver ID
@@ -277,15 +284,9 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
             // Handle DR fee collection if fee exists
             if (drFeeAmount > 0) {
                 handleDRFeeCollection(_exchangeId, _offer, disputeTerms, drFeeAmount);
+                exchange.mutualizerAddress = disputeTerms.mutualizerAddress;
             }
         }
-
-        // Create and store a new exchange
-        Exchange storage exchange = protocolEntities().exchanges[_exchangeId];
-        exchange.id = _exchangeId;
-        exchange.offerId = _offerId;
-        exchange.buyerId = buyerId;
-        exchange.state = ExchangeState.Committed;
 
         // Create and store a new voucher
         Voucher storage voucher = protocolEntities().vouchers[_exchangeId];

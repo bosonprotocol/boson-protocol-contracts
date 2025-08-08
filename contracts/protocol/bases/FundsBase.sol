@@ -138,6 +138,7 @@ abstract contract FundsBase is Context {
             // scope to avoid stack too deep errors
             BosonTypes.ExchangeState exchangeState = exchange.state;
             uint256 sellerDeposit = offer.sellerDeposit;
+            bool isEscalated = pe.disputeDates[_exchangeId].escalated != 0;
 
             if (exchangeState == BosonTypes.ExchangeState.Completed) {
                 // COMPLETED
@@ -158,7 +159,7 @@ abstract contract FundsBase is Context {
                 // DISPUTED
                 // determine if buyerEscalationDeposit was encumbered or not
                 // if dispute was escalated, disputeDates.escalated is populated
-                uint256 buyerEscalationDeposit = pe.disputeDates[_exchangeId].escalated > 0
+                uint256 buyerEscalationDeposit = isEscalated
                     ? pe.disputeResolutionTerms[exchange.offerId].buyerEscalationDeposit
                     : 0;
 
@@ -179,9 +180,7 @@ abstract contract FundsBase is Context {
                         buyerEscalationDeposit;
 
                     // DR is paid if dispute was escalated
-                    payoff.disputeResolver = buyerEscalationDeposit > 0
-                        ? pe.disputeResolutionTerms[exchange.offerId].feeAmount
-                        : 0;
+                    payoff.disputeResolver = isEscalated ? pe.disputeResolutionTerms[exchange.offerId].feeAmount : 0;
                 } else if (disputeState == BosonTypes.DisputeState.Refused) {
                     // REFUSED
                     payoff.seller = sellerDeposit;
@@ -197,7 +196,7 @@ abstract contract FundsBase is Context {
                     payoff.seller = payoff.seller + offerPrice - applyPercent(offerPrice, dispute.buyerPercent);
 
                     // DR is always paid for escalated disputes (Decided or Resolved with escalation)
-                    if (buyerEscalationDeposit > 0) {
+                    if (isEscalated) {
                         payoff.disputeResolver = pe.disputeResolutionTerms[exchange.offerId].feeAmount;
                     }
                 }
@@ -231,7 +230,7 @@ abstract contract FundsBase is Context {
         }
 
         if (payoff.protocol > 0) {
-            increaseAvailableFunds(0, exchangeToken, payoff.protocol);
+            increaseAvailableFunds(PROTOCOL_ENTITY_ID, exchangeToken, payoff.protocol);
             emit IBosonFundsBaseEvents.ProtocolFeeCollected(_exchangeId, exchangeToken, payoff.protocol, sender);
         }
         if (payoff.agent > 0) {
@@ -254,7 +253,8 @@ abstract contract FundsBase is Context {
         if (drTerms.feeAmount != 0) {
             uint256 returnAmount = drTerms.feeAmount - payoff.disputeResolver;
 
-            if (drTerms.mutualizerAddress == address(0)) {
+            // Use exchange-level mutualizer address (locked at commitment time)
+            if (exchange.mutualizerAddress == address(0)) {
                 if (returnAmount > 0) {
                     increaseAvailableFundsAndEmitEvent(
                         _exchangeId,
@@ -266,15 +266,15 @@ abstract contract FundsBase is Context {
                 }
             } else {
                 if (exchangeToken == address(0)) {
-                    IDRFeeMutualizer(drTerms.mutualizerAddress).returnDRFee{ value: returnAmount }(
+                    IDRFeeMutualizer(exchange.mutualizerAddress).returnDRFee{ value: returnAmount }(
                         _exchangeId,
                         returnAmount
                     );
                 } else {
                     if (returnAmount > 0) {
-                        IERC20(exchangeToken).safeApprove(drTerms.mutualizerAddress, returnAmount);
+                        IERC20(exchangeToken).safeApprove(exchange.mutualizerAddress, returnAmount);
                     }
-                    IDRFeeMutualizer(drTerms.mutualizerAddress).returnDRFee(_exchangeId, returnAmount);
+                    IDRFeeMutualizer(exchange.mutualizerAddress).returnDRFee(_exchangeId, returnAmount);
                 }
             }
         }
