@@ -6,12 +6,15 @@ import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonExchangeCommitHandler } from "../../interfaces/handlers/IBosonExchangeCommitHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { IDRFeeMutualizer } from "../../interfaces/clients/IDRFeeMutualizer.sol";
-import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
+import { IBosonFundsEvents, IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BuyerBase } from "../bases/BuyerBase.sol";
+import { OfferBase } from "../bases/OfferBase.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
+import { GroupBase } from "../bases/GroupBase.sol";
 import { OfferBase } from "../bases/OfferBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
+import { EIP712Lib } from "../libs/EIP712Lib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
@@ -24,7 +27,7 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
  * This facet contains all functions related to committing to offers and creating new exchanges,
  * including buyer-initiated offers where sellers commit to buyer-created offers.
  */
-contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchangeCommitHandler {
+contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IBosonExchangeCommitHandler {
     using Address for address;
     using Address for address payable;
 
@@ -84,7 +87,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
     function commitToOffer(
         address payable _committer,
         uint256 _offerId
-    ) external payable override exchangesNotPaused buyersNotPaused sellersNotPaused nonReentrant {
+    ) public payable override exchangesNotPaused buyersNotPaused sellersNotPaused nonReentrant {
         // Make sure committer address is not zero address
         if (_committer == address(0)) revert InvalidAddress();
 
@@ -129,17 +132,17 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
      * - Seller has less funds available than sellerDeposit
      * - Condition has a range and the token id is not within the range
      *
-     * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
+     * @param _committer - the seller's or the buyer's address. The caller can commit on behalf of a buyer or a seller.
      * @param _offerId - the id of the offer to commit to
      * @param _tokenId - the id of the token to use for the conditional commit
      */
     function commitToConditionalOffer(
-        address payable _buyer,
+        address payable _committer,
         uint256 _offerId,
         uint256 _tokenId
-    ) external payable override exchangesNotPaused buyersNotPaused nonReentrant {
-        // Make sure buyer address is not zero address
-        if (_buyer == address(0)) revert InvalidAddress();
+    ) public payable override exchangesNotPaused buyersNotPaused nonReentrant {
+        // Make sure committer address is not zero address
+        if (_committer == address(0)) revert InvalidAddress();
 
         Offer storage offer = getValidOffer(_offerId);
         if (offer.priceType != PriceType.Static) revert InvalidPriceType();
@@ -156,12 +159,179 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
         // Make sure the tokenId is in range
         validateConditionRange(condition, _tokenId);
 
-        authorizeCommit(_buyer, condition, groupId, _tokenId, _offerId);
+        address buyerAddress;
+        if (offer.creator == BosonTypes.OfferCreator.Seller) {
+            buyerAddress = _committer;
+        } else {
+            (, BosonTypes.Buyer storage buyer) = fetchBuyer(offer.buyerId);
+            buyerAddress = buyer.wallet;
 
-        uint256 exchangeId = commitToOfferInternal(_buyer, offer, 0, false);
+            // For buyer-created offers, group sellerId is originally 0, so it needs to be updated
+            protocolEntities().groups[groupId].sellerId = offer.sellerId;
+        }
+        authorizeCommit(buyerAddress, condition, groupId, _tokenId, _offerId);
+
+        uint256 exchangeId = commitToOfferInternal(_committer, offer, 0, false);
 
         // Store the condition to be returned afterward on getReceipt function
         protocolLookups().exchangeCondition[exchangeId] = condition;
+    }
+
+    /**
+     * @notice Creates an offer and commits to it immediately.
+     * The caller is the committer and must provide the offer creator's signature.
+     *
+     * Emits an OfferCreated, FundsEncumbered, BuyerCommitted and SellerCommitted event if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - Valid from date is greater than valid until date
+     * - Valid until date is not in the future
+     * - Both voucher expiration date and voucher expiration period are defined
+     * - Neither of voucher expiration date and voucher expiration period are defined
+     * - Voucher redeemable period is fixed, but it ends before it starts
+     * - Voucher redeemable period is fixed, but it ends before offer expires
+     * - Dispute period is less than minimum dispute period
+     * - Resolution period is not between the minimum and the maximum resolution period
+     * - Voided is set to true
+     * - Available quantity is 0
+     * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     * - Seller is not on dispute resolver's seller allow list
+     * - Dispute resolver does not accept fees in the exchange token
+     * - Buyer cancel penalty is greater than price
+     * - Collection does not exist
+     * - When agent id is non zero:
+     *   - If Agent does not exist
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
+     * - Royalty recipient is not on seller's allow list
+     * - Royalty percentage is less than the value decided by the admin
+     * - Total royalty percentage is more than max royalty percentage
+     * - Not enough funds can be encumbered
+     *
+     * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
+     * @param _offerCreator - the address of the other party
+     * @param _committer - the address of the committer (buyer for seller-created offers, seller for buyer-created offers)
+     * @param _signature - signature of the other party. If the signer is EOA, it must be ECDSA signature in the format of (r,s,v) struct, otherwise, it must be a valid ERC1271 signature.
+     * @param conditionalTokenId - the token id to use for the conditional commit, if applicable
+     */
+    function createOfferAndCommit(
+        BosonTypes.FullOffer calldata _fullOffer,
+        address _offerCreator,
+        address payable _committer,
+        bytes calldata _signature,
+        uint256 conditionalTokenId
+    ) external payable override exchangesNotPaused buyersNotPaused sellersNotPaused {
+        // verify signature and potential cancellation
+        (bytes32 offerHash, uint256 offerId) = verifyOffer(_fullOffer, _offerCreator, _signature);
+
+        // create an offer
+        if (offerId == 0) {
+            offerId = createOfferInternal(
+                _fullOffer.offer,
+                _fullOffer.offerDates,
+                _fullOffer.offerDurations,
+                _fullOffer.drParameters,
+                _fullOffer.agentId,
+                _fullOffer.feeLimit,
+                false
+            );
+            protocolLookups().offerIdByHash[offerHash] = offerId;
+
+            if (_fullOffer.condition.method != BosonTypes.EvaluationMethod.None) {
+                // Construct new group
+                // - group id is 0, and it is ignored
+                Group memory group;
+                group.sellerId = _fullOffer.offer.sellerId;
+                group.offerIds = new uint256[](1);
+                group.offerIds[0] = offerId;
+
+                // Create group and update structs values to represent true state
+                createGroupInternal(group, _fullOffer.condition, false);
+            }
+        }
+
+        // Deposit other committer's funds if needed
+        if (!_fullOffer.useDepositedFunds) {
+            uint256 offerCreatorId;
+            uint256 offerCreatorAmount;
+            if (_fullOffer.offer.creator == BosonTypes.OfferCreator.Buyer) {
+                // Buyer-created offer: committer is the seller
+                offerCreatorId = _fullOffer.offer.buyerId;
+                offerCreatorAmount = _fullOffer.offer.price;
+            } else {
+                // Seller-created offer: committer is the buyer
+                offerCreatorId = _fullOffer.offer.sellerId;
+                offerCreatorAmount = _fullOffer.offer.sellerDeposit;
+            }
+
+            if (offerCreatorAmount > 0) {
+                transferFundsIn(_fullOffer.offer.exchangeToken, _offerCreator, offerCreatorAmount);
+                increaseAvailableFunds(offerCreatorId, _fullOffer.offer.exchangeToken, offerCreatorAmount);
+                emit IBosonFundsEvents.FundsDeposited(
+                    offerCreatorId,
+                    _offerCreator,
+                    _fullOffer.offer.exchangeToken,
+                    offerCreatorAmount
+                );
+            }
+        }
+
+        if (_fullOffer.condition.method != BosonTypes.EvaluationMethod.None) {
+            commitToConditionalOffer(_committer, offerId, conditionalTokenId);
+        } else {
+            commitToOffer(_committer, offerId);
+        }
+    }
+
+    /**
+     * @notice Verifies the offer and its signature.
+     *
+     * Reverts if:
+     * - Offer is not valid
+     * - Offer has been voided
+     * - Signature is invalid
+     *
+     * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
+     * @param _offerCreator - the address of the offer creator
+     * @param _signature - the signature of the offer creator
+     */
+    function verifyOffer(
+        BosonTypes.FullOffer calldata _fullOffer,
+        address _offerCreator,
+        bytes calldata _signature
+    ) internal returns (bytes32 offerHash, uint256 offerId) {
+        // `_fullOffer.offer.voided` is checked in createOfferInternal
+        if (
+            _fullOffer.offer.id != 0 ||
+            _fullOffer.offer.royaltyInfo.length != 1 ||
+            _fullOffer.offer.priceType != BosonTypes.PriceType.Static
+        ) revert InvalidOffer();
+
+        offerHash = getOfferHash(_fullOffer);
+
+        // Check if the offer non-listed offer has been voided via `voidOffer`
+        // Does not apply to already listed offers, with `voided` set to true
+        offerId = protocolLookups().offerIdByHash[offerHash];
+        if (offerId == 0) {
+            if (_fullOffer.offer.creator == OfferCreator.Seller) {
+                // Validate caller is seller assistant
+                (, uint256 sellerId) = getSellerIdByAssistant(_offerCreator);
+                if (sellerId != _fullOffer.offer.sellerId) {
+                    revert NotAssistant();
+                }
+            } else if (_fullOffer.offer.creator == OfferCreator.Buyer) {
+                uint256 buyerId = getValidBuyer(payable(_offerCreator));
+                if (buyerId != _fullOffer.offer.buyerId) {
+                    revert NotBuyerWallet();
+                }
+            }
+            EIP712Lib.verify(_offerCreator, offerHash, _signature);
+        } else if (offerId == VOIDED_OFFER_ID) {
+            // Offer is voided
+            revert OfferHasBeenVoided();
+        }
     }
 
     /**

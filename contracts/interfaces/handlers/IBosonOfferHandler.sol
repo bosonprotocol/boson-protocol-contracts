@@ -10,7 +10,7 @@ import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xeaace31f
+ * The ERC-165 identifier for this interface is: 0xc7f86b80
  */
 interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
     /**
@@ -169,6 +169,37 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      * @param _offerIds - list of ids of offers to void
      */
     function voidOfferBatch(uint256[] calldata _offerIds) external;
+
+    /**
+     * @notice Voids a non-listed offer. (offers used in `createOfferAndCommit`)
+     * It prevents the offer from being used in future exchanges even if it was already signed.
+     *
+     * Emits a NonListedOfferVoided event if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - Caller is not the assistant of the offer
+     * - Offer has already been voided
+     *
+     * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
+     */
+    function voidNonListedOffer(BosonTypes.FullOffer calldata _fullOffer) external;
+
+    /**
+     * @notice Voids multiple a non-listed offer. (offers used in `createOfferAndCommit`)
+     * It prevents the offers from being used in future exchanges even if they were already signed.
+     *
+     * Emits NonListedOfferVoided events if successful.
+     *
+     * Reverts if:
+     * - The number of elements in offers, offerDates, offerDurations, disputeResolverIds, agentIds and feeLimits do not match
+     * - The offers region of protocol is paused
+     * - Caller is not the authorized to void the offer
+     * - Offer has already been voided
+     *
+     * @param _fullOffers - the list fully populated structs containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
+     */
+    function voidNonListedOfferBatch(BosonTypes.FullOffer[] calldata _fullOffers) external;
 
     /**
      * @notice Sets new valid until date.

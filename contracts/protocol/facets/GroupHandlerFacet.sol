@@ -40,7 +40,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
         Group memory _group,
         Condition calldata _condition
     ) external override groupsNotPaused nonReentrant {
-        createGroupInternal(_group, _condition);
+        createGroupInternal(_group, _condition, true);
     }
 
     /**
