@@ -5,6 +5,7 @@ import "../../domain/BosonConstants.sol";
 import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
+import { IBosonExchangeCommitHandler } from "../../interfaces/handlers/IBosonExchangeCommitHandler.sol";
 import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { BeaconClientLib } from "../libs/BeaconClientLib.sol";
@@ -122,7 +123,13 @@ abstract contract BeaconClientBase is BosonTypes, BosonErrors, Context {
         address _rangeOwner
     ) internal returns (bool) {
         address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
-        return IBosonExchangeHandler(protocolDiamond).onPremintedVoucherTransferred(_tokenId, _to, _from, _rangeOwner);
+        return
+            IBosonExchangeCommitHandler(protocolDiamond).onPremintedVoucherTransferred(
+                _tokenId,
+                _to,
+                _from,
+                _rangeOwner
+            );
     }
 
     /**

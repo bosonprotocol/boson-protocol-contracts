@@ -30,7 +30,7 @@ describe("IBosonBundleHandler", function () {
     twinHandler,
     accountHandler,
     bundleHandler,
-    exchangeHandler,
+    exchangeCommitHandler,
     fundsHandler,
     pauseHandler,
     bosonToken,
@@ -76,7 +76,7 @@ describe("IBosonBundleHandler", function () {
       twinHandler: "IBosonTwinHandler",
       bundleHandler: "IBosonBundleHandler",
       offerHandler: "IBosonOfferHandler",
-      exchangeHandler: "IBosonExchangeHandler",
+      exchangeCommitHandler: "IBosonExchangeCommitHandler",
       fundsHandler: "IBosonFundsHandler",
       pauseHandler: "IBosonPauseHandler",
     };
@@ -89,7 +89,7 @@ describe("IBosonBundleHandler", function () {
         twinHandler,
         bundleHandler,
         offerHandler,
-        exchangeHandler,
+        exchangeCommitHandler,
         fundsHandler,
         pauseHandler,
       },
@@ -540,7 +540,7 @@ describe("IBosonBundleHandler", function () {
 
           // Commit to an offer
           let offerIdToCommit = bundle.offerIds[0];
-          await exchangeHandler
+          await exchangeCommitHandler
             .connect(buyer)
             .commitToOffer(await buyer.getAddress(), offerIdToCommit, { value: price });
 

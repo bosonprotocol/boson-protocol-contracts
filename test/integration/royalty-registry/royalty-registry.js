@@ -33,7 +33,7 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
   let bosonVoucher;
   let assistant, buyer, DR, other1, other2;
   let seller;
-  let offerHandler, exchangeHandler, fundsHandler, accountHandler;
+  let offerHandler, exchangeCommitHandler, fundsHandler, accountHandler;
   let offerId, offerPrice, exchangeId, tokenId;
   let snapshotId;
 
@@ -50,12 +50,12 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
       accountHandler: "IBosonAccountHandler",
       offerHandler: "IBosonOfferHandler",
       fundsHandler: "IBosonFundsHandler",
-      exchangeHandler: "IBosonExchangeHandler",
+      exchangeCommitHandler: "IBosonExchangeCommitHandler",
     };
 
     ({
       signers: [assistant, buyer, DR, other1, other2],
-      contractInstances: { accountHandler, offerHandler, fundsHandler, exchangeHandler },
+      contractInstances: { accountHandler, offerHandler, fundsHandler, exchangeCommitHandler },
       extraReturnValues: { bosonVoucher },
     } = await setupTestEnvironment(contracts));
 
@@ -148,7 +148,7 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
       context("EIP2981", function () {
         it("Normal voucher", async function () {
           // Commit to an offer
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: offerPrice });
+          await exchangeCommitHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: offerPrice });
 
           // get royalty info directly from voucher contract
           let [recipient, royaltyAmount] = await bosonVoucher.royaltyInfo(tokenId, offerPrice);

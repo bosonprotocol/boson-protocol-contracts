@@ -64,6 +64,7 @@ describe("IBosonOfferHandler", function () {
     configHandler,
     pauseHandler,
     exchangeHandler,
+    exchangeCommitHandler,
     fundsHandler,
     bosonToken,
     offerStruct,
@@ -126,6 +127,7 @@ describe("IBosonOfferHandler", function () {
       accountHandler: "IBosonAccountHandler",
       offerHandler: "IBosonOfferHandler",
       exchangeHandler: "IBosonExchangeHandler",
+      exchangeCommitHandler: "IBosonExchangeCommitHandler",
       fundsHandler: "IBosonFundsHandler",
       configHandler: "IBosonConfigHandler",
       pauseHandler: "IBosonPauseHandler",
@@ -138,6 +140,7 @@ describe("IBosonOfferHandler", function () {
         accountHandler,
         offerHandler,
         exchangeHandler,
+        exchangeCommitHandler,
         fundsHandler,
         configHandler,
         pauseHandler,
@@ -2405,8 +2408,8 @@ describe("IBosonOfferHandler", function () {
         await fundsHandler.connect(assistant).depositFunds(seller.id, ZeroAddress, sellerPool, { value: sellerPool });
 
         // Commit to the offer twice
-        await exchangeHandler.connect(rando).commitToOffer(await rando.getAddress(), id, { value: price });
-        await exchangeHandler.connect(rando).commitToOffer(await rando.getAddress(), id, { value: price });
+        await exchangeCommitHandler.connect(rando).commitToOffer(await rando.getAddress(), id, { value: price });
+        await exchangeCommitHandler.connect(rando).commitToOffer(await rando.getAddress(), id, { value: price });
 
         // Reserve a range, testing for the event
         await expect(offerHandler.connect(assistant).reserveRange(id, length, await assistant.getAddress()))

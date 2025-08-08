@@ -76,6 +76,7 @@ describe("IBosonOrchestrationHandler", function () {
     accountHandler,
     offerHandler,
     exchangeHandler,
+    exchangeCommitHandler,
     groupHandler,
     twinHandler,
     bundleHandler,
@@ -141,6 +142,7 @@ describe("IBosonOrchestrationHandler", function () {
       bundleHandler: "IBosonBundleHandler",
       offerHandler: "IBosonOfferHandler",
       exchangeHandler: "IBosonExchangeHandler",
+      exchangeCommitHandler: "IBosonExchangeCommitHandler",
       fundsHandler: "IBosonFundsHandler",
       disputeHandler: "IBosonDisputeHandler",
       orchestrationHandler: "IBosonOrchestrationHandler",
@@ -158,6 +160,7 @@ describe("IBosonOrchestrationHandler", function () {
         bundleHandler,
         offerHandler,
         exchangeHandler,
+        exchangeCommitHandler,
         fundsHandler,
         disputeHandler,
         orchestrationHandler,
@@ -343,7 +346,7 @@ describe("IBosonOrchestrationHandler", function () {
         await mockToken.connect(buyer).approve(protocolDiamondAddress, buyerEscalationDepositToken);
 
         // Commit to offer and put exchange all the way to dispute
-        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id);
+        await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id);
         await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
 
         return mockToken;
@@ -388,7 +391,9 @@ describe("IBosonOrchestrationHandler", function () {
         exchangeId = "1";
 
         // Commit to offer, creating a new exchange
-        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), nextOfferId, { value: price });
+        await exchangeCommitHandler
+          .connect(buyer)
+          .commitToOffer(await buyer.getAddress(), nextOfferId, { value: price });
 
         // Set time forward to the offer's voucherRedeemableFrom
         await setNextBlockTimestamp(Number(voucherRedeemableFrom));

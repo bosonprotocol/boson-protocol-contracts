@@ -32,7 +32,7 @@ const DisputeResolverUpdateFields = require("../../scripts/domain/DisputeResolve
  *  Integration test case - operations should remain possible after updating account roles addresses.
  */
 describe("[@skip-on-coverage] Update account roles addresses", function () {
-  let accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler;
+  let accountHandler, offerHandler, exchangeHandler, exchangeCommitHandler, fundsHandler, disputeHandler;
   let assistant, admin, clerk, treasury, buyer, rando, assistantDR, adminDR, clerkDR, treasuryDR, agent;
   let buyerEscalationDepositPercentage, redeemedDate;
   let snapshotId;
@@ -47,6 +47,7 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       accountHandler: "IBosonAccountHandler",
       offerHandler: "IBosonOfferHandler",
       exchangeHandler: "IBosonExchangeHandler",
+      exchangeCommitHandler: "IBosonExchangeCommitHandler",
       fundsHandler: "IBosonFundsHandler",
       disputeHandler: "IBosonDisputeHandler",
     };
@@ -55,7 +56,14 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
     ({
       diamondAddress: protocolDiamondAddress,
       signers: [admin, treasury, buyer, rando, adminDR, treasuryDR, agent],
-      contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler },
+      contractInstances: {
+        accountHandler,
+        offerHandler,
+        exchangeHandler,
+        exchangeCommitHandler,
+        fundsHandler,
+        disputeHandler,
+      },
       protocolConfig: [, , , , buyerEscalationDepositPercentage],
     } = await setupTestEnvironment(contracts));
 
@@ -173,7 +181,9 @@ describe("[@skip-on-coverage] Update account roles addresses", function () {
       await setNextBlockTimestamp(Number(offerDates.voucherRedeemableFrom));
 
       // Commit to offer
-      await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id, { value: offer.price });
+      await exchangeCommitHandler
+        .connect(buyer)
+        .commitToOffer(await buyer.getAddress(), offer.id, { value: offer.price });
 
       exchangeId = "1";
 

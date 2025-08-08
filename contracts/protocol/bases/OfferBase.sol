@@ -3,6 +3,7 @@ pragma solidity 0.8.22;
 
 import { IBosonOfferEvents } from "../../interfaces/events/IBosonOfferEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
+import { BuyerBase } from "./../bases/BuyerBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { IERC165 } from "../../interfaces/IERC165.sol";
@@ -14,14 +15,18 @@ import "./../../domain/BosonConstants.sol";
  *
  * @dev Provides methods for offer creation that can be shared across facets.
  */
-contract OfferBase is ProtocolBase, IBosonOfferEvents {
+contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
     /**
      * @notice Creates offer. Can be reused among different facets.
      *
      * Emits an OfferCreated event if successful.
      *
      * Reverts if:
-     * - Caller is not an assistant
+     * - Caller is not an assistant in case of seller-initiated offer
+     * - sellerId is not 0 when buyer-initiated offer is created
+     * - collectionIndex is not 0 when buyer-initiated offer is created
+     * - royaltyInfo is not empty when buyer-initiated offer is created
+     * - Invalid offer creator value specified (OfferCreator.Seller or OfferCreator.Buyer)
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
      * - Both voucher expiration date and voucher expiration period are defined
@@ -60,10 +65,26 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         uint256 _agentId,
         uint256 _feeLimit
     ) internal {
-        // get seller id, make sure it exists and store it to incoming struct
-        (bool exists, uint256 sellerId) = getSellerIdByAssistant(_msgSender());
-        if (!exists) revert NotAssistant();
-        _offer.sellerId = sellerId;
+        address sender = _msgSender();
+
+        if (_offer.creator == OfferCreator.Seller) {
+            // Validate caller is seller assistant
+            (bool isAssistant, uint256 sellerId) = getSellerIdByAssistant(sender);
+            if (!isAssistant) {
+                revert NotAssistant();
+            }
+            _offer.sellerId = sellerId;
+        } else if (_offer.creator == OfferCreator.Buyer) {
+            if (_offer.sellerId != 0 || _offer.collectionIndex != 0 || _offer.royaltyInfo.length > 0) {
+                revert InvalidBuyerOfferFields();
+            }
+            uint256 buyerId = getValidBuyer(payable(sender));
+            _offer.buyerId = buyerId;
+            _offer.quantityAvailable = 1;
+        } else {
+            revert InvalidOfferCreator();
+        }
+
         // Get the next offerId and increment the counter
         uint256 offerId = protocolCounters().nextOfferId++;
         _offer.id = offerId;
@@ -274,8 +295,13 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             // Make sure that supplied royalties ok
             // Operate in a block to avoid "stack too deep" error
             {
-                if (_offer.royaltyInfo.length != 1) revert InvalidRoyaltyInfo();
-                validateRoyaltyInfo(lookups, limits, _offer.sellerId, _offer.royaltyInfo[0]);
+                // Buyer-created offers can have 0 royalties, seller-created offers must have 1
+                if (_offer.creator == OfferCreator.Buyer) {
+                    if (_offer.royaltyInfo.length != 0) revert InvalidRoyaltyInfo();
+                } else {
+                    if (_offer.royaltyInfo.length != 1) revert InvalidRoyaltyInfo();
+                    validateRoyaltyInfo(lookups, limits, _offer.sellerId, _offer.royaltyInfo[0]);
+                }
             }
         }
         // Get storage location for offer
@@ -294,7 +320,12 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         offer.metadataHash = _offer.metadataHash;
         offer.collectionIndex = _offer.collectionIndex;
         offer.priceType = _offer.priceType;
-        offer.royaltyInfo.push(_offer.royaltyInfo[0]);
+        offer.creator = _offer.creator;
+        offer.buyerId = _offer.buyerId;
+        // Only push royalty info if it exists (seller-created offers)
+        if (_offer.royaltyInfo.length > 0) {
+            offer.royaltyInfo.push(_offer.royaltyInfo[0]);
+        }
 
         // Get storage location for offer dates
         OfferDates storage offerDates = fetchOfferDates(_offer.id);

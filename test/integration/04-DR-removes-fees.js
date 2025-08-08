@@ -28,7 +28,7 @@ const {
  *  Integration test case - exchange and offer operations should remain possible even when token fees are removed from the DR fee list
  */
 describe("[@skip-on-coverage] DR removes fee", function () {
-  let accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler;
+  let accountHandler, offerHandler, exchangeHandler, exchangeCommitHandler, fundsHandler, disputeHandler;
   let expectedCloneAddress, emptyAuthToken, voucherInitValues;
   let assistant, admin, clerk, treasury, buyer, assistantDR, adminDR, clerkDR, treasuryDR;
   let buyerEscalationDepositPercentage;
@@ -48,6 +48,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
       accountHandler: "IBosonAccountHandler",
       offerHandler: "IBosonOfferHandler",
       exchangeHandler: "IBosonExchangeHandler",
+      exchangeCommitHandler: "IBosonExchangeCommitHandler",
       fundsHandler: "IBosonFundsHandler",
       disputeHandler: "IBosonDisputeHandler",
     };
@@ -56,7 +57,14 @@ describe("[@skip-on-coverage] DR removes fee", function () {
     ({
       diamondAddress: protocolDiamondAddress,
       signers: [admin, treasury, buyer, adminDR, treasuryDR],
-      contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler },
+      contractInstances: {
+        accountHandler,
+        offerHandler,
+        exchangeHandler,
+        exchangeCommitHandler,
+        fundsHandler,
+        disputeHandler,
+      },
       protocolConfig: [, , , , buyerEscalationDepositPercentage],
     } = await setupTestEnvironment(contracts));
 
@@ -142,7 +150,9 @@ describe("[@skip-on-coverage] DR removes fee", function () {
 
     for (exchangeId = 1; exchangeId <= 2; exchangeId++) {
       // Commit to offer, creating a new exchange
-      await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id, { value: offer.price });
+      await exchangeCommitHandler
+        .connect(buyer)
+        .commitToOffer(await buyer.getAddress(), offer.id, { value: offer.price });
 
       // Redeem voucher
       await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
@@ -164,7 +174,7 @@ describe("[@skip-on-coverage] DR removes fee", function () {
       .withArgs(disputeResolver.id, [ZeroAddress], await adminDR.getAddress());
 
     // Commit to offer
-    const tx = await exchangeHandler
+    const tx = await exchangeCommitHandler
       .connect(buyer)
       .commitToOffer(await buyer.getAddress(), offer.id, { value: offer.price });
     const blockTimestamp = (await provider.getBlock(tx.blockNumber)).timestamp;

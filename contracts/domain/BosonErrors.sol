@@ -122,6 +122,10 @@ interface BosonErrors {
     // Offer related
     // Offer does not exist
     error NoSuchOffer();
+    // Offer parameters are invalid
+    error InvalidOffer();
+    // Collection index is invalid for the context
+    error InvalidCollectionIndex();
     // Offer finishes in the past or it starts after it finishes
     error InvalidOfferPeriod();
     // Buyer cancellation penalty is higher than the item price
@@ -142,6 +146,10 @@ interface BosonErrors {
     error CannotCommit();
     // Bundle cannot be created since exchganes for offer exist already
     error ExchangeForOfferExists();
+    // Buyer-initiated offer cannot have seller-specific fields (sellerId, collectionIndex, royaltyInfo)
+    error InvalidBuyerOfferFields();
+    // Invalid offer creator value specified
+    error InvalidOfferCreator();
     // Voucher must have either a fixed expiry or a fixed redeemable period, not both
     error AmbiguousVoucherExpiry();
     // Redemption period starts after it ends or it ends before offer itself expires

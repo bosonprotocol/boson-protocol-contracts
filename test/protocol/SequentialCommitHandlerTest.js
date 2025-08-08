@@ -46,6 +46,7 @@ describe("IBosonSequentialCommitHandler", function () {
   let erc165,
     accountHandler,
     exchangeHandler,
+    exchangeCommitHandler,
     offerHandler,
     fundsHandler,
     pauseHandler,
@@ -95,6 +96,7 @@ describe("IBosonSequentialCommitHandler", function () {
       accountHandler: "IBosonAccountHandler",
       offerHandler: "IBosonOfferHandler",
       exchangeHandler: "IBosonExchangeHandler",
+      exchangeCommitHandler: "IBosonExchangeCommitHandler",
       fundsHandler: "IBosonFundsHandler",
       configHandler: "IBosonConfigHandler",
       pauseHandler: "IBosonPauseHandler",
@@ -108,6 +110,7 @@ describe("IBosonSequentialCommitHandler", function () {
         accountHandler,
         offerHandler,
         exchangeHandler,
+        exchangeCommitHandler,
         fundsHandler,
         configHandler,
         pauseHandler,
@@ -273,7 +276,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
       beforeEach(async function () {
         // Commit to offer with first buyer
-        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+        tx = await exchangeCommitHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
@@ -503,7 +506,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
             // Committing directly is not possible
             await expect(
-              exchangeHandler.connect(buyer2).commitToOffer(buyer2.address, offerId, { value: price })
+              exchangeCommitHandler.connect(buyer2).commitToOffer(buyer2.address, offerId, { value: price })
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
 
             // Sequential commit to offer, retrieving the event
@@ -535,7 +538,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
             // Committing directly is not possible
             await expect(
-              exchangeHandler.connect(buyer2).commitToOffer(buyer2.address, offerId, { value: price })
+              exchangeCommitHandler.connect(buyer2).commitToOffer(buyer2.address, offerId, { value: price })
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_EXPIRED);
 
             // Sequential commit to offer, retrieving the event
@@ -549,12 +552,12 @@ describe("IBosonSequentialCommitHandler", function () {
           it("It is possible to commit even if is sold out", async function () {
             // Commit to all remaining quantity
             for (let i = 1; i < offer.quantityAvailable; i++) {
-              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+              await exchangeCommitHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
             }
 
             // Committing directly is not possible
             await expect(
-              exchangeHandler.connect(buyer2).commitToOffer(buyer2.address, offerId, { value: price })
+              exchangeCommitHandler.connect(buyer2).commitToOffer(buyer2.address, offerId, { value: price })
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_SOLD_OUT);
 
             // Sequential commit to offer, retrieving the event
@@ -1174,7 +1177,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
             // Committing directly is not possible
             await expect(
-              exchangeHandler.connect(buyer2).commitToOffer(buyer2.address, offerId)
+              exchangeCommitHandler.connect(buyer2).commitToOffer(buyer2.address, offerId)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
 
             // Sequential commit to offer, retrieving the event
@@ -1206,7 +1209,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
             // Committing directly is not possible
             await expect(
-              exchangeHandler.connect(buyer2).commitToOffer(buyer2.address, offerId)
+              exchangeCommitHandler.connect(buyer2).commitToOffer(buyer2.address, offerId)
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_EXPIRED);
 
             // Sequential commit to offer, retrieving the event
@@ -1220,12 +1223,12 @@ describe("IBosonSequentialCommitHandler", function () {
           it("It is possible to commit even if is sold out", async function () {
             // Commit to all remaining quantity
             for (let i = 1; i < offer.quantityAvailable; i++) {
-              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+              await exchangeCommitHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
             }
 
             // Committing directly is not possible
             await expect(
-              exchangeHandler.connect(buyer2).commitToOffer(buyer2.address, offerId, { value: price })
+              exchangeCommitHandler.connect(buyer2).commitToOffer(buyer2.address, offerId, { value: price })
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_SOLD_OUT);
 
             // Sequential commit to offer, retrieving the event
@@ -1617,7 +1620,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
       beforeEach(async function () {
         // Commit to offer with first buyer
-        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+        await exchangeCommitHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
         reseller = buyer;
 
@@ -1680,7 +1683,7 @@ describe("IBosonSequentialCommitHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("Correct caller, wrong id", async function () {
           // Commit to offer with first buyer once more (so they have two vouchers)
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+          await exchangeCommitHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
           // Deploy Bad PriceDiscovery contract
           const PriceDiscoveryFactory = await getContractFactory("PriceDiscoveryModifyTokenId");

@@ -81,6 +81,7 @@ async function getFacets(config) {
 
   facetArgs["ConfigHandlerFacet"] = { init: ConfigHandlerFacetInitArgs };
   facetArgs["ExchangeHandlerFacet"] = { init: [], constructorArgs: [protocolConfig.EXCHANGE_ID_2_2_0[network]] };
+  facetArgs["ExchangeCommitFacet"] = { init: [], constructorArgs: [protocolConfig.EXCHANGE_ID_2_2_0[network]] };
   facetArgs["SequentialCommitHandlerFacet"] = {
     init: [],
     constructorArgs: [protocolConfig.WrappedNative[network]],

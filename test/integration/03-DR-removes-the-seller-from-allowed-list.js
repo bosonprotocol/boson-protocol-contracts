@@ -25,7 +25,7 @@ const {
 describe("[@skip-on-coverage] DR removes sellers from the approved seller list", function () {
   // Common vars
   let assistant, admin, clerk, treasury, buyer, other1, assistantDR, adminDR, clerkDR, treasuryDR;
-  let accountHandler, exchangeHandler, offerHandler, fundsHandler, disputeHandler;
+  let accountHandler, exchangeHandler, exchangeCommitHandler, offerHandler, fundsHandler, disputeHandler;
   let offer, seller;
   let offerDates, offerDurations;
   let buyerEscalationDepositPercentage;
@@ -44,13 +44,21 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
       accountHandler: "IBosonAccountHandler",
       offerHandler: "IBosonOfferHandler",
       exchangeHandler: "IBosonExchangeHandler",
+      exchangeCommitHandler: "IBosonExchangeCommitHandler",
       fundsHandler: "IBosonFundsHandler",
       disputeHandler: "IBosonDisputeHandler",
     };
 
     ({
       signers: [admin, treasury, buyer, other1, adminDR, treasuryDR],
-      contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler },
+      contractInstances: {
+        accountHandler,
+        offerHandler,
+        exchangeHandler,
+        exchangeCommitHandler,
+        fundsHandler,
+        disputeHandler,
+      },
       protocolConfig: [, , , , buyerEscalationDepositPercentage],
     } = await setupTestEnvironment(contracts));
 
@@ -163,7 +171,7 @@ describe("[@skip-on-coverage] DR removes sellers from the approved seller list",
 
       for (exchangeId = 1; exchangeId <= 3; exchangeId++) {
         // Commit to offer, creating a new exchange
-        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+        await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
         // Redeem voucher
         await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);

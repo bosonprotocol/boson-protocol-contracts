@@ -5,6 +5,7 @@ const decache = require("decache");
 let Condition = require("../../scripts/domain/Condition.js");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 let Offer = require("../../scripts/domain/Offer");
+const OfferCreator = require("../../scripts/domain/OfferCreator");
 const GatingType = require("../../scripts/domain/GatingType");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferFees = require("../../scripts/domain/OfferFees");
@@ -78,6 +79,8 @@ async function mockOffer({ refreshModule, legacyOffer } = {}) {
   const voided = false;
   const collectionIndex = "0";
   const royaltyInfo = [new RoyaltyInfo([ZeroAddress], ["0"])];
+  const creator = OfferCreator.Seller; // Default to seller-created offers for existing tests
+  const buyerId = "0"; // Default to 0 for seller-created offers
 
   // Create a valid offer, then set fields in tests directly
   let offer;
@@ -90,10 +93,14 @@ async function mockOffer({ refreshModule, legacyOffer } = {}) {
       buyerCancelPenalty,
       quantityAvailable,
       exchangeToken,
+      priceType,
       metadataUri,
       metadataHash,
       voided,
-      collectionIndex
+      collectionIndex,
+      royaltyInfo,
+      creator,
+      buyerId
     );
   } else {
     offer = new Offer(
@@ -109,7 +116,9 @@ async function mockOffer({ refreshModule, legacyOffer } = {}) {
       metadataHash,
       voided,
       collectionIndex,
-      royaltyInfo
+      royaltyInfo,
+      creator,
+      buyerId
     );
   }
 
