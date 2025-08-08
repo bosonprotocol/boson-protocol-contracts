@@ -90,7 +90,7 @@ contract BosonPriceDiscovery is ERC165, FundsBase, IBosonPriceDiscovery, BosonEr
 
         if (overchargedAmount > 0) {
             // Return the surplus to caller
-            transferFundsFromProtocol(_exchangeToken, _msgSender, overchargedAmount);
+            transferFundsOut(_exchangeToken, _msgSender, overchargedAmount);
         }
 
         // sometimes tokenId is unknow, so we approve all. Since protocol is trusted, this is ok.
@@ -154,7 +154,7 @@ contract BosonPriceDiscovery is ERC165, FundsBase, IBosonPriceDiscovery, BosonEr
 
         // Send the actual price back to the protocol
         if (actualPrice > 0) {
-            transferFundsFromProtocol(_exchangeToken, payable(bosonProtocolAddress), actualPrice);
+            transferFundsOut(_exchangeToken, payable(bosonProtocolAddress), actualPrice);
         }
     }
 
@@ -199,7 +199,7 @@ contract BosonPriceDiscovery is ERC165, FundsBase, IBosonPriceDiscovery, BosonEr
         // getAndVerifyTokenId(_tokenId);
         // Send the actual price back to the protocol
         if (actualPrice > 0) {
-            transferFundsFromProtocol(_exchangeToken, payable(bosonProtocolAddress), actualPrice);
+            transferFundsOut(_exchangeToken, payable(bosonProtocolAddress), actualPrice);
         }
     }
 
@@ -241,23 +241,9 @@ contract BosonPriceDiscovery is ERC165, FundsBase, IBosonPriceDiscovery, BosonEr
 
             unchecked {
                 // Return the surplus to the sender
-                transferFundsFromProtocol(
-                    address(0),
-                    payable(_msgSender),
-                    thisNativeBalanceAfter - thisNativeBalanceBefore
-                );
+                transferFundsOut(address(0), payable(_msgSender), thisNativeBalanceAfter - thisNativeBalanceBefore);
             }
         }
-    }
-
-    /**
-     * @notice Returns the balance of the protocol for the given token address
-     *
-     * @param _tokenAddress - the address of the token to check the balance for
-     * @return balance - the balance of the protocol for the given token address
-     */
-    function getBalance(address _tokenAddress) internal view returns (uint256) {
-        return _tokenAddress == address(0) ? address(this).balance : IERC20(_tokenAddress).balanceOf(address(this));
     }
 
     /**

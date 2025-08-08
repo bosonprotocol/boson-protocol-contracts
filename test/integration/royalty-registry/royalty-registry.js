@@ -97,7 +97,7 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
   recipients.forEach((recipient) => {
     context(recipient, function () {
       let expectedRecipients, expectedRoyaltyAmounts;
-      let offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit;
+      let offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit;
 
       beforeEach(async function () {
         let bps;
@@ -112,7 +112,7 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
           bps = [100];
         }
 
-        ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+        ({ offer, offerDates, offerDurations, drParams } = await mockOffer());
         offer.quantityAvailable = 10;
         offer.royaltyInfo = [
           new RoyaltyInfo(expectedRecipients[0] == seller.treasury ? [ZeroAddress] : expectedRecipients, bps),
@@ -123,7 +123,7 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
 
         await offerHandler
           .connect(assistant)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+          .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
 
         const beaconProxyAddress = await calculateBosonProxyAddress(await accountHandler.getAddress());
         const voucherAddress = calculateCloneAddress(
@@ -200,7 +200,7 @@ describe("[@skip-on-coverage] Royalty registry integration", function () {
           for (let i = 0; i < 50; i++) {
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+              .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
             offerId++;
 
             // reserve length

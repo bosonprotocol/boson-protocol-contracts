@@ -250,7 +250,7 @@ describe("IBosonVoucher", function () {
   });
 
   context("Tests with an actual protocol offer", async function () {
-    let offer, offerDates, offerDurations, disputeResolverId;
+    let offer, offerDates, offerDurations, drParams;
     let priceDiscoveryOffer;
 
     before(async function () {
@@ -291,12 +291,12 @@ describe("IBosonVoucher", function () {
         .connect(adminDR)
         .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
-      ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+      ({ offer, offerDates, offerDurations, drParams } = await mockOffer());
       offer.quantityAvailable = "1000";
 
       await offerHandler
         .connect(assistant)
-        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+        .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
 
       const amount = BigInt(offer.sellerDeposit) * BigInt(offer.quantityAvailable);
 
@@ -312,7 +312,7 @@ describe("IBosonVoucher", function () {
       priceDiscoveryOffer.buyerCancelPenalty = "0";
       await offerHandler
         .connect(assistant)
-        .createOffer(priceDiscoveryOffer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+        .createOffer(priceDiscoveryOffer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
 
       // Get snapshot id
       snapshotId = await getSnapshot();
@@ -557,7 +557,7 @@ describe("IBosonVoucher", function () {
 
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+            .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
 
           // reserve a range
           start = "1010";
@@ -828,7 +828,7 @@ describe("IBosonVoucher", function () {
 
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+            .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
 
           // reserve a range
           start = "2000";
@@ -891,7 +891,7 @@ describe("IBosonVoucher", function () {
           assistantAddress = await assistant.getAddress();
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+            .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
           await offerHandler.connect(assistant).reserveRange(offerId, length, assistantAddress);
           await bosonVoucher.connect(assistant).preMint(offerId, length);
         });
@@ -982,7 +982,7 @@ describe("IBosonVoucher", function () {
 
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+            .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
           await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, await assistant.getAddress());
           // Mint another 10 vouchers, so that there are 15 in total
           await bosonVoucher.connect(assistant).preMint(offerId, 10);
@@ -1203,7 +1203,7 @@ describe("IBosonVoucher", function () {
 
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+              .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
 
             // reserve length
             await bosonVoucher.connect(protocol).reserveRange(offerId, start, length, await assistant.getAddress());
@@ -1267,7 +1267,7 @@ describe("IBosonVoucher", function () {
 
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+            .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
 
           // reserve length
           await bosonVoucher
@@ -2024,7 +2024,7 @@ describe("IBosonVoucher", function () {
           await accountHandler.connect(admin).addRoyaltyRecipients(seller.id, royaltyRecipientInfoList.toStruct());
 
           // Create an offer with multiple recipients
-          const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+          const { offer, offerDates, offerDurations, drParams } = await mockOffer();
           offer.royaltyInfo = [
             new RoyaltyInfo(
               [rando.address, ZeroAddress, rando2.address],
@@ -2039,7 +2039,7 @@ describe("IBosonVoucher", function () {
               offer.toStruct(),
               offerDates.toStruct(),
               offerDurations.toStruct(),
-              disputeResolverId,
+              drParams,
               agentId,
               offerFeeLimit
             );
@@ -2066,7 +2066,7 @@ describe("IBosonVoucher", function () {
 
         it("for offer without royalty recipients, it returns 0 values", async function () {
           // Create an offer with multiple recipients
-          const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+          const { offer, offerDates, offerDurations, drParams } = await mockOffer();
           offer.royaltyInfo = [new RoyaltyInfo([], [])];
           offer.id = "3"; // Two offers are created in beforeAll
 
@@ -2076,7 +2076,7 @@ describe("IBosonVoucher", function () {
               offer.toStruct(),
               offerDates.toStruct(),
               offerDurations.toStruct(),
-              disputeResolverId,
+              drParams,
               agentId,
               offerFeeLimit
             );
@@ -2100,7 +2100,7 @@ describe("IBosonVoucher", function () {
 
         it("should return a recipient and royalty fee for preminted offers", async function () {
           // Create an offer with multiple recipients
-          const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+          const { offer, offerDates, offerDurations, drParams } = await mockOffer();
           offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
           offer.id = "3"; // Two offers are created in beforeAll
           offer.quantityAvailable = 20;
@@ -2111,7 +2111,7 @@ describe("IBosonVoucher", function () {
               offer.toStruct(),
               offerDates.toStruct(),
               offerDurations.toStruct(),
-              disputeResolverId,
+              drParams,
               agentId,
               offerFeeLimit
             );

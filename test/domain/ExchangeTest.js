@@ -1,4 +1,5 @@
 const { expect } = require("chai");
+const { ZeroAddress } = require("ethers");
 const Exchange = require("../../scripts/domain/Exchange");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 
@@ -9,7 +10,7 @@ describe("Exchange", function () {
   // Suite-wide scope
   let object, promoted, clone, dehydrated, rehydrated, key, value, struct;
   let id, offerId, buyerId;
-  let exchange, finalizedDate, state;
+  let exchange, finalizedDate, state, mutualizerAddress;
 
   beforeEach(async function () {
     // Required exchange constructor params
@@ -18,17 +19,19 @@ describe("Exchange", function () {
     buyerId = "99";
     finalizedDate = "1661447000";
     state = ExchangeState.Completed;
-    exchange = new Exchange(id, offerId, buyerId, finalizedDate, state);
+    mutualizerAddress = ZeroAddress;
+    exchange = new Exchange(id, offerId, buyerId, finalizedDate, state, mutualizerAddress);
   });
 
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated Exchange instance", async function () {
-      exchange = new Exchange(id, offerId, buyerId, finalizedDate, state);
+      exchange = new Exchange(id, offerId, buyerId, finalizedDate, state, mutualizerAddress);
       expect(exchange.idIsValid()).is.true;
       expect(exchange.offerIdIsValid()).is.true;
       expect(exchange.buyerIdIsValid()).is.true;
       expect(exchange.finalizedDateIsValid()).is.true;
       expect(exchange.stateIsValid()).is.true;
+      expect(exchange.mutualizerAddressIsValid()).is.true;
       expect(exchange.isValid()).is.true;
     });
   });
@@ -36,7 +39,7 @@ describe("Exchange", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid exchange, then set fields in tests directly
-      exchange = new Exchange(id, offerId, buyerId, finalizedDate, state);
+      exchange = new Exchange(id, offerId, buyerId, finalizedDate, state, mutualizerAddress);
       expect(exchange.isValid()).is.true;
     });
 
@@ -137,12 +140,34 @@ describe("Exchange", function () {
       expect(exchange.finalizedDateIsValid()).is.true;
       expect(exchange.isValid()).is.true;
     });
+
+    it("Always present, mutualizerAddress must be a valid ethereum address", async function () {
+      // Invalid field value
+      exchange.mutualizerAddress = "notanaddress";
+      expect(exchange.mutualizerAddressIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
+
+      // Invalid field value
+      exchange.mutualizerAddress = "0x";
+      expect(exchange.mutualizerAddressIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
+
+      // Valid field value
+      exchange.mutualizerAddress = ZeroAddress;
+      expect(exchange.mutualizerAddressIsValid()).is.true;
+      expect(exchange.isValid()).is.true;
+
+      // Valid field value
+      exchange.mutualizerAddress = "0x1234567890123456789012345678901234567890";
+      expect(exchange.mutualizerAddressIsValid()).is.true;
+      expect(exchange.isValid()).is.true;
+    });
   });
 
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid exchange, then set fields in tests directly
-      exchange = new Exchange(id, offerId, buyerId, finalizedDate, state);
+      exchange = new Exchange(id, offerId, buyerId, finalizedDate, state, mutualizerAddress);
       expect(exchange.isValid()).is.true;
 
       // Get plain object
@@ -152,10 +177,11 @@ describe("Exchange", function () {
         buyerId,
         finalizedDate,
         state,
+        mutualizerAddress,
       };
 
       // Struct representation
-      struct = [id, offerId, buyerId, finalizedDate, state];
+      struct = [id, offerId, buyerId, finalizedDate, state, mutualizerAddress];
     });
 
     context("👉 Static", async function () {

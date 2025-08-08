@@ -1014,7 +1014,10 @@ describe("ProtocolInitializationHandler", async function () {
         const offerFeeLimit = MaxUint256;
         const { offer, offerDates, offerDurations } = await mockOffer();
         // make absolute zero offer
-        const disputeResolverId = "0";
+        const drParams = {
+          disputeResolverId: "0",
+          mutualizerAddress: ZeroAddress,
+        };
         offer.price = "0";
         offer.sellerDeposit = "0";
         offer.buyerCancelPenalty = "0";
@@ -1030,7 +1033,7 @@ describe("ProtocolInitializationHandler", async function () {
             // Create the offer
             await offerHandler
               .connect(sellerWallet)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+              .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
           }
         }
 

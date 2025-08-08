@@ -116,10 +116,11 @@ async function mockOffer({ refreshModule, legacyOffer } = {}) {
   const offerDates = await mockOfferDates();
   const offerDurations = mockOfferDurations();
   const disputeResolverId = "2";
+  const mutualizerAddress = ZeroAddress;
   const agentFee = "0";
   const offerFees = mockOfferFees(protocolFee, agentFee);
 
-  return { offer, offerDates, offerDurations, offerFees, disputeResolverId };
+  return { offer, offerDates, offerDurations, offerFees, drParams: { disputeResolverId, mutualizerAddress } };
 }
 
 function mockTwin(tokenAddress, tokenType) {
@@ -222,13 +223,14 @@ function mockVoucher({ committedDate, validUntilDate, redeemedDate, expired } = 
   );
 }
 
-function mockExchange({ id, offerId, buyerId, finalizedDate, state } = {}) {
+function mockExchange({ id, offerId, buyerId, finalizedDate, state, mutualizerAddress } = {}) {
   return new Exchange(
     id ?? "1",
     offerId ?? "1",
     buyerId ?? "1",
     finalizedDate ?? "1661447000",
-    state ?? ExchangeState.Committed
+    state ?? ExchangeState.Committed,
+    mutualizerAddress ?? ZeroAddress
   );
 }
 

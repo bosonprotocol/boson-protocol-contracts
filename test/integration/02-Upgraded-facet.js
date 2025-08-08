@@ -33,7 +33,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   // Common vars
   let deployer, assistant, admin, clerk, treasury, rando, buyer, assistantDR, adminDR, clerkDR, treasuryDR;
   let accountHandler, exchangeHandler, offerHandler, fundsHandler, disputeHandler, mockExchangeHandlerUpgrade;
-  let buyerId, offerId, seller, disputeResolverId;
+  let buyerId, offerId, seller, drParams;
   let price, sellerPool;
   let voucherRedeemableFrom;
   let voucherValid;
@@ -184,7 +184,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       ({ offerDates, offerDurations } = mo);
       offer = mo.offer;
       offer.quantityAvailable = "10";
-      disputeResolverId = mo.disputeResolverId;
+      drParams = mo.drParams;
 
       // Check if domains are valid
       expect(offer.isValid()).is.true;
@@ -194,7 +194,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // Create the offer
       await offerHandler
         .connect(assistant)
-        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+        .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
 
       // Set used variables
       price = offer.price;
@@ -415,7 +415,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       buyerEscalationDepositNative = applyPercentage(DRFeeNative, buyerEscalationDepositPercentage);
 
       // Mock offer
-      ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+      ({ offer, offerDates, offerDurations, drParams } = await mockOffer());
       offer.quantityAvailable = "5";
 
       // Check if domains are valid
@@ -426,7 +426,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       // Create the offer
       await offerHandler
         .connect(assistant)
-        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+        .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
 
       // Set used variables
       price = offer.price;
@@ -605,7 +605,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative })
           )
             .to.emit(disputeHandler, "DisputeEscalated")
-            .withArgs(exchangeId, disputeResolverId, await buyer.getAddress());
+            .withArgs(exchangeId, drParams.disputeResolverId, await buyer.getAddress());
         });
       });
 
@@ -706,7 +706,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
         // Mock offer
-        const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+        const { offer, offerDates, offerDurations, drParams } = await mockOffer();
         offer.quantityAvailable = "2";
 
         const offerNative = offer;
@@ -728,10 +728,10 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         await Promise.all([
           offerHandler
             .connect(assistant)
-            .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit),
+            .createOffer(offerNative, offerDates, offerDurations, drParams, agentId, offerFeeLimit),
           offerHandler
             .connect(assistant)
-            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit),
+            .createOffer(offerToken, offerDates, offerDurations, drParams, agentId, offerFeeLimit),
         ]);
 
         // Set used variables

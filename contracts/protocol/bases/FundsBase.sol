@@ -9,6 +9,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { IDRFeeMutualizer } from "../../interfaces/clients/IDRFeeMutualizer.sol";
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
 
 /**
@@ -100,12 +101,12 @@ abstract contract FundsBase is Context {
             if (msg.value != 0) revert BosonErrors.NativeNotAllowed();
 
             // if transfer is in ERC20 token, try to transfer the amount from buyer to the protocol
-            transferFundsToProtocol(_exchangeToken, _value);
+            transferFundsIn(_exchangeToken, _value);
         }
     }
 
     /**
-     * @notice Takes in the exchange id and releases the funds to buyer and seller, depending on the state of the exchange.
+     * @notice Takes in the exchange id and releases the funds to buyer, seller and dispute resolver depending on the state of the exchange.
      * It is called only from finalizeExchange and finalizeDispute.
      *
      * Emits FundsReleased and/or ProtocolFeeCollected event if payoffs are warranted and transaction is successful.
@@ -135,6 +136,7 @@ abstract contract FundsBase is Context {
             // scope to avoid stack too deep errors
             BosonTypes.ExchangeState exchangeState = exchange.state;
             uint256 sellerDeposit = offer.sellerDeposit;
+            bool isEscalated = pe.disputeDates[_exchangeId].escalated != 0;
 
             if (exchangeState == BosonTypes.ExchangeState.Completed) {
                 // COMPLETED
@@ -155,7 +157,7 @@ abstract contract FundsBase is Context {
                 // DISPUTED
                 // determine if buyerEscalationDeposit was encumbered or not
                 // if dispute was escalated, disputeDates.escalated is populated
-                uint256 buyerEscalationDeposit = pe.disputeDates[_exchangeId].escalated > 0
+                uint256 buyerEscalationDeposit = isEscalated
                     ? pe.disputeResolutionTerms[exchange.offerId].buyerEscalationDeposit
                     : 0;
 
@@ -174,10 +176,14 @@ abstract contract FundsBase is Context {
                         payoff.protocol -
                         payoff.agent +
                         buyerEscalationDeposit;
+
+                    // DR is paid if dispute was escalated
+                    payoff.disputeResolver = isEscalated ? pe.disputeResolutionTerms[exchange.offerId].feeAmount : 0;
                 } else if (disputeState == BosonTypes.DisputeState.Refused) {
                     // REFUSED
                     payoff.seller = sellerDeposit;
                     payoff.buyer = lastPrice + buyerEscalationDeposit;
+                    // DR is not paid when dispute is refused
                 } else {
                     // RESOLVED or DECIDED
                     uint256 commonPot = sellerDeposit + buyerEscalationDeposit;
@@ -186,6 +192,11 @@ abstract contract FundsBase is Context {
 
                     payoff.buyer = payoff.buyer + applyPercent(lastPrice, dispute.buyerPercent);
                     payoff.seller = payoff.seller + offerPrice - applyPercent(offerPrice, dispute.buyerPercent);
+
+                    // DR is always paid for escalated disputes (Decided or Resolved with escalation)
+                    if (isEscalated) {
+                        payoff.disputeResolver = pe.disputeResolutionTerms[exchange.offerId].feeAmount;
+                    }
                 }
             }
         }
@@ -217,13 +228,53 @@ abstract contract FundsBase is Context {
         }
 
         if (payoff.protocol > 0) {
-            increaseAvailableFunds(0, exchangeToken, payoff.protocol);
+            increaseAvailableFunds(PROTOCOL_ENTITY_ID, exchangeToken, payoff.protocol);
             emit IBosonFundsBaseEvents.ProtocolFeeCollected(_exchangeId, exchangeToken, payoff.protocol, sender);
         }
         if (payoff.agent > 0) {
             // Get the agent for offer
             uint256 agentId = ProtocolLib.protocolLookups().agentIdByOffer[exchange.offerId];
             increaseAvailableFundsAndEmitEvent(_exchangeId, agentId, exchangeToken, payoff.agent, sender);
+        }
+        BosonTypes.DisputeResolutionTerms storage drTerms = pe.disputeResolutionTerms[offer.id];
+        if (payoff.disputeResolver > 0) {
+            increaseAvailableFundsAndEmitEvent(
+                _exchangeId,
+                drTerms.disputeResolverId,
+                exchangeToken,
+                payoff.disputeResolver,
+                sender
+            );
+        }
+
+        // Return unused DR fee to mutualizer or seller's pool
+        if (drTerms.feeAmount != 0) {
+            uint256 returnAmount = drTerms.feeAmount - payoff.disputeResolver;
+
+            // Use exchange-level mutualizer address (locked at commitment time)
+            if (exchange.mutualizerAddress == address(0)) {
+                if (returnAmount > 0) {
+                    increaseAvailableFundsAndEmitEvent(
+                        _exchangeId,
+                        offer.sellerId,
+                        exchangeToken,
+                        returnAmount,
+                        sender
+                    );
+                }
+            } else {
+                if (exchangeToken == address(0)) {
+                    IDRFeeMutualizer(exchange.mutualizerAddress).returnDRFee{ value: returnAmount }(
+                        _exchangeId,
+                        returnAmount
+                    );
+                } else {
+                    if (returnAmount > 0) {
+                        IERC20(exchangeToken).safeApprove(exchange.mutualizerAddress, returnAmount);
+                    }
+                    IDRFeeMutualizer(exchange.mutualizerAddress).returnDRFee(_exchangeId, returnAmount);
+                }
+            }
         }
     }
 
@@ -389,7 +440,7 @@ abstract contract FundsBase is Context {
      * @param _from - address to transfer funds from
      * @param _amount - amount to be transferred
      */
-    function transferFundsToProtocol(address _tokenAddress, address _from, uint256 _amount) internal {
+    function transferFundsIn(address _tokenAddress, address _from, uint256 _amount) internal {
         if (_amount > 0) {
             // protocol balance before the transfer
             uint256 protocolTokenBalanceBefore = IERC20(_tokenAddress).balanceOf(address(this));
@@ -407,14 +458,14 @@ abstract contract FundsBase is Context {
     }
 
     /**
-     * @notice Same as transferFundsToProtocol(address _tokenAddress, address _from, uint256 _amount),
+     * @notice Same as transferFundsIn(address _tokenAddress, address _from, uint256 _amount),
      * but _from is message sender
      *
      * @param _tokenAddress - address of the token to be transferred
      * @param _amount - amount to be transferred
      */
-    function transferFundsToProtocol(address _tokenAddress, uint256 _amount) internal {
-        transferFundsToProtocol(_tokenAddress, _msgSender(), _amount);
+    function transferFundsIn(address _tokenAddress, uint256 _amount) internal {
+        transferFundsIn(_tokenAddress, _msgSender(), _amount);
     }
 
     /**
@@ -433,17 +484,12 @@ abstract contract FundsBase is Context {
      * @param _to - address of the recipient
      * @param _amount - amount to be transferred
      */
-    function transferFundsFromProtocol(
-        uint256 _entityId,
-        address _tokenAddress,
-        address payable _to,
-        uint256 _amount
-    ) internal {
+    function transferFundsOut(uint256 _entityId, address _tokenAddress, address payable _to, uint256 _amount) internal {
         // first decrease the amount to prevent the reentrancy attack
         decreaseAvailableFunds(_entityId, _tokenAddress, _amount);
 
         // try to transfer the funds
-        transferFundsFromProtocol(_tokenAddress, _to, _amount);
+        transferFundsOut(_tokenAddress, _to, _amount);
 
         // notify the external observers
         emit IBosonFundsBaseEvents.FundsWithdrawn(_entityId, _to, _tokenAddress, _amount, _msgSender());
@@ -463,7 +509,7 @@ abstract contract FundsBase is Context {
      * @param _to - address of the recipient
      * @param _amount - amount to be transferred
      */
-    function transferFundsFromProtocol(address _tokenAddress, address payable _to, uint256 _amount) internal {
+    function transferFundsOut(address _tokenAddress, address payable _to, uint256 _amount) internal {
         // try to transfer the funds
         if (_tokenAddress == address(0)) {
             // transfer native currency
@@ -600,6 +646,16 @@ abstract contract FundsBase is Context {
             sellerRoyalties +
             applyPercent(_secondaryCommit.royaltyAmount, _effectivePriceMultiplier) -
             totalAmount;
+    }
+
+    /**
+     * @notice Returns the balance of the protocol for the given token address
+     *
+     * @param _tokenAddress - the address of the token to check the balance for
+     * @return balance - the balance of the protocol for the given token address
+     */
+    function getBalance(address _tokenAddress) internal view returns (uint256) {
+        return _tokenAddress == address(0) ? address(this).balance : IERC20(_tokenAddress).balanceOf(address(this));
     }
 
     /**

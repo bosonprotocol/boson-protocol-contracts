@@ -73,7 +73,7 @@ describe("IBosonDisputeHandler", function () {
   let block, blockNumber, tx;
   let support, newTime;
   let price, quantityAvailable, resolutionPeriod, disputePeriod, sellerDeposit;
-  let voucherRedeemableFrom, offerDates, offerDurations;
+  let voucherRedeemableFrom, offerDates, offerDurations, drParams;
   let buyerEscalationDepositPercentage;
   let exchangeStruct, voucherStruct, finalizedDate, exchangeId;
   let dispute,
@@ -211,7 +211,7 @@ describe("IBosonDisputeHandler", function () {
       buyerEscalationDepositNative = applyPercentage(DRFeeNative, buyerEscalationDepositPercentage);
 
       // Mock offer
-      ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+      ({ offer, offerDates, offerDurations, drParams } = await mockOffer());
       offer.quantityAvailable = "5";
 
       // Check if domains are valid
@@ -222,7 +222,7 @@ describe("IBosonDisputeHandler", function () {
       // Create the offer
       await offerHandler
         .connect(assistant)
-        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+        .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
 
       // Set used variables
       price = offer.price;
@@ -1798,7 +1798,7 @@ describe("IBosonDisputeHandler", function () {
           DRFeeToken = parseUnits("0.1", "ether").toString();
           await accountHandler
             .connect(adminDR)
-            .addFeesToDisputeResolver(disputeResolverId, [
+            .addFeesToDisputeResolver(drParams.disputeResolverId, [
               new DisputeResolverFee(await mockToken.getAddress(), "MockToken", DRFeeToken),
             ]);
 
@@ -1810,7 +1810,7 @@ describe("IBosonDisputeHandler", function () {
           // create an offer with erc20 exchange token
           await offerHandler
             .connect(assistant)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+            .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
 
           // mint tokens to buyer and approve the protocol
           buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
@@ -1848,7 +1848,7 @@ describe("IBosonDisputeHandler", function () {
 
           await expect(tx)
             .to.emit(disputeHandler, "DisputeEscalated")
-            .withArgs(exchangeId, disputeResolverId, await buyer.getAddress());
+            .withArgs(exchangeId, drParams.disputeResolverId, await buyer.getAddress());
         });
 
         it("Does not emit FundsEncumbered if buyerEscalationDeposit is 0", async function () {
@@ -1925,7 +1925,7 @@ describe("IBosonDisputeHandler", function () {
 
           await expect(tx)
             .to.emit(disputeHandler, "DisputeEscalated")
-            .withArgs(exchangeId, disputeResolverId, await buyer.getAddress());
+            .withArgs(exchangeId, drParams.disputeResolverId, await buyer.getAddress());
 
           // Protocol balance should increase for buyer escalation deposit
           const escrowBalanceAfter = await mockToken.balanceOf(await disputeHandler.getAddress());
@@ -2026,12 +2026,12 @@ describe("IBosonDisputeHandler", function () {
             // Prepare an absolute zero offer
             offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = "0";
             offer.id++;
-            disputeResolverId = "0";
+            drParams.disputeResolverId = "0";
 
             // Create a new offer
             await offerHandler
               .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+              .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
 
             // Commit to offer and put exchange all the way to dispute
             await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id);
@@ -2107,9 +2107,17 @@ describe("IBosonDisputeHandler", function () {
             offer.id++;
 
             // Create a new offer
-            await offerHandler
-              .connect(assistant)
-              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+            await offerHandler.connect(assistant).createOffer(
+              offer,
+              offerDates,
+              offerDurations,
+              {
+                disputeResolverId: disputeResolverId,
+                mutualizerAddress: ZeroAddress,
+              },
+              agentId,
+              offerFeeLimit
+            );
 
             // mint tokens and approve
             buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
