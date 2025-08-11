@@ -105,7 +105,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
     }
 
     /**
-     * @notice Commits to a buyer-createdstatic offer with seller-specific parameters (first step of an exchange).
+     * @notice Commits to a buyer-created static offer with seller-specific parameters (first step of an exchange).
      *
      * Emits a SellerCommitted event if successful.
      * Issues a voucher to the buyer address.
@@ -140,7 +140,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
      * @param _offerId - the id of the offer to commit to
      * @param _sellerParams - the seller-specific parameters (collection index, royalty info, mutualizer address)
      */
-    function commitToOffer(
+    function commitToBuyerOffer(
         address payable _committer,
         uint256 _offerId,
         SellerOfferParams calldata _sellerParams
