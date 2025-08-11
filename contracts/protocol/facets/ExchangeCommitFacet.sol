@@ -51,9 +51,9 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
     }
 
     /**
-     * @notice Commits to a price static offer (first step of an exchange).
+     * @notice Commits to a seller-created price static offer (first step of an exchange).
      *
-     * Emits a BuyerCommitted or SellerCommitted event if successful.
+     * Emits a BuyerCommitted  event if successful.
      * Issues a voucher to the buyer address.
      *
      * Reverts if:
@@ -99,6 +99,85 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
 
             // Make sure group doesn't have a condition. If it does, use commitToConditionalOffer instead.
             if (condition.method != EvaluationMethod.None) revert GroupHasCondition();
+        }
+
+        commitToOfferInternal(_committer, offer, 0, false);
+    }
+
+    /**
+     * @notice Commits to a buyer-createdstatic offer with seller-specific parameters (first step of an exchange).
+     *
+     * Emits a SellerCommitted event if successful.
+     * Issues a voucher to the buyer address.
+     *
+     * Reverts if:
+     * - The exchanges region of protocol is paused
+     * - The buyers region of protocol is paused
+     * - The sellers region of protocol is paused
+     * - OfferId is invalid
+     * - Offer price type is not static
+     * - Offer has been voided
+     * - Offer has expired
+     * - Offer is not yet available for commits
+     * - Offer's quantity available is zero
+     * - Committer address is zero
+     * - Committer is not a seller assistant
+     * - Offer is not buyer-created
+     * - Collection index is invalid for the seller
+     * - Royalty recipients are not on seller's whitelist
+     * - Royalty percentages are below minimum requirements
+     * - Total royalty percentage exceeds maximum allowed
+     * - Offer exchange token is in native token and caller does not send enough
+     * - Offer exchange token is in some ERC20 token and caller also sends native currency
+     * - Contract at token address does not support ERC20 function transferFrom
+     * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - Received ERC20 token amount differs from the expected value
+     * - Seller has less funds available than seller deposit
+     * - Buyer has less funds available than offer price
+     * - Offer belongs to a group with a condition
+     *
+     * @param _committer - the seller's address. The caller can commit on behalf of a seller.
+     * @param _offerId - the id of the offer to commit to
+     * @param _sellerParams - the seller-specific parameters (collection index, royalty info, mutualizer address)
+     */
+    function commitToOffer(
+        address payable _committer,
+        uint256 _offerId,
+        SellerOfferParams calldata _sellerParams
+    ) external payable override exchangesNotPaused buyersNotPaused sellersNotPaused nonReentrant {
+        if (_committer == address(0)) revert InvalidAddress();
+
+        Offer storage offer = getValidOffer(_offerId);
+        if (offer.priceType != PriceType.Static) revert InvalidPriceType();
+        if (offer.creator != OfferCreator.Buyer) revert InvalidOfferCreator();
+
+        (bool sellerExists, uint256 sellerId) = getSellerIdByAssistant(_committer);
+        if (!sellerExists) revert NotAssistant();
+        offer.sellerId = sellerId;
+
+        (bool exists, uint256 groupId) = getGroupIdByOffer(_offerId);
+        if (exists) {
+            Condition storage condition = fetchCondition(groupId);
+            if (condition.method != EvaluationMethod.None) revert GroupHasCondition();
+        }
+
+        {
+            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+            if (_sellerParams.collectionIndex > 0) {
+                if (lookups.additionalCollections[sellerId].length < _sellerParams.collectionIndex) {
+                    revert NoSuchCollection();
+                }
+            }
+
+            validateRoyaltyInfo(lookups, protocolLimits(), sellerId, _sellerParams.royaltyInfo);
+
+            offer.collectionIndex = _sellerParams.collectionIndex;
+            offer.royaltyInfo[0] = _sellerParams.royaltyInfo;
+
+            if (_sellerParams.mutualizerAddress != address(0)) {
+                DisputeResolutionTerms storage disputeTerms = fetchDisputeResolutionTerms(_offerId);
+                disputeTerms.mutualizerAddress = _sellerParams.mutualizerAddress;
+            }
         }
 
         commitToOfferInternal(_committer, offer, 0, false);
@@ -220,49 +299,15 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
             if (exists) revert ExchangeAlreadyExists();
         }
 
-        // Handle different logic based on offer creator
         uint256 buyerId;
-        uint256 sellerId;
 
         if (_offer.creator == OfferCreator.Buyer) {
-            // Buyer-created offer: seller is committing
-            // Validate seller and get seller ID
-            (bool sellerExists, uint256 sellerIdFromCommitter) = getSellerIdByAssistant(_committer);
-            if (!sellerExists) revert NotAssistant();
-            sellerId = sellerIdFromCommitter;
-
-            // Set sellerId in offer (this assigns the seller to the buyer-created offer)
-            _offer.sellerId = sellerId;
-
-            {
-                ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-                RoyaltyRecipientInfo[] storage royaltyRecipients = lookups.royaltyRecipientsBySeller[sellerId];
-
-                address payable[] memory recipients = new address payable[](royaltyRecipients.length);
-                uint256[] memory bps = new uint256[](royaltyRecipients.length);
-
-                for (uint256 i = 0; i < royaltyRecipients.length; i++) {
-                    recipients[i] = royaltyRecipients[i].wallet;
-                    bps[i] = royaltyRecipients[i].minRoyaltyPercentage;
-                }
-
-                RoyaltyInfo memory royaltyInfo = RoyaltyInfo(recipients, bps);
-
-                validateRoyaltyInfo(lookups, protocolLimits(), sellerId, royaltyInfo);
-
-                (, Offer storage storedOffer) = fetchOffer(_offerId);
-                storedOffer.royaltyInfo.push(royaltyInfo);
-            }
-
-            // For buyer-created offers, the buyer is stored in the offer
+            // For buyer-created offers, buyer ID is stored in the offer
             buyerId = _offer.buyerId;
-
             // Encumber seller deposit (seller is committing)
-            encumberFunds(_offerId, sellerId, _offer.sellerDeposit, _isPreminted, _offer.priceType);
+            encumberFunds(_offerId, _offer.sellerId, _offer.sellerDeposit, _isPreminted, _offer.priceType);
         } else {
-            // Seller-created offer: buyer is committing (existing logic)
             buyerId = getValidBuyer(_committer);
-
             // Encumber buyer payment (buyer is committing)
             encumberFunds(_offerId, buyerId, _offer.price, _isPreminted, _offer.priceType);
         }
@@ -345,7 +390,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
         // Notify watchers of state change
         if (_offer.creator == OfferCreator.Buyer) {
             // Buyer-created offer: emit SellerCommitted event
-            emit SellerCommitted(_offerId, sellerId, _exchangeId, exchange, voucher, _msgSender());
+            emit SellerCommitted(_offerId, _offer.sellerId, _exchangeId, exchange, voucher, _msgSender());
         } else {
             // Seller-created offer: emit BuyerCommitted event
             emit BuyerCommitted(_offerId, buyerId, _exchangeId, exchange, voucher, _msgSender());

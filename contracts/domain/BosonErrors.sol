@@ -148,6 +148,8 @@ interface BosonErrors {
     error ExchangeForOfferExists();
     // Buyer-initiated offer cannot have seller-specific fields (sellerId, collectionIndex, royaltyInfo)
     error InvalidBuyerOfferFields();
+    // Seller-initiated offer cannot have buyer-specific fields (buyerId, quantityAvailable)
+    error InvalidSellerOfferFields();
     // Invalid offer creator value specified
     error InvalidOfferCreator();
     // Voucher must have either a fixed expiry or a fixed redeemable period, not both

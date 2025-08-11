@@ -373,4 +373,10 @@ contract BosonTypes {
         uint256 agent;
         uint256 disputeResolver;
     }
+
+    struct SellerOfferParams {
+        uint256 collectionIndex;
+        RoyaltyInfo royaltyInfo;
+        address payable mutualizerAddress;
+    }
 }

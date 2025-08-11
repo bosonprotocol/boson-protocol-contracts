@@ -73,9 +73,18 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
             if (!isAssistant) {
                 revert NotAssistant();
             }
+            if (_offer.buyerId != 0) revert InvalidBuyerOfferFields();
             _offer.sellerId = sellerId;
         } else if (_offer.creator == OfferCreator.Buyer) {
-            if (_offer.sellerId != 0 || _offer.collectionIndex != 0 || _offer.royaltyInfo.length > 0) {
+            if (
+                _offer.sellerId != 0 ||
+                _offer.collectionIndex != 0 ||
+                _offer.royaltyInfo.length != 1 ||
+                _offer.royaltyInfo[0].recipients.length != 0 ||
+                _offer.royaltyInfo[0].bps.length != 0 ||
+                _drParameters.mutualizerAddress != address(0) ||
+                _offer.quantityAvailable != 1
+            ) {
                 revert InvalidBuyerOfferFields();
             }
             uint256 buyerId = getValidBuyer(payable(sender));
@@ -292,17 +301,8 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
             // Store the agent id for the offer
             lookups.agentIdByOffer[_offer.id] = _agentId;
 
-            // Make sure that supplied royalties ok
-            // Operate in a block to avoid "stack too deep" error
-            {
-                // Buyer-created offers can have 0 royalties, seller-created offers must have 1
-                if (_offer.creator == OfferCreator.Buyer) {
-                    if (_offer.royaltyInfo.length != 0) revert InvalidRoyaltyInfo();
-                } else {
-                    if (_offer.royaltyInfo.length != 1) revert InvalidRoyaltyInfo();
-                    validateRoyaltyInfo(lookups, limits, _offer.sellerId, _offer.royaltyInfo[0]);
-                }
-            }
+            if (_offer.royaltyInfo.length != 1) revert InvalidRoyaltyInfo();
+            validateRoyaltyInfo(lookups, limits, _offer.sellerId, _offer.royaltyInfo[0]);
         }
         // Get storage location for offer
 
@@ -322,10 +322,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
         offer.priceType = _offer.priceType;
         offer.creator = _offer.creator;
         offer.buyerId = _offer.buyerId;
-        // Only push royalty info if it exists (seller-created offers)
-        if (_offer.royaltyInfo.length > 0) {
-            offer.royaltyInfo.push(_offer.royaltyInfo[0]);
-        }
+        offer.royaltyInfo.push(_offer.royaltyInfo[0]);
 
         // Get storage location for offer dates
         OfferDates storage offerDates = fetchOfferDates(_offer.id);

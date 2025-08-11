@@ -47,6 +47,46 @@ interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBos
     function commitToOffer(address payable _committer, uint256 _offerId) external payable;
 
     /**
+     * @notice Commits to buyer-created offer with seller-specific parameters.
+     *
+     * Emits a SellerCommitted event if successful.
+     * Issues a voucher to the buyer address.
+     *
+     * Reverts if:
+     * - The exchanges region of protocol is paused
+     * - The buyers region of protocol is paused
+     * - The sellers region of protocol is paused
+     * - OfferId is invalid
+     * - Offer has been voided
+     * - Offer has expired
+     * - Offer is not yet available for commits
+     * - Offer's quantity available is zero
+     * - Committer address is zero
+     * - Committer is not a seller assistant
+     * - Offer is not buyer-created
+     * - Collection index is invalid for the seller
+     * - Royalty recipients are not on seller's whitelist
+     * - Royalty percentages are below minimum requirements
+     * - Total royalty percentage exceeds maximum allowed
+     * - Offer exchange token is in native token and caller does not send enough
+     * - Offer exchange token is in some ERC20 token and caller also sends native currency
+     * - Contract at token address does not support ERC20 function transferFrom
+     * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - Received ERC20 token amount differs from the expected value
+     * - Seller has less funds available than sellerDeposit
+     * - Buyer has less funds available than item price
+     *
+     * @param _committer - the seller's address. The caller can commit on behalf of a seller.
+     * @param _offerId - the id of the offer to commit to
+     * @param _sellerParams - the seller-specific parameters (collection index, royalty info, mutualizer address)
+     */
+    function commitToOffer(
+        address payable _committer,
+        uint256 _offerId,
+        BosonTypes.SellerOfferParams calldata _sellerParams
+    ) external payable;
+
+    /**
      * @notice Commits to an conditional offer (first step of an exchange).
      *
      * Emits a BuyerCommitted event if successful.

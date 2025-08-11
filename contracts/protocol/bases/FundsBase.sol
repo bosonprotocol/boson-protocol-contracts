@@ -60,7 +60,6 @@ abstract contract FundsBase is Context {
         BosonTypes.Offer storage offer = pe.offers[_offerId];
         address exchangeToken = offer.exchangeToken;
 
-        bool isPriceDiscovery = _priceType == BosonTypes.PriceType.Discovery;
         if (!_isPreminted) {
             validateIncomingPayment(exchangeToken, _incomingAmount);
             emit IBosonFundsBaseEvents.FundsEncumbered(_entityId, exchangeToken, _incomingAmount, sender);
@@ -71,6 +70,7 @@ abstract contract FundsBase is Context {
             emit IBosonFundsBaseEvents.FundsEncumbered(offer.buyerId, exchangeToken, offer.price, sender);
         } else {
             uint256 sellerId = offer.sellerId;
+            bool isPriceDiscovery = _priceType == BosonTypes.PriceType.Discovery;
             uint256 sellerFundsEncumbered = offer.sellerDeposit +
                 (_isPreminted && !isPriceDiscovery ? _incomingAmount : 0);
             decreaseAvailableFunds(sellerId, exchangeToken, sellerFundsEncumbered);

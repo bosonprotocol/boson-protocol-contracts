@@ -223,7 +223,7 @@ describe("Buyer-Initiated Exchange", function () {
     buyerCreatedOffer.creator = OfferCreator.Buyer;
     buyerCreatedOffer.buyerId = buyerId;
     buyerCreatedOffer.collectionIndex = "0";
-    buyerCreatedOffer.royaltyInfo = [];
+    buyerCreatedOffer.royaltyInfo = [new RoyaltyInfo([], [])];
 
     offerDatesStruct = offerDates.toStruct();
     offerDurationsStruct = offerDurations.toStruct();
@@ -295,7 +295,9 @@ describe("Buyer-Initiated Exchange", function () {
         expect(storedOfferDomain.buyerId).to.equal(buyerId);
         expect(storedOfferDomain.sellerId).to.equal("0");
         expect(storedOfferDomain.collectionIndex).to.equal("0");
-        expect(storedOfferDomain.royaltyInfo).to.have.length(0);
+        expect(storedOfferDomain.royaltyInfo).to.have.length(1);
+        expect(storedOfferDomain.royaltyInfo[0].recipients).to.have.length(0);
+        expect(storedOfferDomain.royaltyInfo[0].bps).to.have.length(0);
       });
 
       it("should allow multiple buyers to create offers", async function () {
@@ -570,9 +572,19 @@ describe("Buyer-Initiated Exchange", function () {
       it("should emit SellerCommitted event when seller commits to buyer offer", async function () {
         const expectedExchangeId = "1";
 
+        // Create seller parameters struct
+        const sellerParams = {
+          collectionIndex: 0,
+          royaltyInfo: {
+            recipients: [ZeroAddress],
+            bps: [0],
+          },
+          mutualizerAddress: ZeroAddress,
+        };
+
         const tx = await exchangeCommitHandler
           .connect(assistant)
-          .commitToOffer(await assistant.getAddress(), nextOfferId, {
+          .commitToOffer(await assistant.getAddress(), nextOfferId, sellerParams, {
             value: sellerDeposit,
           });
 
@@ -600,9 +612,21 @@ describe("Buyer-Initiated Exchange", function () {
       it("should update state correctly when seller commits to buyer offer", async function () {
         const expectedExchangeId = "1";
 
-        await exchangeCommitHandler.connect(assistant).commitToOffer(await assistant.getAddress(), nextOfferId, {
-          value: sellerDeposit,
-        });
+        // Create seller parameters struct
+        const sellerParams = {
+          collectionIndex: 0,
+          royaltyInfo: {
+            recipients: [ZeroAddress],
+            bps: [0],
+          },
+          mutualizerAddress: ZeroAddress,
+        };
+
+        await exchangeCommitHandler
+          .connect(assistant)
+          .commitToOffer(await assistant.getAddress(), nextOfferId, sellerParams, {
+            value: sellerDeposit,
+          });
 
         const [existsExchange, exchange] = await exchangeHandler.getExchange(expectedExchangeId);
         expect(existsExchange).to.be.true;
@@ -616,9 +640,21 @@ describe("Buyer-Initiated Exchange", function () {
       it("should mint voucher to buyer when seller commits", async function () {
         const expectedExchangeId = "1";
 
-        await exchangeCommitHandler.connect(assistant).commitToOffer(await assistant.getAddress(), nextOfferId, {
-          value: sellerDeposit,
-        });
+        // Create seller parameters struct
+        const sellerParams = {
+          collectionIndex: 0,
+          royaltyInfo: {
+            recipients: [ZeroAddress],
+            bps: [0],
+          },
+          mutualizerAddress: ZeroAddress,
+        };
+
+        await exchangeCommitHandler
+          .connect(assistant)
+          .commitToOffer(await assistant.getAddress(), nextOfferId, sellerParams, {
+            value: sellerDeposit,
+          });
 
         const [existsOffer, updatedOffer] = await offerHandler.getOffer(nextOfferId);
         expect(existsOffer).to.be.true;
@@ -655,14 +691,23 @@ describe("Buyer-Initiated Exchange", function () {
           value: price,
         });
 
+        const sellerParams = {
+          collectionIndex: 0,
+          royaltyInfo: {
+            recipients: [ZeroAddress],
+            bps: [0],
+          },
+          mutualizerAddress: ZeroAddress,
+        };
+
         await expect(
-          exchangeCommitHandler.connect(assistant).commitToOffer(await assistant.getAddress(), "1", {
+          exchangeCommitHandler.connect(assistant).commitToOffer(await assistant.getAddress(), "1", sellerParams, {
             value: sellerDeposit,
           })
         ).to.emit(exchangeCommitHandler, "SellerCommitted");
 
         await expect(
-          exchangeCommitHandler.connect(assistant2).commitToOffer(await assistant2.getAddress(), "2", {
+          exchangeCommitHandler.connect(assistant2).commitToOffer(await assistant2.getAddress(), "2", sellerParams, {
             value: sellerDeposit,
           })
         ).to.emit(exchangeCommitHandler, "SellerCommitted");
@@ -683,10 +728,21 @@ describe("Buyer-Initiated Exchange", function () {
         it("should revert if seller has insufficient deposit funds", async function () {
           const insufficientDeposit = parseUnits("0.1", "ether"); // Less than required
 
+          const sellerParams = {
+            collectionIndex: 0,
+            royaltyInfo: {
+              recipients: [ZeroAddress],
+              bps: [0],
+            },
+            mutualizerAddress: ZeroAddress,
+          };
+
           await expect(
-            exchangeCommitHandler.connect(assistant).commitToOffer(await assistant.getAddress(), nextOfferId, {
-              value: insufficientDeposit,
-            })
+            exchangeCommitHandler
+              .connect(assistant)
+              .commitToOffer(await assistant.getAddress(), nextOfferId, sellerParams, {
+                value: insufficientDeposit,
+              })
           ).to.be.revertedWithCustomError(exchangeCommitHandler, "InsufficientValueReceived");
         });
 
@@ -705,16 +761,34 @@ describe("Buyer-Initiated Exchange", function () {
               offerFeeLimit
             );
 
+          const sellerParams = {
+            collectionIndex: 0,
+            royaltyInfo: {
+              recipients: [ZeroAddress],
+              bps: [0],
+            },
+            mutualizerAddress: ZeroAddress,
+          };
+
           await expect(
-            exchangeCommitHandler.connect(assistant).commitToOffer(await assistant.getAddress(), "2", {
+            exchangeCommitHandler.connect(assistant).commitToOffer(await assistant.getAddress(), "2", sellerParams, {
               value: sellerDeposit,
             })
           ).to.be.revertedWithCustomError(exchangeCommitHandler, "InsufficientAvailableFunds");
         });
 
         it("should revert if non-seller tries to commit to buyer offer", async function () {
+          const sellerParams = {
+            collectionIndex: 0,
+            royaltyInfo: {
+              recipients: [ZeroAddress],
+              bps: [0],
+            },
+            mutualizerAddress: ZeroAddress,
+          };
+
           await expect(
-            exchangeCommitHandler.connect(rando).commitToOffer(await rando.getAddress(), nextOfferId, {
+            exchangeCommitHandler.connect(rando).commitToOffer(await rando.getAddress(), nextOfferId, sellerParams, {
               value: sellerDeposit,
             })
           ).to.be.revertedWithCustomError(exchangeCommitHandler, "NotAssistant");
@@ -768,9 +842,20 @@ describe("Buyer-Initiated Exchange", function () {
         expect(buyerFundsArray).to.have.lengthOf(1);
         expect(buyerFundsArray[0].availableAmount).to.equal(price);
 
-        await exchangeCommitHandler.connect(assistant).commitToOffer(await assistant.getAddress(), nextOfferId, {
-          value: sellerDeposit,
-        });
+        const sellerParams = {
+          collectionIndex: 0,
+          royaltyInfo: {
+            recipients: [ZeroAddress],
+            bps: [0],
+          },
+          mutualizerAddress: ZeroAddress,
+        };
+
+        await exchangeCommitHandler
+          .connect(assistant)
+          .commitToOffer(await assistant.getAddress(), nextOfferId, sellerParams, {
+            value: sellerDeposit,
+          });
 
         // Check funds after commitment
         buyerFundsArray = await fundsHandler.getAllAvailableFunds(buyerId);
@@ -809,7 +894,20 @@ describe("Buyer-Initiated Exchange", function () {
 
         await fundsHandler.connect(buyer1).depositFunds(buyerId, tokenAddress, price);
 
-        await exchangeCommitHandler.connect(assistant).commitToOffer(await assistant.getAddress(), nextOfferId);
+        const sellerParams = {
+          collectionIndex: 0,
+          royaltyInfo: {
+            recipients: [ZeroAddress],
+            bps: [0],
+          },
+          mutualizerAddress: ZeroAddress,
+        };
+
+        await exchangeCommitHandler
+          .connect(assistant)
+          [
+            "commitToOffer(address,uint256,(uint256,(address[],uint256[]),address))"
+          ](await assistant.getAddress(), nextOfferId, sellerParams);
 
         const [existsExchange, exchange] = await exchangeHandler.getExchange("1");
         expect(existsExchange).to.be.true;
@@ -861,20 +959,42 @@ describe("Buyer-Initiated Exchange", function () {
       it("should prevent seller commitment when exchanges region is paused", async function () {
         await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
+        const sellerParams = {
+          collectionIndex: 0,
+          royaltyInfo: {
+            recipients: [ZeroAddress],
+            bps: [0],
+          },
+          mutualizerAddress: ZeroAddress,
+        };
+
         await expect(
-          exchangeCommitHandler.connect(assistant).commitToOffer(await assistant.getAddress(), nextOfferId, {
-            value: buyerCreatedOffer.sellerDeposit,
-          })
+          exchangeCommitHandler
+            .connect(assistant)
+            .commitToOffer(await assistant.getAddress(), nextOfferId, sellerParams, {
+              value: buyerCreatedOffer.sellerDeposit,
+            })
         ).to.be.revertedWithCustomError(exchangeCommitHandler, "RegionPaused");
       });
 
       it("should prevent seller commitment when sellers region is paused", async function () {
         await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
 
+        const sellerParams = {
+          collectionIndex: 0,
+          royaltyInfo: {
+            recipients: [ZeroAddress],
+            bps: [0],
+          },
+          mutualizerAddress: ZeroAddress,
+        };
+
         await expect(
-          exchangeCommitHandler.connect(assistant).commitToOffer(await assistant.getAddress(), nextOfferId, {
-            value: buyerCreatedOffer.sellerDeposit,
-          })
+          exchangeCommitHandler
+            .connect(assistant)
+            .commitToOffer(await assistant.getAddress(), nextOfferId, sellerParams, {
+              value: buyerCreatedOffer.sellerDeposit,
+            })
         ).to.be.revertedWithCustomError(exchangeCommitHandler, "RegionPaused");
       });
     });
@@ -914,9 +1034,11 @@ describe("Buyer-Initiated Exchange", function () {
     });
 
     it("should handle traditional buyer commitment to seller offer", async function () {
-      const tx = await exchangeCommitHandler.connect(buyer1).commitToOffer(await buyer1.getAddress(), "1", {
-        value: sellerCreatedOffer.price,
-      });
+      const tx = await exchangeCommitHandler
+        .connect(buyer1)
+        ["commitToOffer(address,uint256)"](await buyer1.getAddress(), "1", {
+          value: sellerCreatedOffer.price,
+        });
 
       const receipt = await tx.wait();
       const event = getEvent(receipt, exchangeCommitHandler, "BuyerCommitted");
@@ -931,9 +1053,20 @@ describe("Buyer-Initiated Exchange", function () {
     });
 
     it("should handle new seller commitment to buyer offer", async function () {
-      const tx = await exchangeCommitHandler.connect(assistant).commitToOffer(await assistant.getAddress(), "2", {
-        value: buyerCreatedOffer.sellerDeposit,
-      });
+      const sellerParams = {
+        collectionIndex: 0,
+        royaltyInfo: {
+          recipients: [ZeroAddress],
+          bps: [0],
+        },
+        mutualizerAddress: ZeroAddress,
+      };
+
+      const tx = await exchangeCommitHandler
+        .connect(assistant)
+        .commitToOffer(await assistant.getAddress(), "2", sellerParams, {
+          value: buyerCreatedOffer.sellerDeposit,
+        });
 
       // Get the SellerCommitted event from transaction
       const receipt = await tx.wait();
@@ -951,11 +1084,20 @@ describe("Buyer-Initiated Exchange", function () {
 
     it("should maintain separate exchange lifecycles for both flow types", async function () {
       // Commit to both offers
-      await exchangeCommitHandler.connect(buyer1).commitToOffer(await buyer1.getAddress(), "1", {
+      await exchangeCommitHandler.connect(buyer1)["commitToOffer(address,uint256)"](await buyer1.getAddress(), "1", {
         value: sellerCreatedOffer.price,
       });
 
-      await exchangeCommitHandler.connect(assistant).commitToOffer(await assistant.getAddress(), "2", {
+      const sellerParams = {
+        collectionIndex: 0,
+        royaltyInfo: {
+          recipients: [ZeroAddress],
+          bps: [0],
+        },
+        mutualizerAddress: ZeroAddress,
+      };
+
+      await exchangeCommitHandler.connect(assistant).commitToOffer(await assistant.getAddress(), "2", sellerParams, {
         value: buyerCreatedOffer.sellerDeposit,
       });
 
@@ -1000,8 +1142,21 @@ describe("Buyer-Initiated Exchange", function () {
         value: buyerCreatedOffer.price,
       });
 
+      const sellerParams = {
+        collectionIndex: 0,
+        royaltyInfo: {
+          recipients: [ZeroAddress],
+          bps: [0],
+        },
+        mutualizerAddress: ZeroAddress,
+      };
+
       await expect(
-        exchangeCommitHandler.connect(assistant).commitToOffer(await assistant.getAddress(), nextOfferId)
+        exchangeCommitHandler
+          .connect(assistant)
+          [
+            "commitToOffer(address,uint256,(uint256,(address[],uint256[]),address))"
+          ](await assistant.getAddress(), nextOfferId, sellerParams)
       ).to.emit(exchangeCommitHandler, "SellerCommitted");
     });
 
@@ -1022,8 +1177,17 @@ describe("Buyer-Initiated Exchange", function () {
           value: buyerCreatedOffer.price,
         });
 
+        const sellerParams = {
+          collectionIndex: 0,
+          royaltyInfo: {
+            recipients: [ZeroAddress],
+            bps: [0],
+          },
+          mutualizerAddress: ZeroAddress,
+        };
+
         await expect(
-          exchangeCommitHandler.connect(buyer1).commitToOffer(await buyer1.getAddress(), nextOfferId, {
+          exchangeCommitHandler.connect(buyer1).commitToOffer(await buyer1.getAddress(), nextOfferId, sellerParams, {
             value: buyerCreatedOffer.sellerDeposit,
           })
         ).to.be.revertedWithCustomError(exchangeCommitHandler, "NotAssistant");
@@ -1052,11 +1216,24 @@ describe("Buyer-Initiated Exchange", function () {
     it("should set default royalty info when seller commits to buyer offer", async function () {
       const [existsBefore, offerBefore] = await offerHandler.getOffer(nextOfferId);
       expect(existsBefore).to.be.true;
-      expect(offerBefore.royaltyInfo).to.have.length(0);
+      expect(offerBefore.royaltyInfo).to.have.length(1);
+      expect(offerBefore.royaltyInfo[0].recipients).to.have.length(0);
+      expect(offerBefore.royaltyInfo[0].bps).to.have.length(0);
 
-      await exchangeCommitHandler.connect(assistant).commitToOffer(await assistant.getAddress(), nextOfferId, {
-        value: buyerCreatedOffer.sellerDeposit,
-      });
+      const sellerParams = {
+        collectionIndex: 0,
+        royaltyInfo: {
+          recipients: [ZeroAddress],
+          bps: [0],
+        },
+        mutualizerAddress: ZeroAddress,
+      };
+
+      await exchangeCommitHandler
+        .connect(assistant)
+        .commitToOffer(await assistant.getAddress(), nextOfferId, sellerParams, {
+          value: buyerCreatedOffer.sellerDeposit,
+        });
 
       const [existsAfter, offerAfter] = await offerHandler.getOffer(nextOfferId);
       expect(existsAfter).to.be.true;
@@ -1079,7 +1256,7 @@ describe("Buyer-Initiated Exchange", function () {
       buyerCreatedPriceDiscoveryOffer.priceType = PriceType.Discovery;
       buyerCreatedPriceDiscoveryOffer.price = "0";
       buyerCreatedPriceDiscoveryOffer.buyerCancelPenalty = "0";
-      buyerCreatedPriceDiscoveryOffer.quantityAvailable = "10";
+      // Note: quantityAvailable must be 1 for buyer-created offers
 
       await offerHandler
         .connect(buyer1)
