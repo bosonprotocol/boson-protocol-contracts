@@ -61,7 +61,14 @@ describe("IBosonDisputeHandler", function () {
     adminDR,
     clerkDR,
     treasuryDR;
-  let erc165, accountHandler, exchangeHandler, exchangeCommitHandler, offerHandler, fundsHandler, disputeHandler, pauseHandler;
+  let erc165,
+    accountHandler,
+    exchangeHandler,
+    exchangeCommitHandler,
+    offerHandler,
+    fundsHandler,
+    disputeHandler,
+    pauseHandler;
   let buyerId, offer, offerId, seller;
   let block, blockNumber, tx;
   let support, newTime;

@@ -157,7 +157,7 @@ describe("SnapshotGate", function () {
       "AccountHandlerFacet",
       "SellerHandlerFacet",
       "DisputeResolverHandlerFacet",
-      "ExchangeCommitHandlerFacet",
+      "ExchangeCommitFacet",
       "OfferHandlerFacet",
       "GroupHandlerFacet",
       "ProtocolInitializationHandlerFacet",
