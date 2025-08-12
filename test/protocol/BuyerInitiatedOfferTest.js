@@ -4,6 +4,7 @@ const { expect } = require("chai");
 
 const Offer = require("../../scripts/domain/Offer");
 const OfferCreator = require("../../scripts/domain/OfferCreator");
+const PriceType = require("../../scripts/domain/PriceType");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
@@ -397,6 +398,23 @@ describe("Buyer-Initiated Exchange", function () {
 
         it("should revert if buyer specifies royaltyInfo", async function () {
           buyerCreatedOffer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], ["100"])];
+
+          await expect(
+            offerHandler
+              .connect(buyer1)
+              .createOffer(
+                buyerCreatedOffer,
+                offerDates,
+                offerDurations,
+                { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
+                agentId,
+                offerFeeLimit
+              )
+          ).to.be.revertedWithCustomError(offerHandler, "InvalidBuyerOfferFields");
+        });
+
+        it("should revert if buyer specifies Discovery price type", async function () {
+          buyerCreatedOffer.priceType = PriceType.Discovery;
 
           await expect(
             offerHandler

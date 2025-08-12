@@ -26,6 +26,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
      * - sellerId is not 0 when buyer-initiated offer is created
      * - collectionIndex is not 0 when buyer-initiated offer is created
      * - royaltyInfo is not empty when buyer-initiated offer is created
+     * - priceType is not Static when buyer-initiated offer is created
      * - Invalid offer creator value specified (OfferCreator.Seller or OfferCreator.Buyer)
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
@@ -83,7 +84,8 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
                 _offer.royaltyInfo[0].recipients.length != 0 ||
                 _offer.royaltyInfo[0].bps.length != 0 ||
                 _drParameters.mutualizerAddress != address(0) ||
-                _offer.quantityAvailable != 1
+                _offer.quantityAvailable != 1 ||
+                _offer.priceType != PriceType.Static
             ) {
                 revert InvalidBuyerOfferFields();
             }
