@@ -12,7 +12,7 @@ import { IBosonFundsBaseEvents } from "../events/IBosonFundsEvents.sol";
  * @notice Handles exchange commitment and creation within the protocol.
  * This interface contains functions for committing to offers and creating new exchanges.
  *
- * The ERC-165 identifier for this interface is: 0xbddcd180
+ * The ERC-165 identifier for this interface is: 0xa0a0ddd6
  */
 interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBosonFundsBaseEvents {
     /**
