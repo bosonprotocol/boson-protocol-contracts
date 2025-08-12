@@ -92,8 +92,6 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
             uint256 buyerId = getValidBuyer(payable(sender));
             _offer.buyerId = buyerId;
             _offer.quantityAvailable = 1;
-        } else {
-            revert InvalidOfferCreator();
         }
 
         // Get the next offerId and increment the counter

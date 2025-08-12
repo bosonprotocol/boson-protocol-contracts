@@ -427,6 +427,32 @@ describe("IBosonFundsHandler", function () {
         expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
       });
 
+      it("should allow deposit funds for agent entity", async function () {
+        const testAgent = mockAgent(await other.getAddress());
+        testAgent.id = "0";
+        expect(testAgent.isValid()).is.true;
+
+        const createTx = await accountHandler.connect(rando).createAgent(testAgent);
+        const createReceipt = await createTx.wait();
+        const agentCreatedEvent = getEvent(createReceipt, accountHandler, "AgentCreated");
+        const actualAgentId = agentCreatedEvent.agentId;
+
+        const agentDepositAmount = parseUnits("100", "ether");
+        await expect(
+          fundsHandler
+            .connect(other)
+            .depositFunds(actualAgentId, ZeroAddress, agentDepositAmount, { value: agentDepositAmount })
+        )
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(actualAgentId, await other.getAddress(), ZeroAddress, agentDepositAmount);
+
+        const agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(actualAgentId));
+        const expectedAgentFunds = new FundsList([
+          new Funds(ZeroAddress, "Native currency", agentDepositAmount.toString()),
+        ]);
+        expect(agentAvailableFunds).to.eql(expectedAgentFunds);
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The funds region of protocol is paused", async function () {
           // Pause the funds region of the protocol
