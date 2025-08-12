@@ -155,12 +155,6 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
         if (!sellerExists) revert NotAssistant();
         offer.sellerId = sellerId;
 
-        (bool exists, uint256 groupId) = getGroupIdByOffer(_offerId);
-        if (exists) {
-            Condition storage condition = fetchCondition(groupId);
-            if (condition.method != EvaluationMethod.None) revert GroupHasCondition();
-        }
-
         {
             ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
             if (_sellerParams.collectionIndex > 0) {

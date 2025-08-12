@@ -4,9 +4,6 @@ const { expect } = require("chai");
 
 const Offer = require("../../scripts/domain/Offer");
 const OfferCreator = require("../../scripts/domain/OfferCreator");
-const PriceDiscovery = require("../../scripts/domain/PriceDiscovery");
-const Side = require("../../scripts/domain/Side");
-const PriceType = require("../../scripts/domain/PriceType.js");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
@@ -51,14 +48,7 @@ describe("Buyer-Initiated Exchange", function () {
     buyer1,
     buyer2,
     assistant2;
-  let accountHandler,
-    fundsHandler,
-    exchangeHandler,
-    exchangeCommitHandler,
-    offerHandler,
-    configHandler,
-    pauseHandler,
-    priceDiscoveryHandler;
+  let accountHandler, fundsHandler, exchangeHandler, exchangeCommitHandler, offerHandler, pauseHandler;
   let seller, seller2;
   let offer, offerDates, offerDurations, offerFees;
   let buyerCreatedOffer, sellerCreatedOffer;
@@ -74,7 +64,6 @@ describe("Buyer-Initiated Exchange", function () {
   let DRFeeNative, DRFeeToken;
   let sellerAllowList;
   let nextOfferId;
-  let priceDiscoveryContract, bpd, protocolDiamondAddress;
 
   before(async function () {
     [
@@ -101,11 +90,9 @@ describe("Buyer-Initiated Exchange", function () {
       exchangeHandler: "IBosonExchangeHandler",
       exchangeCommitHandler: "IBosonExchangeCommitHandler",
       fundsHandler: "IBosonFundsHandler",
-      configHandler: "IBosonConfigHandler",
       disputeHandler: "IBosonDisputeHandler",
       pauseHandler: "IBosonPauseHandler",
       sequentialCommitHandler: "IBosonSequentialCommitHandler",
-      priceDiscoveryHandler: "IBosonPriceDiscoveryHandler",
     };
 
     [mockToken, bosonToken] = await deployMockTokens(["Foreign20", "BosonToken"]);
@@ -122,26 +109,13 @@ describe("Buyer-Initiated Exchange", function () {
         exchangeHandler,
         exchangeCommitHandler,
         fundsHandler,
-        configHandler,
         pauseHandler,
-        priceDiscoveryHandler,
       },
       protocolConfig: [, , , , buyerEscalationDepositPercentage],
-      diamondAddress: protocolDiamondAddress,
     } = await setupTestEnvironment(contracts, {
       bosonTokenAddress: await bosonToken.getAddress(),
       wethAddress: await weth.getAddress(),
     }));
-
-    const bpdFactory = await getContractFactory("BosonPriceDiscovery");
-    bpd = await bpdFactory.deploy(await weth.getAddress(), protocolDiamondAddress);
-    await bpd.waitForDeployment();
-
-    await configHandler.setPriceDiscoveryAddress(await bpd.getAddress());
-
-    const PriceDiscoveryFactory = await getContractFactory("PriceDiscoveryMock");
-    priceDiscoveryContract = await PriceDiscoveryFactory.deploy();
-    await priceDiscoveryContract.waitForDeployment();
 
     assistant = admin;
     assistantDR = adminDR;
@@ -727,6 +701,32 @@ describe("Buyer-Initiated Exchange", function () {
         expect(offer2.sellerId).to.equal(sellerId2);
       });
 
+      it("should execute mutualizer address assignment when provided in seller params", async function () {
+        const mutualizerAddress = await assistant2.getAddress();
+
+        const sellerParams = {
+          collectionIndex: 0,
+          royaltyInfo: {
+            recipients: [ZeroAddress],
+            bps: [0],
+          },
+          mutualizerAddress: mutualizerAddress,
+        };
+
+        await expect(
+          exchangeCommitHandler
+            .connect(assistant)
+            .commitToBuyerOffer(await assistant.getAddress(), nextOfferId, sellerParams, {
+              value: sellerDeposit,
+            })
+        ).to.emit(exchangeCommitHandler, "SellerCommitted");
+
+        const nextExchangeId = await exchangeHandler.getNextExchangeId();
+        const createdExchangeId = (nextExchangeId - BigInt(1)).toString();
+        const [existsExchange] = await exchangeHandler.getExchange(createdExchangeId);
+        expect(existsExchange).to.be.true;
+      });
+
       context("💔 Revert Reasons", async function () {
         it("should revert if seller has insufficient deposit funds", async function () {
           const insufficientDeposit = parseUnits("0.1", "ether"); // Less than required
@@ -799,6 +799,25 @@ describe("Buyer-Initiated Exchange", function () {
                 value: sellerDeposit,
               })
           ).to.be.revertedWithCustomError(exchangeCommitHandler, "NotAssistant");
+        });
+
+        it("should revert if collection index exceeds seller's additional collections", async function () {
+          const sellerParams = {
+            collectionIndex: 1, // Seller has no additional collections (only default collection 0)
+            royaltyInfo: {
+              recipients: [ZeroAddress],
+              bps: [0],
+            },
+            mutualizerAddress: ZeroAddress,
+          };
+
+          await expect(
+            exchangeCommitHandler
+              .connect(assistant)
+              .commitToBuyerOffer(await assistant.getAddress(), nextOfferId, sellerParams, {
+                value: sellerDeposit,
+              })
+          ).to.be.revertedWithCustomError(exchangeCommitHandler, "NoSuchCollection");
         });
       });
     });
@@ -1250,270 +1269,6 @@ describe("Buyer-Initiated Exchange", function () {
       expect(royaltyInfo.recipients[0]).to.equal(ZeroAddress); // Protocol uses address(0) to represent treasury
       expect(royaltyInfo.bps).to.have.length(1);
       expect(royaltyInfo.bps[0]).to.equal(0);
-    });
-  });
-
-  context("🔍 Price Discovery for Buyer Offers", async function () {
-    let buyerCreatedPriceDiscoveryOffer;
-
-    beforeEach(async function () {
-      buyerCreatedPriceDiscoveryOffer = buyerCreatedOffer.clone();
-      buyerCreatedPriceDiscoveryOffer.priceType = PriceType.Discovery;
-      buyerCreatedPriceDiscoveryOffer.price = "0";
-      buyerCreatedPriceDiscoveryOffer.buyerCancelPenalty = "0";
-      buyerCreatedPriceDiscoveryOffer.exchangeToken = ZeroAddress; // Use native currency for simplicity
-      // Note: quantityAvailable must be 1 for buyer-created offers
-
-      await offerHandler
-        .connect(buyer1)
-        .createOffer(
-          buyerCreatedPriceDiscoveryOffer,
-          offerDates,
-          offerDurations,
-          { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
-          agentId,
-          offerFeeLimit
-        );
-
-      await fundsHandler
-        .connect(assistant)
-        .depositFunds(sellerId, ZeroAddress, buyerCreatedPriceDiscoveryOffer.sellerDeposit, {
-          value: buyerCreatedPriceDiscoveryOffer.sellerDeposit,
-        });
-    });
-
-    context("👉 Seller Commits to Buyer Price Discovery Offer", async function () {
-      let priceDiscovery, price;
-
-      beforeEach(async function () {
-        price = parseUnits("0.1", "ether");
-        const priceDiscoveryData = "0xdeadbeef";
-        const priceDiscoveryContractAddress = await bpd.getAddress();
-
-        priceDiscovery = new PriceDiscovery(
-          price,
-          Side.Ask,
-          priceDiscoveryContractAddress,
-          priceDiscoveryContractAddress,
-          priceDiscoveryData
-        );
-      });
-
-      context("✅ Happy Path", async function () {
-        it("should successfully call commitToBuyerPriceDiscoveryOffer function", async function () {
-          // Simplified test to just verify the function exists and can be called
-          const sellerParams = {
-            collectionIndex: 0,
-            royaltyInfo: {
-              recipients: [ZeroAddress],
-              bps: [0],
-            },
-            mutualizerAddress: ZeroAddress,
-          };
-
-          // Just verify the function can be called without reverting due to missing function
-          try {
-            await priceDiscoveryHandler
-              .connect(assistant)
-              .commitToBuyerPriceDiscoveryOffer(
-                await assistant.getAddress(),
-                nextOfferId,
-                priceDiscovery,
-                sellerParams
-              );
-            // If we get here, the function exists and was called
-            expect(true).to.be.true;
-          } catch (error) {
-            // Accept price discovery related errors as the function is working
-            if (
-              error.message.includes("InvalidPriceDiscovery") ||
-              error.message.includes("SafeERC20") ||
-              error.message.includes("low-level call failed")
-            ) {
-              expect(true).to.be.true; // Function exists and basic validation passed
-            } else {
-              throw error; // Re-throw if it's a different error
-            }
-          }
-        });
-      });
-
-      context("💔 Revert Reasons", async function () {
-        it("should revert if non-seller tries to commit to buyer price discovery offer", async function () {
-          const sellerParams = {
-            collectionIndex: 0,
-            royaltyInfo: {
-              recipients: [ZeroAddress],
-              bps: [0],
-            },
-            mutualizerAddress: ZeroAddress,
-          };
-
-          await expect(
-            priceDiscoveryHandler
-              .connect(rando)
-              .commitToBuyerPriceDiscoveryOffer(await rando.getAddress(), nextOfferId, priceDiscovery, sellerParams)
-          ).to.be.revertedWithCustomError(priceDiscoveryHandler, "NotAssistant");
-        });
-
-        it("should revert if offer is not buyer-created", async function () {
-          // Create a seller-created price discovery offer
-          const { offer: sellerCreatedOffer } = await mockOffer();
-          sellerCreatedOffer.sellerId = sellerId;
-          sellerCreatedOffer.priceType = PriceType.Discovery;
-          sellerCreatedOffer.price = "0";
-          sellerCreatedOffer.buyerCancelPenalty = "0";
-          sellerCreatedOffer.exchangeToken = ZeroAddress;
-
-          await offerHandler
-            .connect(assistant)
-            .createOffer(
-              sellerCreatedOffer,
-              offerDates,
-              offerDurations,
-              { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
-              agentId,
-              offerFeeLimit
-            );
-
-          const sellerOfferId = (await offerHandler.getNextOfferId()) - BigInt(1);
-
-          const sellerParams = {
-            collectionIndex: 0,
-            royaltyInfo: {
-              recipients: [ZeroAddress],
-              bps: [0],
-            },
-            mutualizerAddress: ZeroAddress,
-          };
-
-          await expect(
-            priceDiscoveryHandler
-              .connect(assistant)
-              .commitToBuyerPriceDiscoveryOffer(
-                await assistant.getAddress(),
-                sellerOfferId,
-                priceDiscovery,
-                sellerParams
-              )
-          ).to.be.revertedWithCustomError(priceDiscoveryHandler, "InvalidOfferCreator");
-        });
-
-        it("should revert if offer is not price discovery type", async function () {
-          // Create a buyer-created static offer
-          const buyerStaticOffer = buyerCreatedOffer.clone();
-          buyerStaticOffer.priceType = PriceType.Static;
-          buyerStaticOffer.price = parseUnits("1", "ether").toString();
-          buyerStaticOffer.exchangeToken = ZeroAddress;
-
-          await offerHandler
-            .connect(buyer1)
-            .createOffer(
-              buyerStaticOffer,
-              offerDates,
-              offerDurations,
-              { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
-              agentId,
-              offerFeeLimit
-            );
-
-          const staticOfferId = (await offerHandler.getNextOfferId()) - BigInt(1);
-
-          const sellerParams = {
-            collectionIndex: 0,
-            royaltyInfo: {
-              recipients: [ZeroAddress],
-              bps: [0],
-            },
-            mutualizerAddress: ZeroAddress,
-          };
-
-          await expect(
-            priceDiscoveryHandler
-              .connect(assistant)
-              .commitToBuyerPriceDiscoveryOffer(
-                await assistant.getAddress(),
-                staticOfferId,
-                priceDiscovery,
-                sellerParams
-              )
-          ).to.be.revertedWithCustomError(priceDiscoveryHandler, "InvalidPriceType");
-        });
-
-        it("should revert if collection index is invalid", async function () {
-          const sellerParams = {
-            collectionIndex: 999, // Invalid collection index
-            royaltyInfo: {
-              recipients: [ZeroAddress],
-              bps: [0],
-            },
-            mutualizerAddress: ZeroAddress,
-          };
-
-          await expect(
-            priceDiscoveryHandler
-              .connect(assistant)
-              .commitToBuyerPriceDiscoveryOffer(await assistant.getAddress(), nextOfferId, priceDiscovery, sellerParams)
-          ).to.be.revertedWithCustomError(priceDiscoveryHandler, "NoSuchCollection");
-        });
-
-        it("should revert if buyers region is paused", async function () {
-          await pauseHandler.connect(pauser).pause([PausableRegion.Buyers]);
-
-          const sellerParams = {
-            collectionIndex: 0,
-            royaltyInfo: {
-              recipients: [ZeroAddress],
-              bps: [0],
-            },
-            mutualizerAddress: ZeroAddress,
-          };
-
-          await expect(
-            priceDiscoveryHandler
-              .connect(assistant)
-              .commitToBuyerPriceDiscoveryOffer(await assistant.getAddress(), nextOfferId, priceDiscovery, sellerParams)
-          ).to.be.revertedWithCustomError(priceDiscoveryHandler, "RegionPaused");
-        });
-
-        it("should revert if sellers region is paused", async function () {
-          await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
-
-          const sellerParams = {
-            collectionIndex: 0,
-            royaltyInfo: {
-              recipients: [ZeroAddress],
-              bps: [0],
-            },
-            mutualizerAddress: ZeroAddress,
-          };
-
-          await expect(
-            priceDiscoveryHandler
-              .connect(assistant)
-              .commitToBuyerPriceDiscoveryOffer(await assistant.getAddress(), nextOfferId, priceDiscovery, sellerParams)
-          ).to.be.revertedWithCustomError(priceDiscoveryHandler, "RegionPaused");
-        });
-
-        it("should revert if exchanges region is paused", async function () {
-          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
-
-          const sellerParams = {
-            collectionIndex: 0,
-            royaltyInfo: {
-              recipients: [ZeroAddress],
-              bps: [0],
-            },
-            mutualizerAddress: ZeroAddress,
-          };
-
-          await expect(
-            priceDiscoveryHandler
-              .connect(assistant)
-              .commitToBuyerPriceDiscoveryOffer(await assistant.getAddress(), nextOfferId, priceDiscovery, sellerParams)
-          ).to.be.revertedWithCustomError(priceDiscoveryHandler, "RegionPaused");
-        });
-      });
     });
   });
 });
