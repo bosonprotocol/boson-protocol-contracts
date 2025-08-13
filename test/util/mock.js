@@ -94,12 +94,12 @@ async function mockOffer({ refreshModule, legacyOffer } = {}) {
       quantityAvailable,
       exchangeToken,
       priceType,
+      creator,
       metadataUri,
       metadataHash,
       voided,
       collectionIndex,
       royaltyInfo,
-      creator,
       buyerId
     );
   } else {
@@ -112,12 +112,12 @@ async function mockOffer({ refreshModule, legacyOffer } = {}) {
       quantityAvailable,
       exchangeToken,
       priceType,
+      creator,
       metadataUri,
       metadataHash,
       voided,
       collectionIndex,
       royaltyInfo,
-      creator,
       buyerId
     );
   }

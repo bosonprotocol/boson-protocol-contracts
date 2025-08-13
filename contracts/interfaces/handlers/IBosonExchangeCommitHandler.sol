@@ -12,13 +12,13 @@ import { IBosonFundsBaseEvents } from "../events/IBosonFundsEvents.sol";
  * @notice Handles exchange commitment and creation within the protocol.
  * This interface contains functions for committing to offers and creating new exchanges.
  *
- * The ERC-165 identifier for this interface is: 0xa0a0ddd6
+ * The ERC-165 identifier for this interface is: 0xcdafde08
  */
 interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBosonFundsBaseEvents {
     /**
      * @notice Commits to a static offer (first step of an exchange).
      *
-     * Emits a BuyerCommitted or SellerCommitted event if successful.
+     * Emits a BuyerCommitted event if successful.
      * Issues a voucher to the buyer address.
      *
      * Reverts if:
@@ -30,8 +30,8 @@ interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBos
      * - Offer has expired
      * - Offer is not yet available for commits
      * - Offer's quantity available is zero
-     * - Committer address is zero
-     * - Committer account is inactive
+     * - Buyer address is zero
+     * - Buyer account is inactive
      * - Buyer is token-gated (conditional commit requirements not met or already used)
      * - Offer exchange token is in native token and caller does not send enough
      * - Offer exchange token is in some ERC20 token and caller also sends native currency
@@ -41,14 +41,15 @@ interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBos
      * - Seller has less funds available than sellerDeposit if offer was created by the seller
      * - Buyer has less funds available than price if offer was created by the buyer
      *
-     * @param _committer - the seller's or the buyer's address. The caller can commit on behalf of a buyer or a seller.
+     * @param _buyer - the buyer's address.
      * @param _offerId - the id of the offer to commit to
      */
-    function commitToOffer(address payable _committer, uint256 _offerId) external payable;
+    function commitToOffer(address payable _buyer, uint256 _offerId) external payable;
 
     /**
      * @notice Commits to buyer-created offer with seller-specific parameters.
      *
+     * Emits a BuyerInitiatedOfferSetSellerParams event if successful.
      * Emits a SellerCommitted event if successful.
      * Issues a voucher to the buyer address.
      *
@@ -61,8 +62,7 @@ interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBos
      * - Offer has expired
      * - Offer is not yet available for commits
      * - Offer's quantity available is zero
-     * - Committer address is zero
-     * - Committer is not a seller assistant
+     * - Msg.sender is not a seller assistant or not valid seller
      * - Offer is not buyer-created
      * - Collection index is invalid for the seller
      * - Royalty recipients are not on seller's whitelist
@@ -76,15 +76,10 @@ interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBos
      * - Seller has less funds available than sellerDeposit
      * - Buyer has less funds available than item price
      *
-     * @param _committer - the seller's address. The caller can commit on behalf of a seller.
      * @param _offerId - the id of the offer to commit to
      * @param _sellerParams - the seller-specific parameters (collection index, royalty info, mutualizer address)
      */
-    function commitToBuyerOffer(
-        address payable _committer,
-        uint256 _offerId,
-        BosonTypes.SellerOfferParams calldata _sellerParams
-    ) external payable;
+    function commitToBuyerOffer(uint256 _offerId, BosonTypes.SellerOfferParams calldata _sellerParams) external payable;
 
     /**
      * @notice Commits to an conditional offer (first step of an exchange).

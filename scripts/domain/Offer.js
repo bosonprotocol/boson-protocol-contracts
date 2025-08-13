@@ -25,12 +25,12 @@ class Offer {
             uint256 quantityAvailable;
             address exchangeToken;
             PriceType priceType;
+            OfferCreator creator;
             string metadataUri;
             string metadataHash;
             bool voided;
             uint256 collectionIndex;            
             RoyaltyInfo[] royaltyInfo;
-            OfferCreator creator;
             uint256 buyerId;
         }
     */
@@ -44,12 +44,12 @@ class Offer {
     quantityAvailable,
     exchangeToken,
     priceType,
+    creator,
     metadataUri,
     metadataHash,
     voided,
     collectionIndex,
     royaltyInfo,
-    creator,
     buyerId
   ) {
     this.id = id;
@@ -60,12 +60,12 @@ class Offer {
     this.quantityAvailable = quantityAvailable;
     this.exchangeToken = exchangeToken;
     this.priceType = priceType;
+    this.creator = creator;
     this.metadataUri = metadataUri;
     this.metadataHash = metadataHash;
     this.voided = voided;
     this.collectionIndex = collectionIndex;
     this.royaltyInfo = royaltyInfo;
-    this.creator = creator;
     this.buyerId = buyerId;
   }
 
@@ -84,12 +84,12 @@ class Offer {
       quantityAvailable,
       exchangeToken,
       priceType,
+      creator,
       metadataUri,
       metadataHash,
       voided,
       collectionIndex,
       royaltyInfo,
-      creator,
       buyerId,
     } = o;
 
@@ -102,12 +102,12 @@ class Offer {
       quantityAvailable,
       exchangeToken,
       priceType,
+      creator,
       metadataUri,
       metadataHash,
       voided,
       collectionIndex,
       (royaltyInfo || []).map((ri) => RoyaltyInfo.fromObject(ri)),
-      creator,
       buyerId
     );
   }
@@ -126,12 +126,12 @@ class Offer {
       quantityAvailable,
       exchangeToken,
       priceType,
+      creator,
       metadataUri,
       metadataHash,
       voided,
       collectionIndex,
       royaltyInfo,
-      creator,
       buyerId;
 
     // destructure struct
@@ -144,12 +144,12 @@ class Offer {
       quantityAvailable,
       exchangeToken,
       priceType,
+      creator,
       metadataUri,
       metadataHash,
       voided,
       collectionIndex,
       royaltyInfo,
-      creator,
       buyerId,
     ] = struct;
     if (!collectionIndex) {
@@ -171,12 +171,12 @@ class Offer {
       quantityAvailable: quantityAvailable.toString(),
       exchangeToken,
       priceType: Number(priceType),
+      creator: Number(creator),
       metadataUri,
       metadataHash,
       voided,
       collectionIndex: collectionIndex.toString(),
       royaltyInfo: (royaltyInfo || []).map((ri) => RoyaltyInfo.fromStruct(ri)),
-      creator: Number(creator),
       buyerId: buyerId.toString(),
     });
   }
@@ -211,12 +211,12 @@ class Offer {
       this.quantityAvailable,
       this.exchangeToken,
       this.priceType,
+      this.creator,
       this.metadataUri,
       this.metadataHash,
       this.voided,
       this.collectionIndex,
       new RoyaltyInfoList(this.royaltyInfo).toStruct(),
-      this.creator,
       this.buyerId,
     ];
   }
@@ -386,12 +386,12 @@ class Offer {
       this.quantityAvailableIsValid() &&
       this.exchangeTokenIsValid() &&
       this.priceTypeIsValid() &&
+      this.creatorIsValid() &&
       this.metadataUriIsValid() &&
       this.metadataHashIsValid() &&
       this.voidedIsValid() &&
       this.collectionIndexIsValid() &&
       this.royaltyInfoIsValid() &&
-      this.creatorIsValid() &&
       this.buyerIdIsValid()
     );
   }

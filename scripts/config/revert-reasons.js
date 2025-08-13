@@ -70,6 +70,7 @@ exports.RevertReasons = {
   // Account-related
   MUST_BE_ACTIVE: "MustBeActive",
   NO_SUCH_SELLER: "NoSuchSeller",
+  NO_SUCH_ENTITY: "NoSuchEntity",
   SELLER_ADDRESS_MUST_BE_UNIQUE: "SellerAddressMustBeUnique",
   BUYER_ADDRESS_MUST_BE_UNIQUE: "BuyerAddressMustBeUnique",
   DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE: "DisputeResolverAddressMustBeUnique",

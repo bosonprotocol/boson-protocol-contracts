@@ -167,12 +167,12 @@ contract BosonTypes {
         uint256 quantityAvailable;
         address exchangeToken;
         PriceType priceType;
+        OfferCreator creator;
         string metadataUri;
         string metadataHash;
         bool voided;
         uint256 collectionIndex;
         RoyaltyInfo[] royaltyInfo;
-        OfferCreator creator;
         uint256 buyerId; // For buyer-created offers, stores the buyer who created the offer
     }
 

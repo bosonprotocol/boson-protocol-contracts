@@ -84,6 +84,8 @@ interface BosonErrors {
     error NoSuchDisputeResolver();
     // Agent does not exist
     error NoSuchAgent();
+    // Entity does not exist
+    error NoSuchEntity();
     // Buyer is involved in an non-finalized exchange
     error WalletOwnsVouchers();
     // Escalation period is not greater than zero or is more than the max allowed

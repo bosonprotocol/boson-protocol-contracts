@@ -23,14 +23,14 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
     }
 
     /**
-     * @notice Receives funds from the caller, maps funds to the entity id and stores them so they can be used during the commitToOffer.
+     * @notice Receives funds from the caller , maps funds to the entity id and stores them so they can be used during the commitToOffer.
      *
      * Emits FundsDeposited event if successful.
      *
      * Reverts if:
      * - The funds region of protocol is paused
      * - Amount to deposit is zero
-     * - Entity id does not exist
+     * - Entity id is neither a seller nor a buyer
      * - It receives some native currency (e.g. ETH), but token address is not zero
      * - It receives some native currency (e.g. ETH), and the amount does not match msg.value
      * - It receives no native currency, but token address is zero
@@ -49,29 +49,11 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
     ) external payable override fundsNotPaused nonReentrant {
         if (_amount == 0) revert ZeroDepositNotAllowed();
 
-        // Check if entity exists - could be seller, buyer, agent, etc.
-        bool entityExists = false;
-
         // First check if entity is a seller
         (bool sellerExists, , ) = fetchSeller(_entityId);
-        if (sellerExists) {
-            entityExists = true;
-        } else {
-            // Check if entity is a buyer
-            (bool buyerExists, ) = fetchBuyer(_entityId);
-            if (buyerExists) {
-                entityExists = true;
-            } else {
-                // Check if entity is an agent
-                (bool agentExists, ) = fetchAgent(_entityId);
-                if (agentExists) {
-                    entityExists = true;
-                }
-            }
-        }
+        (bool buyerExists, ) = fetchBuyer(_entityId);
 
-        // Entity must exist
-        if (!entityExists) revert NoSuchSeller(); // Keep existing error for backward compatibility
+        if (!sellerExists && !buyerExists) revert NoSuchEntity();
 
         if (msg.value != 0) {
             // Receiving native currency

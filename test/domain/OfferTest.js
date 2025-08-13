@@ -67,12 +67,12 @@ describe("Offer", function () {
         quantityAvailable,
         exchangeToken,
         priceType,
+        creator,
         metadataUri,
         metadataHash,
         voided,
         collectionIndex,
         royaltyInfo,
-        creator,
         buyerId
       );
       expect(offer.idIsValid()).is.true;
@@ -106,12 +106,12 @@ describe("Offer", function () {
         quantityAvailable,
         exchangeToken,
         priceType,
+        creator,
         metadataUri,
         metadataHash,
         voided,
         collectionIndex,
         royaltyInfo,
-        creator,
         buyerId
       );
       expect(offer.isValid()).is.true;
@@ -433,12 +433,12 @@ describe("Offer", function () {
         quantityAvailable,
         exchangeToken,
         priceType,
+        creator,
         metadataUri,
         metadataHash,
         voided,
         collectionIndex,
         royaltyInfo,
-        creator,
         buyerId
       );
       expect(offer.isValid()).is.true;
@@ -487,12 +487,12 @@ describe("Offer", function () {
           offer.quantityAvailable,
           offer.exchangeToken,
           offer.priceType,
+          offer.creator,
           offer.metadataUri,
           offer.metadataHash,
           offer.voided,
           offer.collectionIndex,
           royaltyInfo.map((ri) => ri.toStruct()),
-          offer.creator,
           offer.buyerId,
         ];
 

@@ -77,7 +77,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     offerHandler,
     bundleHandler,
     exchangeHandler,
-    exchangeCommitHandler,
     twinHandler,
     disputeHandler,
     groupHandler,
@@ -224,7 +223,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         orchestrationHandler: "IBosonOrchestrationHandler",
         fundsHandler: "IBosonFundsHandler",
         exchangeHandler: "IBosonExchangeHandler",
-        exchangeCommitHandler: "IBosonExchangeCommitHandler",
       };
 
       contractsAfter = { ...contractsBefore };
@@ -242,7 +240,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         orchestrationHandler,
         fundsHandler,
         exchangeHandler,
-        exchangeCommitHandler,
       } = contractsAfter);
 
       getFunctionHashesClosure = getStateModifyingFunctionsHashes(
@@ -457,8 +454,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           const walletSet = wallets.slice(0, exchangesCount);
 
           for (let i = 0; i < exchangesCount; i++) {
-            const tx = await exchangeCommitHandler.connect(walletSet[i]).commitToOffer(walletSet[i].address, offerId);
-            const { exchangeId } = getEvent(await tx.wait(), exchangeCommitHandler, "BuyerCommitted");
+            const tx = await exchangeHandler.connect(walletSet[i]).commitToOffer(walletSet[i].address, offerId);
+            const { exchangeId } = getEvent(await tx.wait(), exchangeHandler, "BuyerCommitted");
             await exchangeHandler.connect(walletSet[i]).redeemVoucher(exchangeId);
           }
 
@@ -695,8 +692,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
             walletSet.map(async (wallet) => {
               const walletAddress = await wallet.getAddress();
               await provider.send("hardhat_setBalance", [walletAddress, toHexString(parseEther("10"))]);
-              const tx = await exchangeCommitHandler.connect(wallet).commitToOffer(walletAddress, offerId);
-              const { exchangeId } = getEvent(await tx.wait(), exchangeCommitHandler, "BuyerCommitted");
+              const tx = await exchangeHandler.connect(wallet).commitToOffer(walletAddress, offerId);
+              const { exchangeId } = getEvent(await tx.wait(), exchangeHandler, "BuyerCommitted");
               await exchangeHandler.connect(wallet).redeemVoucher(exchangeId);
               return disputeHandler.connect(wallet).raiseDispute(exchangeId);
             })
@@ -1334,7 +1331,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
               await mockToken.mint(buyer.address, offer.price);
             }
             // Commit to offer
-            await exchangeCommitHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: msgValue });
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: msgValue });
 
             await setNextBlockTimestamp(Number(offerDates.voucherRedeemableFrom));
           });
@@ -1418,7 +1415,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
             // Commit to offer
             const exchangeId = await exchangeHandler.getNextExchangeId();
-            await exchangeCommitHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: msgValue });
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: msgValue });
 
             // Redeem the voucher
             const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId, { gasLimit: 1000000 }); // limit gas to speed up test
@@ -1464,8 +1461,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           await setNextBlockTimestamp(Number(offerDates.validUntil));
 
           // Commit to offer, retrieving the event
-          await expect(exchangeCommitHandler.connect(buyer).commitToOffer(buyer.address, offer.id)).to.emit(
-            exchangeCommitHandler,
+          await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id)).to.emit(
+            exchangeHandler,
             "BuyerCommitted"
           );
         });

@@ -28,20 +28,6 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
     using Address for address;
     using Address for address payable;
 
-    uint256 private immutable EXCHANGE_ID_2_2_0; // solhint-disable-line
-
-    /**
-     * @notice After v2.2.0, token ids are derived from offerId and exchangeId.
-     * EXCHANGE_ID_2_2_0 is the first exchange id to use for 2.2.0.
-     * Set EXCHANGE_ID_2_2_0 in the constructor.
-     *
-     * @param _firstExchangeId2_2_0 - the first exchange id to use for 2.2.0
-     */
-    //solhint-disable-next-line
-    constructor(uint256 _firstExchangeId2_2_0) {
-        EXCHANGE_ID_2_2_0 = _firstExchangeId2_2_0;
-    }
-
     /**
      * @notice Initializes facet.
      * This function is callable only once.
@@ -107,6 +93,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
     /**
      * @notice Commits to a buyer-created static offer with seller-specific parameters (first step of an exchange).
      *
+     * Emits a BuyerInitiatedOfferSetSellerParams event if successful.
      * Emits a SellerCommitted event if successful.
      * Issues a voucher to the buyer address.
      *
@@ -136,22 +123,20 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
      * - Buyer has less funds available than offer price
      * - Offer belongs to a group with a condition
      *
-     * @param _committer - the seller's address. The caller can commit on behalf of a seller.
      * @param _offerId - the id of the offer to commit to
      * @param _sellerParams - the seller-specific parameters (collection index, royalty info, mutualizer address)
      */
     function commitToBuyerOffer(
-        address payable _committer,
         uint256 _offerId,
         SellerOfferParams calldata _sellerParams
     ) external payable override exchangesNotPaused buyersNotPaused sellersNotPaused nonReentrant {
-        if (_committer == address(0)) revert InvalidAddress();
+        address committer = _msgSender();
 
         Offer storage offer = getValidOffer(_offerId);
         if (offer.priceType != PriceType.Static) revert InvalidPriceType();
         if (offer.creator != OfferCreator.Buyer) revert InvalidOfferCreator();
 
-        (bool sellerExists, uint256 sellerId) = getSellerIdByAssistant(_committer);
+        (bool sellerExists, uint256 sellerId) = getSellerIdByAssistant(committer);
         if (!sellerExists) revert NotAssistant();
         offer.sellerId = sellerId;
 
@@ -161,20 +146,22 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
                 if (lookups.additionalCollections[sellerId].length < _sellerParams.collectionIndex) {
                     revert NoSuchCollection();
                 }
+                offer.collectionIndex = _sellerParams.collectionIndex;
             }
 
             validateRoyaltyInfo(lookups, protocolLimits(), sellerId, _sellerParams.royaltyInfo);
 
-            offer.collectionIndex = _sellerParams.collectionIndex;
             offer.royaltyInfo[0] = _sellerParams.royaltyInfo;
 
             if (_sellerParams.mutualizerAddress != address(0)) {
                 DisputeResolutionTerms storage disputeTerms = fetchDisputeResolutionTerms(_offerId);
                 disputeTerms.mutualizerAddress = _sellerParams.mutualizerAddress;
             }
+
+            emit BuyerInitiatedOfferSetSellerParams(_offerId, sellerId, _sellerParams, committer);
         }
 
-        commitToOfferInternal(_committer, offer, 0, false);
+        commitToOfferInternal(payable(committer), offer, 0, false);
     }
 
     /**
@@ -520,7 +507,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
     }
 
     /**
-     * @notice Tells if buyer is elligible to commit to conditional
+     * @notice Tells if buyer is elligible to commit to conditional offer
      * Returns the eligibility status, the number of used commits and the maximal number of commits to the conditional offer.
      *
      * Unconditional offers do not have maximal number of commits, so the returned value will always be 0.
