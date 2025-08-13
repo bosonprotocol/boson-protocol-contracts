@@ -295,7 +295,7 @@ describe("IBosonOfferHandler", function () {
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
-            offer.sellerId,
+            offer.creatorId,
             compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
@@ -370,7 +370,7 @@ describe("IBosonOfferHandler", function () {
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
-            offer.sellerId,
+            offer.creatorId,
             compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
@@ -391,7 +391,7 @@ describe("IBosonOfferHandler", function () {
 
       it("should ignore any provided seller and assign seller id of msg.sender", async function () {
         // set some other sellerId
-        offer.sellerId = "123";
+        offer.creatorId = "123";
 
         // Create an offer, testing for the event
         await expect(
@@ -446,7 +446,7 @@ describe("IBosonOfferHandler", function () {
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
-            offer.sellerId,
+            offer.creatorId,
             compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
@@ -486,7 +486,7 @@ describe("IBosonOfferHandler", function () {
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
-            offer.sellerId,
+            offer.creatorId,
             compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
@@ -520,7 +520,7 @@ describe("IBosonOfferHandler", function () {
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
-            offer.sellerId,
+            offer.creatorId,
             compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
@@ -551,7 +551,7 @@ describe("IBosonOfferHandler", function () {
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
-            offer.sellerId,
+            offer.creatorId,
             compareOfferStructs.bind(offer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
@@ -709,7 +709,7 @@ describe("IBosonOfferHandler", function () {
             .to.emit(offerHandler, "OfferCreated")
             .withArgs(
               nextOfferId,
-              offer.sellerId,
+              offer.creatorId,
               compareOfferStructs.bind(offer.toStruct()),
               offerDatesStruct,
               offerDurationsStruct,
@@ -748,7 +748,7 @@ describe("IBosonOfferHandler", function () {
 
           await expect(tx)
             .to.emit(offerHandler, "RangeReserved")
-            .withArgs(nextOfferId, offer.sellerId, exchangeId, lastExchangeId, assistant.address, assistant.address);
+            .withArgs(nextOfferId, offer.creatorId, exchangeId, lastExchangeId, assistant.address, assistant.address);
 
           await expect(tx).to.emit(bosonVoucher, "RangeReserved").withArgs(nextOfferId, range.toStruct());
         });
@@ -1442,7 +1442,7 @@ describe("IBosonOfferHandler", function () {
             .to.emit(offerHandler, "OfferCreated")
             .withArgs(
               nextOfferId,
-              offer.sellerId,
+              offer.creatorId,
               compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
@@ -1487,7 +1487,7 @@ describe("IBosonOfferHandler", function () {
             .to.emit(offerHandler, "OfferCreated")
             .withArgs(
               nextOfferId,
-              offer.sellerId,
+              offer.creatorId,
               compareOfferStructs.bind(offer.toStruct()),
               offerDatesStruct,
               offerDurationsStruct,
@@ -1661,7 +1661,7 @@ describe("IBosonOfferHandler", function () {
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
-            offer.sellerId,
+            offer.creatorId,
             compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
@@ -1924,7 +1924,7 @@ describe("IBosonOfferHandler", function () {
           // Extend the valid until date, testing for the event
           await expect(offerHandler.connect(assistant).extendOffer(offer.id, offerDates.validUntil))
             .to.emit(offerHandler, "OfferExtended")
-            .withArgs(id, offer.sellerId, offerDates.validUntil, await assistant.getAddress());
+            .withArgs(id, offer.creatorId, offerDates.validUntil, await assistant.getAddress());
         });
 
         it("should update state", async function () {
@@ -2069,7 +2069,7 @@ describe("IBosonOfferHandler", function () {
           // Extend the valid until date, testing for the event
           await expect(offerHandler.connect(assistant).extendOffer(offer.id, offerDates.validUntil))
             .to.emit(offerHandler, "OfferExtended")
-            .withArgs(id, offer.sellerId, offerDates.validUntil, await assistant.getAddress());
+            .withArgs(id, offer.creatorId, offerDates.validUntil, await assistant.getAddress());
         });
 
         it("should update state", async function () {
@@ -2142,7 +2142,7 @@ describe("IBosonOfferHandler", function () {
           .to.emit(offerHandler, "OfferRoyaltyInfoUpdated")
           .withArgs(
             offer.id,
-            offer.sellerId,
+            offer.creatorId,
             compareRoyaltyInfo.bind(expectedRoyaltyInfo),
             await assistant.getAddress()
           );
@@ -2315,7 +2315,7 @@ describe("IBosonOfferHandler", function () {
           offerHandler.connect(assistant).updateOfferMutualizer(offer.id, await newDrFeeMutualizer.getAddress())
         )
           .to.emit(offerHandler, "OfferMutualizerUpdated")
-          .withArgs(offer.id, offer.sellerId, await newDrFeeMutualizer.getAddress(), await assistant.getAddress());
+          .withArgs(offer.id, offer.creatorId, await newDrFeeMutualizer.getAddress(), await assistant.getAddress());
       });
 
       it("should revert when new mutualizer is the same as current", async function () {
@@ -2369,7 +2369,7 @@ describe("IBosonOfferHandler", function () {
           .to.emit(offerHandler, "RangeReserved")
           .withArgs(
             id,
-            offer.sellerId,
+            offer.creatorId,
             firstTokenId,
             lastTokenId,
             await assistant.getAddress(),
@@ -2416,7 +2416,7 @@ describe("IBosonOfferHandler", function () {
           .to.emit(offerHandler, "RangeReserved")
           .withArgs(
             id,
-            offer.sellerId,
+            offer.creatorId,
             firstTokenId + 2,
             lastTokenId + 2,
             await assistant.getAddress(),
@@ -2489,7 +2489,7 @@ describe("IBosonOfferHandler", function () {
             .to.emit(offerHandler, "RangeReserved")
             .withArgs(
               id,
-              offer.sellerId,
+              offer.creatorId,
               firstTokenId,
               lastTokenId,
               await bosonVoucher.getAddress(),
@@ -3039,7 +3039,7 @@ describe("IBosonOfferHandler", function () {
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "1",
-            offer.sellerId,
+            offer.creatorId,
             compareOfferStructs.bind(offerStructs[0]),
             offerDatesStructs[0],
             offerDurationsStructs[0],
@@ -3053,7 +3053,7 @@ describe("IBosonOfferHandler", function () {
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "2",
-            offer.sellerId,
+            offer.creatorId,
             compareOfferStructs.bind(offerStructs[1]),
             offerDatesStructs[1],
             offerDurationsStructs[1],
@@ -3067,7 +3067,7 @@ describe("IBosonOfferHandler", function () {
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "3",
-            offer.sellerId,
+            offer.creatorId,
             compareOfferStructs.bind(offerStructs[2]),
             offerDatesStructs[2],
             offerDurationsStructs[2],
@@ -3081,7 +3081,7 @@ describe("IBosonOfferHandler", function () {
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "4",
-            offer.sellerId,
+            offer.creatorId,
             compareOfferStructs.bind(offerStructs[3]),
             offerDatesStructs[3],
             offerDurationsStructs[3],
@@ -3095,7 +3095,7 @@ describe("IBosonOfferHandler", function () {
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "5",
-            offer.sellerId,
+            offer.creatorId,
             compareOfferStructs.bind(offerStructs[4]),
             offerDatesStructs[4],
             offerDurationsStructs[4],
@@ -3171,7 +3171,7 @@ describe("IBosonOfferHandler", function () {
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "1",
-            offer.sellerId,
+            offer.creatorId,
             compareOfferStructs.bind(offerStructs[0]),
             offerDatesStructs[0],
             offerDurationsStructs[0],
@@ -3185,7 +3185,7 @@ describe("IBosonOfferHandler", function () {
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "2",
-            offer.sellerId,
+            offer.creatorId,
             compareOfferStructs.bind(offerStructs[1]),
             offerDatesStructs[1],
             offerDurationsStructs[1],
@@ -3199,7 +3199,7 @@ describe("IBosonOfferHandler", function () {
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "3",
-            offer.sellerId,
+            offer.creatorId,
             compareOfferStructs.bind(offerStructs[2]),
             offerDatesStructs[2],
             offerDurationsStructs[2],
@@ -3213,7 +3213,7 @@ describe("IBosonOfferHandler", function () {
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "4",
-            offer.sellerId,
+            offer.creatorId,
             compareOfferStructs.bind(offerStructs[3]),
             offerDatesStructs[3],
             offerDurationsStructs[3],
@@ -3227,7 +3227,7 @@ describe("IBosonOfferHandler", function () {
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "5",
-            offer.sellerId,
+            offer.creatorId,
             compareOfferStructs.bind(offerStructs[4]),
             offerDatesStructs[4],
             offerDurationsStructs[4],
@@ -3908,7 +3908,7 @@ describe("IBosonOfferHandler", function () {
             .to.emit(offerHandler, "OfferCreated")
             .withArgs(
               "1",
-              offer.sellerId,
+              offer.creatorId,
               compareOfferStructs.bind(offerStructs[0]),
               offerDatesStructs[0],
               offerDurationsStructs[0],
@@ -3922,7 +3922,7 @@ describe("IBosonOfferHandler", function () {
             .to.emit(offerHandler, "OfferCreated")
             .withArgs(
               "2",
-              offer.sellerId,
+              offer.creatorId,
               compareOfferStructs.bind(offerStructs[1]),
               offerDatesStructs[1],
               offerDurationsStructs[1],
@@ -3936,7 +3936,7 @@ describe("IBosonOfferHandler", function () {
             .to.emit(offerHandler, "OfferCreated")
             .withArgs(
               "3",
-              offer.sellerId,
+              offer.creatorId,
               compareOfferStructs.bind(offerStructs[2]),
               offerDatesStructs[2],
               offerDurationsStructs[2],
@@ -3950,7 +3950,7 @@ describe("IBosonOfferHandler", function () {
             .to.emit(offerHandler, "OfferCreated")
             .withArgs(
               "4",
-              offer.sellerId,
+              offer.creatorId,
               compareOfferStructs.bind(offerStructs[3]),
               offerDatesStructs[3],
               offerDurationsStructs[3],
@@ -3964,7 +3964,7 @@ describe("IBosonOfferHandler", function () {
             .to.emit(offerHandler, "OfferCreated")
             .withArgs(
               "5",
-              offer.sellerId,
+              offer.creatorId,
               compareOfferStructs.bind(offerStructs[4]),
               offerDatesStructs[4],
               offerDurationsStructs[4],
@@ -4228,15 +4228,15 @@ describe("IBosonOfferHandler", function () {
         const tx = await offerHandler.connect(assistant).extendOfferBatch(offersToExtend, newValidUntilDate);
         await expect(tx)
           .to.emit(offerHandler, "OfferExtended")
-          .withArgs(offersToExtend[0], offer.sellerId, newValidUntilDate, await assistant.getAddress());
+          .withArgs(offersToExtend[0], offer.creatorId, newValidUntilDate, await assistant.getAddress());
 
         await expect(tx)
           .to.emit(offerHandler, "OfferExtended")
-          .withArgs(offersToExtend[1], offer.sellerId, newValidUntilDate, await assistant.getAddress());
+          .withArgs(offersToExtend[1], offer.creatorId, newValidUntilDate, await assistant.getAddress());
 
         await expect(tx)
           .to.emit(offerHandler, "OfferExtended")
-          .withArgs(offersToExtend[2], offer.sellerId, newValidUntilDate, await assistant.getAddress());
+          .withArgs(offersToExtend[2], offer.creatorId, newValidUntilDate, await assistant.getAddress());
       });
 
       it("should update state", async function () {
@@ -4412,15 +4412,15 @@ describe("IBosonOfferHandler", function () {
           .updateOfferRoyaltyRecipientsBatch(offersToUpdate, newRoyaltyInfo);
         await expect(tx)
           .to.emit(offerHandler, "OfferRoyaltyInfoUpdated")
-          .withArgs(offersToUpdate[0], offer.sellerId, compareRoyaltyInfo.bind(expectedRoyaltyInfo), assistant.address);
+          .withArgs(offersToUpdate[0], offer.creatorId, compareRoyaltyInfo.bind(expectedRoyaltyInfo), assistant.address);
 
         await expect(tx)
           .to.emit(offerHandler, "OfferRoyaltyInfoUpdated")
-          .withArgs(offersToUpdate[1], offer.sellerId, compareRoyaltyInfo.bind(expectedRoyaltyInfo), assistant.address);
+          .withArgs(offersToUpdate[1], offer.creatorId, compareRoyaltyInfo.bind(expectedRoyaltyInfo), assistant.address);
 
         await expect(tx)
           .to.emit(offerHandler, "OfferRoyaltyInfoUpdated")
-          .withArgs(offersToUpdate[2], offer.sellerId, compareRoyaltyInfo.bind(expectedRoyaltyInfo), assistant.address);
+          .withArgs(offersToUpdate[2], offer.creatorId, compareRoyaltyInfo.bind(expectedRoyaltyInfo), assistant.address);
       });
 
       it("should update state", async function () {

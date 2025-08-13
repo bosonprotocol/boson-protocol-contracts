@@ -355,7 +355,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         offer.voided = true;
 
         // Notify listeners of state change
-        emit OfferVoided(_offerId, offer.sellerId, _msgSender());
+        emit OfferVoided(_offerId, getSellerId(offer), _msgSender());
     }
 
     /**
@@ -392,7 +392,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         offerDates.validUntil = _validUntilDate;
 
         // Notify watchers of state change
-        emit OfferExtended(_offerId, offer.sellerId, _validUntilDate, _msgSender());
+        emit OfferExtended(_offerId, getSellerId(offer), _validUntilDate, _msgSender());
     }
 
     /**
@@ -413,13 +413,13 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         // Make sure the caller is the assistant, offer exists and is not voided
         Offer storage offer = getValidOfferWithSellerCheck(_offerId);
 
-        validateRoyaltyInfo(protocolLookups(), protocolLimits(), offer.sellerId, _royaltyInfo);
+        validateRoyaltyInfo(protocolLookups(), protocolLimits(), getSellerId(offer), _royaltyInfo);
 
         // Add new entry to the royaltyInfo array
         offer.royaltyInfo.push(_royaltyInfo);
 
         // Notify watchers of state change
-        emit OfferRoyaltyInfoUpdated(_offerId, offer.sellerId, _royaltyInfo, _msgSender());
+        emit OfferRoyaltyInfoUpdated(_offerId, getSellerId(offer), _royaltyInfo, _msgSender());
     }
 
     /**
@@ -445,7 +445,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         if (disputeResolutionTerms.mutualizerAddress == _newMutualizer) revert SameMutualizerAddress();
         disputeResolutionTerms.mutualizerAddress = payable(_newMutualizer);
 
-        emit OfferMutualizerUpdated(_offerId, offer.sellerId, _newMutualizer, _msgSender());
+        emit OfferMutualizerUpdated(_offerId, getSellerId(offer), _newMutualizer, _msgSender());
     }
 
     /**

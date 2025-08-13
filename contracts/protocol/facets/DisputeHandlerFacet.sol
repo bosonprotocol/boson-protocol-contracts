@@ -44,7 +44,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // Raise the dispute
-        raiseDisputeInternal(exchange, voucher, offer.sellerId);
+        raiseDisputeInternal(exchange, voucher, getSellerId(offer, exchange));
     }
 
     /**
@@ -67,7 +67,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
         // Make sure the caller is buyer associated with the exchange  // {MR: only by game}
-        checkBuyer(exchange.buyerId);
+        checkBuyer(getBuyerId(exchange));
 
         // Fetch the dispute
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
@@ -118,7 +118,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // Get seller, we assume seller exists if offer exists
-        (, Seller storage seller, ) = fetchSeller(offer.sellerId);
+        (, Seller storage seller, ) = fetchSeller(getSellerId(offer, exchange));
 
         // get message sender
         address sender = _msgSender();
@@ -258,19 +258,19 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
             address expectedSigner;
 
             // find out if the caller is the seller or the buyer, and which address should be the signer
-            if (exists && offer.sellerId == sellerId) {
+            if (exists && getSellerId(offer, exchange) == sellerId) {
                 // caller is the seller
                 // get the buyer's address, which should be the signer of the resolution
-                (, Buyer storage buyer) = fetchBuyer(exchange.buyerId);
+                (, Buyer storage buyer) = fetchBuyer(getBuyerId(exchange));
                 expectedSigner = buyer.wallet;
             } else {
                 uint256 buyerId;
                 (exists, buyerId) = getBuyerIdByWallet(_msgSender());
-                if (!exists || buyerId != exchange.buyerId) revert NotBuyerOrSeller();
+                if (!exists || buyerId != getBuyerId(exchange)) revert NotBuyerOrSeller();
 
                 // caller is the buyer
                 // get the seller's address, which should be the signer of the resolution
-                (, Seller storage seller, ) = fetchSeller(offer.sellerId);
+                (, Seller storage seller, ) = fetchSeller(getSellerId(offer, exchange));
                 expectedSigner = seller.assistant;
             }
 

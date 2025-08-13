@@ -383,7 +383,7 @@ describe("SnapshotGate", function () {
     const mo = await mockOffer();
     ({ offerDates, offerDurations } = mo);
     offer = mo.offer;
-    offer.sellerId = "2"; // second seller
+    offer.creatorId = "2"; // second seller
     offer.price = price;
     offer.sellerDeposit = "0";
     offer.quantityAvailable = "5";

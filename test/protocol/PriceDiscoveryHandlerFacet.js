@@ -313,7 +313,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
           await weth.connect(assistant).approve(await priceDiscoveryHandler.getAddress(), price);
 
           newBuyer = mockBuyer(buyer.address);
-          exchange.buyerId = newBuyer.id;
+          exchange.comitter = newBuyer.id;
         });
 
         it("should emit FundsEncumbered and BuyerCommitted events", async function () {
@@ -363,7 +363,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
           // Parse into entity
           let returnedExchange = Exchange.fromStruct(exchangeStruct);
-          expect(returnedExchange.buyerId).to.equal(newBuyer.id);
+          expect(returnedexchange.comitter).to.equal(newBuyer.id);
 
           // Contract's balance should increase for the amount of the price
           const escrowAfter = await provider.getBalance(await priceDiscoveryHandler.getAddress());
@@ -792,7 +792,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
           await bosonVoucherClone.connect(assistant).setApprovalForAll(await priceDiscoveryHandler.getAddress(), true);
 
           newBuyer = mockBuyer(buyer.address);
-          exchange.buyerId = newBuyer.id;
+          exchange.comitter = newBuyer.id;
         });
 
         it("should emit FundsEncumbered and BuyerCommitted events", async function () {
@@ -842,7 +842,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
 
           // Parse into entity
           let returnedExchange = Exchange.fromStruct(exchangeStruct);
-          expect(returnedExchange.buyerId).to.equal(newBuyer.id);
+          expect(returnedexchange.comitter).to.equal(newBuyer.id);
 
           // Contract's balance should increase for the amount of the price
           const escrowAfter = await provider.getBalance(await exchangeHandler.getAddress());

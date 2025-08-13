@@ -257,7 +257,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         // - group id is 0, and it is ignored
         // - note that _offer fields are updated during createOfferInternal, so they represent correct values
         Group memory _group;
-        _group.sellerId = _offer.sellerId;
+        _group.sellerId = _offer.creatorId;
         _group.offerIds = new uint256[](1);
         _group.offerIds[0] = _offer.id;
 
@@ -529,7 +529,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         createOfferInternal(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit);
 
         // Create twin and pack everything into a bundle
-        createTwinAndBundleAfterOffer(_twin, _offer.id, _offer.sellerId);
+        createTwinAndBundleAfterOffer(_twin, _offer.id, _offer.creatorId);
     }
 
     /**
@@ -679,7 +679,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         // Create offer with condition first
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _drParameters, _condition, _agentId, _feeLimit);
         // Create twin and pack everything into a bundle
-        createTwinAndBundleAfterOffer(_twin, _offer.id, _offer.sellerId);
+        createTwinAndBundleAfterOffer(_twin, _offer.id, _offer.creatorId);
     }
 
     /**

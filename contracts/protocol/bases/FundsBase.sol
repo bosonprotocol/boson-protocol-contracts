@@ -11,6 +11,7 @@ import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { IDRFeeMutualizer } from "../../interfaces/clients/IDRFeeMutualizer.sol";
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
+// import { ProtocolBase } from "./ProtocolBase.sol";
 
 /**
  * @title FundsBase
@@ -66,10 +67,10 @@ abstract contract FundsBase is Context {
         }
 
         if (offer.creator == BosonTypes.OfferCreator.Buyer) {
-            decreaseAvailableFunds(offer.buyerId, exchangeToken, offer.price);
-            emit IBosonFundsBaseEvents.FundsEncumbered(offer.buyerId, exchangeToken, offer.price, sender);
+            decreaseAvailableFunds(offer.creatorId, exchangeToken, offer.price);
+            emit IBosonFundsBaseEvents.FundsEncumbered(offer.creatorId, exchangeToken, offer.price, sender);
         } else {
-            uint256 sellerId = offer.sellerId;
+            uint256 sellerId = offer.creatorId;
             bool isPriceDiscovery = _priceType == BosonTypes.PriceType.Discovery;
             uint256 sellerFundsEncumbered = offer.sellerDeposit +
                 (_isPreminted && !isPriceDiscovery ? _incomingAmount : 0);
@@ -223,10 +224,10 @@ abstract contract FundsBase is Context {
         // Store payoffs to availablefunds and notify the external observers
         address sender = _msgSender();
         if (payoff.seller > 0) {
-            increaseAvailableFundsAndEmitEvent(_exchangeId, offer.sellerId, exchangeToken, payoff.seller, sender);
+            increaseAvailableFundsAndEmitEvent(_exchangeId, getSellerId(offer, exchange), exchangeToken, payoff.seller, sender);
         }
         if (payoff.buyer > 0) {
-            increaseAvailableFundsAndEmitEvent(_exchangeId, exchange.buyerId, exchangeToken, payoff.buyer, sender);
+            increaseAvailableFundsAndEmitEvent(_exchangeId, getBuyerId(exchange), exchangeToken, payoff.buyer, sender);
         }
 
         if (payoff.protocol > 0) {
@@ -258,7 +259,7 @@ abstract contract FundsBase is Context {
                 if (returnAmount > 0) {
                     increaseAvailableFundsAndEmitEvent(
                         _exchangeId,
-                        offer.sellerId,
+                        getSellerId(offer, exchange),
                         exchangeToken,
                         returnAmount,
                         sender
@@ -671,5 +672,19 @@ abstract contract FundsBase is Context {
         if (_percent == 0) return 0;
 
         return (_amount * _percent) / HUNDRED_PERCENT;
+    }
+
+        function getSellerId(BosonTypes.Offer storage _offer, BosonTypes.Exchange storage _exchange) internal view returns (uint256) {
+        if (_offer.creator == BosonTypes.OfferCreator.Seller) return _offer.creatorId;
+
+        return _exchange.committerId;
+    }
+
+    function getBuyerId(BosonTypes.Exchange storage _exchange) internal view returns (uint256) {
+        BosonTypes.Offer storage offer = ProtocolLib.protocolEntities().offers[_exchange.offerId];
+
+        if (offer.creator == BosonTypes.OfferCreator.Buyer) return offer.creatorId;
+
+        return _exchange.committerId;
     }
 }

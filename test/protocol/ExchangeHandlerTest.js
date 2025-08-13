@@ -311,7 +311,7 @@ describe("IBosonExchangeHandler", function () {
       exchange = mockExchange();
 
       buyerId = accountId.next().value;
-      exchange.buyerId = buyerId;
+      exchange.comitter = buyerId;
       exchange.finalizedDate = "0";
 
       // Deposit seller funds so the commit will succeed
@@ -3017,7 +3017,7 @@ describe("IBosonExchangeHandler", function () {
 
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchangeId, exchange.buyerId, seller.id, await buyer.getAddress());
+              .withArgs(exchangeId, exchange.comitter, seller.id, await buyer.getAddress());
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -3098,7 +3098,7 @@ describe("IBosonExchangeHandler", function () {
 
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchangeId, ++exchange.buyerId, seller.id, await testProtocolFunctions.getAddress());
+              .withArgs(exchangeId, ++exchange.comitter, seller.id, await testProtocolFunctions.getAddress());
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -3157,7 +3157,7 @@ describe("IBosonExchangeHandler", function () {
             // Dispute should be raised and both transfers should fail
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
+              .withArgs(exchange.id, exchange.comitter, seller.id, buyerAddress);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -3222,7 +3222,7 @@ describe("IBosonExchangeHandler", function () {
             // Dispute should be raised and twin transfer should be skipped
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
+              .withArgs(exchange.id, exchange.comitter, seller.id, buyerAddress);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferSkipped")
@@ -3268,7 +3268,7 @@ describe("IBosonExchangeHandler", function () {
             // Dispute should be raised and both transfers should fail
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
+              .withArgs(exchange.id, exchange.comitter, seller.id, buyerAddress);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -3327,7 +3327,7 @@ describe("IBosonExchangeHandler", function () {
                 // Dispute should be raised and both transfers should fail
                 await expect(tx)
                   .to.emit(disputeHandler, "DisputeRaised")
-                  .withArgs(exchange.id, exchange.buyerId, seller.id, buyer.address);
+                  .withArgs(exchange.id, exchange.comitter, seller.id, buyer.address);
 
                 await expect(tx)
                   .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -3842,7 +3842,7 @@ describe("IBosonExchangeHandler", function () {
 
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchange.id, exchange.buyerId, seller.id, await buyer.getAddress());
+              .withArgs(exchange.id, exchange.comitter, seller.id, await buyer.getAddress());
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -3868,7 +3868,7 @@ describe("IBosonExchangeHandler", function () {
 
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchange.id, ++exchange.buyerId, seller.id, await testProtocolFunctions.getAddress());
+              .withArgs(exchange.id, ++exchange.comitter, seller.id, await testProtocolFunctions.getAddress());
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -3927,7 +3927,7 @@ describe("IBosonExchangeHandler", function () {
             // Dispute should be raised and both transfers should fail
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
+              .withArgs(exchange.id, exchange.comitter, seller.id, buyerAddress);
 
             let tokenId = "9";
             await expect(tx)
@@ -3988,7 +3988,7 @@ describe("IBosonExchangeHandler", function () {
             // Dispute should be raised and twin transfer should be skipped
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
+              .withArgs(exchange.id, exchange.comitter, seller.id, buyerAddress);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferSkipped")
@@ -4034,7 +4034,7 @@ describe("IBosonExchangeHandler", function () {
             // Dispute should be raised and both transfers should fail
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
+              .withArgs(exchange.id, exchange.comitter, seller.id, buyerAddress);
 
             let tokenId = "9";
             await expect(tx)
@@ -4094,7 +4094,7 @@ describe("IBosonExchangeHandler", function () {
                 // Dispute should be raised and both transfers should fail
                 await expect(tx)
                   .to.emit(disputeHandler, "DisputeRaised")
-                  .withArgs(exchange.id, exchange.buyerId, seller.id, buyer.address);
+                  .withArgs(exchange.id, exchange.comitter, seller.id, buyer.address);
 
                 let tokenId = "9";
                 await expect(tx)
@@ -4252,7 +4252,7 @@ describe("IBosonExchangeHandler", function () {
             const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchange.id, exchange.buyerId, seller.id, await buyer.getAddress());
+              .withArgs(exchange.id, exchange.comitter, seller.id, await buyer.getAddress());
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -4284,7 +4284,7 @@ describe("IBosonExchangeHandler", function () {
             const tx = await testProtocolFunctions.redeem(++exchange.id);
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchange.id, ++exchange.buyerId, seller.id, await testProtocolFunctions.getAddress());
+              .withArgs(exchange.id, ++exchange.comitter, seller.id, await testProtocolFunctions.getAddress());
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -4347,7 +4347,7 @@ describe("IBosonExchangeHandler", function () {
             // Dispute should be raised and both transfers should fail
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchange.id, exchange.buyerId, seller.id, buyer.address);
+              .withArgs(exchange.id, exchange.comitter, seller.id, buyer.address);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -4422,7 +4422,7 @@ describe("IBosonExchangeHandler", function () {
             // Dispute should be raised and twin transfer should be skipped
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
+              .withArgs(exchange.id, exchange.comitter, seller.id, buyerAddress);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferSkipped")
@@ -4469,7 +4469,7 @@ describe("IBosonExchangeHandler", function () {
             // Dispute should be raised and both transfers should fail
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
+              .withArgs(exchange.id, exchange.comitter, seller.id, buyerAddress);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -4536,7 +4536,7 @@ describe("IBosonExchangeHandler", function () {
                 // Dispute should be raised and both transfers should fail
                 await expect(tx)
                   .to.emit(disputeHandler, "DisputeRaised")
-                  .withArgs(exchange.id, exchange.buyerId, seller.id, buyer.address);
+                  .withArgs(exchange.id, exchange.comitter, seller.id, buyer.address);
 
                 await expect(tx)
                   .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -4870,7 +4870,7 @@ describe("IBosonExchangeHandler", function () {
 
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchangeId, exchange.buyerId, seller.id, await buyer.getAddress());
+              .withArgs(exchangeId, exchange.comitter, seller.id, await buyer.getAddress());
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -4915,7 +4915,7 @@ describe("IBosonExchangeHandler", function () {
             const tx = await testProtocolFunctions.redeem(exchangeId);
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchangeId, ++exchange.buyerId, seller.id, await testProtocolFunctions.getAddress());
+              .withArgs(exchangeId, ++exchange.comitter, seller.id, await testProtocolFunctions.getAddress());
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -5009,7 +5009,7 @@ describe("IBosonExchangeHandler", function () {
             // Dispute should be raised and both transfers should fail
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
+              .withArgs(exchange.id, exchange.comitter, seller.id, buyerAddress);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -5100,7 +5100,7 @@ describe("IBosonExchangeHandler", function () {
             // Dispute should be raised and twin transfer should be skipped
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchange.id, exchange.buyerId, seller.id, buyerAddress);
+              .withArgs(exchange.id, exchange.comitter, seller.id, buyerAddress);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferSkipped")
@@ -5257,7 +5257,7 @@ describe("IBosonExchangeHandler", function () {
         expect(exchange.isValid());
 
         // Exchange's voucher expired flag should be true
-        assert.equal(exchange.buyerId, nextAccountId, "Exchange.buyerId not updated");
+        assert.equal(exchange.comitter, nextAccountId, "exchange.comitter not updated");
       });
 
       it("should update exchange when new buyer (no account) is passed", async function () {
@@ -5277,7 +5277,7 @@ describe("IBosonExchangeHandler", function () {
         expect(exchange.isValid());
 
         // Exchange's voucher expired flag should be true
-        assert.equal(exchange.buyerId, nextAccountId, "Exchange.buyerId not updated");
+        assert.equal(exchange.comitter, nextAccountId, "exchange.comitter not updated");
       });
 
       it("should be triggered when a voucher is transferred", async function () {

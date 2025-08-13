@@ -61,7 +61,7 @@ contract PriceDiscoveryBase is ProtocolBase {
             revert InvalidConduitAddress();
 
         IBosonVoucher bosonVoucher = IBosonVoucher(
-            getCloneAddress(protocolLookups(), _offer.sellerId, _offer.collectionIndex)
+            getCloneAddress(protocolLookups(), _offer.creatorId, _offer.collectionIndex)
         );
 
         // Set incoming voucher clone address

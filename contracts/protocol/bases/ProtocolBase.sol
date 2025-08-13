@@ -520,7 +520,7 @@ abstract contract ProtocolBase is PausableBase, FundsBase, ReentrancyGuardBase, 
         offer = getValidOffer(_offerId);
 
         // Get seller, we assume seller exists if offer exists
-        (, Seller storage seller, ) = fetchSeller(offer.sellerId);
+        (, Seller storage seller, ) = fetchSeller(offer.creatorId);
 
         // Caller must be seller's assistant address
         if (seller.assistant != _msgSender()) revert NotAssistant();
@@ -794,7 +794,7 @@ abstract contract ProtocolBase is PausableBase, FundsBase, ReentrancyGuardBase, 
         // not using fetchOffer to reduce gas costs (limitation of royalty registry)
         ProtocolLib.ProtocolEntities storage pe = protocolEntities();
         Offer storage offer = pe.offers[_queryId];
-        treasury = pe.sellers[offer.sellerId].treasury;
+        treasury = pe.sellers[offer.creatorId].treasury;
         royaltyInfoAll = pe.offers[_queryId].royaltyInfo;
 
         uint256 royaltyInfoLength = royaltyInfoAll.length;
@@ -820,4 +820,5 @@ abstract contract ProtocolBase is PausableBase, FundsBase, ReentrancyGuardBase, 
             }
         }
     }
+
 }

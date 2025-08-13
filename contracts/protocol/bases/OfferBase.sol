@@ -75,10 +75,10 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
                 revert NotAssistant();
             }
             if (_offer.buyerId != 0) revert InvalidBuyerOfferFields();
-            _offer.sellerId = sellerId;
+            _offer.creatorId = sellerId;
         } else if (_offer.creator == OfferCreator.Buyer) {
             if (
-                _offer.sellerId != 0 ||
+                _offer.creatorId != 0 ||
                 _offer.collectionIndex != 0 ||
                 _offer.royaltyInfo.length != 1 ||
                 _offer.royaltyInfo[0].recipients.length != 0 ||
@@ -203,7 +203,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
                     if (lookups.allowedSellers[_drParameters.disputeResolverId].length > 0) {
                         // if length == 0, dispute resolver allows any seller
                         // if length > 0, we check that it is on allow list
-                        if (lookups.allowedSellerIndex[_drParameters.disputeResolverId][_offer.sellerId] == 0)
+                        if (lookups.allowedSellerIndex[_drParameters.disputeResolverId][_offer.creatorId] == 0)
                             revert SellerNotApproved();
                     }
 
@@ -244,7 +244,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
 
                 // Collection must exist. Collections with index 0 exist by default.
                 if (_offer.collectionIndex > 0) {
-                    if (lookups.additionalCollections[_offer.sellerId].length < _offer.collectionIndex)
+                    if (lookups.additionalCollections[_offer.creatorId].length < _offer.collectionIndex)
                         revert NoSuchCollection();
                 }
             }
@@ -301,7 +301,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
             lookups.agentIdByOffer[_offer.id] = _agentId;
 
             if (_offer.royaltyInfo.length != 1) revert InvalidRoyaltyInfo();
-            validateRoyaltyInfo(lookups, limits, _offer.sellerId, _offer.royaltyInfo[0]);
+            validateRoyaltyInfo(lookups, limits, _offer.creatorId, _offer.royaltyInfo[0]);
         }
         // Get storage location for offer
 
@@ -309,7 +309,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
 
         // Set offer props individually since memory structs can't be copied to storage
         offer.id = _offer.id;
-        offer.sellerId = _offer.sellerId;
+        offer.creatorId = _offer.creatorId;
         offer.price = _offer.price;
         offer.sellerDeposit = _offer.sellerDeposit;
         offer.buyerCancelPenalty = _offer.buyerCancelPenalty;
@@ -343,7 +343,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
         // Notify watchers of state change
         emit OfferCreated(
             _offer.id,
-            _offer.sellerId,
+            _offer.creatorId,
             _offer,
             _offerDates,
             _offerDurations,
@@ -393,7 +393,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
         uint256 _startId = pc.nextExchangeId;
 
         IBosonVoucher bosonVoucher = IBosonVoucher(
-            getCloneAddress(protocolLookups(), offer.sellerId, offer.collectionIndex)
+            getCloneAddress(protocolLookups(), offer.creatorId, offer.collectionIndex)
         );
 
         address sender = _msgSender();
@@ -413,7 +413,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
         bosonVoucher.reserveRange(_offerId, _startId, _length, _to);
 
         // Notify external observers
-        emit RangeReserved(_offerId, offer.sellerId, _startId, _startId + _length - 1, _to, sender);
+        emit RangeReserved(_offerId, offer.creatorId, _startId, _startId + _length - 1, _to, sender);
     }
 
     /**

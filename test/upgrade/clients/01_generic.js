@@ -80,7 +80,7 @@ function getGenericContext(
           // loop matches the loop in populateVoucherContract
           for (let j = i; j < buyers.length; j++) {
             const offer = preUpgradeEntities.offers[i + j].offer;
-            const sellerId = BigInt(offer.sellerId).toString();
+            const sellerId = BigInt(offer.creatorId).toString();
 
             // Find the voucher data for the seller
             const voucherData = voucherContractStateAfterUpgradeAndActions.find(

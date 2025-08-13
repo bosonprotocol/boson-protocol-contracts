@@ -81,7 +81,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeManagemen
 
         // Buyer may call any time. Seller or anyone else may call after dispute period elapses
         // N.B. An existing buyer or seller may be the "anyone else" on an exchange they are not a part of
-        if (!buyerExists || buyerId != exchange.buyerId) {
+        if (!buyerExists || buyerId != getBuyerId(exchange)) {
             uint256 elapsed = block.timestamp - voucher.redeemedDate;
             if (elapsed < fetchOfferDurations(offerId).disputePeriod) revert DisputePeriodNotElapsed();
         }
@@ -90,7 +90,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeManagemen
         finalizeExchange(exchange, ExchangeState.Completed);
 
         // Notify watchers of state change
-        emit ExchangeCompleted(offerId, exchange.buyerId, exchange.id, sender);
+        emit ExchangeCompleted(offerId, getBuyerId(exchange), exchange.id, sender);
     }
 
     /**
@@ -145,7 +145,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeManagemen
         (, Offer storage offer) = fetchOffer(offerId);
 
         // Only seller's assistant may call
-        if (!sellerExists || offer.sellerId != sellerId) revert NotAssistant();
+        if (!sellerExists || getSellerId(offer) != sellerId) revert NotAssistant();
 
         // Finalize the exchange, burning the voucher
         finalizeExchange(exchange, ExchangeState.Revoked);
@@ -172,7 +172,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeManagemen
         (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
         // Make sure the caller is buyer associated with the exchange
-        checkBuyer(exchange.buyerId);
+        checkBuyer(getBuyerId(exchange));
 
         // Finalize the exchange, burning the voucher
         finalizeExchange(exchange, ExchangeState.Canceled);
@@ -244,7 +244,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeManagemen
         (sellerExists, sellerId) = getSellerIdByAssistant(sender);
 
         // Only seller's assistant may call
-        if (!sellerExists || offer.sellerId != sellerId) revert NotAssistant();
+        if (!sellerExists || getSellerId(offer) != sellerId) revert NotAssistant();
 
         // Make sure the proposed date is later than the current one
         if (_validUntilDate <= voucher.validUntilDate) revert VoucherExtensionNotValid();
@@ -280,7 +280,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeManagemen
         uint256 offerId = exchange.offerId;
 
         // Make sure the caller is buyer associated with the exchange
-        checkBuyer(exchange.buyerId);
+        checkBuyer(getBuyerId(exchange));
 
         // Make sure the voucher is redeemable
         if (
@@ -345,16 +345,16 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeManagemen
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // Make sure that the voucher was issued on the clone that is making a call
-        if (msg.sender != getCloneAddress(lookups, offer.sellerId, offer.collectionIndex)) revert AccessDenied();
+        if (msg.sender != getCloneAddress(lookups, getSellerId(offer), offer.collectionIndex)) revert AccessDenied();
 
         // Decrease voucher counter for old buyer
-        lookups.voucherCount[exchange.buyerId]--;
+        lookups.voucherCount[getBuyerId(exchange)]--;
 
         // Fetch or create buyer
         uint256 buyerId = getValidBuyer(_newBuyer);
 
         // Update buyer id for the exchange
-        exchange.buyerId = buyerId;
+        exchange.comitter = buyerId; // risk
 
         // Increase voucher counter for new buyer
         lookups.voucherCount[buyerId]++;
@@ -567,12 +567,12 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeManagemen
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // Decrease the voucher count
-        lookups.voucherCount[_exchange.buyerId]--;
+        lookups.voucherCount[getBuyerId(_exchange)]--;
 
         // Burn the voucher
         uint256 offerId = _exchange.offerId;
         (, Offer storage offer) = fetchOffer(offerId);
-        IBosonVoucher bosonVoucher = IBosonVoucher(getCloneAddress(lookups, offer.sellerId, offer.collectionIndex));
+        IBosonVoucher bosonVoucher = IBosonVoucher(getCloneAddress(lookups, getSellerId(offer), offer.collectionIndex));
 
         uint256 tokenId = _exchange.id;
         if (tokenId >= EXCHANGE_ID_2_2_0) tokenId |= (offerId << 128);
@@ -814,7 +814,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeManagemen
 
         // Add exchange to receipt
         receipt.exchangeId = exchange.id;
-        receipt.buyerId = exchange.buyerId;
+        receipt.buyerId = getBuyerId(exchange);
         receipt.finalizedDate = exchange.finalizedDate;
 
         // Get the voucher
@@ -826,7 +826,7 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeManagemen
         // Fetch offer, we assume offer exist if exchange exist
         (, Offer storage offer) = fetchOffer(exchange.offerId);
         receipt.offerId = offer.id;
-        receipt.sellerId = offer.sellerId;
+        receipt.sellerId = getSellerId(offer);
         receipt.price = offer.price;
         receipt.sellerDeposit = offer.sellerDeposit;
         receipt.buyerCancelPenalty = offer.buyerCancelPenalty;

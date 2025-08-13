@@ -81,7 +81,7 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
 
         // Buyer may call any time. Seller or anyone else may call after dispute period elapses
         // N.B. An existing buyer or seller may be the "anyone else" on an exchange they are not a part of
-        if (!buyerExists || buyerId != exchange.buyerId) {
+        if (!buyerExists || buyerId != getBuyerId(exchange)) {
             uint256 elapsed = block.timestamp - voucher.redeemedDate;
             if (elapsed < fetchOfferDurations(offerId).disputePeriod) {
                 revert DisputePeriodNotElapsed();
@@ -92,7 +92,7 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         finalizeExchange(exchange, ExchangeState.Completed);
 
         // Notify watchers of state change
-        emit ExchangeCompleted2(offerId, exchange.buyerId, exchange.id, sender);
+        emit ExchangeCompleted2(offerId, getBuyerId(exchange), exchange.id, sender);
     }
 
     /**
@@ -147,7 +147,7 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         (, offer) = fetchOffer(exchange.offerId);
 
         // Only seller's assistant may call
-        if (!sellerExists || offer.sellerId != sellerId) {
+        if (!sellerExists || getSellerId(offer, exchange) != sellerId) {
             revert NotAssistant();
         }
 
@@ -173,7 +173,7 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
         // Make sure the caller is buyer associated with the exchange
-        checkBuyer(exchange.buyerId);
+        checkBuyer(getBuyerId(exchange));
 
         // Finalize the exchange, burning the voucher
         finalizeExchange(exchange, ExchangeState.Canceled);
@@ -247,7 +247,7 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         (sellerExists, sellerId) = getSellerIdByAssistant(sender);
 
         // Only seller's assistant may call
-        if (!sellerExists || offer.sellerId != sellerId) {
+        if (!sellerExists || getSellerId(offer, exchange) != sellerId) {
             revert NotAssistant();
         }
 
@@ -284,7 +284,7 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
         uint256 offerId = exchange.offerId;
 
         // Make sure the caller is buyer associated with the exchange
-        checkBuyer(exchange.buyerId);
+        checkBuyer(getBuyerId(exchange));
 
         // Make sure the voucher is redeemable
         if (
@@ -369,11 +369,11 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
      */
     function burnVoucher(Exchange storage _exchange) internal {
         // Decrease the voucher count
-        protocolLookups().voucherCount[_exchange.buyerId]--;
+        protocolLookups().voucherCount[getBuyerId(_exchange)]--;
 
         // Burn the voucher
         (, Offer storage offer) = fetchOffer(_exchange.offerId);
-        IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
+        IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[getSellerId(offer, _exchange)]);
         uint256 tokenId = _exchange.id + (_exchange.offerId << 128);
         bosonVoucher.burnVoucher(tokenId);
     }
@@ -529,7 +529,7 @@ contract MockExchangeHandlerFacetWithDefect is MockExchangeHandlerFacet {
         (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
         // Make sure the caller is buyer associated with the exchange
-        checkBuyer(exchange.buyerId);
+        checkBuyer(getBuyerId(exchange));
 
         // finalizeExchange() is not executed.
 

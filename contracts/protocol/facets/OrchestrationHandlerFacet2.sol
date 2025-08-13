@@ -52,7 +52,7 @@ contract OrchestrationHandlerFacet2 is DisputeBase {
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // Raise the dispute
-        raiseDisputeInternal(exchange, voucher, offer.sellerId);
+        raiseDisputeInternal(exchange, voucher, getSellerId(offer));
 
         // Escalate the dispute
         escalateDisputeInternal(_exchangeId);

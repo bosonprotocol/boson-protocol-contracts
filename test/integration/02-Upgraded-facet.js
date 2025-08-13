@@ -210,7 +210,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       exchange = mockExchange();
 
       buyerId = accountId.next().value;
-      exchange.buyerId = buyerId;
+      exchange.comitter = buyerId;
       exchange.finalizedDate = "0";
 
       // Deposit seller funds so the commit will succeed

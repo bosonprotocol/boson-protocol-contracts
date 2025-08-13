@@ -160,7 +160,7 @@ contract BosonTypes {
 
     struct Offer {
         uint256 id;
-        uint256 sellerId;
+        uint256 creatorId;
         uint256 price;
         uint256 sellerDeposit;
         uint256 buyerCancelPenalty;
@@ -173,7 +173,6 @@ contract BosonTypes {
         bool voided;
         uint256 collectionIndex;
         RoyaltyInfo[] royaltyInfo;
-        uint256 buyerId; // For buyer-created offers, stores the buyer who created the offer
     }
 
     struct DRParameters {
@@ -214,7 +213,7 @@ contract BosonTypes {
     struct Exchange {
         uint256 id;
         uint256 offerId;
-        uint256 buyerId;
+        uint256 committerId;
         uint256 finalizedDate;
         ExchangeState state;
         address payable mutualizerAddress;

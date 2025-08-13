@@ -84,7 +84,7 @@ contract PriceDiscoveryHandlerFacet is IBosonPriceDiscoveryHandler, PriceDiscove
 
         // Make sure offer type is price discovery. Otherwise, use commitToOffer
         if (offer.priceType != PriceType.Discovery) revert InvalidPriceType();
-        uint256 sellerId = offer.sellerId;
+        uint256 sellerId = getSellerId(offer);
 
         uint256 actualPrice;
         {

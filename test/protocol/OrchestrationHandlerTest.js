@@ -273,7 +273,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       // Mock offer, offerDates and offerDurations
       ({ offer, offerDates, offerDurations, offerFees } = await mockOffer());
-      offer.sellerId = seller.id;
+      offer.creatorId = seller.id;
 
       // Check if domains are valid
       expect(offer.isValid()).is.true;
@@ -658,7 +658,7 @@ describe("IBosonOrchestrationHandler", function () {
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
-            offer.sellerId,
+            offer.creatorId,
             compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
@@ -726,7 +726,7 @@ describe("IBosonOrchestrationHandler", function () {
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
-            offer.sellerId,
+            offer.creatorId,
             compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
@@ -1046,7 +1046,7 @@ describe("IBosonOrchestrationHandler", function () {
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
-            offer.sellerId,
+            offer.creatorId,
             compareOfferStructs.bind(offerStruct),
             offerDatesStruct,
             offerDurationsStruct,
@@ -1075,7 +1075,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should ignore any provided seller and assign seller id of msg.sender", async function () {
         // set some other seller.id
-        offer.sellerId = "123";
+        offer.creatorId = "123";
 
         // Create a seller and an offer, testing for the event
         await expect(
@@ -1296,7 +1296,7 @@ describe("IBosonOrchestrationHandler", function () {
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
         offer.exchangeToken = await bosonToken.getAddress();
         offer.id = "2";
-        offer.sellerId = seller.id;
+        offer.creatorId = seller.id;
         disputeResolutionTermsStruct = new DisputeResolutionTerms(
           disputeResolver.id,
           disputeResolver.escalationResponsePeriod,
@@ -1428,7 +1428,7 @@ describe("IBosonOrchestrationHandler", function () {
             .to.emit(orchestrationHandler, "OfferCreated")
             .withArgs(
               nextOfferId,
-              offer.sellerId,
+              offer.creatorId,
               compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
@@ -1442,7 +1442,7 @@ describe("IBosonOrchestrationHandler", function () {
             .to.emit(orchestrationHandler, "RangeReserved")
             .withArgs(
               nextOfferId,
-              offer.sellerId,
+              offer.creatorId,
               firstTokenId,
               lastTokenId,
               await assistant.getAddress(),
@@ -2448,7 +2448,7 @@ describe("IBosonOrchestrationHandler", function () {
       context("When offers have non zero agent ids", async function () {
         beforeEach(async function () {
           seller.id = "3"; // 1 is dispute resolver, 2 is agent because is created first
-          offer.sellerId = seller.id;
+          offer.creatorId = seller.id;
           sellerStruct = seller.toStruct();
           offerStruct = offer.toStruct();
 
@@ -2499,7 +2499,7 @@ describe("IBosonOrchestrationHandler", function () {
             .to.emit(orchestrationHandler, "OfferCreated")
             .withArgs(
               nextOfferId,
-              offer.sellerId,
+              offer.creatorId,
               compareOfferStructs.bind(offerStruct),
               offerDatesStruct,
               offerDurationsStruct,
@@ -2780,7 +2780,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should ignore any provided seller and assign seller id of msg.sender", async function () {
         // set some other seller.id
-        offer.sellerId = "123";
+        offer.creatorId = "123";
 
         // Create an offer with condition, testing for the events
         const tx = await orchestrationHandler.connect(assistant).createOfferWithCondition(
@@ -3198,7 +3198,7 @@ describe("IBosonOrchestrationHandler", function () {
             .to.emit(orchestrationHandler, "RangeReserved")
             .withArgs(
               nextOfferId,
-              offer.sellerId,
+              offer.creatorId,
               firstTokenId,
               lastTokenId,
               await bosonVoucher.getAddress(),
@@ -3577,7 +3577,7 @@ describe("IBosonOrchestrationHandler", function () {
           offer.sellerDeposit = parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
           offer.buyerCancelPenalty = parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
           offer.quantityAvailable = `${(i + 1) * 2}`;
-          offer.sellerId = seller.id; // "2" is dispute resolver
+          offer.creatorId = seller.id; // "2" is dispute resolver
 
           offerDates.validFrom = (BigInt(Date.now()) + oneMonth * BigInt(i)).toString();
           offerDates.validUntil = (BigInt(Date.now()) + oneMonth * 6n * BigInt(i + 1)).toString();
@@ -3791,7 +3791,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should ignore any provided seller and assign seller id of msg.sender", async function () {
         // set some other seller.id
-        offer.sellerId = "123";
+        offer.creatorId = "123";
 
         // Create an offer, add it to the group, testing for the events
         const tx = await orchestrationHandler.connect(assistant).createOfferAddToGroup(
@@ -4208,7 +4208,7 @@ describe("IBosonOrchestrationHandler", function () {
             .to.emit(orchestrationHandler, "RangeReserved")
             .withArgs(
               nextOfferId,
-              offer.sellerId,
+              offer.creatorId,
               firstTokenId,
               lastTokenId,
               await assistant.getAddress(),
@@ -4672,7 +4672,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should ignore any provided seller and assign seller id of msg.sender", async function () {
         // set some other seller.id
-        offer.sellerId = "123";
+        offer.creatorId = "123";
         twin.sellerId = "456";
 
         // Create an offer, a twin and a bundle, testing for the events
@@ -5111,7 +5111,7 @@ describe("IBosonOrchestrationHandler", function () {
             .to.emit(orchestrationHandler, "RangeReserved")
             .withArgs(
               nextOfferId,
-              offer.sellerId,
+              offer.creatorId,
               firstTokenId,
               lastTokenId,
               await bosonVoucher.getAddress(),
@@ -5742,7 +5742,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should ignore any provided seller and assign seller id of msg.sender", async function () {
         // set some other seller.id
-        offer.sellerId = "123";
+        offer.creatorId = "123";
         twin.sellerId = "456";
 
         // Create an offer with condition, twin and bundle
@@ -6216,7 +6216,7 @@ describe("IBosonOrchestrationHandler", function () {
             .to.emit(orchestrationHandler, "RangeReserved")
             .withArgs(
               nextOfferId,
-              offer.sellerId,
+              offer.creatorId,
               firstTokenId,
               lastTokenId,
               await assistant.getAddress(),
@@ -6917,7 +6917,7 @@ describe("IBosonOrchestrationHandler", function () {
       context("When offers have non zero agent ids", async function () {
         beforeEach(async function () {
           seller.id = "3"; // 1 is dispute resolver, 2 is agent.
-          offer.sellerId = seller.id;
+          offer.creatorId = seller.id;
           group.sellerId = seller.id;
           sellerStruct = seller.toStruct();
           offerStruct = offer.toStruct();
@@ -7070,7 +7070,7 @@ describe("IBosonOrchestrationHandler", function () {
             .to.emit(orchestrationHandler, "RangeReserved")
             .withArgs(
               nextOfferId,
-              offer.sellerId,
+              offer.creatorId,
               firstTokenId,
               lastTokenId,
               await assistant.getAddress(),
@@ -7832,7 +7832,7 @@ describe("IBosonOrchestrationHandler", function () {
       context("When offers have non zero agent ids", async function () {
         beforeEach(async function () {
           seller.id = "3";
-          offer.sellerId = seller.id;
+          offer.creatorId = seller.id;
           twin.sellerId = seller.id;
           bundle.sellerId = seller.id;
           sellerStruct = seller.toStruct();
@@ -8012,7 +8012,7 @@ describe("IBosonOrchestrationHandler", function () {
             .to.emit(orchestrationHandler, "RangeReserved")
             .withArgs(
               nextOfferId,
-              offer.sellerId,
+              offer.creatorId,
               firstTokenId,
               lastTokenId,
               await assistant.getAddress(),
@@ -8887,7 +8887,7 @@ describe("IBosonOrchestrationHandler", function () {
       context("When offers have non zero agent ids", async function () {
         beforeEach(async function () {
           seller.id = "3";
-          offer.sellerId = seller.id;
+          offer.creatorId = seller.id;
           twin.sellerId = seller.id;
           group.sellerId = seller.id;
           bundle.sellerId = seller.id;
@@ -9101,7 +9101,7 @@ describe("IBosonOrchestrationHandler", function () {
             .to.emit(orchestrationHandler, "RangeReserved")
             .withArgs(
               nextOfferId,
-              offer.sellerId,
+              offer.creatorId,
               firstTokenId,
               lastTokenId,
               await assistant.getAddress(),

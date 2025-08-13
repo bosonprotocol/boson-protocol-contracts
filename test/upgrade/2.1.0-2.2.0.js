@@ -318,7 +318,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           buyerWallet = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
 
           const offer = preUpgradeEntities.offers.find((o) => o.offer.id == exchange.offerId);
-          const seller = preUpgradeEntities.sellers.find((s) => s.seller.id == offer.offer.sellerId);
+          const seller = preUpgradeEntities.sellers.find((s) => s.seller.id == offer.offer.creatorId);
           bosonVoucher = await getContractAt("IBosonVoucher", seller.voucherContractAddress);
           tokenId = exchange.exchangeId;
           sellerWallet = seller.wallet;
@@ -380,7 +380,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           await exchangeHandler.commitToOffer(await buyerWallet.getAddress(), offerId, { value: price });
 
           const offer = preUpgradeEntities.offers.find((o) => o.offer.id == offerId);
-          const seller = preUpgradeEntities.sellers.find((s) => s.seller.id == offer.offer.sellerId);
+          const seller = preUpgradeEntities.sellers.find((s) => s.seller.id == offer.offer.creatorId);
           bosonVoucher = await getContractAt("IBosonVoucher", seller.voucherContractAddress);
           tokenId = deriveTokenId(offerId, exchangeId);
           sellerWallet = seller.wallet;
@@ -1302,7 +1302,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           const offerId = "2";
           ({ offer } = await offerHandler.getOffer(offerId));
 
-          seller = sellers.find((s) => s.id === offer.sellerId.toString());
+          seller = sellers.find((s) => s.id === offer.creatorId.toString());
           assistant = seller.wallet;
         });
 
@@ -1400,7 +1400,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
       // Get seller assistant
       const { sellers } = preUpgradeEntities;
-      const seller = sellers.find((s) => s.id === offer.sellerId.toString());
+      const seller = sellers.find((s) => s.id === offer.creatorId.toString());
       const assistant = seller.wallet;
 
       // Reserve range

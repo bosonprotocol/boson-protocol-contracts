@@ -33,7 +33,7 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents, IBosonFundsBaseEvents
         if (elapsed >= offerDurations.disputePeriod) revert DisputePeriodHasElapsed();
 
         // Make sure the caller is buyer associated with the exchange
-        checkBuyer(_exchange.buyerId);
+        checkBuyer(getBuyerId(_exchange));
 
         // Set the exchange state to disputed
         _exchange.state = ExchangeState.Disputed;
@@ -50,7 +50,7 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents, IBosonFundsBaseEvents
         disputeDates.timeout = block.timestamp + offerDurations.resolutionPeriod;
 
         // Notify watchers of state change
-        emit DisputeRaised(_exchange.id, _exchange.buyerId, _sellerId, _msgSender());
+        emit DisputeRaised(_exchange.id, getBuyerId(_exchange), _sellerId, _msgSender());
     }
 
     /**
@@ -83,7 +83,7 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents, IBosonFundsBaseEvents
         (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
         // Make sure the caller is buyer associated with the exchange
-        uint256 buyerId = exchange.buyerId;
+        uint256 buyerId = getBuyerId(exchange);
         checkBuyer(buyerId);
 
         // Fetch the dispute and dispute dates

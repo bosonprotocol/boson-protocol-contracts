@@ -2206,7 +2206,7 @@ describe("IBosonFundsHandler", function () {
         // make sure that rando is actually the buyer of the exchange
         let exchange;
         [, exchange] = await exchangeHandler.getExchange("1");
-        expect(exchange.buyerId.toString()).to.eql(randoBuyerId, "Wrong buyer id");
+        expect(exchange.comitter.toString()).to.eql(randoBuyerId, "Wrong buyer id");
 
         // get native currency balance before the commit
         const buyerNativeBalanceBefore = await provider.getBalance(await buyer.getAddress());
@@ -2234,7 +2234,7 @@ describe("IBosonFundsHandler", function () {
         );
         // make sure that rando is actually the buyer of the exchange
         [, exchange] = await exchangeHandler.getExchange("2");
-        expect(exchange.buyerId.toString()).to.eql(randoBuyerId, "Wrong buyer id");
+        expect(exchange.comitter.toString()).to.eql(randoBuyerId, "Wrong buyer id");
 
         // make sure that randoBuyerId actually belongs to rando address
         let [, buyerStruct] = await accountHandler.getBuyer(randoBuyerId);
@@ -2312,7 +2312,7 @@ describe("IBosonFundsHandler", function () {
         // make sure that buyer is actually the buyer of the exchange
         let exchange;
         [, exchange] = await exchangeHandler.getExchange(exchangeId);
-        expect(exchange.buyerId.toString()).to.eql(buyerId, "Wrong buyer id");
+        expect(exchange.comitter.toString()).to.eql(buyerId, "Wrong buyer id");
 
         // get native currency balance before the commit
         const buyerNativeBalanceBefore = await provider.getBalance(await buyer.getAddress());
@@ -2353,7 +2353,7 @@ describe("IBosonFundsHandler", function () {
 
         // make sure that buyer is actually the buyer of the exchange
         [, exchange] = await exchangeHandler.getExchange(exchangeId);
-        expect(exchange.buyerId.toString()).to.eql(buyerId, "Wrong buyer id");
+        expect(exchange.comitter.toString()).to.eql(buyerId, "Wrong buyer id");
       });
 
       context("💔 Revert Reasons", async function () {
@@ -3312,7 +3312,7 @@ describe("IBosonFundsHandler", function () {
         // Event validation
         if (tx && action) {
           // Get seller ID from the offer
-          const sellerId = offer.sellerId;
+          const sellerId = offer.creatorId;
 
           // Seller events
           if (expSellerPayoff != "0") {
@@ -3372,7 +3372,7 @@ describe("IBosonFundsHandler", function () {
           expectedDRAvailableFunds
         ) {
           // Get seller ID from the offer for state validation
-          const sellerId = offer.sellerId;
+          const sellerId = offer.creatorId;
 
           // Seller funds
           if (updatedSellersAvailableFunds) {
@@ -6099,7 +6099,7 @@ describe("IBosonFundsHandler", function () {
             const exchangeToken = offer.exchangeToken;
 
             // Store available funds before the finalizing action
-            const sellerFundsBefore = await getFundsForParticipant(fundsHandler, offer.sellerId, exchangeToken);
+            const sellerFundsBefore = await getFundsForParticipant(fundsHandler, offer.creatorId, exchangeToken);
             const buyerFundsBefore = await getFundsForParticipant(fundsHandler, buyerId, exchangeToken);
             const protocolFundsBefore = await getFundsForParticipant(fundsHandler, protocolId, exchangeToken);
 
@@ -6107,7 +6107,7 @@ describe("IBosonFundsHandler", function () {
             await action.handler.connect(action.wallet)[action.method](...action.args);
 
             // Get available funds after the finalizing action
-            const sellerFundsAfter = await getFundsForParticipant(fundsHandler, offer.sellerId, exchangeToken);
+            const sellerFundsAfter = await getFundsForParticipant(fundsHandler, offer.creatorId, exchangeToken);
             const buyerFundsAfter = await getFundsForParticipant(fundsHandler, buyerId, exchangeToken);
             const protocolFundsAfter = await getFundsForParticipant(fundsHandler, protocolId, exchangeToken);
 

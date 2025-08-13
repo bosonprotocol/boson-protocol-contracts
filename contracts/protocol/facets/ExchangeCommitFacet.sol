@@ -138,7 +138,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
 
         (bool sellerExists, uint256 sellerId) = getSellerIdByAssistant(committer);
         if (!sellerExists) revert NotAssistant();
-        offer.sellerId = sellerId;
+        offer.creatorId = sellerId;
 
         {
             ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
@@ -286,7 +286,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
             // For buyer-created offers, buyer ID is stored in the offer
             buyerId = _offer.buyerId;
             // Encumber seller deposit (seller is committing)
-            encumberFunds(_offerId, _offer.sellerId, _offer.sellerDeposit, _isPreminted, _offer.priceType);
+            encumberFunds(_offerId, offer.creatorId, _offer.sellerDeposit, _isPreminted, _offer.priceType);
         } else {
             buyerId = getValidBuyer(_committer);
             // Encumber buyer payment (buyer is committing)
@@ -297,7 +297,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
         Exchange storage exchange = protocolEntities().exchanges[_exchangeId];
         exchange.id = _exchangeId;
         exchange.offerId = _offerId;
-        exchange.buyerId = buyerId;
+        exchange.comitter = buyerId; // risk
         exchange.state = ExchangeState.Committed;
 
         // Handle DR fee collection
@@ -347,7 +347,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
 
                 // Issue voucher, unless it already exist (for preminted offers)
                 IBosonVoucher bosonVoucher = IBosonVoucher(
-                    getCloneAddress(lookups, _offer.sellerId, _offer.collectionIndex)
+                    getCloneAddress(lookups, getSellerId(_offer), _offer.collectionIndex)
                 );
                 uint256 tokenId = _exchangeId | (_offerId << 128);
 
@@ -371,7 +371,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
         // Notify watchers of state change
         if (_offer.creator == OfferCreator.Buyer) {
             // Buyer-created offer: emit SellerCommitted event
-            emit SellerCommitted(_offerId, _offer.sellerId, _exchangeId, exchange, voucher, _msgSender());
+            emit SellerCommitted(_offerId, getSellerId(_offer), _exchangeId, exchange, voucher, _msgSender());
         } else {
             // Seller-created offer: emit BuyerCommitted event
             emit BuyerCommitted(_offerId, buyerId, _exchangeId, exchange, voucher, _msgSender());
@@ -420,7 +420,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
         Offer storage offer = getValidOffer(offerId);
 
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-        address bosonVoucher = getCloneAddress(lookups, offer.sellerId, offer.collectionIndex);
+        address bosonVoucher = getCloneAddress(lookups, getSellerId(offer), offer.collectionIndex);
 
         // Make sure that the voucher was issued on the clone that is making a call
         if (msg.sender != bosonVoucher) revert AccessDenied();
@@ -724,14 +724,14 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, IBosonExchang
         address exchangeToken = _offer.exchangeToken;
         if (mutualizer == address(0)) {
             // Self-mutualize: take fee from seller's pool
-            decreaseAvailableFunds(_offer.sellerId, _offer.exchangeToken, _drFeeAmount);
+            decreaseAvailableFunds(getSellerId(_offer), _offer.exchangeToken, _drFeeAmount);
         } else {
             // Use mutualizer: request fee
             uint256 balanceBefore = getBalance(exchangeToken);
 
             // Request DR fee from mutualizer
             bool success = IDRFeeMutualizer(mutualizer).requestDRFee(
-                _offer.sellerId,
+                getSellerId(_offer),
                 _drFeeAmount,
                 exchangeToken,
                 _exchangeId,

@@ -89,7 +89,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
 
         // Get current buyer address. This is actually the seller in sequential commit. Need to do it before voucher is transferred
         address seller;
-        thisExchangeCost.resellerId = exchange.buyerId;
+        thisExchangeCost.resellerId = getBuyerId(exchange);
         {
             (, Buyer storage currentBuyer) = fetchBuyer(thisExchangeCost.resellerId);
             seller = currentBuyer.wallet;
@@ -171,7 +171,7 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
         clearPriceDiscoveryStorage();
 
         // Since exchange and voucher are passed by reference, they are updated
-        uint256 buyerId = exchange.buyerId;
+        uint256 buyerId = getBuyerId(exchange);
         address sender = _msgSender();
         if (thisExchangeCost.price > 0) emit FundsEncumbered(buyerId, exchangeToken, thisExchangeCost.price, sender);
         if (immediatePayout > 0) {

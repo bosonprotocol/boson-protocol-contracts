@@ -76,7 +76,7 @@ describe("Offer", function () {
         buyerId
       );
       expect(offer.idIsValid()).is.true;
-      expect(offer.sellerIdIsValid()).is.true;
+      expect(offer.creatorIdIsValid()).is.true;
       expect(offer.priceIsValid()).is.true;
       expect(offer.sellerDepositIsValid()).is.true;
       expect(offer.buyerCancelPenaltyIsValid()).is.true;
@@ -229,23 +229,23 @@ describe("Offer", function () {
 
     it("Always present, sellerId must be the string representation of a BigNumber", async function () {
       // Invalid field value
-      offer.sellerId = "zedzdeadbaby";
-      expect(offer.sellerIdIsValid()).is.false;
+      offer.creatorId = "zedzdeadbaby";
+      expect(offer.creatorIdIsValid()).is.false;
       expect(offer.isValid()).is.false;
 
       // Valid field value
-      offer.sellerId = "0";
-      expect(offer.sellerIdIsValid()).is.true;
+      offer.creatorId = "0";
+      expect(offer.creatorIdIsValid()).is.true;
       expect(offer.isValid()).is.true;
 
       // Valid field value
-      offer.sellerId = "126";
-      expect(offer.sellerIdIsValid()).is.true;
+      offer.creatorId = "126";
+      expect(offer.creatorIdIsValid()).is.true;
       expect(offer.isValid()).is.true;
 
       // Invalid field value
-      offer.sellerId = new Date();
-      expect(offer.sellerIdIsValid()).is.false;
+      offer.creatorId = new Date();
+      expect(offer.creatorIdIsValid()).is.false;
       expect(offer.isValid()).is.false;
     });
 
@@ -480,7 +480,7 @@ describe("Offer", function () {
       it("Offer.fromStruct() should return a Offer instance with the same values as the given struct", async function () {
         struct = [
           offer.id,
-          offer.sellerId,
+          offer.creatorId,
           offer.price,
           offer.sellerDeposit,
           offer.buyerCancelPenalty,

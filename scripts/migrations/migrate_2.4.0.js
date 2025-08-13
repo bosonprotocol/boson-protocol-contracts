@@ -304,7 +304,7 @@ async function prepareInitializationData(protocolAddress) {
     const [, offer] = await offerHandler.getOffer(i);
 
     const collectionIndex = offer.collectionIndex;
-    const sellerId = offer.sellerId;
+    const sellerId = offer.creatorId;
     const offerId = i;
 
     const offerRoyaltyPercentage = collections[sellerId][collectionIndex];

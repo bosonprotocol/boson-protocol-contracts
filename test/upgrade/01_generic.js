@@ -211,7 +211,7 @@ function getGenericContext(
       it("Revoke old voucher", async function () {
         const exchange = preUpgradeEntities.exchanges[0]; // some exchange that wasn't redeemed/revoked/canceled yet
         const offer = preUpgradeEntities.offers.find((o) => o.offer.id == exchange.offerId);
-        const seller = preUpgradeEntities.sellers.find((s) => s.seller.id == offer.offer.sellerId);
+        const seller = preUpgradeEntities.sellers.find((s) => s.seller.id == offer.offer.creatorId);
         await expect(exchangeHandler.connect(seller.wallet).revokeVoucher(exchange.exchangeId))
           .to.emit(exchangeHandler, "VoucherRevoked")
           .withArgs(exchange.offerId, exchange.exchangeId, seller.wallet.address);

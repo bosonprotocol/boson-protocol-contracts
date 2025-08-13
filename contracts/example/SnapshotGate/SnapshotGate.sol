@@ -245,7 +245,7 @@ contract SnapshotGate is BosonTypes, Ownable, ERC721 {
         require(exists, "Invalid offer id");
 
         // Make sure the seller id matches
-        require(offer.sellerId == sellerId, "Offer is from another seller");
+        require(offer.creatorId == sellerId, "Offer is from another seller"); // high risk!
 
         // Determine if offer is priced in native token or ERC20
         if (offer.exchangeToken == address(0)) {

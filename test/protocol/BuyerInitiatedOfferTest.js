@@ -194,7 +194,7 @@ describe("Buyer-Initiated Exchange", function () {
 
     //Valid buyer-created offer
     buyerCreatedOffer = offer.clone();
-    buyerCreatedOffer.sellerId = "0";
+    buyerCreatedoffer.creatorId = "0";
     buyerCreatedOffer.creator = OfferCreator.Buyer;
     buyerCreatedOffer.buyerId = buyerId;
     buyerCreatedOffer.collectionIndex = "0";
@@ -239,7 +239,7 @@ describe("Buyer-Initiated Exchange", function () {
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
-            buyerCreatedOffer.sellerId, // Should be 0 for buyer-created offers
+            buyerCreatedoffer.creatorId, // Should be 0 for buyer-created offers
             compareOfferStructs.bind(buyerCreatedOffer.toStruct()),
             offerDatesStruct,
             offerDurationsStruct,
@@ -357,12 +357,12 @@ describe("Buyer-Initiated Exchange", function () {
         const [exists, offer] = await offerHandler.getOffer(createdOfferId);
         expect(exists).to.be.true;
         expect(offer.creator).to.equal(OfferCreator.Buyer);
-        expect(offer.sellerId).to.equal("0");
+        expect(offer.creatorId).to.equal("0");
       });
 
       context("💔 Revert Reasons", async function () {
         it("should revert if buyer specifies sellerId", async function () {
-          buyerCreatedOffer.sellerId = sellerId;
+          buyerCreatedoffer.creatorId = sellerId;
 
           await expect(
             offerHandler
@@ -548,7 +548,7 @@ describe("Buyer-Initiated Exchange", function () {
         const exchange = event[3];
         expect(exchange[0]).to.equal(BigInt(expectedExchangeId)); // exchange.id
         expect(exchange[1]).to.equal(BigInt(nextOfferId)); // exchange.offerId
-        expect(exchange[2]).to.equal(buyerId); // exchange.buyerId
+        expect(exchange[2]).to.equal(buyerId); // exchange.comitter
         expect(exchange[3]).to.equal(0n); // exchange.sellerId (should be 0 initially, assigned later)
 
         // Check voucher properties (event[4])
@@ -579,11 +579,11 @@ describe("Buyer-Initiated Exchange", function () {
 
         const [existsExchange, exchange] = await exchangeHandler.getExchange(expectedExchangeId);
         expect(existsExchange).to.be.true;
-        expect(exchange.buyerId).to.equal(buyerId);
+        expect(exchange.comitter).to.equal(buyerId);
 
         const [existsOffer, updatedOffer] = await offerHandler.getOffer(nextOfferId);
         expect(existsOffer).to.be.true;
-        expect(updatedOffer.sellerId).to.equal(sellerId);
+        expect(updatedoffer.creatorId).to.equal(sellerId);
         expect(updatedOffer.collectionIndex).to.equal(1);
       });
 
@@ -606,7 +606,7 @@ describe("Buyer-Initiated Exchange", function () {
 
         const [existsOffer, updatedOffer] = await offerHandler.getOffer(nextOfferId);
         expect(existsOffer).to.be.true;
-        expect(updatedOffer.sellerId).to.equal(sellerId);
+        expect(updatedoffer.creatorId).to.equal(sellerId);
 
         const voucherTokenId = deriveTokenId(nextOfferId, expectedExchangeId);
         const voucherCloneAddress = calculateCloneAddress(
@@ -892,7 +892,7 @@ describe("Buyer-Initiated Exchange", function () {
 
         const [existsExchange, exchange] = await exchangeHandler.getExchange("1");
         expect(existsExchange).to.be.true;
-        expect(exchange.buyerId).to.equal(buyerId);
+        expect(exchange.comitter).to.equal(buyerId);
         expect(exchange.offerId).to.equal(nextOfferId); // Exchange references the buyer-created offer
       });
     });

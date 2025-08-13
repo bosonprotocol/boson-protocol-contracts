@@ -117,7 +117,7 @@ function compareArgs(eventArgs, args) {
         .to.emit(offerHandler, "OfferCreated")
         .withArgs(
           nextOfferId,
-          offer.sellerId,
+          offer.creatorId,
           compareOfferStructs.bind(offerStruct),  <====== BIND OFFER STRUCT TO THIS FUNCTION
           offerDatesStruct,
           offerDurationsStruct,

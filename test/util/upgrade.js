@@ -532,7 +532,7 @@ async function populateProtocolContract(
 
       // Set unique offer properties based on offer id
       offer.id = `${offerId}`;
-      offer.sellerId = sellers[j].seller.id;
+      offer.creatorId = sellers[j].seller.id;
       offer.price = `${offerId * 1000}`;
       offer.sellerDeposit = `${offerId * 100}`;
       offer.buyerCancelPenalty = `${offerId * 50}`;
@@ -737,7 +737,7 @@ async function populateProtocolContract(
           .commitToOffer(await buyerWallet.getAddress(), offer.id, { value: msgValue });
       }
 
-      exchanges.push({ exchangeId: exchangeId, offerId: offer.id, buyerIndex: j, sellerId: offer.sellerId });
+      exchanges.push({ exchangeId: exchangeId, offerId: offer.id, buyerIndex: j, sellerId: offer.creatorId });
       exchangeId++;
     }
   }
@@ -748,7 +748,7 @@ async function populateProtocolContract(
 
     // If exchange has twins, mint them so the transfer can succeed
     const offer = offers.find((o) => o.offer.id == exchange.offerId);
-    const seller = sellers.find((s) => s.seller.id == offer.offer.sellerId);
+    const seller = sellers.find((s) => s.seller.id == offer.offer.creatorId);
     if (twinHandler) {
       const bundle = bundles.find((b) => b.sellerId == seller.id);
       if (!bundle) continue; // no twins for this seller
@@ -783,7 +783,7 @@ async function populateProtocolContract(
   for (const id of [4, 6]) {
     const exchange = exchanges[id - 1];
     const offer = offers.find((o) => o.offer.id == exchange.offerId);
-    const seller = sellers.find((s) => s.seller.id == offer.offer.sellerId);
+    const seller = sellers.find((s) => s.seller.id == offer.offer.creatorId);
     await exchangeHandler.connect(seller.wallet).revokeVoucher(exchange.exchangeId);
   }
 
@@ -791,7 +791,7 @@ async function populateProtocolContract(
   const id = 5; // must be one of redeemed ones
   const exchange = exchanges[id - 1];
   const offer = offers.find((o) => o.offer.id == exchange.offerId);
-  const seller = sellers.find((s) => s.seller.id == offer.offer.sellerId);
+  const seller = sellers.find((s) => s.seller.id == offer.offer.creatorId);
 
   await disputeHandler.connect(buyers[exchange.buyerIndex].wallet).raiseDispute(exchange.exchangeId);
   await disputeHandler.connect(seller.wallet).extendDisputeTimeout(exchange.exchangeId, 4000000000n);
@@ -2049,7 +2049,7 @@ async function populateVoucherContract(
 
       // Set unique offer properties based on offer id
       offer.id = `${offerId}`;
-      offer.sellerId = sellers[j].seller.id;
+      offer.creatorId = sellers[j].seller.id;
       offer.price = `${offerId * 1000}`;
       offer.sellerDeposit = `${offerId * 100}`;
       offer.buyerCancelPenalty = `${offerId * 50}`;
@@ -2147,7 +2147,7 @@ async function populateVoucherContract(
           .commitToOffer(await buyerWallet.getAddress(), offer.id, { value: msgValue });
       }
 
-      exchanges.push({ exchangeId: exchangeId, offerId: offer.id, buyerIndex: j, sellerId: offer.sellerId });
+      exchanges.push({ exchangeId: exchangeId, offerId: offer.id, buyerIndex: j, sellerId: offer.creatorId });
       exchangeId++;
     }
   }

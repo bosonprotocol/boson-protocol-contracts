@@ -837,7 +837,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         it("getEIP2981Royalties", async function () {
           const sellers = preUpgradeEntities.sellers;
           for (const offer of preUpgradeEntities.offers) {
-            const seller = sellers.find((s) => s.id == offer.offer.sellerId);
+            const seller = sellers.find((s) => s.id == offer.offer.creatorId);
 
             const [returnedReceiver, returnedRoyaltyPercentage] = await exchangeHandler.getEIP2981Royalties(
               offer.offer.id,
@@ -875,7 +875,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         it("getRoyalties", async function () {
           const sellers = preUpgradeEntities.sellers;
           for (const offer of preUpgradeEntities.offers) {
-            const seller = sellers.find((s) => s.id == offer.offer.sellerId);
+            const seller = sellers.find((s) => s.id == offer.offer.creatorId);
 
             const queryId = deriveTokenId(offer.offer.id, "999"); // some exchange id that does not exist. Simulates the preminted offer
             const [returnedReceiver, returnedRoyaltyPercentage] = await exchangeHandler.getRoyalties(queryId);
@@ -1194,7 +1194,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
           const newBuyer = mockBuyer(buyer.address);
           newBuyer.id = await accountHandler.getNextAccountId();
-          exchange.buyerId = newBuyer.id;
+          exchange.comitter = newBuyer.id;
 
           const tx = await priceDiscoveryHandler
             .connect(buyer)
@@ -1299,7 +1299,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
           const newBuyer = mockBuyer(buyer.address);
           newBuyer.id = await accountHandler.getNextAccountId();
-          exchange.buyerId = newBuyer.id;
+          exchange.comitter = newBuyer.id;
 
           // Get voucher info before the approval. Sequential commit should not change it
           const [, , returnedVoucher] = await exchangeHandler.getExchange(exchange.id);

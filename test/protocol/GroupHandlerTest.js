@@ -278,7 +278,7 @@ describe("IBosonGroupHandler", function () {
 
       it("should ignore any provided seller and assign seller id of msg.sender", async function () {
         // set some other sellerId
-        offer.sellerId = "123";
+        offer.creatorId = "123";
 
         // Create a group, testing for the event
         const tx = await groupHandler.connect(assistant).createGroup(group, condition);

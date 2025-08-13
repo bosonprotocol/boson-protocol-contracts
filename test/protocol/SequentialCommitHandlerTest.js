@@ -257,7 +257,7 @@ describe("IBosonSequentialCommitHandler", function () {
       exchange = mockExchange();
 
       buyerId = accountId.next().value;
-      exchange.buyerId = buyerId;
+      exchange.comitter = buyerId;
       exchange.finalizedDate = "0";
 
       // Deposit seller funds so the commit will succeed
@@ -334,7 +334,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
             mockBuyer(buyer.address); // call only to increment account id counter
             newBuyer = mockBuyer(buyer2.address);
-            exchange.buyerId = newBuyer.id;
+            exchange.comitter = newBuyer.id;
           });
 
           it("should emit FundsEncumbered, FundsReleased, FundsWithdrawn and BuyerCommitted events", async function () {
@@ -370,13 +370,13 @@ describe("IBosonSequentialCommitHandler", function () {
               .connect(buyer2)
               .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery);
 
-            // buyer2 is exchange.buyerId
+            // buyer2 is exchange.comitter
             // Get the exchange as a struct
             const [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchangeId);
 
             // Parse into entity
             let returnedExchange = Exchange.fromStruct(exchangeStruct);
-            expect(returnedExchange.buyerId).to.equal(newBuyer.id);
+            expect(returnedexchange.comitter).to.equal(newBuyer.id);
 
             // Contract's balance should increase for minimal escrow amount
             const escrowAfter = await provider.getBalance(await exchangeHandler.getAddress());
@@ -875,7 +875,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
                 mockBuyer(buyer.address); // call only to increment account id counter
                 newBuyer = mockBuyer(buyer2.address);
-                exchange.buyerId = newBuyer.id;
+                exchange.comitter = newBuyer.id;
               });
 
               const fees = [
@@ -1021,7 +1021,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
             mockBuyer(reseller.address); // call only to increment account id counter
             newBuyer = mockBuyer(buyer2.address);
-            exchange.buyerId = newBuyer.id;
+            exchange.comitter = newBuyer.id;
           });
 
           it("should emit FundsEncumbered, FundsReleased, FundsWithdrawn and BuyerCommitted events", async function () {
@@ -1057,13 +1057,13 @@ describe("IBosonSequentialCommitHandler", function () {
               .connect(reseller)
               .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery);
 
-            // buyer2 is exchange.buyerId
+            // buyer2 is exchange.comitter
             // Get the exchange as a struct
             const [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchangeId);
 
             // Parse into entity
             let returnedExchange = Exchange.fromStruct(exchangeStruct);
-            expect(returnedExchange.buyerId).to.equal(newBuyer.id);
+            expect(returnedexchange.comitter).to.equal(newBuyer.id);
 
             // Contract's balance should increase for minimal escrow amount
             const escrowAfter = await provider.getBalance(await exchangeHandler.getAddress());
@@ -1471,7 +1471,7 @@ describe("IBosonSequentialCommitHandler", function () {
 
                 mockBuyer(buyer.address); // call only to increment account id counter
                 newBuyer = mockBuyer(buyer2.address);
-                exchange.buyerId = newBuyer.id;
+                exchange.comitter = newBuyer.id;
               });
 
               const fees = [

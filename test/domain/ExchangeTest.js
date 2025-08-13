@@ -28,7 +28,7 @@ describe("Exchange", function () {
       exchange = new Exchange(id, offerId, buyerId, finalizedDate, state, mutualizerAddress);
       expect(exchange.idIsValid()).is.true;
       expect(exchange.offerIdIsValid()).is.true;
-      expect(exchange.buyerIdIsValid()).is.true;
+      expect(exchange.comitterIsValid()).is.true;
       expect(exchange.finalizedDateIsValid()).is.true;
       expect(exchange.stateIsValid()).is.true;
       expect(exchange.mutualizerAddressIsValid()).is.true;
@@ -89,23 +89,23 @@ describe("Exchange", function () {
 
     it("Always present, buyerId must be the string representation of a non-zero BigNumber", async function () {
       // Invalid field value
-      exchange.buyerId = "zedzdeadbaby";
-      expect(exchange.buyerIdIsValid()).is.false;
+      exchange.comitter = "zedzdeadbaby";
+      expect(exchange.comitterIsValid()).is.false;
       expect(exchange.isValid()).is.false;
 
       // Valid field value
-      exchange.buyerId = "0";
-      expect(exchange.buyerIdIsValid()).is.false;
+      exchange.comitter = "0";
+      expect(exchange.comitterIsValid()).is.false;
       expect(exchange.isValid()).is.false;
 
       // Valid field value
-      exchange.buyerId = "126";
-      expect(exchange.buyerIdIsValid()).is.true;
+      exchange.comitter = "126";
+      expect(exchange.comitterIsValid()).is.true;
       expect(exchange.isValid()).is.true;
 
       // Invalid field value
-      exchange.buyerId = new Date();
-      expect(exchange.buyerIdIsValid()).is.false;
+      exchange.comitter = new Date();
+      expect(exchange.comitterIsValid()).is.false;
       expect(exchange.isValid()).is.false;
     });
 
