@@ -1181,4 +1181,86 @@ describe("Buyer-Initiated Exchange", function () {
       expect(royaltyInfo.bps[0]).to.equal(0);
     });
   });
+
+  context("Voiding Buyer-Initiated Offers", async function () {
+    beforeEach(async function () {
+      // Create a buyer-initiated offer
+      await offerHandler
+        .connect(buyer1)
+        .createOffer(
+          buyerCreatedOffer,
+          offerDates,
+          offerDurations,
+          { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
+          agentId,
+          offerFeeLimit
+        );
+
+      await fundsHandler.connect(buyer1).depositFunds(buyerId, ZeroAddress, buyerCreatedOffer.price, {
+        value: buyerCreatedOffer.price,
+      });
+    });
+
+    it("should allow buyer to void their own buyer-initiated offer", async function () {
+      // Check offer exists and is not voided before
+      const [existsBefore, offerBefore] = await offerHandler.getOffer(nextOfferId);
+      expect(existsBefore).to.be.true;
+      expect(offerBefore.voided).to.be.false;
+
+      // Buyer should be able to void the offer
+      await expect(offerHandler.connect(buyer1).voidOffer(nextOfferId))
+        .to.emit(offerHandler, "OfferVoided")
+        .withArgs(nextOfferId, buyerId, buyer1.address); // creatorId should be buyerId for buyer-created offers
+
+      // Check offer is now voided
+      const [existsAfter, offerAfter] = await offerHandler.getOffer(nextOfferId);
+      expect(existsAfter).to.be.true;
+      expect(offerAfter.voided).to.be.true;
+    });
+
+    it("should prevent random user from voiding buyer-initiated offer", async function () {
+      // Random user should not be able to void buyer-created offer
+      await expect(offerHandler.connect(rando).voidOffer(nextOfferId)).to.be.revertedWithCustomError(
+        offerHandler,
+        "NotOfferCreator"
+      );
+    });
+
+    it("should work with voidOfferBatch for buyer-initiated offers", async function () {
+      // Get the ID for the second offer we're about to create
+      const secondOfferId = await offerHandler.getNextOfferId();
+
+      // Create another buyer-initiated offer
+      const secondOffer = { ...buyerCreatedOffer, id: 0 };
+      await offerHandler
+        .connect(buyer1)
+        .createOffer(
+          secondOffer,
+          offerDates,
+          offerDurations,
+          { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
+          agentId,
+          offerFeeLimit
+        );
+
+      await fundsHandler.connect(buyer1).depositFunds(buyerId, ZeroAddress, secondOffer.price, {
+        value: secondOffer.price,
+      });
+
+      // Void both offers in batch
+      await expect(offerHandler.connect(buyer1).voidOfferBatch([nextOfferId, secondOfferId]))
+        .to.emit(offerHandler, "OfferVoided")
+        .withArgs(nextOfferId, buyerId, buyer1.address)
+        .to.emit(offerHandler, "OfferVoided")
+        .withArgs(secondOfferId, buyerId, buyer1.address);
+
+      // Check both offers are voided
+      const [exists1, offer1] = await offerHandler.getOffer(nextOfferId);
+      const [exists2, offer2] = await offerHandler.getOffer(secondOfferId);
+      expect(exists1).to.be.true;
+      expect(exists2).to.be.true;
+      expect(offer1.voided).to.be.true;
+      expect(offer2.voided).to.be.true;
+    });
+  });
 });

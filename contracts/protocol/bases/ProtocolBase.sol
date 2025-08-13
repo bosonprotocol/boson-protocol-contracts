@@ -527,6 +527,37 @@ abstract contract ProtocolBase is PausableBase, FundsBase, ReentrancyGuardBase, 
     }
 
     /**
+     * @notice Gets a valid offer from storage and checks that the caller is authorized to modify it
+     *
+     * Reverts if:
+     * - Offer id is invalid
+     * - Offer has already been voided
+     * - Caller is not authorized (for seller-created offers: not the seller assistant; for buyer-created offers: not the buyer who created it)
+     *
+     *  @param _offerId - the id of the offer to check
+     *  @return offer - the offer details. See {BosonTypes.Offer}
+     *  @return creatorId - the id of the creator (sellerId for seller-created offers, buyerId for buyer-created offers)
+     */
+    function getValidOfferWithCreatorCheck(
+        uint256 _offerId
+    ) internal view returns (Offer storage offer, uint256 creatorId) {
+        // Get offer
+        offer = getValidOffer(_offerId);
+
+        if (offer.creator == OfferCreator.Seller) {
+            // For seller-created offers, check that caller is the seller's assistant
+            (, Seller storage seller, ) = fetchSeller(offer.sellerId);
+            if (seller.assistant != _msgSender()) revert NotAssistant();
+            creatorId = offer.sellerId;
+        } else if (offer.creator == OfferCreator.Buyer) {
+            // For buyer-created offers, check that caller is the buyer who created the offer
+            (, Buyer storage buyer) = fetchBuyer(offer.buyerId);
+            if (buyer.wallet != _msgSender()) revert NotOfferCreator();
+            creatorId = offer.buyerId;
+        }
+    }
+
+    /**
      * @notice Gets the bundle id for a given offer id.
      *
      * @param _offerId - the offer id.

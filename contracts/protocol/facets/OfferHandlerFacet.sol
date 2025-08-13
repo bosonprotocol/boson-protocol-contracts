@@ -342,20 +342,20 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * Reverts if:
      * - The offers region of protocol is paused
      * - Offer id is invalid
-     * - Caller is not the assistant of the offer
+     * - Caller is not authorized (for seller-created offers: not the seller assistant; for buyer-created offers: not the buyer who created it)
      * - Offer has already been voided
      *
      * @param _offerId - the id of the offer to void
      */
     function voidOfferInternal(uint256 _offerId) internal {
-        // Get offer. Make sure caller is assistant
-        Offer storage offer = getValidOfferWithSellerCheck(_offerId);
+        // Get offer. Make sure caller is authorized to void it
+        (Offer storage offer, uint256 creatorId) = getValidOfferWithCreatorCheck(_offerId);
 
         // Void the offer
         offer.voided = true;
 
-        // Notify listeners of state change
-        emit OfferVoided(_offerId, offer.sellerId, _msgSender());
+        // Notify listeners of state change - emit creatorId as the "sellerId" parameter for consistency
+        emit OfferVoided(_offerId, creatorId, _msgSender());
     }
 
     /**

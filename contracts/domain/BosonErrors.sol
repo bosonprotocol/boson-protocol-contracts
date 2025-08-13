@@ -62,6 +62,8 @@ interface BosonErrors {
     error NotAgentWallet();
     // Caller is not dispute resolver assistant
     error NotDisputeResolverAssistant();
+    // Caller is not the creator of the offer
+    error NotOfferCreator();
     // Supplied clerk is not zero address
     error ClerkDeprecated();
 

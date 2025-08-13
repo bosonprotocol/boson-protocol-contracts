@@ -146,7 +146,7 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      * Reverts if:
      * - The offers region of protocol is paused
      * - Offer id is invalid
-     * - Caller is not the assistant of the offer
+     * - Caller is not authorized (for seller-created offers: not the seller assistant; for buyer-created offers: not the buyer who created it)
      * - Offer has already been voided
      *
      * @param _offerId - the id of the offer to void
@@ -163,7 +163,7 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      * Reverts if, for any offer:
      * - The offers region of protocol is paused
      * - Offer id is invalid
-     * - Caller is not the assistant of the offer
+     * - Caller is not authorized (for seller-created offers: not the seller assistant; for buyer-created offers: not the buyer who created it)
      * - Offer has already been voided
      *
      * @param _offerIds - list of ids of offers to void
