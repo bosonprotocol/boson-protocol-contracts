@@ -61,7 +61,14 @@ describe("IBosonDisputeHandler", function () {
     adminDR,
     clerkDR,
     treasuryDR;
-  let erc165, accountHandler, exchangeHandler, offerHandler, fundsHandler, disputeHandler, pauseHandler;
+  let erc165,
+    accountHandler,
+    exchangeHandler,
+    exchangeCommitHandler,
+    offerHandler,
+    fundsHandler,
+    disputeHandler,
+    pauseHandler;
   let buyerId, offer, offerId, seller;
   let block, blockNumber, tx;
   let support, newTime;
@@ -103,6 +110,7 @@ describe("IBosonDisputeHandler", function () {
       accountHandler: "IBosonAccountHandler",
       offerHandler: "IBosonOfferHandler",
       exchangeHandler: "IBosonExchangeHandler",
+      exchangeCommitHandler: "IBosonExchangeCommitHandler",
       fundsHandler: "IBosonFundsHandler",
       disputeHandler: "IBosonDisputeHandler",
       pauseHandler: "IBosonPauseHandler",
@@ -115,6 +123,7 @@ describe("IBosonDisputeHandler", function () {
         accountHandler,
         offerHandler,
         exchangeHandler,
+        exchangeCommitHandler,
         fundsHandler,
         disputeHandler,
         pauseHandler,
@@ -245,7 +254,7 @@ describe("IBosonDisputeHandler", function () {
         exchangeId = "1";
 
         // Commit to offer, creating a new exchange
-        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+        await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
         // Set time forward to the offer's voucherRedeemableFrom
         await setNextBlockTimestamp(Number(voucherRedeemableFrom));
@@ -476,7 +485,9 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+            await exchangeCommitHandler
+              .connect(buyer)
+              .commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to retract the dispute, expecting revert
             await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.revertedWithCustomError(
@@ -616,7 +627,9 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+            await exchangeCommitHandler
+              .connect(buyer)
+              .commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to extend the dispute timeout, expecting revert
             await expect(
@@ -760,7 +773,9 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+            await exchangeCommitHandler
+              .connect(buyer)
+              .commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to expire the dispute, expecting revert
             await expect(disputeHandler.connect(rando).expireDispute(exchangeId)).to.revertedWithCustomError(
@@ -1146,7 +1161,9 @@ describe("IBosonDisputeHandler", function () {
               exchangeId++;
 
               // Commit to offer, creating a new exchange
-              await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+              await exchangeCommitHandler
+                .connect(buyer)
+                .commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
               // Attempt to resolve the dispute, expecting revert
               await expect(
@@ -1814,7 +1831,7 @@ describe("IBosonDisputeHandler", function () {
           await mockToken.connect(buyer).approve(await disputeHandler.getAddress(), buyerEscalationDepositToken);
 
           // Commit to offer and put exchange all the way to dispute
-          await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id);
+          await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id);
           await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
           await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -1868,7 +1885,7 @@ describe("IBosonDisputeHandler", function () {
             .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
 
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
+          await exchangeCommitHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
           await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
           await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -1970,7 +1987,7 @@ describe("IBosonDisputeHandler", function () {
             .connect(assistant)
             .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
 
-          await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id);
+          await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id);
           await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
           await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -2008,7 +2025,9 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+            await exchangeCommitHandler
+              .connect(buyer)
+              .commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to escalate the dispute, expecting revert
             await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId), {
@@ -2057,7 +2076,7 @@ describe("IBosonDisputeHandler", function () {
               .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
 
             // Commit to offer and put exchange all the way to dispute
-            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id);
+            await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offer.id);
             await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
             await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -2156,7 +2175,7 @@ describe("IBosonDisputeHandler", function () {
             );
 
             // Commit to offer and put exchange all the way to dispute
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
+            await exchangeCommitHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
             await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
             await disputeHandler.connect(buyer).raiseDispute(exchangeId);
             await Foreign20WithFee.setFee("10");
@@ -2269,7 +2288,9 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+            await exchangeCommitHandler
+              .connect(buyer)
+              .commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to decide the dispute, expecting revert
             await expect(
@@ -2288,7 +2309,9 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+            await exchangeCommitHandler
+              .connect(buyer)
+              .commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Redeem voucher
             await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
@@ -2420,7 +2443,9 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+            await exchangeCommitHandler
+              .connect(buyer)
+              .commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to expire the escalated dispute, expecting revert
             await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId)).to.revertedWithCustomError(
@@ -2441,7 +2466,9 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+            await exchangeCommitHandler
+              .connect(buyer)
+              .commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Redeem voucher
             await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
@@ -2564,7 +2591,9 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+            await exchangeCommitHandler
+              .connect(buyer)
+              .commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Attempt to refuse the escalated dispute, expecting revert
             await expect(
@@ -2576,7 +2605,9 @@ describe("IBosonDisputeHandler", function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
-            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+            await exchangeCommitHandler
+              .connect(buyer)
+              .commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
             // Redeem voucher
             await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
@@ -2670,7 +2701,7 @@ describe("IBosonDisputeHandler", function () {
           exchangeId++;
 
           // Commit to offer, creating a new exchange
-          await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+          await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
           // Get the exchange
           [exists, response] = await exchangeHandler.connect(rando).getExchange(exchangeId);
@@ -3030,7 +3061,7 @@ describe("IBosonDisputeHandler", function () {
 
         for (exchangeId = 1; exchangeId <= 5; exchangeId++) {
           // Commit to offer, creating a new exchange
-          await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+          await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
 
           // Redeem voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);

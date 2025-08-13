@@ -29,7 +29,7 @@ const {
 describe("BuyerHandler", function () {
   // Common vars
   let pauser, rando, assistant, admin, clerk, treasury, other1, other2, other3, other4;
-  let accountHandler, exchangeHandler, offerHandler, fundsHandler, pauseHandler;
+  let accountHandler, exchangeCommitHandler, offerHandler, fundsHandler, pauseHandler;
   let seller;
   let emptyAuthToken;
   let buyer, buyerStruct, buyer2, buyer2Struct, expectedBuyer, expectedBuyerStruct;
@@ -50,14 +50,14 @@ describe("BuyerHandler", function () {
     const contracts = {
       accountHandler: "IBosonAccountHandler",
       offerHandler: "IBosonOfferHandler",
-      exchangeHandler: "IBosonExchangeHandler",
+      exchangeCommitHandler: "IBosonExchangeCommitHandler",
       fundsHandler: "IBosonFundsHandler",
       pauseHandler: "IBosonPauseHandler",
     };
 
     ({
       signers: [pauser, admin, treasury, rando, other1, other2, other3, other4],
-      contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, pauseHandler },
+      contractInstances: { accountHandler, offerHandler, exchangeCommitHandler, fundsHandler, pauseHandler },
     } = await setupTestEnvironment(contracts));
 
     bosonErrors = await getContractAt("BosonErrors", await accountHandler.getAddress());
@@ -426,7 +426,7 @@ describe("BuyerHandler", function () {
             .depositFunds(seller.id, ZeroAddress, sellerDeposit, { value: sellerDeposit });
 
           //Commit to offer
-          await exchangeHandler
+          await exchangeCommitHandler
             .connect(other1)
             .commitToOffer(await other1.getAddress(), offerId, { value: offer.price });
 

@@ -63,6 +63,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     fundsHandler,
     disputeHandler,
     exchangeHandler,
+    exchangeCommitHandler,
     offerHandler,
     twinHandler,
     pauseHandler,
@@ -124,6 +125,7 @@ describe("IBosonMetaTransactionsHandler", function () {
       "DisputeResolverHandlerFacet",
       "FundsHandlerFacet",
       "ExchangeHandlerFacet",
+      "ExchangeCommitFacet",
       "OfferHandlerFacet",
       "TwinHandlerFacet",
       "DisputeHandlerFacet",
@@ -140,6 +142,7 @@ describe("IBosonMetaTransactionsHandler", function () {
       twinHandler: "IBosonTwinHandler",
       offerHandler: "IBosonOfferHandler",
       exchangeHandler: "IBosonExchangeHandler",
+      exchangeCommitHandler: "IBosonExchangeCommitHandler",
       fundsHandler: "IBosonFundsHandler",
       disputeHandler: "IBosonDisputeHandler",
       metaTransactionsHandler: "IBosonMetaTransactionsHandler",
@@ -155,6 +158,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         twinHandler,
         offerHandler,
         exchangeHandler,
+        exchangeCommitHandler,
         fundsHandler,
         disputeHandler,
         metaTransactionsHandler,
@@ -1352,7 +1356,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 .depositFunds(seller.id, await maliciousToken.getAddress(), sellerDeposit);
 
               // Commit to the offer
-              await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
+              await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
 
               // Cancel the voucher, so both seller and buyer have something to withdraw
               await exchangeHandler.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
@@ -1573,7 +1577,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Prepare the message
             message = {};
             message.nonce = parseInt(nonce);
-            message.contractAddress = await exchangeHandler.getAddress();
+            message.contractAddress = await exchangeCommitHandler.getAddress();
             message.from = await buyer.getAddress();
             message.functionName = "commitToOffer(address,uint256)";
 
@@ -1669,7 +1673,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               );
 
               // Prepare the function signature
-              functionSignature = exchangeHandler.interface.encodeFunctionData(
+              functionSignature = exchangeCommitHandler.interface.encodeFunctionData(
                 "commitToOffer",
                 Object.values(validOfferDetails)
               );
@@ -1721,7 +1725,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               );
 
               // Prepare the function signature
-              functionSignature = exchangeHandler.interface.encodeFunctionData(
+              functionSignature = exchangeCommitHandler.interface.encodeFunctionData(
                 "commitToOffer",
                 Object.values(validOfferDetails)
               );
@@ -1741,7 +1745,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             context("💔 Revert Reasons", async function () {
               beforeEach(async function () {
                 // Prepare the function signature
-                functionSignature = exchangeHandler.interface.encodeFunctionData(
+                functionSignature = exchangeCommitHandler.interface.encodeFunctionData(
                   "commitToOffer",
                   Object.values(validOfferDetails)
                 );
@@ -1896,7 +1900,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               );
 
               // Prepare the function signature
-              functionSignature = exchangeHandler.interface.encodeFunctionData(
+              functionSignature = exchangeCommitHandler.interface.encodeFunctionData(
                 "commitToConditionalOffer",
                 Object.values(validOfferDetails)
               );
@@ -1948,7 +1952,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               );
 
               // Prepare the function signature
-              functionSignature = exchangeHandler.interface.encodeFunctionData(
+              functionSignature = exchangeCommitHandler.interface.encodeFunctionData(
                 "commitToConditionalOffer",
                 Object.values(validOfferDetails)
               );
@@ -1985,7 +1989,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               );
 
               // Prepare the function signature
-              functionSignature = exchangeHandler.interface.encodeFunctionData(
+              functionSignature = exchangeCommitHandler.interface.encodeFunctionData(
                 "commitToConditionalOffer",
                 Object.values(validOfferDetails)
               );
@@ -2005,7 +2009,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             context("💔 Revert Reasons", async function () {
               beforeEach(async function () {
                 // Prepare the function signature
-                functionSignature = exchangeHandler.interface.encodeFunctionData(
+                functionSignature = exchangeCommitHandler.interface.encodeFunctionData(
                   "commitToConditionalOffer",
                   Object.values(validOfferDetails)
                 );
@@ -2103,7 +2107,9 @@ describe("IBosonMetaTransactionsHandler", function () {
               message.exchangeDetails = validExchangeDetails;
 
               // Commit to offer
-              await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: price });
+              await exchangeCommitHandler
+                .connect(buyer)
+                .commitToOffer(await buyer.getAddress(), offerId, { value: price });
             });
 
             context("👉 ExchangeHandlerFacet 👉 cancelVoucher()", async function () {
@@ -3356,7 +3362,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             message.from = await assistant.getAddress();
             message.contractAddress = await offerHandler.getAddress();
             message.functionName =
-              "createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,uint8,string,string,bool,uint256,(address[],uint256[])[]),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),(uint256,address),uint256,uint256)";
+              "createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,uint8,uint8,string,string,bool,uint256,(address[],uint256[])[],uint256),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),(uint256,address),uint256,uint256)";
             message.functionSignature = functionSignature;
           });
 
@@ -3593,8 +3599,8 @@ describe("IBosonMetaTransactionsHandler", function () {
             });
 
             // commit to both offers
-            await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
-            await exchangeHandler
+            await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
+            await exchangeCommitHandler
               .connect(buyer)
               .commitToOffer(await buyer.getAddress(), offerNative.id, { value: offerNative.price });
 

@@ -49,7 +49,7 @@ describe("SnapshotGate", function () {
     holder3,
     holder4,
     holder5;
-  let protocolDiamond, accessController, accountHandler, offerHandler, groupHandler, exchangeHandler;
+  let protocolDiamond, accessController, accountHandler, offerHandler, groupHandler, exchangeCommitHandler;
   let offerId, seller, seller2, disputeResolverId;
   let price, foreign20;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
@@ -157,7 +157,7 @@ describe("SnapshotGate", function () {
       "AccountHandlerFacet",
       "SellerHandlerFacet",
       "DisputeResolverHandlerFacet",
-      "ExchangeHandlerFacet",
+      "ExchangeCommitFacet",
       "OfferHandlerFacet",
       "GroupHandlerFacet",
       "ProtocolInitializationHandlerFacet",
@@ -178,8 +178,8 @@ describe("SnapshotGate", function () {
     // Cast Diamond to IGroupHandler
     groupHandler = await getContractAt("IBosonGroupHandler", await protocolDiamond.getAddress());
 
-    // Cast Diamond to IBosonExchangeHandler
-    exchangeHandler = await getContractAt("IBosonExchangeHandler", await protocolDiamond.getAddress());
+    // Cast Diamond to IBosonExchangeCommitHandler
+    exchangeCommitHandler = await getContractAt("IBosonExchangeCommitHandler", await protocolDiamond.getAddress());
 
     bosonErrors = await getContractAt("BosonErrors", await protocolDiamond.getAddress());
 
@@ -940,7 +940,9 @@ describe("SnapshotGate", function () {
 
           // Check that holder cannot commit directly to the offer on the protocol itself
           await expect(
-            exchangeHandler.connect(holder).commitToConditionalOffer(await holder.getAddress(), offerId, entry.tokenId)
+            exchangeCommitHandler
+              .connect(holder)
+              .commitToConditionalOffer(await holder.getAddress(), offerId, entry.tokenId)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.CANNOT_COMMIT);
         });
       });

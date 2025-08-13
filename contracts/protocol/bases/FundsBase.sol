@@ -21,30 +21,31 @@ abstract contract FundsBase is Context {
     using SafeERC20 for IERC20;
 
     /**
-     * @notice Takes in the offer id and buyer id and encumbers buyer's and seller's funds during the commitToOffer.
-     * If offer is preminted, caller's funds are not encumbered, but the price is covered from the seller's funds.
+     * @notice Takes in the offer id and entity id and encumbers the appropriate funds during commitToOffer.
+     * For seller-created offers: encumbers seller's pre-deposited deposit and validates buyer's incoming payment.
+     * For buyer-created offers: encumbers buyer's pre-deposited payment and validates seller's incoming deposit.
+     * If offer is preminted, caller's funds are not encumbered, but the funds are covered from pre-deposited amounts.
      *
      * Emits FundsEncumbered event if successful.
      *
      * Reverts if:
-     * - Offer price is in native token and caller does not send enough
-     * - Offer price is in some ERC20 token and caller also sends native currency
+     * - Incoming payment is in native token and caller does not send enough
+     * - Incoming payment is in some ERC20 token and caller also sends native currency
      * - Contract at token address does not support ERC20 function transferFrom
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
-     * - Seller has less funds available than sellerDeposit for non preminted offers
-     * - Seller has less funds available than sellerDeposit and price for preminted offers
+     * - Entity has less pre-deposited funds available than required amount
      * - Received ERC20 token amount differs from the expected value
      *
      * @param _offerId - id of the offer with the details
-     * @param _buyerId - id of the buyer
-     * @param _price - the price, either price discovered externally or set on offer creation
+     * @param _entityId - id of the committing entity (buyer for seller-created offers, seller for buyer-created offers)
+     * @param _incomingAmount - the amount being paid by the committing entity
      * @param _isPreminted - flag indicating if the offer is preminted
      * @param _priceType - price type, either static or discovery
      */
     function encumberFunds(
         uint256 _offerId,
-        uint256 _buyerId,
-        uint256 _price,
+        uint256 _entityId,
+        uint256 _incomingAmount,
         bool _isPreminted,
         BosonTypes.PriceType _priceType
     ) internal {
@@ -59,21 +60,22 @@ abstract contract FundsBase is Context {
         BosonTypes.Offer storage offer = pe.offers[_offerId];
         address exchangeToken = offer.exchangeToken;
 
-        // if offer is non-preminted, validate incoming payment
         if (!_isPreminted) {
-            validateIncomingPayment(exchangeToken, _price);
-            emit IBosonFundsBaseEvents.FundsEncumbered(_buyerId, exchangeToken, _price, sender);
+            validateIncomingPayment(exchangeToken, _incomingAmount);
+            emit IBosonFundsBaseEvents.FundsEncumbered(_entityId, exchangeToken, _incomingAmount, sender);
         }
 
-        bool isPriceDiscovery = _priceType == BosonTypes.PriceType.Discovery;
-
-        // decrease available funds
-        uint256 sellerId = offer.sellerId;
-        uint256 sellerFundsEncumbered = offer.sellerDeposit + (_isPreminted && !isPriceDiscovery ? _price : 0); // for preminted offer and price type is static, encumber also price from seller's available funds
-        decreaseAvailableFunds(sellerId, exchangeToken, sellerFundsEncumbered);
-
-        // notify external observers
-        emit IBosonFundsBaseEvents.FundsEncumbered(sellerId, exchangeToken, sellerFundsEncumbered, sender);
+        if (offer.creator == BosonTypes.OfferCreator.Buyer) {
+            decreaseAvailableFunds(offer.buyerId, exchangeToken, offer.price);
+            emit IBosonFundsBaseEvents.FundsEncumbered(offer.buyerId, exchangeToken, offer.price, sender);
+        } else {
+            uint256 sellerId = offer.sellerId;
+            bool isPriceDiscovery = _priceType == BosonTypes.PriceType.Discovery;
+            uint256 sellerFundsEncumbered = offer.sellerDeposit +
+                (_isPreminted && !isPriceDiscovery ? _incomingAmount : 0);
+            decreaseAvailableFunds(sellerId, exchangeToken, sellerFundsEncumbered);
+            emit IBosonFundsBaseEvents.FundsEncumbered(sellerId, exchangeToken, sellerFundsEncumbered, sender);
+        }
     }
 
     /**

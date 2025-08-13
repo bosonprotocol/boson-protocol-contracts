@@ -10,7 +10,7 @@ import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x44f68f71
+ * The ERC-165 identifier for this interface is: 0x002b2835
  */
 interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
     /**
@@ -20,7 +20,8 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      *
      * Reverts if:
      * - The offers region of protocol is paused
-     * - Caller is not an assistant
+     * - Caller is not an assistant or a buyer
+     * - sellerId is not 0 when offer is created by the buyer
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
      * - Both voucher expiration date and voucher expiration period are defined
@@ -33,17 +34,20 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
-     * - Seller is not on dispute resolver's seller allow list
+     * - Seller is not on dispute resolver's seller allow list if offer is created by the seller
      * - Dispute resolver does not accept fees in the exchange token
      * - Buyer cancel penalty is greater than price
-     * - Collection does not exist
+     * - Collection does not exist if offer is created by the seller
+     * - Collection id is different from 0 if offer is created by the buyer
      * - When agent id is non zero:
      *   - If Agent does not exist
      * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
-     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
-     * - Royalty recipient is not on seller's allow list
-     * - Royalty percentage is less than the value decided by the admin
-     * - Total royalty percentage is more than max royalty percentage
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by caller
+     * If the seller is creating an offer and:
+     *   - Royalty recipient is not on seller's allow list
+     *   - Royalty percentage is less than the value decided by the admin
+     *   - Total royalty percentage is more than max royalty percentage
+     * If the buyer is creating an offer and royalties are set.
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -142,7 +146,7 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      * Reverts if:
      * - The offers region of protocol is paused
      * - Offer id is invalid
-     * - Caller is not the assistant of the offer
+     * - Caller is not authorized (for seller-created offers: not the seller assistant; for buyer-created offers: not the buyer who created it)
      * - Offer has already been voided
      *
      * @param _offerId - the id of the offer to void
@@ -159,7 +163,7 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      * Reverts if, for any offer:
      * - The offers region of protocol is paused
      * - Offer id is invalid
-     * - Caller is not the assistant of the offer
+     * - Caller is not authorized (for seller-created offers: not the seller assistant; for buyer-created offers: not the buyer who created it)
      * - Offer has already been voided
      *
      * @param _offerIds - list of ids of offers to void

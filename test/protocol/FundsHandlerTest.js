@@ -131,6 +131,7 @@ describe("IBosonFundsHandler", function () {
     accountHandler,
     fundsHandler,
     exchangeHandler,
+    exchangeCommitHandler,
     offerHandler,
     configHandler,
     disputeHandler,
@@ -202,6 +203,7 @@ describe("IBosonFundsHandler", function () {
       accountHandler: "IBosonAccountHandler",
       offerHandler: "IBosonOfferHandler",
       exchangeHandler: "IBosonExchangeHandler",
+      exchangeCommitHandler: "IBosonExchangeCommitHandler",
       fundsHandler: "IBosonFundsHandler",
       configHandler: "IBosonConfigHandler",
       pauseHandler: "IBosonPauseHandler",
@@ -231,6 +233,7 @@ describe("IBosonFundsHandler", function () {
         accountHandler,
         offerHandler,
         exchangeHandler,
+        exchangeCommitHandler,
         fundsHandler,
         configHandler,
         pauseHandler,
@@ -451,7 +454,7 @@ describe("IBosonFundsHandler", function () {
           seller.id = "555";
           await expect(
             fundsHandler.connect(rando).depositFunds(seller.id, await mockToken.getAddress(), depositAmount)
-          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_SELLER);
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_ENTITY);
         });
 
         it("Native currency deposited, but the token address is not zero", async function () {
@@ -627,8 +630,8 @@ describe("IBosonFundsHandler", function () {
         ]);
 
         // commit to both offers
-        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
-        await exchangeHandler
+        await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
+        await exchangeCommitHandler
           .connect(buyer)
           .commitToOffer(await buyer.getAddress(), offerNative.id, { value: offerNative.price });
 
@@ -904,7 +907,7 @@ describe("IBosonFundsHandler", function () {
                 .depositFunds(seller.id, await mockToken.getAddress(), sellerDeposit);
 
               // commit to agent offer
-              await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
+              await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id);
 
               // Set time forward to the offer's voucherRedeemableFrom
               await setNextBlockTimestamp(Number(voucherRedeemableFrom));
@@ -1069,11 +1072,11 @@ describe("IBosonFundsHandler", function () {
               const [fallbackErrorContract] = await deployMockTokens(["FallbackError"]);
 
               // commit to offer on behalf of some contract
-              tx = await exchangeHandler
+              tx = await exchangeCommitHandler
                 .connect(buyer)
                 .commitToOffer(await fallbackErrorContract.getAddress(), offerNative.id, { value: price });
               txReceipt = await tx.wait();
-              event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
+              event = getEvent(txReceipt, exchangeCommitHandler, "BuyerCommitted");
               exchangeId = event.exchangeId;
               const fallbackContractBuyerId = event.buyerId;
 
@@ -1096,11 +1099,11 @@ describe("IBosonFundsHandler", function () {
               const [fallbackErrorContract] = await deployMockTokens(["WithoutFallbackError"]);
 
               // commit to offer on behalf of some contract
-              tx = await exchangeHandler
+              tx = await exchangeCommitHandler
                 .connect(buyer)
                 .commitToOffer(await fallbackErrorContract.getAddress(), offerNative.id, { value: price });
               txReceipt = await tx.wait();
-              event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
+              event = getEvent(txReceipt, exchangeCommitHandler, "BuyerCommitted");
               exchangeId = event.exchangeId;
               const fallbackContractBuyerId = event.buyerId;
 
@@ -2017,7 +2020,7 @@ describe("IBosonFundsHandler", function () {
         let buyerId = "4"; // 1: seller, 2: disputeResolver, 3: agent, 4: buyer
 
         // Commit to an offer with erc20 token, test for FundsEncumbered event
-        const tx = await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
+        const tx = await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
         await expect(tx)
           .to.emit(exchangeHandler, "FundsEncumbered")
           .withArgs(buyerId, await mockToken.getAddress(), price, await buyer.getAddress());
@@ -2027,7 +2030,7 @@ describe("IBosonFundsHandler", function () {
           .withArgs(seller.id, await mockToken.getAddress(), sellerDeposit, await buyer.getAddress());
 
         // Commit to an offer with native currency, test for FundsEncumbered event
-        const tx2 = await exchangeHandler
+        const tx2 = await exchangeCommitHandler
           .connect(buyer)
           .commitToOffer(await buyer.getAddress(), offerNative.id, { value: price });
         await expect(tx2)
@@ -2048,7 +2051,7 @@ describe("IBosonFundsHandler", function () {
         const sellersAvailableFundsBefore = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
 
         // Commit to an offer with erc20 token
-        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
+        await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
 
         // Check that token balance increased
         const contractTokenBalanceAfter = await mockToken.balanceOf(protocolDiamondAddress);
@@ -2068,7 +2071,9 @@ describe("IBosonFundsHandler", function () {
         ).to.eql(BigInt(sellerDeposit), "Token seller available funds mismatch");
 
         // Commit to an offer with native currency
-        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerNative.id, { value: price });
+        await exchangeCommitHandler
+          .connect(buyer)
+          .commitToOffer(await buyer.getAddress(), offerNative.id, { value: price });
 
         // check that native currency balance increased
         const contractNativeBalanceAfter = await provider.getBalance(protocolDiamondAddress);
@@ -2100,8 +2105,8 @@ describe("IBosonFundsHandler", function () {
           expect(sellersAvailableFunds.funds[1].tokenAddress).to.eql(ZeroAddress, "Native currency address mismatch");
 
           // Commit to offer with token twice to empty the seller's pool
-          await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
-          await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
+          await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
+          await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
 
           // Token address should be removed and have only native currency in the list
           sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAllAvailableFunds(seller.id));
@@ -2109,10 +2114,10 @@ describe("IBosonFundsHandler", function () {
           expect(sellersAvailableFunds.funds[0].tokenAddress).to.eql(ZeroAddress, "Native currency address mismatch");
 
           // Commit to offer with token twice to empty the seller's pool
-          await exchangeHandler
+          await exchangeCommitHandler
             .connect(buyer)
             .commitToOffer(await buyer.getAddress(), offerNative.id, { value: price });
-          await exchangeHandler
+          await exchangeCommitHandler
             .connect(buyer)
             .commitToOffer(await buyer.getAddress(), offerNative.id, { value: price });
 
@@ -2158,10 +2163,10 @@ describe("IBosonFundsHandler", function () {
           );
 
           // Commit to offer with token twice to empty the seller's pool
-          await exchangeHandler
+          await exchangeCommitHandler
             .connect(buyer)
             .commitToOffer(await buyer.getAddress(), offerNative.id, { value: price });
-          await exchangeHandler
+          await exchangeCommitHandler
             .connect(buyer)
             .commitToOffer(await buyer.getAddress(), offerNative.id, { value: price });
 
@@ -2186,7 +2191,7 @@ describe("IBosonFundsHandler", function () {
         const randoTokenBalanceBefore = await mockToken.balanceOf(await rando.getAddress());
 
         // commit to an offer with token on rando's behalf
-        await exchangeHandler.connect(buyer).commitToOffer(await rando.getAddress(), offerToken.id);
+        await exchangeCommitHandler.connect(buyer).commitToOffer(await rando.getAddress(), offerToken.id);
 
         // get token balance after the commit
         const buyerTokenBalanceAfter = await mockToken.balanceOf(await buyer.getAddress());
@@ -2208,7 +2213,7 @@ describe("IBosonFundsHandler", function () {
         const randoNativeBalanceBefore = await provider.getBalance(await rando.getAddress());
 
         // commit to an offer with native currency on rando's behalf
-        tx = await exchangeHandler
+        tx = await exchangeCommitHandler
           .connect(buyer)
           .commitToOffer(await rando.getAddress(), offerNative.id, { value: price });
         txReceipt = await tx.wait();
@@ -2355,7 +2360,7 @@ describe("IBosonFundsHandler", function () {
         it("Insufficient native currency sent", async function () {
           // Attempt to commit to an offer, expecting revert
           await expect(
-            exchangeHandler
+            exchangeCommitHandler
               .connect(buyer)
               .commitToOffer(await buyer.getAddress(), offerNative.id, { value: BigInt(price) - 1n })
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
@@ -2364,7 +2369,9 @@ describe("IBosonFundsHandler", function () {
         it("Native currency sent together with ERC20 token transfer", async function () {
           // Attempt to commit to an offer, expecting revert
           await expect(
-            exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id, { value: price })
+            exchangeCommitHandler
+              .connect(buyer)
+              .commitToOffer(await buyer.getAddress(), offerToken.id, { value: price })
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.NATIVE_NOT_ALLOWED);
         });
 
@@ -2389,7 +2396,7 @@ describe("IBosonFundsHandler", function () {
 
           // Attempt to commit to an offer, expecting revert
           await expect(
-            exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id)
+            exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id)
           ).to.revertedWith(RevertReasons.SAFE_ERC20_LOW_LEVEL_CALL);
         });
 
@@ -2412,7 +2419,7 @@ describe("IBosonFundsHandler", function () {
 
           // Attempt to commit to an offer, expecting revert
           await expect(
-            exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id)
+            exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id)
           ).to.revertedWithoutReason();
         });
 
@@ -2422,14 +2429,14 @@ describe("IBosonFundsHandler", function () {
           await mockToken.connect(rando).approve(protocolDiamondAddress, price);
           // Attempt to commit to an offer, expecting revert
           await expect(
-            exchangeHandler.connect(rando).commitToOffer(await rando.getAddress(), offerToken.id)
+            exchangeCommitHandler.connect(rando).commitToOffer(await rando.getAddress(), offerToken.id)
           ).to.revertedWith(RevertReasons.ERC20_EXCEEDS_BALANCE);
 
           // not approved
           await mockToken.connect(rando).approve(protocolDiamondAddress, BigInt(price) - 1n);
           // Attempt to commit to an offer, expecting revert
           await expect(
-            exchangeHandler.connect(rando).commitToOffer(await rando.getAddress(), offerToken.id)
+            exchangeCommitHandler.connect(rando).commitToOffer(await rando.getAddress(), offerToken.id)
           ).to.revertedWith(RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE);
         });
 
@@ -2445,7 +2452,7 @@ describe("IBosonFundsHandler", function () {
 
           // Attempt to commit to an offer, expecting revert
           await expect(
-            exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id)
+            exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
 
           // create an offer with native currency with higher seller deposit
@@ -2459,7 +2466,9 @@ describe("IBosonFundsHandler", function () {
 
           // Attempt to commit to an offer, expecting revert
           await expect(
-            exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerNative.id, { value: price })
+            exchangeCommitHandler
+              .connect(buyer)
+              .commitToOffer(await buyer.getAddress(), offerNative.id, { value: price })
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
         });
 
@@ -2533,7 +2542,7 @@ describe("IBosonFundsHandler", function () {
 
           // Attempt to commit to offer, expecting revert
           await expect(
-            exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id)
+            exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id)
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
         });
       });
@@ -2544,7 +2553,7 @@ describe("IBosonFundsHandler", function () {
         protocolId = "0";
         buyerId = "4";
         exchangeId = "1";
-        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
+        await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
       });
 
       // Non-dispute states (standalone contexts)
@@ -3834,7 +3843,7 @@ describe("IBosonFundsHandler", function () {
                   getOfferId: true,
                 });
 
-              await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id, {
+              await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id, {
                 value: agentOffer.price,
               });
 
@@ -3907,7 +3916,7 @@ describe("IBosonFundsHandler", function () {
 
             it("should update state", async function () {
               // commit again, so seller has nothing in available funds (matches original test)
-              await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
+              await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
 
               const action = disputeStateFinalization[state]();
               await action.handler.connect(action.wallet)[action.method](...action.args);
@@ -3935,7 +3944,7 @@ describe("IBosonFundsHandler", function () {
                     getOfferId: true,
                   });
 
-                await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id, {
+                await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), agentOffer.id, {
                   value: agentOffer.price,
                 });
 
@@ -4064,7 +4073,7 @@ describe("IBosonFundsHandler", function () {
           // similar as teste before, excpet the commit to offer is done after the procol fee change
 
           // commit to offer and get the correct exchangeId
-          tx = await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
+          tx = await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerToken.id);
           txReceipt = await tx.wait();
           event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
           exchangeId = event.exchangeId.toString();
@@ -4119,7 +4128,7 @@ describe("IBosonFundsHandler", function () {
               });
 
             // Commit to Agent Offer
-            await exchangeHandler
+            await exchangeCommitHandler
               .connect(buyer)
               .commitToOffer(await buyer.getAddress(), agentOffer.id, { value: agentOffer.price });
 
@@ -4166,11 +4175,11 @@ describe("IBosonFundsHandler", function () {
             await fundsHandler.connect(assistant).depositFunds(seller.id, await mockToken.getAddress(), sellerDeposit);
 
             // commit to offer and get the correct exchangeId
-            tx = await exchangeHandler
+            tx = await exchangeCommitHandler
               .connect(buyer)
               .commitToOffer(await buyer.getAddress(), agentOffer.id, { value: agentOffer.price });
             txReceipt = await tx.wait();
-            event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
+            event = getEvent(txReceipt, exchangeCommitHandler, "BuyerCommitted");
             exchangeId = event.exchangeId.toString();
 
             // Set time forward to the offer's voucherRedeemableFrom
@@ -4233,7 +4242,7 @@ describe("IBosonFundsHandler", function () {
           .connect(assistant)
           .createOffer(mutualizerOffer, offerDates, offerDurations, mutualizerDRParams, agentId, offerFeeLimit);
 
-        await exchangeHandler
+        await exchangeCommitHandler
           .connect(buyer)
           .commitToOffer(await buyer.getAddress(), mutualizerOfferId, { value: price });
         mutualizerExchangeId = "1";
@@ -4418,7 +4427,7 @@ describe("IBosonFundsHandler", function () {
                 protocolId = 0;
 
                 // commit to offer
-                await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
+                await exchangeCommitHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
 
                 voucherOwner = buyer; // voucherOwner is the first buyer
 
@@ -5204,7 +5213,7 @@ describe("IBosonFundsHandler", function () {
               await accountHandler.createBuyer(mockBuyer(await bpd.getAddress()));
 
               // commit to offer
-              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
+              await exchangeCommitHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
 
               voucherOwner = buyer; // voucherOwner is the first buyer
               previousPrice = BigInt(offer.price);
@@ -6219,7 +6228,7 @@ describe("IBosonFundsHandler", function () {
           });
 
         // Commit to offer to create exchange (native currency, so send value)
-        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), testOfferId, {
+        await exchangeCommitHandler.connect(buyer).commitToOffer(await buyer.getAddress(), testOfferId, {
           value: offer.price,
         });
 

@@ -62,6 +62,8 @@ interface BosonErrors {
     error NotAgentWallet();
     // Caller is not dispute resolver assistant
     error NotDisputeResolverAssistant();
+    // Caller is not the creator of the offer
+    error NotOfferCreator();
     // Supplied clerk is not zero address
     error ClerkDeprecated();
 
@@ -84,6 +86,8 @@ interface BosonErrors {
     error NoSuchDisputeResolver();
     // Agent does not exist
     error NoSuchAgent();
+    // Entity does not exist
+    error NoSuchEntity();
     // Buyer is involved in an non-finalized exchange
     error WalletOwnsVouchers();
     // Escalation period is not greater than zero or is more than the max allowed
@@ -122,6 +126,10 @@ interface BosonErrors {
     // Offer related
     // Offer does not exist
     error NoSuchOffer();
+    // Offer parameters are invalid
+    error InvalidOffer();
+    // Collection index is invalid for the context
+    error InvalidCollectionIndex();
     // Offer finishes in the past or it starts after it finishes
     error InvalidOfferPeriod();
     // Buyer cancellation penalty is higher than the item price
@@ -142,6 +150,12 @@ interface BosonErrors {
     error CannotCommit();
     // Bundle cannot be created since exchganes for offer exist already
     error ExchangeForOfferExists();
+    // Buyer-initiated offer cannot have seller-specific fields (sellerId, collectionIndex, royaltyInfo)
+    error InvalidBuyerOfferFields();
+    // Seller-initiated offer cannot have buyer-specific fields (buyerId, quantityAvailable)
+    error InvalidSellerOfferFields();
+    // Invalid offer creator value specified
+    error InvalidOfferCreator();
     // Voucher must have either a fixed expiry or a fixed redeemable period, not both
     error AmbiguousVoucherExpiry();
     // Redemption period starts after it ends or it ends before offer itself expires

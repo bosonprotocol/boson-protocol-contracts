@@ -6,6 +6,7 @@ const {
   enumIsValid,
 } = require("../util/validations.js");
 const PriceType = require("./PriceType.js");
+const OfferCreator = require("./OfferCreator.js");
 const { RoyaltyInfo, RoyaltyInfoList } = require("./RoyaltyInfo.js");
 
 /**
@@ -24,11 +25,13 @@ class Offer {
             uint256 quantityAvailable;
             address exchangeToken;
             PriceType priceType;
+            OfferCreator creator;
             string metadataUri;
             string metadataHash;
             bool voided;
             uint256 collectionIndex;            
             RoyaltyInfo[] royaltyInfo;
+            uint256 buyerId;
         }
     */
 
@@ -41,11 +44,13 @@ class Offer {
     quantityAvailable,
     exchangeToken,
     priceType,
+    creator,
     metadataUri,
     metadataHash,
     voided,
     collectionIndex,
-    royaltyInfo
+    royaltyInfo,
+    buyerId
   ) {
     this.id = id;
     this.sellerId = sellerId;
@@ -55,11 +60,13 @@ class Offer {
     this.quantityAvailable = quantityAvailable;
     this.exchangeToken = exchangeToken;
     this.priceType = priceType;
+    this.creator = creator;
     this.metadataUri = metadataUri;
     this.metadataHash = metadataHash;
     this.voided = voided;
     this.collectionIndex = collectionIndex;
     this.royaltyInfo = royaltyInfo;
+    this.buyerId = buyerId;
   }
 
   /**
@@ -77,11 +84,13 @@ class Offer {
       quantityAvailable,
       exchangeToken,
       priceType,
+      creator,
       metadataUri,
       metadataHash,
       voided,
       collectionIndex,
       royaltyInfo,
+      buyerId,
     } = o;
 
     return new Offer(
@@ -93,11 +102,13 @@ class Offer {
       quantityAvailable,
       exchangeToken,
       priceType,
+      creator,
       metadataUri,
       metadataHash,
       voided,
       collectionIndex,
-      royaltyInfo.map((ri) => RoyaltyInfo.fromObject(ri))
+      (royaltyInfo || []).map((ri) => RoyaltyInfo.fromObject(ri)),
+      buyerId
     );
   }
 
@@ -115,11 +126,13 @@ class Offer {
       quantityAvailable,
       exchangeToken,
       priceType,
+      creator,
       metadataUri,
       metadataHash,
       voided,
       collectionIndex,
-      royaltyInfo;
+      royaltyInfo,
+      buyerId;
 
     // destructure struct
     [
@@ -131,14 +144,22 @@ class Offer {
       quantityAvailable,
       exchangeToken,
       priceType,
+      creator,
       metadataUri,
       metadataHash,
       voided,
       collectionIndex,
       royaltyInfo,
+      buyerId,
     ] = struct;
     if (!collectionIndex) {
       collectionIndex = 0;
+    }
+    if (typeof creator === "undefined") {
+      creator = OfferCreator.Seller; // Default to Seller for backward compatibility
+    }
+    if (!buyerId) {
+      buyerId = 0; // Default to 0 for seller-created offers
     }
 
     return Offer.fromObject({
@@ -150,11 +171,13 @@ class Offer {
       quantityAvailable: quantityAvailable.toString(),
       exchangeToken,
       priceType: Number(priceType),
+      creator: Number(creator),
       metadataUri,
       metadataHash,
       voided,
       collectionIndex: collectionIndex.toString(),
-      royaltyInfo: royaltyInfo.map((ri) => RoyaltyInfo.fromStruct(ri)),
+      royaltyInfo: (royaltyInfo || []).map((ri) => RoyaltyInfo.fromStruct(ri)),
+      buyerId: buyerId.toString(),
     });
   }
 
@@ -188,11 +211,13 @@ class Offer {
       this.quantityAvailable,
       this.exchangeToken,
       this.priceType,
+      this.creator,
       this.metadataUri,
       this.metadataHash,
       this.voided,
       this.collectionIndex,
       new RoyaltyInfoList(this.royaltyInfo).toStruct(),
+      this.buyerId,
     ];
   }
 
@@ -330,6 +355,24 @@ class Offer {
   }
 
   /**
+   * Is this Offer instance's creator field valid?
+   * Must be a valid OfferCreator enum value
+   * @returns {boolean}
+   */
+  creatorIsValid() {
+    return enumIsValid(this.creator, OfferCreator.Types);
+  }
+
+  /**
+   * Is this Offer instance's buyerId field valid?
+   * Must be a string representation of a big number
+   * @returns {boolean}
+   */
+  buyerIdIsValid() {
+    return bigNumberIsValid(this.buyerId);
+  }
+
+  /**
    * Is this Offer instance valid?
    * @returns {boolean}
    */
@@ -343,11 +386,13 @@ class Offer {
       this.quantityAvailableIsValid() &&
       this.exchangeTokenIsValid() &&
       this.priceTypeIsValid() &&
+      this.creatorIsValid() &&
       this.metadataUriIsValid() &&
       this.metadataHashIsValid() &&
       this.voidedIsValid() &&
       this.collectionIndexIsValid() &&
-      this.royaltyInfoIsValid()
+      this.royaltyInfoIsValid() &&
+      this.buyerIdIsValid()
     );
   }
 }

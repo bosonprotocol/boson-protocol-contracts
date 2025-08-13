@@ -23,14 +23,14 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
     }
 
     /**
-     * @notice Receives funds from the caller, maps funds to the seller id and stores them so they can be used during the commitToOffer.
+     * @notice Receives funds from the caller , maps funds to the entity id and stores them so they can be used during the commitToOffer.
      *
      * Emits FundsDeposited event if successful.
      *
      * Reverts if:
      * - The funds region of protocol is paused
      * - Amount to deposit is zero
-     * - Seller id does not exist
+     * - Entity id is neither a seller nor a buyer
      * - It receives some native currency (e.g. ETH), but token address is not zero
      * - It receives some native currency (e.g. ETH), and the amount does not match msg.value
      * - It receives no native currency, but token address is zero
@@ -38,22 +38,22 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      * - Received ERC20 token amount differs from the expected value
      *
-     * @param _sellerId - id of the seller that will be credited
+     * @param _entityId - id of the entity that will be credited
      * @param _tokenAddress - contract address of token that is being deposited (0 for native currency)
      * @param _amount - amount to be credited
      */
     function depositFunds(
-        uint256 _sellerId,
+        uint256 _entityId,
         address _tokenAddress,
         uint256 _amount
     ) external payable override fundsNotPaused nonReentrant {
         if (_amount == 0) revert ZeroDepositNotAllowed();
 
-        // Check seller exists in sellers mapping
-        (bool exists, , ) = fetchSeller(_sellerId);
+        // First check if entity is a seller
+        (bool sellerExists, , ) = fetchSeller(_entityId);
+        (bool buyerExists, ) = fetchBuyer(_entityId);
 
-        // Seller must exist
-        if (!exists) revert NoSuchSeller();
+        if (!sellerExists && !buyerExists) revert NoSuchEntity();
 
         if (msg.value != 0) {
             // Receiving native currency
@@ -66,9 +66,9 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         }
 
         // Increase available funds
-        increaseAvailableFunds(_sellerId, _tokenAddress, _amount);
+        increaseAvailableFunds(_entityId, _tokenAddress, _amount);
 
-        emit FundsDeposited(_sellerId, _msgSender(), _tokenAddress, _amount);
+        emit FundsDeposited(_entityId, _msgSender(), _tokenAddress, _amount);
     }
 
     /**

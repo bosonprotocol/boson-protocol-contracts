@@ -40,7 +40,7 @@ const { deployMockTokens } = require("../../../scripts/util/deploy-mock-tokens")
 describe("IBosonVoucher", function () {
   let interfaceIds;
   let accessController;
-  let bosonVoucher, offerHandler, accountHandler, exchangeHandler, fundsHandler, configHandler;
+  let bosonVoucher, offerHandler, accountHandler, exchangeHandler, exchangeCommitHandler, fundsHandler, configHandler;
   let deployer,
     protocol,
     buyer,
@@ -85,6 +85,7 @@ describe("IBosonVoucher", function () {
       accountHandler: "IBosonAccountHandler",
       offerHandler: "IBosonOfferHandler",
       exchangeHandler: "IBosonExchangeHandler",
+      exchangeCommitHandler: "IBosonExchangeCommitHandler",
       fundsHandler: "IBosonFundsHandler",
       configHandler: "IBosonConfigHandler",
     };
@@ -92,7 +93,14 @@ describe("IBosonVoucher", function () {
     let bosonClientBeacon;
     ({
       signers: [protocol, buyer, rando, rando2, admin, treasury, adminDR, treasuryDR],
-      contractInstances: { accountHandler, offerHandler, exchangeHandler, fundsHandler, configHandler },
+      contractInstances: {
+        accountHandler,
+        offerHandler,
+        exchangeHandler,
+        exchangeCommitHandler,
+        fundsHandler,
+        configHandler,
+      },
       extraReturnValues: { accessController, beacon: bosonClientBeacon },
     } = await setupTestEnvironment(contracts, {
       forwarderAddress: [await forwarder.getAddress()],
@@ -1414,7 +1422,7 @@ describe("IBosonVoucher", function () {
               tokenId = deriveTokenId(offerId, exchangeId);
 
               // commit and create buyer account
-              await exchangeHandler.commitToOffer(await buyer.getAddress(), offerId, { value: offer.price });
+              await exchangeCommitHandler.commitToOffer(await buyer.getAddress(), offerId, { value: offer.price });
             });
 
             it("Should emit a Transfer event", async function () {
@@ -1885,7 +1893,7 @@ describe("IBosonVoucher", function () {
       it("should return the correct tokenURI", async function () {
         const buyerAddress = await buyer.getAddress();
 
-        await exchangeHandler.connect(buyer).commitToOffer(buyerAddress, offerId, { value: offer.price });
+        await exchangeCommitHandler.connect(buyer).commitToOffer(buyerAddress, offerId, { value: offer.price });
 
         const tokenId = deriveTokenId(offerId, 1);
         const tokenURI = await bosonVoucher.tokenURI(tokenId);
@@ -1936,7 +1944,9 @@ describe("IBosonVoucher", function () {
         offerPrice = offer.price;
         tokenId = deriveTokenId(offerId, exchangeId);
 
-        await exchangeHandler.connect(buyer).commitToOffer(await buyer.getAddress(), offerId, { value: offer.price });
+        await exchangeCommitHandler
+          .connect(buyer)
+          .commitToOffer(await buyer.getAddress(), offerId, { value: offer.price });
       });
 
       context("royaltyInfo()", function () {
@@ -2046,7 +2056,7 @@ describe("IBosonVoucher", function () {
           await fundsHandler
             .connect(admin)
             .depositFunds(seller.id, ZeroAddress, offer.sellerDeposit, { value: offer.sellerDeposit });
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
+          await exchangeCommitHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
 
           // Set inexistent exchangeId
           exchangeId = "2";
@@ -2083,7 +2093,7 @@ describe("IBosonVoucher", function () {
           await fundsHandler
             .connect(admin)
             .depositFunds(seller.id, ZeroAddress, offer.sellerDeposit, { value: offer.sellerDeposit });
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
+          await exchangeCommitHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
 
           // Set exchangeId
           const exchangeId = "2";

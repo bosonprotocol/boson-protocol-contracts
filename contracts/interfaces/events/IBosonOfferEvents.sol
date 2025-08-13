@@ -26,7 +26,7 @@ interface IBosonOfferEvents {
         uint256 validUntilDate,
         address indexed executedBy
     );
-    event OfferVoided(uint256 indexed offerId, uint256 indexed sellerId, address indexed executedBy);
+    event OfferVoided(uint256 indexed offerId, uint256 indexed creatorId, address indexed executedBy);
     event RangeReserved(
         uint256 indexed offerId,
         uint256 indexed sellerId,
