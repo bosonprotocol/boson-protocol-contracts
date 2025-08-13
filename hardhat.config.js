@@ -245,7 +245,7 @@ module.exports = {
           viaIR: false,
           optimizer: {
             enabled: true,
-            runs: 150,
+            runs: 100,
             details: {
               yul: true,
             },
@@ -259,7 +259,7 @@ module.exports = {
           viaIR: false,
           optimizer: {
             enabled: true,
-            runs: 150,
+            runs: 100,
             details: {
               yul: true,
             },
