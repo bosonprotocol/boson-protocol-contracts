@@ -31,34 +31,6 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
     using Address for address;
     using Address for address payable;
 
-    string private constant OFFER_TYPE =
-        "Offer(uint256 sellerId,uint256 price,uint256 sellerDeposit,uint256 buyerCancelPenalty,address exchangeToken,string metadataUri,string metadataHash,uint256 collectionIndex,RoyaltyInfo royaltyInfo,uint8 creator,uint256 buyerId)";
-    string private constant ROYALTY_INFO_TYPE = "RoyaltyInfo(address[] recipients,uint256[] bps)";
-    string private constant OFFER_DATES_TYPE =
-        "OfferDates(uint256 validFrom,uint256 validUntil,uint256 voucherRedeemableFrom,uint256 voucherRedeemableUntil)";
-    string private constant OFFER_DURATIONS_TYPE =
-        "OfferDurations(uint256 disputePeriod,uint256 voucherValid,uint256 resolutionPeriod)";
-    string private constant DR_PARAMETERS_TYPE = "DRParameters(uint256 disputeResolverId,address mutualizerAddress)";
-
-    bytes32 private immutable OFFER_TYPEHASH = keccak256(bytes(string.concat(OFFER_TYPE, ROYALTY_INFO_TYPE)));
-    bytes32 private constant ROYALTY_INFO_TYPEHASH = keccak256(bytes(ROYALTY_INFO_TYPE));
-    bytes32 private constant OFFER_DATES_TYPEHASH = keccak256(bytes(OFFER_DATES_TYPE));
-    bytes32 private constant OFFER_DURATIONS_TYPEHASH = keccak256(bytes(OFFER_DURATIONS_TYPE));
-    bytes32 private constant DR_PARAMETERS_TYPEHASH = keccak256(bytes(DR_PARAMETERS_TYPE));
-    bytes32 private immutable FULL_OFFER_TYPEHASH =
-        keccak256(
-            bytes(
-                string.concat(
-                    "FullOffer(Offer offer,OfferDates offerDates,OfferDurations offerDurations,DRParameters drParameters,uint256 agentId,uint256 feeLimit)",
-                    DR_PARAMETERS_TYPE,
-                    OFFER_TYPE,
-                    OFFER_DATES_TYPE,
-                    OFFER_DURATIONS_TYPE,
-                    ROYALTY_INFO_TYPE
-                )
-            )
-        );
-
     /**
      * @notice Initializes facet.
      * This function is callable only once.
