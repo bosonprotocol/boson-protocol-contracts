@@ -12,7 +12,7 @@ import { IBosonFundsBaseEvents } from "../events/IBosonFundsEvents.sol";
  * @notice Handles exchange commitment and creation within the protocol.
  * This interface contains functions for committing to offers and creating new exchanges.
  *
- * The ERC-165 identifier for this interface is: 0xa8ee08d2
+ * The ERC-165 identifier for this interface is: 0x5771c11f
  */
 interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBosonFundsBaseEvents {
     /**
@@ -149,14 +149,16 @@ interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBos
      * @param _offerCreator - the address of the other party
      * @param _committer - the address of the committer (buyer for seller-created offers, seller for buyer-created offers)
      * @param _signature - signature of the other party. If the signer is EOA, it must be ECDSA signature in the format of (r,s,v) struct, otherwise, it must be a valid ERC1271 signature.
-     * @param conditionalTokenId - the token id to use for the conditional commit, if applicable
+     * @param _conditionalTokenId - the token id to use for the conditional commit, if applicable
+     * @param _sellerParams - the seller-specific parameters (collection index, royalty info, mutualizer address), if applicable
      */
     function createOfferAndCommit(
         BosonTypes.FullOffer calldata _fullOffer,
         address _offerCreator,
         address payable _committer,
         bytes calldata _signature,
-        uint256 conditionalTokenId
+        uint256 _conditionalTokenId,
+        BosonTypes.SellerOfferParams calldata _sellerParams
     ) external payable;
 
     /**

@@ -8260,6 +8260,15 @@ describe("IBosonExchangeHandler", function () {
     let disputeResolutionTerms;
     let message = {};
 
+    const sellerParams = {
+      collectionIndex: 0,
+      royaltyInfo: {
+        recipients: [],
+        bps: [],
+      },
+      mutualizerAddress: ZeroAddress,
+    };
+
     // Set the message Type
     const eip712TypeDefinition = {
       FullOffer: [
@@ -8447,6 +8456,7 @@ describe("IBosonExchangeHandler", function () {
             buyer.address,
             signature,
             "0",
+            sellerParams,
             { value: price }
           );
 
@@ -8520,7 +8530,8 @@ describe("IBosonExchangeHandler", function () {
             assistant.address,
             buyer.address,
             signature,
-            "0"
+            "0",
+            sellerParams
           );
 
         // Get the block timestamp of the confirmed tx
@@ -8593,6 +8604,7 @@ describe("IBosonExchangeHandler", function () {
             buyer.address,
             signature,
             "0",
+            sellerParams,
             { value: price }
           );
 
@@ -8661,6 +8673,7 @@ describe("IBosonExchangeHandler", function () {
             buyer.address,
             signature,
             "0",
+            sellerParams,
             { value: price }
           );
 
@@ -8673,6 +8686,7 @@ describe("IBosonExchangeHandler", function () {
             buyer.address,
             signature,
             "0",
+            sellerParams,
             { value: price }
           );
 
@@ -8742,6 +8756,7 @@ describe("IBosonExchangeHandler", function () {
             buyer.address,
             signature,
             conditionalTokenId,
+            sellerParams,
             { value: price }
           );
 
@@ -8806,16 +8821,16 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to create an exchange, expecting revert
           await expect(
-            exchangeCommitHandler
-              .connect(buyer)
-              .createOfferAndCommit(
-                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
-                assistant.address,
-                buyer.address,
-                signature,
-                "0",
-                { value: BigInt(price) - 1n }
-              )
+            exchangeCommitHandler.connect(buyer).createOfferAndCommit(
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+              assistant.address,
+              buyer.address,
+              signature,
+              "0",
+
+              sellerParams,
+              { value: BigInt(price) - 1n }
+            )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
         });
 
@@ -8841,7 +8856,8 @@ describe("IBosonExchangeHandler", function () {
                 assistant.address,
                 buyer.address,
                 signature,
-                "0"
+                "0",
+                sellerParams
               )
           ).to.revertedWith(RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE);
         });
@@ -8883,6 +8899,7 @@ describe("IBosonExchangeHandler", function () {
                 buyer.address,
                 signature,
                 "0",
+                sellerParams,
                 { value: price }
               )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
@@ -8909,6 +8926,7 @@ describe("IBosonExchangeHandler", function () {
               buyer.address,
               signature,
               "0",
+              sellerParams,
               { value: price }
             );
 
@@ -8922,6 +8940,7 @@ describe("IBosonExchangeHandler", function () {
                 buyer.address,
                 signature,
                 "0",
+                sellerParams,
                 { value: price }
               )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_SOLD_OUT);
@@ -8940,6 +8959,7 @@ describe("IBosonExchangeHandler", function () {
                 buyer.address,
                 ethers.ZeroHash,
                 "0",
+                sellerParams,
                 { value: price }
               )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
@@ -8991,6 +9011,7 @@ describe("IBosonExchangeHandler", function () {
             assistant.address,
             signature,
             "0",
+            sellerParams,
             { value: offer.sellerDeposit }
           );
 
@@ -9061,7 +9082,8 @@ describe("IBosonExchangeHandler", function () {
             buyer.address,
             assistant.address,
             signature,
-            "0"
+            "0",
+            sellerParams
           );
 
         // Get the block timestamp of the confirmed tx
@@ -9133,6 +9155,7 @@ describe("IBosonExchangeHandler", function () {
             assistant.address,
             signature,
             "0",
+            sellerParams,
             { value: offer.sellerDeposit }
           );
 
@@ -9217,6 +9240,7 @@ describe("IBosonExchangeHandler", function () {
             assistant.address,
             signature,
             conditionalTokenId,
+            sellerParams,
             { value: offer.sellerDeposit }
           );
 
@@ -9291,6 +9315,7 @@ describe("IBosonExchangeHandler", function () {
                 assistant.address,
                 signature,
                 "0",
+                sellerParams,
                 { value: BigInt(offer.sellerDeposit) - 1n }
               )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
@@ -9318,7 +9343,8 @@ describe("IBosonExchangeHandler", function () {
                 buyer.address,
                 assistant.address,
                 signature,
-                "0"
+                "0",
+                sellerParams
               )
           ).to.revertedWith(RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE);
         });
@@ -9362,6 +9388,7 @@ describe("IBosonExchangeHandler", function () {
                 assistant.address,
                 signature,
                 "0",
+                sellerParams,
                 { value: offer.sellerDeposit }
               )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
@@ -9390,6 +9417,7 @@ describe("IBosonExchangeHandler", function () {
               assistant.address,
               signature,
               "0",
+              sellerParams,
               { value: offer.sellerDeposit }
             );
 
@@ -9403,6 +9431,7 @@ describe("IBosonExchangeHandler", function () {
                 assistant.address,
                 signature,
                 "0",
+                sellerParams,
                 { value: offer.sellerDeposit }
               )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_SOLD_OUT);
@@ -9421,6 +9450,7 @@ describe("IBosonExchangeHandler", function () {
                 assistant.address,
                 ethers.ZeroHash,
                 "0",
+                sellerParams,
                 { value: offer.sellerDeposit }
               )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_BUYER_WALLET);
@@ -9444,6 +9474,7 @@ describe("IBosonExchangeHandler", function () {
               buyer.address,
               signature,
               "0",
+              sellerParams,
               { value: price }
             )
         )
@@ -9465,6 +9496,7 @@ describe("IBosonExchangeHandler", function () {
               buyer.address,
               signature,
               "0",
+              sellerParams,
               { value: price }
             )
         )
@@ -9486,6 +9518,7 @@ describe("IBosonExchangeHandler", function () {
               buyer.address,
               signature,
               "0",
+              sellerParams,
               { value: price }
             )
         )
@@ -9506,6 +9539,7 @@ describe("IBosonExchangeHandler", function () {
               buyer.address,
               signature,
               "0",
+              sellerParams,
               { value: price }
             )
         ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_OFFER);
@@ -9525,6 +9559,7 @@ describe("IBosonExchangeHandler", function () {
               buyer.address,
               signature,
               "0",
+              sellerParams,
               { value: price }
             )
         ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_OFFER);
@@ -9540,6 +9575,7 @@ describe("IBosonExchangeHandler", function () {
               buyer.address,
               signature,
               "0",
+              sellerParams,
               { value: price }
             )
         ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_OFFER);
@@ -9558,6 +9594,7 @@ describe("IBosonExchangeHandler", function () {
               buyer.address,
               signature,
               "0",
+              sellerParams,
               { value: price }
             )
         ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_OFFER);

@@ -160,37 +160,10 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
     function commitToBuyerOffer(
         uint256 _offerId,
         SellerOfferParams calldata _sellerParams
-    ) external payable override exchangesNotPaused buyersNotPaused sellersNotPaused nonReentrant {
+    ) public payable override exchangesNotPaused buyersNotPaused sellersNotPaused nonReentrant {
         address committer = _msgSender();
 
-        Offer storage offer = getValidOffer(_offerId);
-        if (offer.priceType != PriceType.Static) revert InvalidPriceType();
-        if (offer.creator != OfferCreator.Buyer) revert InvalidOfferCreator();
-
-        (bool sellerExists, uint256 sellerId) = getSellerIdByAssistant(committer);
-        if (!sellerExists) revert NotAssistant();
-        offer.sellerId = sellerId;
-
-        {
-            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-            if (_sellerParams.collectionIndex > 0) {
-                if (lookups.additionalCollections[sellerId].length < _sellerParams.collectionIndex) {
-                    revert NoSuchCollection();
-                }
-                offer.collectionIndex = _sellerParams.collectionIndex;
-            }
-
-            validateRoyaltyInfo(lookups, protocolLimits(), sellerId, _sellerParams.royaltyInfo);
-
-            offer.royaltyInfo[0] = _sellerParams.royaltyInfo;
-
-            if (_sellerParams.mutualizerAddress != address(0)) {
-                DisputeResolutionTerms storage disputeTerms = fetchDisputeResolutionTerms(_offerId);
-                disputeTerms.mutualizerAddress = _sellerParams.mutualizerAddress;
-            }
-
-            emit BuyerInitiatedOfferSetSellerParams(_offerId, sellerId, _sellerParams, committer);
-        }
+        Offer storage offer = addSellerParametersToBuyerOffer(committer, _offerId, _sellerParams);
 
         commitToOfferInternal(payable(committer), offer, 0, false);
     }
@@ -302,14 +275,16 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
      * @param _offerCreator - the address of the other party
      * @param _committer - the address of the committer (buyer for seller-created offers, seller for buyer-created offers)
      * @param _signature - signature of the other party. If the signer is EOA, it must be ECDSA signature in the format of (r,s,v) struct, otherwise, it must be a valid ERC1271 signature.
-     * @param conditionalTokenId - the token id to use for the conditional commit, if applicable
+     * @param _conditionalTokenId - the token id to use for the conditional commit, if applicable
+     * @param _sellerParams - the seller-specific parameters (collection index, royalty info, mutualizer address), if applicable
      */
     function createOfferAndCommit(
         BosonTypes.FullOffer calldata _fullOffer,
         address _offerCreator,
         address payable _committer,
         bytes calldata _signature,
-        uint256 conditionalTokenId
+        uint256 _conditionalTokenId,
+        BosonTypes.SellerOfferParams calldata _sellerParams
     ) external payable override exchangesNotPaused buyersNotPaused sellersNotPaused {
         // verify signature and potential cancellation
         (bytes32 offerHash, uint256 offerId) = verifyOffer(_fullOffer, _offerCreator, _signature);
@@ -367,9 +342,19 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
         }
 
         if (_fullOffer.condition.method != BosonTypes.EvaluationMethod.None) {
-            commitToConditionalOffer(_committer, offerId, conditionalTokenId);
+            if (_fullOffer.offer.creator == BosonTypes.OfferCreator.Seller) {
+                // validate seller parameters
+            } else {
+                addSellerParametersToBuyerOffer(_committer, offerId, _sellerParams);
+            }
+
+            commitToConditionalOffer(_committer, offerId, _conditionalTokenId);
         } else {
-            commitToOffer(_committer, offerId);
+            if (_fullOffer.offer.creator == BosonTypes.OfferCreator.Seller) {
+                commitToOffer(_committer, offerId);
+            } else {
+                commitToBuyerOffer(_committer, offerId, _sellerParams);
+            }
         }
     }
 
@@ -953,5 +938,54 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
             _disputeTerms.mutualizerAddress,
             msg.sender
         );
+    }
+
+    /* Helper function that adds seller-specific offer parameters to the buyer-created offer.
+     * It is used in commitToBuyerOffer and createOfferAndCommit functions.
+     *
+     * Reverts if:
+     * - Offer price type is not static
+     * - Offer creator is not buyer
+     * - Seller does not exist or is not an assistant
+     * - Collection index is invalid for the seller
+     * - Royalty info is invalid
+     *
+     * @param _committer - the seller's address. The caller can commit on behalf of a seller.
+     * @param _offerId - the id of the offer to commit to
+     * @param _sellerParams - the seller-specific parameters (collection index, royalty info, mutualizer address)
+     */
+    function addSellerParametersToBuyerOffer(
+        address payable _committer,
+        uint256 _offerId,
+        SellerOfferParams calldata _sellerParams
+    ) internal returns (BosonTypes.Offer storage offer) {
+        offer = getValidOffer(_offerId);
+        if (offer.priceType != PriceType.Static) revert InvalidPriceType();
+        if (offer.creator != OfferCreator.Buyer) revert InvalidOfferCreator();
+
+        (bool sellerExists, uint256 sellerId) = getSellerIdByAssistant(committer);
+        if (!sellerExists) revert NotAssistant();
+        offer.sellerId = sellerId;
+
+        {
+            ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+            if (_sellerParams.collectionIndex > 0) {
+                if (lookups.additionalCollections[sellerId].length < _sellerParams.collectionIndex) {
+                    revert NoSuchCollection();
+                }
+                offer.collectionIndex = _sellerParams.collectionIndex;
+            }
+
+            validateRoyaltyInfo(lookups, protocolLimits(), sellerId, _sellerParams.royaltyInfo);
+
+            offer.royaltyInfo[0] = _sellerParams.royaltyInfo;
+
+            if (_sellerParams.mutualizerAddress != address(0)) {
+                DisputeResolutionTerms storage disputeTerms = fetchDisputeResolutionTerms(_offerId);
+                disputeTerms.mutualizerAddress = _sellerParams.mutualizerAddress;
+            }
+
+            emit BuyerInitiatedOfferSetSellerParams(_offerId, sellerId, _sellerParams, committer);
+        }
     }
 }
