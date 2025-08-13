@@ -353,7 +353,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
             if (_fullOffer.offer.creator == BosonTypes.OfferCreator.Seller) {
                 commitToOffer(_committer, offerId);
             } else {
-                commitToBuyerOffer(_committer, offerId, _sellerParams);
+                commitToBuyerOffer(offerId, _sellerParams);
             }
         }
     }
@@ -955,7 +955,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
      * @param _sellerParams - the seller-specific parameters (collection index, royalty info, mutualizer address)
      */
     function addSellerParametersToBuyerOffer(
-        address payable _committer,
+        address _committer,
         uint256 _offerId,
         SellerOfferParams calldata _sellerParams
     ) internal returns (BosonTypes.Offer storage offer) {
@@ -963,7 +963,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
         if (offer.priceType != PriceType.Static) revert InvalidPriceType();
         if (offer.creator != OfferCreator.Buyer) revert InvalidOfferCreator();
 
-        (bool sellerExists, uint256 sellerId) = getSellerIdByAssistant(committer);
+        (bool sellerExists, uint256 sellerId) = getSellerIdByAssistant(_committer);
         if (!sellerExists) revert NotAssistant();
         offer.sellerId = sellerId;
 
@@ -985,7 +985,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
                 disputeTerms.mutualizerAddress = _sellerParams.mutualizerAddress;
             }
 
-            emit BuyerInitiatedOfferSetSellerParams(_offerId, sellerId, _sellerParams, committer);
+            emit BuyerInitiatedOfferSetSellerParams(_offerId, sellerId, _sellerParams, _committer);
         }
     }
 }
