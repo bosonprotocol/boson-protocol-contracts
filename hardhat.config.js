@@ -245,12 +245,12 @@ module.exports = {
           viaIR: false,
           optimizer: {
             enabled: true,
-            runs: 200,
+            runs: 150,
             details: {
               yul: true,
             },
           },
-          evmVersion: "london", // for ethereum mainnet, use shanghai, for polygon, use london
+          evmVersion: "shanghai", // for ethereum mainnet, use shanghai, for polygon, use london
         },
       },
       {
@@ -259,12 +259,12 @@ module.exports = {
           viaIR: false,
           optimizer: {
             enabled: true,
-            runs: 200,
+            runs: 150,
             details: {
               yul: true,
             },
           },
-          evmVersion: "london", // for ethereum mainnet, use shanghai, for polygon, use london
+          evmVersion: "shanghai", // for ethereum mainnet, use shanghai, for polygon, use london
         },
       },
       {
