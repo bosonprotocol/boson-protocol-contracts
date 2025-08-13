@@ -129,7 +129,8 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
         }
 
         // Get the next offerId and increment the counter
-        _offer.id = protocolCounters().nextOfferId++;
+        offerId = protocolCounters().nextOfferId++;
+        _offer.id = offerId;
 
         // Store the offer
         storeOffer(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit);
