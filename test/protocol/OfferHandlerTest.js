@@ -1902,7 +1902,7 @@ describe("IBosonOfferHandler", function () {
       });
     });
 
-    context("👉 voidNonListedOffer()", async function () {
+    context("NonListeOffers", async function () {
       let offerToVoid;
       const condition = mockCondition();
 
@@ -1975,151 +1975,168 @@ describe("IBosonOfferHandler", function () {
         };
       });
 
-      context("Seller offers", async function () {
-        it("Seller can void an offer", async function () {
+      context("👉 voidNonListedOffer()", async function () {
+        context("Seller offers", async function () {
+          it("Seller can void an offer", async function () {
+            const message = { ...offerToVoid };
+            const modifiedOffer = message.offer.clone();
+            modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+            message.offer = modifiedOffer;
+
+            const hash = await prepareDataSignature(
+              assistant,
+              customTransactionType,
+              "FullOffer",
+              message,
+              await offerHandler.getAddress(),
+              { hashOnly: true }
+            );
+
+            // Void the offer, testing for the event
+            await expect(offerHandler.connect(assistant).voidNonListedOffer(offerToVoid))
+              .to.emit(offerHandler, "NonListedOfferVoided")
+              .withArgs(hash, offer.sellerId, assistant.address);
+          });
+
+          context("💔 Revert Reasons", async function () {
+            it("Caller is not seller", async function () {
+              // caller is not the assistant of any seller
+              // Attempt to void the offer, expecting revert
+              await expect(offerHandler.connect(rando).voidNonListedOffer(offerToVoid)).to.revertedWithCustomError(
+                bosonErrors,
+                RevertReasons.NOT_ASSISTANT
+              );
+
+              // caller is an assistant of another seller
+              // Create a valid seller, then set fields in tests directly
+              seller = mockSeller(
+                await rando.getAddress(),
+                await rando.getAddress(),
+                ZeroAddress,
+                await rando.getAddress()
+              );
+
+              // AuthToken
+              emptyAuthToken = mockAuthToken();
+              expect(emptyAuthToken.isValid()).is.true;
+              await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+              // Attempt to void the offer, expecting revert
+              await expect(offerHandler.connect(rando).voidNonListedOffer(offerToVoid)).to.revertedWithCustomError(
+                bosonErrors,
+                RevertReasons.NOT_ASSISTANT
+              );
+            });
+
+            it("Offer already voided", async function () {
+              // Void the offer first
+              await offerHandler.connect(assistant).voidNonListedOffer(offerToVoid);
+
+              // Attempt to void the offer again, expecting revert
+              await expect(offerHandler.connect(assistant).voidNonListedOffer(offerToVoid)).to.revertedWithCustomError(
+                bosonErrors,
+                RevertReasons.OFFER_HAS_BEEN_VOIDED
+              );
+            });
+          });
+        });
+
+        context("Buyer offers", async function () {
+          beforeEach(async function () {
+            //create buyer
+            const buyerId = accountId.next().value;
+            await accountHandler.connect(buyer).createBuyer(mockBuyer(await buyer.getAddress()));
+
+            offer.sellerId = "0";
+            offer.buyerId = buyerId;
+            offer.royaltyInfo = [new RoyaltyInfo([], [])];
+            offer.creator = OfferCreator.Buyer;
+          });
+
+          it("Buyer can void an offer", async function () {
+            const message = { ...offerToVoid };
+            const modifiedOffer = message.offer.clone();
+            modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+            message.offer = modifiedOffer;
+
+            const hash = await prepareDataSignature(
+              buyer,
+              customTransactionType,
+              "FullOffer",
+              message,
+              await offerHandler.getAddress(),
+              { hashOnly: true }
+            );
+
+            // Void the offer, testing for the event
+            await expect(offerHandler.connect(buyer).voidNonListedOffer(offerToVoid))
+              .to.emit(offerHandler, "NonListedOfferVoided")
+              .withArgs(hash, offer.buyerId, buyer.address);
+          });
+
+          context("💔 Revert Reasons", async function () {
+            it("Caller is not buyer", async function () {
+              // caller is not the buyer specified in the offer
+              // Attempt to void the offer, expecting revert
+              await expect(offerHandler.connect(rando).voidNonListedOffer(offerToVoid)).to.revertedWithCustomError(
+                bosonErrors,
+                RevertReasons.NOT_BUYER_WALLET
+              );
+
+              // caller is another buyer
+              await accountHandler.connect(rando).createBuyer(mockBuyer(await rando.getAddress()));
+
+              // Attempt to void the offer, expecting revert
+              await expect(offerHandler.connect(rando).voidNonListedOffer(offerToVoid)).to.revertedWithCustomError(
+                bosonErrors,
+                RevertReasons.NOT_BUYER_WALLET
+              );
+            });
+
+            it("Offer already voided", async function () {
+              // Void the offer first
+              await offerHandler.connect(buyer).voidNonListedOffer(offerToVoid);
+
+              // Attempt to void the offer again, expecting revert
+              await expect(offerHandler.connect(buyer).voidNonListedOffer(offerToVoid)).to.revertedWithCustomError(
+                bosonErrors,
+                RevertReasons.OFFER_HAS_BEEN_VOIDED
+              );
+            });
+          });
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("The offers region of protocol is paused", async function () {
+            // Pause the offers region of the protocol
+            await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
+
+            // Attempt to void an offer expecting revert
+            await expect(offerHandler.connect(assistant).voidNonListedOffer(offerToVoid))
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Offers);
+          });
+        });
+      });
+
+      context("👉 getHash()", async function () {
+        it("Returned hash is correct", async function () {
           const message = { ...offerToVoid };
           const modifiedOffer = message.offer.clone();
           modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
           message.offer = modifiedOffer;
 
-          const hash = await prepareDataSignature(
+          const expectedHash = await prepareDataSignature(
             assistant,
             customTransactionType,
             "FullOffer",
             message,
             await offerHandler.getAddress(),
-            null,
-            null,
-            null,
-            true
+            { hashOnly: true }
           );
+          const hash = await offerHandler.getOfferHash(offerToVoid);
 
-          // Void the offer, testing for the event
-          await expect(offerHandler.connect(assistant).voidNonListedOffer(offerToVoid))
-            .to.emit(offerHandler, "NonListedOfferVoided")
-            .withArgs(hash, offer.sellerId, assistant.address);
-        });
-
-        context("💔 Revert Reasons", async function () {
-          it("Caller is not seller", async function () {
-            // caller is not the assistant of any seller
-            // Attempt to void the offer, expecting revert
-            await expect(offerHandler.connect(rando).voidNonListedOffer(offerToVoid)).to.revertedWithCustomError(
-              bosonErrors,
-              RevertReasons.NOT_ASSISTANT
-            );
-
-            // caller is an assistant of another seller
-            // Create a valid seller, then set fields in tests directly
-            seller = mockSeller(
-              await rando.getAddress(),
-              await rando.getAddress(),
-              ZeroAddress,
-              await rando.getAddress()
-            );
-
-            // AuthToken
-            emptyAuthToken = mockAuthToken();
-            expect(emptyAuthToken.isValid()).is.true;
-            await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
-
-            // Attempt to void the offer, expecting revert
-            await expect(offerHandler.connect(rando).voidNonListedOffer(offerToVoid)).to.revertedWithCustomError(
-              bosonErrors,
-              RevertReasons.NOT_ASSISTANT
-            );
-          });
-
-          it("Offer already voided", async function () {
-            // Void the offer first
-            await offerHandler.connect(assistant).voidNonListedOffer(offerToVoid);
-
-            // Attempt to void the offer again, expecting revert
-            await expect(offerHandler.connect(assistant).voidNonListedOffer(offerToVoid)).to.revertedWithCustomError(
-              bosonErrors,
-              RevertReasons.OFFER_HAS_BEEN_VOIDED
-            );
-          });
-        });
-      });
-
-      context("Buyer offers", async function () {
-        beforeEach(async function () {
-          //create buyer
-          const buyerId = accountId.next().value;
-          await accountHandler.connect(buyer).createBuyer(mockBuyer(await buyer.getAddress()));
-
-          offer.sellerId = "0";
-          offer.buyerId = buyerId;
-          offer.royaltyInfo = [new RoyaltyInfo([], [])];
-          offer.creator = OfferCreator.Buyer;
-        });
-
-        it("Buyer can void an offer", async function () {
-          const message = { ...offerToVoid };
-          const modifiedOffer = message.offer.clone();
-          modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
-          message.offer = modifiedOffer;
-
-          const hash = await prepareDataSignature(
-            buyer,
-            customTransactionType,
-            "FullOffer",
-            message,
-            await offerHandler.getAddress(),
-            null,
-            null,
-            null,
-            true
-          );
-
-          // Void the offer, testing for the event
-          await expect(offerHandler.connect(buyer).voidNonListedOffer(offerToVoid))
-            .to.emit(offerHandler, "NonListedOfferVoided")
-            .withArgs(hash, offer.buyerId, buyer.address);
-        });
-
-        context("💔 Revert Reasons", async function () {
-          it("Caller is not buyer", async function () {
-            // caller is not the buyer specified in the offer
-            // Attempt to void the offer, expecting revert
-            await expect(offerHandler.connect(rando).voidNonListedOffer(offerToVoid)).to.revertedWithCustomError(
-              bosonErrors,
-              RevertReasons.NOT_BUYER_WALLET
-            );
-
-            // caller is another buyer
-            await accountHandler.connect(rando).createBuyer(mockBuyer(await rando.getAddress()));
-
-            // Attempt to void the offer, expecting revert
-            await expect(offerHandler.connect(rando).voidNonListedOffer(offerToVoid)).to.revertedWithCustomError(
-              bosonErrors,
-              RevertReasons.NOT_BUYER_WALLET
-            );
-          });
-
-          it("Offer already voided", async function () {
-            // Void the offer first
-            await offerHandler.connect(buyer).voidNonListedOffer(offerToVoid);
-
-            // Attempt to void the offer again, expecting revert
-            await expect(offerHandler.connect(buyer).voidNonListedOffer(offerToVoid)).to.revertedWithCustomError(
-              bosonErrors,
-              RevertReasons.OFFER_HAS_BEEN_VOIDED
-            );
-          });
-        });
-      });
-
-      context("💔 Revert Reasons", async function () {
-        it("The offers region of protocol is paused", async function () {
-          // Pause the offers region of the protocol
-          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
-
-          // Attempt to void an offer expecting revert
-          await expect(offerHandler.connect(assistant).voidNonListedOffer(offerToVoid))
-            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
-            .withArgs(PausableRegion.Offers);
+          expect(hash).to.equal(expectedHash);
         });
       });
     });
@@ -4544,17 +4561,9 @@ describe("IBosonOfferHandler", function () {
           const offerHandlerAddress = await offerHandler.getAddress();
           const hashes = await Promise.all(
             messages.map((message) =>
-              prepareDataSignature(
-                assistant,
-                customTransactionType,
-                "FullOffer",
-                message,
-                offerHandlerAddress,
-                null,
-                null,
-                null,
-                true
-              )
+              prepareDataSignature(assistant, customTransactionType, "FullOffer", message, offerHandlerAddress, {
+                hashOnly: true,
+              })
             )
           );
 
@@ -4649,17 +4658,9 @@ describe("IBosonOfferHandler", function () {
           const offerHandlerAddress = await offerHandler.getAddress();
           const hashes = await Promise.all(
             messages.map((message) =>
-              prepareDataSignature(
-                buyer,
-                customTransactionType,
-                "FullOffer",
-                message,
-                offerHandlerAddress,
-                null,
-                null,
-                null,
-                true
-              )
+              prepareDataSignature(buyer, customTransactionType, "FullOffer", message, offerHandlerAddress, {
+                hashOnly: true,
+              })
             )
           );
 

@@ -276,26 +276,6 @@ describe("IBosonGroupHandler", function () {
         assert.equal(returnedGroup.offerIds, group.offerIds.toString(), "Offer ids should be empty");
       });
 
-      it("should ignore any provided seller and assign seller id of msg.sender", async function () {
-        // set some other sellerId
-        offer.sellerId = "123";
-
-        // Create a group, testing for the event
-        const tx = await groupHandler.connect(assistant).createGroup(group, condition);
-        const txReceipt = await tx.wait();
-
-        const event = getEvent(txReceipt, groupHandlerFacet_Factory, "GroupCreated");
-
-        const groupInstance = Group.fromStruct(event.group);
-        // Validate the instance
-        expect(groupInstance.isValid()).to.be.true;
-
-        assert.equal(event.groupId.toString(), groupId, "Group Id is incorrect");
-        assert.equal(event.sellerId.toString(), seller.id, "Seller Id is incorrect");
-        assert.equal(event.executedBy.toString(), await assistant.getAddress(), "Executed by is incorrect");
-        assert.equal(groupInstance.toStruct().toString(), groupStruct.toString(), "Group struct is incorrect");
-      });
-
       context("💔 Revert Reasons", async function () {
         it("The groups region of protocol is paused", async function () {
           // Pause the groups region of the protocol
@@ -309,7 +289,17 @@ describe("IBosonGroupHandler", function () {
 
         it("Caller not assistant of any seller", async function () {
           // Attempt to Create a group, expecting revert
+          group.sellerId = 0;
           await expect(groupHandler.connect(rando).createGroup(group, condition)).to.revertedWithCustomError(
+            bosonErrors,
+            RevertReasons.NOT_ASSISTANT
+          );
+        });
+
+        it("Caller not assistant of the group's seller", async function () {
+          // Attempt to Create a group, expecting revert
+          group.sellerId = "999";
+          await expect(groupHandler.connect(assistant).createGroup(group, condition)).to.revertedWithCustomError(
             bosonErrors,
             RevertReasons.NOT_ASSISTANT
           );

@@ -193,14 +193,14 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
         validateConditionRange(condition, _tokenId);
 
         address buyerAddress;
-        if (offer.creator == BosonTypes.OfferCreator.Seller) {
-            buyerAddress = _committer;
-        } else {
+        if (offer.creator == BosonTypes.OfferCreator.Buyer) {
             (, BosonTypes.Buyer storage buyer) = fetchBuyer(offer.buyerId);
             buyerAddress = buyer.wallet;
 
             // For buyer-created offers, group sellerId is originally 0, so it needs to be updated
             protocolEntities().groups[groupId].sellerId = offer.sellerId;
+        } else {
+            buyerAddress = _committer;
         }
         authorizeCommit(buyerAddress, condition, groupId, _tokenId, _offerId);
 
@@ -234,8 +234,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
      * - Dispute resolver does not accept fees in the exchange token
      * - Buyer cancel penalty is greater than price
      * - Collection does not exist
-     * - When agent id is non zero:
-     *   - If Agent does not exist
+     * - When agent id is non zero and the agent does not exist
      * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
      * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      * - Royalty recipient is not on seller's allow list
@@ -258,6 +257,14 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
         uint256 _conditionalTokenId,
         BosonTypes.SellerOfferParams calldata _sellerParams
     ) external payable override exchangesNotPaused buyersNotPaused sellersNotPaused {
+        if (
+            _fullOffer.offer.creator == BosonTypes.OfferCreator.Seller &&
+            (_sellerParams.collectionIndex != 0 ||
+                _sellerParams.royaltyInfo.recipients.length != 0 ||
+                _sellerParams.royaltyInfo.bps.length != 0 ||
+                _sellerParams.mutualizerAddress != address(0))
+        ) revert SellerParametersNotAllowed();
+
         // verify signature and potential cancellation
         (bytes32 offerHash, uint256 offerId) = verifyOffer(_fullOffer, _offerCreator, _signature);
 
@@ -314,18 +321,16 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
         }
 
         if (_fullOffer.condition.method != BosonTypes.EvaluationMethod.None) {
-            if (_fullOffer.offer.creator == BosonTypes.OfferCreator.Seller) {
-                // validate seller parameters
-            } else {
+            if (_fullOffer.offer.creator == BosonTypes.OfferCreator.Buyer) {
                 addSellerParametersToBuyerOffer(_committer, offerId, _sellerParams);
             }
 
             commitToConditionalOffer(_committer, offerId, _conditionalTokenId);
         } else {
-            if (_fullOffer.offer.creator == BosonTypes.OfferCreator.Seller) {
-                commitToOffer(_committer, offerId);
-            } else {
+            if (_fullOffer.offer.creator == BosonTypes.OfferCreator.Buyer) {
                 commitToBuyerOffer(offerId, _sellerParams);
+            } else {
+                commitToOffer(_committer, offerId);
             }
         }
     }
@@ -354,7 +359,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
             _fullOffer.offer.priceType != BosonTypes.PriceType.Static
         ) revert InvalidOffer();
 
-        offerHash = getOfferHash(_fullOffer);
+        offerHash = getOfferHashInternal(_fullOffer);
 
         // Check if the offer non-listed offer has been voided via `voidOffer`
         // Does not apply to already listed offers, with `voided` set to true

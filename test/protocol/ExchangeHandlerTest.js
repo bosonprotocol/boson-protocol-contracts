@@ -8964,6 +8964,77 @@ describe("IBosonExchangeHandler", function () {
               )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
         });
+
+        it("Buyer provides non-zero seller params", async function () {
+          // Collection index != 0
+          await expect(
+            exchangeCommitHandler
+              .connect(buyer)
+              .createOfferAndCommit(
+                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+                assistant.address,
+                buyer.address,
+                ethers.ZeroHash,
+                "0",
+                { ...sellerParams, collectionIndex: "1" },
+                { value: price }
+              )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_PARAMS_NOT_ALLOWED);
+
+          // royaltyInfo.recipients != []
+          await expect(
+            exchangeCommitHandler.connect(buyer).createOfferAndCommit(
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+              assistant.address,
+              buyer.address,
+              ethers.ZeroHash,
+              "0",
+              {
+                ...sellerParams,
+                royaltyInfo: {
+                  recipients: [ZeroAddress],
+                  bps: [],
+                },
+              },
+              { value: price }
+            )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_PARAMS_NOT_ALLOWED);
+
+          // royaltyInfo.bps != []
+          await expect(
+            exchangeCommitHandler.connect(buyer).createOfferAndCommit(
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+              assistant.address,
+              buyer.address,
+              ethers.ZeroHash,
+              "0",
+              {
+                ...sellerParams,
+                royaltyInfo: {
+                  recipients: [],
+                  bps: ["1234"],
+                },
+              },
+              { value: price }
+            )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_PARAMS_NOT_ALLOWED);
+
+          // mutualizer address != 0
+          await expect(
+            exchangeCommitHandler.connect(buyer).createOfferAndCommit(
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+              assistant.address,
+              buyer.address,
+              ethers.ZeroHash,
+              "0",
+              {
+                ...sellerParams,
+                mutualizerAddress: buyer.address,
+              },
+              { value: price }
+            )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_PARAMS_NOT_ALLOWED);
+        });
       });
     });
 

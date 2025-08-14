@@ -154,6 +154,8 @@ interface BosonErrors {
     error InvalidBuyerOfferFields();
     // Seller-initiated offer cannot have buyer-specific fields (buyerId, quantityAvailable)
     error InvalidSellerOfferFields();
+    // Buyer cannot provide seller parameters when committing to an offer
+    error SellerParametersNotAllowed();
     // Invalid offer creator value specified
     error InvalidOfferCreator();
     // Voucher must have either a fixed expiry or a fixed redeemable period, not both

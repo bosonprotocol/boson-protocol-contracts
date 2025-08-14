@@ -30,11 +30,11 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
         "FullOffer(Offer offer,OfferDates offerDates,OfferDurations offerDurations,DRParameters drParameters,Condition condition,uint256 agentId,uint256 feeLimit,bool useDepositedFunds)";
 
     bytes32 private immutable OFFER_TYPEHASH = keccak256(abi.encodePacked(OFFER_TYPE, ROYALTY_INFO_TYPE));
-    bytes32 private constant ROYALTY_INFO_TYPEHASH = keccak256(bytes(ROYALTY_INFO_TYPE));
-    bytes32 private constant OFFER_DATES_TYPEHASH = keccak256(bytes(OFFER_DATES_TYPE));
-    bytes32 private constant OFFER_DURATIONS_TYPEHASH = keccak256(bytes(OFFER_DURATIONS_TYPE));
-    bytes32 private constant DR_PARAMETERS_TYPEHASH = keccak256(bytes(DR_PARAMETERS_TYPE));
-    bytes32 private constant CONDITION_TYPEHASH = keccak256(bytes(CONDITION_TYPE));
+    bytes32 private immutable ROYALTY_INFO_TYPEHASH = keccak256(bytes(ROYALTY_INFO_TYPE));
+    bytes32 private immutable OFFER_DATES_TYPEHASH = keccak256(bytes(OFFER_DATES_TYPE));
+    bytes32 private immutable OFFER_DURATIONS_TYPEHASH = keccak256(bytes(OFFER_DURATIONS_TYPE));
+    bytes32 private immutable DR_PARAMETERS_TYPEHASH = keccak256(bytes(DR_PARAMETERS_TYPE));
+    bytes32 private immutable CONDITION_TYPEHASH = keccak256(bytes(CONDITION_TYPE));
     bytes32 private immutable FULL_OFFER_TYPEHASH =
         keccak256(
             abi.encodePacked(
@@ -506,7 +506,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
      * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
      * @return - the hash of the complete offer
      */
-    function getOfferHash(BosonTypes.FullOffer calldata _fullOffer) internal view returns (bytes32) {
+    function getOfferHashInternal(BosonTypes.FullOffer calldata _fullOffer) internal view returns (bytes32) {
         return
             keccak256(
                 abi.encode(

@@ -10,7 +10,7 @@ import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x7ecaa4b3
+ * The ERC-165 identifier for this interface is: 0xe0d6e79c
  */
 interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
     /**
@@ -186,7 +186,7 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
     function voidNonListedOffer(BosonTypes.FullOffer calldata _fullOffer) external;
 
     /**
-     * @notice Voids multiple a non-listed offer. (offers used in `createOfferAndCommit`)
+     * @notice Voids multiple non-listed offers. (offers used in `createOfferAndCommit`)
      * It prevents the offers from being used in future exchanges even if they were already signed.
      *
      * Emits NonListedOfferVoided events if successful.
@@ -312,6 +312,14 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
             BosonTypes.DisputeResolutionTerms memory disputeResolutionTerms,
             BosonTypes.OfferFees memory offerFees
         );
+
+    /**
+     * @notice Computes the EIP712 hash of the full offer parameters.
+     *
+     * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
+     * @return offerHash - the hash of the complete offer
+     */
+    function getOfferHash(BosonTypes.FullOffer calldata _fullOffer) external view returns (bytes32 offerHash);
 
     /**
      * @notice Gets the next offer id.

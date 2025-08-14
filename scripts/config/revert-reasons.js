@@ -56,6 +56,7 @@ exports.RevertReasons = {
   INVALID_ROYALTY_RECIPIENT: "InvalidRoyaltyRecipient",
   INVALID_ROYALTY_PERCENTAGE: "InvalidRoyaltyPercentage",
   INVALID_PRICE_DISCOVERY_PRICE: "InvalidPriceDiscoveryPrice",
+  SELLER_PARAMS_NOT_ALLOWED: "SellerParametersNotAllowed",
 
   // Group related
   NO_SUCH_GROUP: "NoSuchGroup",

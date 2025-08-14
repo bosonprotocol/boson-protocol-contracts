@@ -136,8 +136,7 @@ interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBos
      * - Dispute resolver does not accept fees in the exchange token
      * - Buyer cancel penalty is greater than price
      * - Collection does not exist
-     * - When agent id is non zero:
-     *   - If Agent does not exist
+     * - When agent id is non zero and the agent does not exist
      * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
      * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
      * - Royalty recipient is not on seller's allow list

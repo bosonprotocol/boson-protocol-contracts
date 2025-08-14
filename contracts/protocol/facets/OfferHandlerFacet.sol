@@ -229,7 +229,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     }
 
     /**
-     * @notice Voids multiple a non-listed offer. (offers used in `createOfferAndCommit`)
+     * @notice Voids multiple non-listed offers. (offers used in `createOfferAndCommit`)
      * It prevents the offers from being used in future exchanges even if they were already signed.
      *
      * Emits NonListedOfferVoided events if successful.
@@ -414,7 +414,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
             }
         }
 
-        bytes32 offerHash = getOfferHash(_fullOffer);
+        bytes32 offerHash = getOfferHashInternal(_fullOffer);
 
         ProtocolLib.ProtocolLookups storage pl = protocolLookups();
         if (pl.offerIdByHash[offerHash] == VOIDED_OFFER_ID) {
@@ -549,6 +549,16 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
             disputeResolutionTerms = fetchDisputeResolutionTerms(_offerId);
             offerFees = fetchOfferFees(_offerId);
         }
+    }
+
+    /**
+     * @notice Computes the EIP712 hash of the full offer parameters.
+     *
+     * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
+     * @return offerHash - the hash of the complete offer
+     */
+    function getOfferHash(BosonTypes.FullOffer calldata _fullOffer) external view override returns (bytes32 offerHash) {
+        offerHash = getOfferHashInternal(_fullOffer);
     }
 
     /**

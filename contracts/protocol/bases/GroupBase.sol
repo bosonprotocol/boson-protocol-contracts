@@ -37,9 +37,8 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
 
         // authenticate caller if needed
         if (_authenticate) {
-            bool exists;
-            (exists, _group.sellerId) = getSellerIdByAssistant(sender);
-            if (!exists) revert NotAssistant();
+            (bool exists, uint256 sellerId) = getSellerIdByAssistant(sender);
+            if (!exists || _group.sellerId != sellerId) revert NotAssistant();
         }
 
         // condition must be valid
