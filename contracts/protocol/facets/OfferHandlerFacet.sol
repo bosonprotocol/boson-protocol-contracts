@@ -3,6 +3,7 @@ pragma solidity 0.8.22;
 
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
+import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { OfferBase } from "../bases/OfferBase.sol";
 import "../../domain/BosonConstants.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
@@ -68,7 +69,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         uint256 _agentId,
         uint256 _feeLimit
     ) external override offersNotPaused nonReentrant {
-        createOfferInternal(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit, true);
     }
 
     /**
@@ -130,7 +131,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         ) {
             revert ArrayLengthMismatch();
         }
-        for (uint256 i; i < _offers.length; ) {
+        for (uint256 i; i < _offers.length; ++i) {
             // Create offer and update structs values to represent true state
             createOfferInternal(
                 _offers[i],
@@ -138,11 +139,9 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
                 _offerDurations[i],
                 _drParameters[i],
                 _agentIds[i],
-                _feeLimits[i]
+                _feeLimits[i],
+                true
             );
-            unchecked {
-                i++;
-            }
         }
     }
 
@@ -205,12 +204,49 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @param _offerIds - list of ids of offers to void
      */
     function voidOfferBatch(uint256[] calldata _offerIds) external override offersNotPaused nonReentrant {
-        for (uint256 i = 0; i < _offerIds.length; ) {
+        for (uint256 i; i < _offerIds.length; ++i) {
             voidOfferInternal(_offerIds[i]);
+        }
+    }
 
-            unchecked {
-                i++;
-            }
+    /**
+     * @notice Voids a non-listed offer. (offers used in `createOfferAndCommit`)
+     * It prevents the offer from being used in future exchanges even if it was already signed.
+     *
+     * Emits a NonListedOfferVoided event if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - Caller is not the authorized to void the offer
+     * - Offer has already been voided
+     *
+     * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
+     */
+    function voidNonListedOffer(
+        BosonTypes.FullOffer calldata _fullOffer
+    ) external override offersNotPaused nonReentrant {
+        voidNonListedOfferInternal(_fullOffer);
+    }
+
+    /**
+     * @notice Voids multiple non-listed offers. (offers used in `createOfferAndCommit`)
+     * It prevents the offers from being used in future exchanges even if they were already signed.
+     *
+     * Emits NonListedOfferVoided events if successful.
+     *
+     * Reverts if:
+     * - The number of elements in offers, offerDates, offerDurations, disputeResolverIds, agentIds and feeLimits do not match
+     * - The offers region of protocol is paused
+     * - Caller is not the authorized to void the offer
+     * - Offer has already been voided
+     *
+     * @param _fullOffers - the list fully populated structs containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
+     */
+    function voidNonListedOfferBatch(
+        BosonTypes.FullOffer[] calldata _fullOffers
+    ) external override offersNotPaused nonReentrant {
+        for (uint256 i; i < _fullOffers.length; ++i) {
+            voidNonListedOfferInternal(_fullOffers[i]);
         }
     }
 
@@ -253,12 +289,8 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         uint256[] calldata _offerIds,
         uint256 _validUntilDate
     ) external override offersNotPaused nonReentrant {
-        for (uint256 i = 0; i < _offerIds.length; ) {
+        for (uint256 i; i < _offerIds.length; ++i) {
             extendOfferInternal(_offerIds[i], _validUntilDate);
-
-            unchecked {
-                i++;
-            }
         }
     }
 
@@ -302,12 +334,8 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         uint256[] calldata _offerIds,
         BosonTypes.RoyaltyInfo calldata _royaltyInfo
     ) external override offersNotPaused nonReentrant {
-        for (uint256 i = 0; i < _offerIds.length; ) {
+        for (uint256 i; i < _offerIds.length; ++i) {
             updateOfferRoyaltyRecipientsInternal(_offerIds[i], _royaltyInfo);
-
-            unchecked {
-                i++;
-            }
         }
     }
 
@@ -356,6 +384,46 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
 
         // Notify listeners of state change - emit creatorId as the "sellerId" parameter for consistency
         emit OfferVoided(_offerId, creatorId, _msgSender());
+    }
+
+    /**
+     * @notice Voids a non-listed offer. (offers used in `createOfferAndCommit`)
+     * It prevents the offer from being used in future exchanges even if it was already signed.
+     *
+     * Emits an OfferVoided event if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - Caller is not the authorized to void the offer
+     * - Offer has already been voided
+     *
+     * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
+     */
+    function voidNonListedOfferInternal(BosonTypes.FullOffer calldata _fullOffer) internal {
+        // Make sure the caller is authorized to void the offer
+        address sender = _msgSender();
+        uint256 offerCreatorId;
+        if (_fullOffer.offer.creator == BosonTypes.OfferCreator.Seller) {
+            offerCreatorId = _fullOffer.offer.sellerId;
+            (, Seller storage seller, ) = fetchSeller(offerCreatorId);
+            if (seller.assistant != sender) revert NotAssistant();
+        } else {
+            offerCreatorId = getValidBuyer(payable(sender));
+            if (_fullOffer.offer.buyerId != offerCreatorId) {
+                revert NotBuyerWallet();
+            }
+        }
+
+        bytes32 offerHash = getOfferHashInternal(_fullOffer);
+
+        ProtocolLib.ProtocolLookups storage pl = protocolLookups();
+        if (pl.offerIdByHash[offerHash] == VOIDED_OFFER_ID) {
+            revert OfferHasBeenVoided();
+        }
+
+        pl.offerIdByHash[offerHash] = VOIDED_OFFER_ID;
+
+        emit NonListedOfferVoided(offerHash, offerCreatorId, sender);
     }
 
     /**
@@ -481,6 +549,16 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
             disputeResolutionTerms = fetchDisputeResolutionTerms(_offerId);
             offerFees = fetchOfferFees(_offerId);
         }
+    }
+
+    /**
+     * @notice Computes the EIP712 hash of the full offer parameters.
+     *
+     * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
+     * @return offerHash - the hash of the complete offer
+     */
+    function getOfferHash(BosonTypes.FullOffer calldata _fullOffer) external view override returns (bytes32 offerHash) {
+        offerHash = getOfferHashInternal(_fullOffer);
     }
 
     /**

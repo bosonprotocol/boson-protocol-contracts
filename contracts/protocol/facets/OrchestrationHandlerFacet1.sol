@@ -99,7 +99,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         uint256 _feeLimit
     ) public sellersNotPaused offersNotPaused orchestrationNotPaused nonReentrant {
         createSellerInternal(_seller, _authToken, _voucherInitValues);
-        createOfferInternal(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit, true);
     }
 
     /**
@@ -251,7 +251,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         uint256 _feeLimit
     ) public offersNotPaused groupsNotPaused orchestrationNotPaused nonReentrant {
         // Create offer and update structs values to represent true state
-        createOfferInternal(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit, true);
 
         // Construct new group
         // - group id is 0, and it is ignored
@@ -262,7 +262,8 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         _group.offerIds[0] = _offer.id;
 
         // Create group and update structs values to represent true state
-        createGroupInternal(_group, _condition);
+        // authentication can be skipped here, since it is already done in createOfferInternal
+        createGroupInternal(_group, _condition, false);
     }
 
     /**
@@ -387,7 +388,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         uint256 _feeLimit
     ) public offersNotPaused groupsNotPaused orchestrationNotPaused nonReentrant {
         // Create offer and update structs values to represent true state
-        createOfferInternal(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit, true);
 
         // Create an array with offer ids and add it to the group
         uint256[] memory _offerIds = new uint256[](1);
@@ -526,7 +527,7 @@ contract OrchestrationHandlerFacet1 is PausableBase, SellerBase, OfferBase, Grou
         uint256 _feeLimit
     ) public offersNotPaused twinsNotPaused bundlesNotPaused orchestrationNotPaused nonReentrant {
         // Create offer and update structs values to represent true state
-        createOfferInternal(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _drParameters, _agentId, _feeLimit, true);
 
         // Create twin and pack everything into a bundle
         createTwinAndBundleAfterOffer(_twin, _offer.id, _offer.sellerId);

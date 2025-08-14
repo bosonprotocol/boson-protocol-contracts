@@ -26,17 +26,20 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      *
      * @param _group - the fully populated struct with group id set to 0x0
      * @param _condition - the fully populated condition struct
+     * @param _authenticate - whether to authenticate the caller. Use false when called from a handler that already authenticated the caller. _group.sellerId must be set in this case.
      */
-    function createGroupInternal(Group memory _group, Condition calldata _condition) internal {
+    function createGroupInternal(Group memory _group, Condition calldata _condition, bool _authenticate) internal {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         // get message sender
         address sender = _msgSender();
 
-        // get seller id, make sure it exists and store it to incoming struct
-        (bool exists, uint256 sellerId) = getSellerIdByAssistant(sender);
-        if (!exists) revert NotAssistant();
+        // authenticate caller if needed
+        if (_authenticate) {
+            (bool exists, uint256 sellerId) = getSellerIdByAssistant(sender);
+            if (!exists || _group.sellerId != sellerId) revert NotAssistant();
+        }
 
         // condition must be valid
         if (!validateCondition(_condition)) revert InvalidConditionParameters();
@@ -44,9 +47,9 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         // Get the next group and increment the counter
         uint256 groupId = protocolCounters().nextGroupId++;
 
-        for (uint256 i = 0; i < _group.offerIds.length; ) {
+        for (uint256 i; i < _group.offerIds.length; ++i) {
             // make sure offer exists and belongs to the seller
-            getValidOfferWithSellerCheck(_group.offerIds[i]);
+            if (_authenticate) getValidOfferWithSellerCheck(_group.offerIds[i]);
 
             // Offer should not belong to another group already
             (bool exist, ) = getGroupIdByOffer(_group.offerIds[i]);
@@ -57,10 +60,6 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
 
             // Set index mapping. Should be index in offerIds + 1
             lookups.offerIdIndexByGroup[groupId][_group.offerIds[i]] = i + 1;
-
-            unchecked {
-                i++;
-            }
         }
 
         // Get storage location for group
@@ -68,14 +67,14 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
 
         // Set group props individually since memory structs can't be copied to storage
         group.id = _group.id = groupId;
-        group.sellerId = _group.sellerId = sellerId;
+        group.sellerId = _group.sellerId;
         group.offerIds = _group.offerIds;
 
         // Store the condition
         storeCondition(groupId, _condition);
 
         // Notify watchers of state change
-        emit GroupCreated(groupId, sellerId, _group, _condition, sender);
+        emit GroupCreated(groupId, _group.sellerId, _group, _condition, sender);
     }
 
     /**

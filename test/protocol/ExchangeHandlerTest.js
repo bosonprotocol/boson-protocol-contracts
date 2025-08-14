@@ -32,9 +32,12 @@ const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const GatingType = require("../../scripts/domain/GatingType");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
+const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
+const PriceType = require("../../scripts/domain/PriceType");
 const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo");
 const { RoyaltyRecipientInfo, RoyaltyRecipientInfoList } = require("../../scripts/domain/RoyaltyRecipientInfo.js");
+const OfferCreator = require("../../scripts/domain/OfferCreator");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
@@ -8249,6 +8252,1423 @@ describe("IBosonExchangeHandler", function () {
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
+      });
+    });
+  });
+
+  context("👉 CreateOfferAndCommit", async function () {
+    let disputeResolutionTerms;
+    let message = {};
+
+    const sellerParams = {
+      collectionIndex: 0,
+      royaltyInfo: {
+        recipients: [],
+        bps: [],
+      },
+      mutualizerAddress: ZeroAddress,
+    };
+
+    // Set the message Type
+    const eip712TypeDefinition = {
+      FullOffer: [
+        { name: "offer", type: "Offer" },
+        { name: "offerDates", type: "OfferDates" },
+        { name: "offerDurations", type: "OfferDurations" },
+        { name: "drParameters", type: "DRParameters" },
+        { name: "condition", type: "Condition" },
+        { name: "agentId", type: "uint256" },
+        { name: "feeLimit", type: "uint256" },
+        { name: "useDepositedFunds", type: "bool" },
+      ],
+      Condition: [
+        { name: "method", type: "uint8" },
+        { name: "tokenType", type: "uint8" },
+        { name: "tokenAddress", type: "address" },
+        { name: "gating", type: "uint8" },
+        { name: "minTokenId", type: "uint256" },
+        { name: "threshold", type: "uint256" },
+        { name: "maxCommits", type: "uint256" },
+        { name: "maxTokenId", type: "uint256" },
+      ],
+      DRParameters: [
+        { name: "disputeResolverId", type: "uint256" },
+        { name: "mutualizerAddress", type: "address" },
+      ],
+      OfferDurations: [
+        { name: "disputePeriod", type: "uint256" },
+        { name: "voucherValid", type: "uint256" },
+        { name: "resolutionPeriod", type: "uint256" },
+      ],
+      OfferDates: [
+        { name: "validFrom", type: "uint256" },
+        { name: "validUntil", type: "uint256" },
+        { name: "voucherRedeemableFrom", type: "uint256" },
+        { name: "voucherRedeemableUntil", type: "uint256" },
+      ],
+      Offer: [
+        { name: "sellerId", type: "uint256" },
+        { name: "price", type: "uint256" },
+        { name: "sellerDeposit", type: "uint256" },
+        { name: "buyerCancelPenalty", type: "uint256" },
+        { name: "quantityAvailable", type: "uint256" },
+        { name: "exchangeToken", type: "address" },
+        { name: "metadataUri", type: "string" },
+        { name: "metadataHash", type: "string" },
+        { name: "collectionIndex", type: "uint256" },
+        { name: "royaltyInfo", type: "RoyaltyInfo" },
+        { name: "creator", type: "uint8" },
+        { name: "buyerId", type: "uint256" },
+      ],
+      RoyaltyInfo: [
+        { name: "recipients", type: "address[]" },
+        { name: "bps", type: "uint256[]" },
+      ],
+    };
+
+    beforeEach(async function () {
+      // Initial ids for all the things
+      exchangeId = offerId = "1";
+      agentId = "0"; // agent id is optional while creating an offer
+      offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
+
+      // Create a valid seller
+      seller = mockSeller(
+        await assistant.getAddress(),
+        await admin.getAddress(),
+        clerk.address,
+        await treasury.getAddress()
+      );
+
+      // AuthToken
+      emptyAuthToken = mockAuthToken();
+      // VoucherInitValues
+      seller1Treasury = seller.treasury;
+      royaltyPercentage1 = "500"; // 5%
+      voucherInitValues = mockVoucherInitValues();
+      voucherInitValues.royaltyPercentage = royaltyPercentage1;
+
+      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+      expectedCloneAddress = calculateCloneAddress(
+        await accountHandler.getAddress(),
+        beaconProxyAddress,
+        admin.address
+      );
+
+      // Create a valid dispute resolver
+      disputeResolver = mockDisputeResolver(
+        await assistantDR.getAddress(),
+        await adminDR.getAddress(),
+        clerkDR.address,
+        await treasuryDR.getAddress(),
+        true
+      );
+
+      //Create DisputeResolverFee array so offer creation will succeed
+      disputeResolverFees = [
+        new DisputeResolverFee(ZeroAddress, "Native", "0"),
+        new DisputeResolverFee(await foreign20.getAddress(), "ERC20", "0"),
+      ];
+
+      disputeResolutionTerms = new DisputeResolutionTerms(
+        disputeResolver.id,
+        disputeResolver.escalationResponsePeriod,
+        "0",
+        "0",
+        ZeroAddress
+      );
+
+      // Make empty seller list, so every seller is allowed
+      const sellerAllowList = [];
+
+      // Register the dispute resolver
+      await accountHandler
+        .connect(adminDR)
+        .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+
+      // Offer setup
+      const mo = await mockOffer();
+      ({ offer, offerDates, offerDurations, drParams, offerFees } = mo);
+      offer.id = "0";
+      offerFees.protocolFee = applyPercentage(offer.price, protocolFeePercentage);
+      offer.quantityAvailable = "1";
+      disputeResolverId = drParams.disputeResolverId;
+      offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
+
+      offerDurations.voucherValid = (oneMonth * 12n).toString();
+
+      condition = mockCondition({ method: EvaluationMethod.None, threshold: "0", maxCommits: "0" });
+
+      // Set used variables
+      price = offer.price;
+      voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+      voucherValid = offerDurations.voucherValid;
+      disputePeriod = offerDurations.disputePeriod;
+
+      // Required voucher constructor params
+      voucher = mockVoucher();
+      voucher.redeemedDate = "0";
+
+      // Mock exchange
+      exchange = mockExchange();
+
+      buyerId = accountId.next().value;
+      exchange.buyerId = buyerId;
+      exchange.finalizedDate = "0";
+
+      // Prepare the message
+      message.offerDates = offerDates;
+      message.offerDurations = offerDurations;
+      message.drParameters = drParams;
+      message.condition = condition;
+      message.agentId = agentId.toString();
+      message.feeLimit = offerFeeLimit.toString();
+      message.useDepositedFunds = false;
+    });
+
+    context("seller offer", async function () {
+      afterEach(async function () {
+        // Reset the accountId iterator
+        accountId.next(true);
+      });
+
+      it("zero seller deposit and native token", async function () {
+        offer.sellerDeposit = "0";
+
+        const modifiedOffer = offer.clone();
+        modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+        message.offer = modifiedOffer;
+
+        // Collect the signature components
+        let signature = await prepareDataSignature(
+          assistant,
+          eip712TypeDefinition,
+          "FullOffer",
+          message,
+          await exchangeCommitHandler.getAddress()
+        );
+        // Commit to offer, retrieving the event
+        tx = await exchangeCommitHandler
+          .connect(buyer)
+          .createOfferAndCommit(
+            [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+            assistant.address,
+            buyer.address,
+            signature,
+            "0",
+            sellerParams,
+            { value: price }
+          );
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        voucher.committedDate = block.timestamp.toString();
+        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "BuyerCommitted")
+          .withArgs(offerId, buyerId, exchangeId, exchange.toStruct(), voucher.toStruct(), buyer.address);
+
+        offer.id = offerId;
+        await expect(tx)
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(
+            offerId,
+            seller.id,
+            offer.toStruct(),
+            offerDates.toStruct(),
+            offerDurations.toStruct(),
+            disputeResolutionTerms.toStruct(),
+            offerFees.toStruct(),
+            agentId,
+            buyer.address
+          );
+
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsEncumbered")
+          .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
+        await expect(tx).to.not.emit(fundsHandler, "FundsDeposited");
+
+        // Unconditional offer should not emit events
+        await expect(tx).to.not.emit(exchangeHandler, "ConditionalCommitAuthorized");
+        await expect(tx).to.not.emit(groupHandler, "GroupCreated");
+      });
+
+      it("non zero seller deposit and erc20 token", async function () {
+        offer.exchangeToken = await foreign20.getAddress();
+        offer.sellerDeposit = parseUnits("0.1", "ether").toString();
+
+        // erc20token
+        await foreign20.connect(assistant).mint(assistant.address, offer.sellerDeposit);
+        await foreign20.connect(assistant).approve(protocolDiamondAddress, offer.sellerDeposit);
+
+        await foreign20.connect(buyer).mint(buyer.address, price);
+        await foreign20.connect(buyer).approve(protocolDiamondAddress, price);
+
+        const modifiedOffer = offer.clone();
+        modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+
+        // Prepare the message
+        message.offer = modifiedOffer;
+
+        // Collect the signature components
+        let signature = await prepareDataSignature(
+          assistant,
+          eip712TypeDefinition,
+          "FullOffer",
+          message,
+          await exchangeCommitHandler.getAddress()
+        );
+        // Commit to offer, retrieving the event
+        tx = await exchangeCommitHandler
+          .connect(buyer)
+          .createOfferAndCommit(
+            [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+            assistant.address,
+            buyer.address,
+            signature,
+            "0",
+            sellerParams
+          );
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        voucher.committedDate = block.timestamp.toString();
+        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "BuyerCommitted")
+          .withArgs(offerId, buyerId, exchangeId, exchange.toStruct(), voucher.toStruct(), buyer.address);
+
+        offer.id = offerId;
+        await expect(tx)
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(
+            offerId,
+            seller.id,
+            offer.toStruct(),
+            offerDates.toStruct(),
+            offerDurations.toStruct(),
+            disputeResolutionTerms.toStruct(),
+            offerFees.toStruct(),
+            agentId,
+            buyer.address
+          );
+
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsEncumbered")
+          .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(seller.id, assistant.address, offer.exchangeToken, offer.sellerDeposit);
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsEncumbered")
+          .withArgs(seller.id, offer.exchangeToken, offer.sellerDeposit, buyer.address);
+
+        // Unconditional offer should not emit events
+        await expect(tx).to.not.emit(exchangeHandler, "ConditionalCommitAuthorized");
+        await expect(tx).to.not.emit(groupHandler, "GroupCreated");
+      });
+
+      it("use offer creator's deposited funds", async function () {
+        offer.sellerDeposit = parseUnits("0.1", "ether").toString();
+        await fundsHandler
+          .connect(assistant)
+          .depositFunds(seller.id, ethers.ZeroAddress, offer.sellerDeposit, { value: offer.sellerDeposit });
+
+        const modifiedOffer = offer.clone();
+        modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+        message.offer = modifiedOffer;
+        message.useDepositedFunds = true;
+
+        // Collect the signature components
+        let signature = await prepareDataSignature(
+          assistant,
+          eip712TypeDefinition,
+          "FullOffer",
+          message,
+          await exchangeCommitHandler.getAddress()
+        );
+        // Commit to offer, retrieving the event
+        tx = await exchangeCommitHandler
+          .connect(buyer)
+          .createOfferAndCommit(
+            [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, true],
+            assistant.address,
+            buyer.address,
+            signature,
+            "0",
+            sellerParams,
+            { value: price }
+          );
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        voucher.committedDate = block.timestamp.toString();
+        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "BuyerCommitted")
+          .withArgs(offerId, buyerId, exchangeId, exchange.toStruct(), voucher.toStruct(), buyer.address);
+
+        offer.id = offerId;
+        await expect(tx)
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(
+            offerId,
+            seller.id,
+            offer.toStruct(),
+            offerDates.toStruct(),
+            offerDurations.toStruct(),
+            disputeResolutionTerms.toStruct(),
+            offerFees.toStruct(),
+            agentId,
+            buyer.address
+          );
+
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsEncumbered")
+          .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
+        await expect(tx).to.not.emit(fundsHandler, "FundsDeposited");
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsEncumbered")
+          .withArgs(seller.id, offer.exchangeToken, offer.sellerDeposit, buyer.address);
+
+        // Unconditional offer should not emit events
+        await expect(tx).to.not.emit(exchangeHandler, "ConditionalCommitAuthorized");
+        await expect(tx).to.not.emit(groupHandler, "GroupCreated");
+      });
+
+      it("quantity available greater than 1", async function () {
+        offer.sellerDeposit = "0";
+        offer.quantityAvailable = "2";
+
+        const modifiedOffer = offer.clone();
+        modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+        message.offer = modifiedOffer;
+
+        // Collect the signature components
+        let signature = await prepareDataSignature(
+          assistant,
+          eip712TypeDefinition,
+          "FullOffer",
+          message,
+          await exchangeCommitHandler.getAddress()
+        );
+        // 1st Commit to offer
+        tx = await exchangeCommitHandler
+          .connect(buyer)
+          .createOfferAndCommit(
+            [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+            assistant.address,
+            buyer.address,
+            signature,
+            "0",
+            sellerParams,
+            { value: price }
+          );
+
+        // 2nd Commit to offer
+        tx = await exchangeCommitHandler
+          .connect(buyer)
+          .createOfferAndCommit(
+            [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+            assistant.address,
+            buyer.address,
+            signature,
+            "0",
+            sellerParams,
+            { value: price }
+          );
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        voucher.committedDate = block.timestamp.toString();
+        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+
+        exchange.id = ++exchangeId;
+        await expect(tx)
+          .to.emit(exchangeHandler, "BuyerCommitted")
+          .withArgs(offerId, buyerId, exchangeId, exchange.toStruct(), voucher.toStruct(), buyer.address);
+
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsEncumbered")
+          .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
+        await expect(tx).to.not.emit(fundsHandler, "FundsDeposited");
+
+        // Offer should not be created again, as it already exists
+        await expect(tx).to.not.emit(offerHandler, "OfferCreated");
+
+        // Unconditional offer should not emit events
+        await expect(tx).to.not.emit(exchangeHandler, "ConditionalCommitAuthorized");
+        await expect(tx).to.not.emit(groupHandler, "GroupCreated");
+      });
+
+      it("conditional offer", async function () {
+        offer.sellerDeposit = "0";
+
+        const modifiedOffer = offer.clone();
+        modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+        message.offer = modifiedOffer;
+
+        const conditionalTokenId = "12";
+        condition = mockCondition({
+          tokenAddress: await foreign721.getAddress(),
+          threshold: "0",
+          maxCommits: "3",
+          tokenType: TokenType.NonFungibleToken,
+          minTokenId: conditionalTokenId,
+          method: EvaluationMethod.SpecificToken,
+          maxTokenId: "22",
+          gating: GatingType.PerAddress,
+        });
+        message.condition = condition;
+
+        // mint correct token for the buyer
+        await foreign721.connect(buyer).mint(conditionalTokenId, "1");
+
+        // Collect the signature components
+        let signature = await prepareDataSignature(
+          assistant,
+          eip712TypeDefinition,
+          "FullOffer",
+          message,
+          await exchangeCommitHandler.getAddress()
+        );
+        // Commit to offer, retrieving the event
+        tx = await exchangeCommitHandler
+          .connect(buyer)
+          .createOfferAndCommit(
+            [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+            assistant.address,
+            buyer.address,
+            signature,
+            conditionalTokenId,
+            sellerParams,
+            { value: price }
+          );
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        voucher.committedDate = block.timestamp.toString();
+        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "BuyerCommitted")
+          .withArgs(offerId, buyerId, exchangeId, exchange.toStruct(), voucher.toStruct(), buyer.address);
+
+        offer.id = offerId;
+        await expect(tx)
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(
+            offerId,
+            seller.id,
+            offer.toStruct(),
+            offerDates.toStruct(),
+            offerDurations.toStruct(),
+            disputeResolutionTerms.toStruct(),
+            offerFees.toStruct(),
+            agentId,
+            buyer.address
+          );
+
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsEncumbered")
+          .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
+        await expect(tx).to.not.emit(fundsHandler, "FundsDeposited");
+
+        // Conditional offer emits additional events
+        const groupId = "1";
+        const offerIds = [offerId];
+        const group = new Group(groupId, seller.id, offerIds);
+
+        await expect(tx)
+          .to.emit(groupHandler, "GroupCreated")
+          .withArgs(groupId, seller.id, group.toStruct(), condition.toStruct(), buyer.address);
+        await expect(tx)
+          .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+          .withArgs(offerId, condition.gating, buyer.address, conditionalTokenId, 1, condition.maxCommits);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Insufficient payment", async function () {
+          offer.sellerDeposit = "0";
+          const modifiedOffer = offer.clone();
+          modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+          message.offer = modifiedOffer;
+          let signature = await prepareDataSignature(
+            assistant,
+            eip712TypeDefinition,
+            "FullOffer",
+            message,
+            await exchangeCommitHandler.getAddress()
+          );
+
+          // Attempt to create an exchange, expecting revert
+          await expect(
+            exchangeCommitHandler.connect(buyer).createOfferAndCommit(
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+              assistant.address,
+              buyer.address,
+              signature,
+              "0",
+
+              sellerParams,
+              { value: BigInt(price) - 1n }
+            )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+        });
+
+        it("Insufficient sellerDeposit", async function () {
+          offer.exchangeToken = await foreign20.getAddress();
+
+          const modifiedOffer = offer.clone();
+          modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+          message.offer = modifiedOffer;
+          let signature = await prepareDataSignature(
+            assistant,
+            eip712TypeDefinition,
+            "FullOffer",
+            message,
+            await exchangeCommitHandler.getAddress()
+          );
+          // Attempt to create an exchange, expecting revert
+          await expect(
+            exchangeCommitHandler
+              .connect(buyer)
+              .createOfferAndCommit(
+                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+                assistant.address,
+                buyer.address,
+                signature,
+                "0",
+                sellerParams
+              )
+          ).to.revertedWith(RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE);
+        });
+
+        it("Offer is voided", async function () {
+          offer.sellerDeposit = "0";
+
+          await offerHandler
+            .connect(assistant)
+            .voidNonListedOffer([
+              offer,
+              offerDates,
+              offerDurations,
+              drParams,
+              condition,
+              agentId,
+              offerFeeLimit,
+              false,
+            ]);
+
+          const modifiedOffer = offer.clone();
+          modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+          message.offer = modifiedOffer;
+          let signature = await prepareDataSignature(
+            assistant,
+            eip712TypeDefinition,
+            "FullOffer",
+            message,
+            await exchangeCommitHandler.getAddress()
+          );
+
+          // Attempt to create an exchange, expecting revert
+          await expect(
+            exchangeCommitHandler
+              .connect(buyer)
+              .createOfferAndCommit(
+                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+                assistant.address,
+                buyer.address,
+                signature,
+                "0",
+                sellerParams,
+                { value: price }
+              )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
+        });
+
+        it("Offer is used", async function () {
+          offer.sellerDeposit = "0";
+          const modifiedOffer = offer.clone();
+          modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+          message.offer = modifiedOffer;
+          let signature = await prepareDataSignature(
+            assistant,
+            eip712TypeDefinition,
+            "FullOffer",
+            message,
+            await exchangeCommitHandler.getAddress()
+          );
+
+          await exchangeCommitHandler
+            .connect(buyer)
+            .createOfferAndCommit(
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+              assistant.address,
+              buyer.address,
+              signature,
+              "0",
+              sellerParams,
+              { value: price }
+            );
+
+          // Attempt to create an exchange, expecting revert
+          await expect(
+            exchangeCommitHandler
+              .connect(buyer)
+              .createOfferAndCommit(
+                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+                assistant.address,
+                buyer.address,
+                signature,
+                "0",
+                sellerParams,
+                { value: price }
+              )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_SOLD_OUT);
+        });
+
+        it("Seller id does not belong to the assistant", async function () {
+          offer.sellerId = "999";
+
+          // Attempt to create an exchange, expecting revert
+          await expect(
+            exchangeCommitHandler
+              .connect(buyer)
+              .createOfferAndCommit(
+                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+                assistant.address,
+                buyer.address,
+                ethers.ZeroHash,
+                "0",
+                sellerParams,
+                { value: price }
+              )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
+        });
+
+        it("Buyer provides non-zero seller params", async function () {
+          // Collection index != 0
+          await expect(
+            exchangeCommitHandler
+              .connect(buyer)
+              .createOfferAndCommit(
+                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+                assistant.address,
+                buyer.address,
+                ethers.ZeroHash,
+                "0",
+                { ...sellerParams, collectionIndex: "1" },
+                { value: price }
+              )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_PARAMS_NOT_ALLOWED);
+
+          // royaltyInfo.recipients != []
+          await expect(
+            exchangeCommitHandler.connect(buyer).createOfferAndCommit(
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+              assistant.address,
+              buyer.address,
+              ethers.ZeroHash,
+              "0",
+              {
+                ...sellerParams,
+                royaltyInfo: {
+                  recipients: [ZeroAddress],
+                  bps: [],
+                },
+              },
+              { value: price }
+            )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_PARAMS_NOT_ALLOWED);
+
+          // royaltyInfo.bps != []
+          await expect(
+            exchangeCommitHandler.connect(buyer).createOfferAndCommit(
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+              assistant.address,
+              buyer.address,
+              ethers.ZeroHash,
+              "0",
+              {
+                ...sellerParams,
+                royaltyInfo: {
+                  recipients: [],
+                  bps: ["1234"],
+                },
+              },
+              { value: price }
+            )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_PARAMS_NOT_ALLOWED);
+
+          // mutualizer address != 0
+          await expect(
+            exchangeCommitHandler.connect(buyer).createOfferAndCommit(
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+              assistant.address,
+              buyer.address,
+              ethers.ZeroHash,
+              "0",
+              {
+                ...sellerParams,
+                mutualizerAddress: buyer.address,
+              },
+              { value: price }
+            )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.SELLER_PARAMS_NOT_ALLOWED);
+        });
+      });
+    });
+
+    context("buyer offer", async function () {
+      beforeEach(async function () {
+        // Set the buyer-specific offer parameters
+        offer.sellerId = "0";
+        offer.creator = OfferCreator.Buyer;
+        offer.buyerId = buyerId.toString();
+        // offer.collectionIndex = "0"; //
+        offer.royaltyInfo = [new RoyaltyInfo([], [])];
+        // offer.royaltyInfo = [];
+
+        await accountHandler.connect(buyer).createBuyer(mockBuyer(buyer.address));
+      });
+
+      afterEach(async function () {
+        // Reset the accountId iterator
+        accountId.next(true);
+      });
+
+      it("zero price and native token", async function () {
+        offer.price = "0";
+        offer.buyerCancelPenalty = "0";
+        offerFees.protocolFee = "0";
+
+        const modifiedOffer = offer.clone();
+        modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+        message.offer = modifiedOffer;
+
+        // Collect the signature components
+        let signature = await prepareDataSignature(
+          buyer,
+          eip712TypeDefinition,
+          "FullOffer",
+          message,
+          await exchangeCommitHandler.getAddress()
+        );
+        // Commit to offer, retrieving the event
+        tx = await exchangeCommitHandler
+          .connect(assistant)
+          .createOfferAndCommit(
+            [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+            buyer.address,
+            assistant.address,
+            signature,
+            "0",
+            sellerParams,
+            { value: offer.sellerDeposit }
+          );
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        voucher.committedDate = block.timestamp.toString();
+        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "SellerCommitted")
+          .withArgs(offerId, seller.id, exchangeId, exchange.toStruct(), voucher.toStruct(), assistant.address);
+
+        offer.id = offerId;
+        await expect(tx)
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(
+            offerId,
+            offer.sellerId,
+            offer.toStruct(),
+            offerDates.toStruct(),
+            offerDurations.toStruct(),
+            disputeResolutionTerms.toStruct(),
+            offerFees.toStruct(),
+            agentId,
+            assistant.address
+          );
+
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsEncumbered")
+          .withArgs(seller.id, offer.exchangeToken, offer.sellerDeposit, assistant.address);
+        await expect(tx).to.not.emit(fundsHandler, "FundsDeposited");
+
+        // Unconditional offer should not emit events
+        await expect(tx).to.not.emit(exchangeHandler, "ConditionalCommitAuthorized");
+        await expect(tx).to.not.emit(groupHandler, "GroupCreated");
+      });
+
+      it("non zero price and erc20 token", async function () {
+        offer.exchangeToken = await foreign20.getAddress();
+
+        // erc20token
+        await foreign20.connect(assistant).mint(assistant.address, offer.sellerDeposit);
+        await foreign20.connect(assistant).approve(protocolDiamondAddress, offer.sellerDeposit);
+
+        await foreign20.connect(buyer).mint(buyer.address, price);
+        await foreign20.connect(buyer).approve(protocolDiamondAddress, price);
+
+        const modifiedOffer = offer.clone();
+        modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+        message.offer = modifiedOffer;
+
+        // Collect the signature components
+        let signature = await prepareDataSignature(
+          buyer,
+          eip712TypeDefinition,
+          "FullOffer",
+          message,
+          await exchangeCommitHandler.getAddress()
+        );
+        // Commit to offer, retrieving the event
+        tx = await exchangeCommitHandler
+          .connect(assistant)
+          .createOfferAndCommit(
+            [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+            buyer.address,
+            assistant.address,
+            signature,
+            "0",
+            sellerParams
+          );
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        voucher.committedDate = block.timestamp.toString();
+        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "SellerCommitted")
+          .withArgs(offerId, seller.id, exchangeId, exchange.toStruct(), voucher.toStruct(), assistant.address);
+
+        offer.id = offerId;
+        await expect(tx)
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(
+            offerId,
+            offer.sellerId,
+            offer.toStruct(),
+            offerDates.toStruct(),
+            offerDurations.toStruct(),
+            disputeResolutionTerms.toStruct(),
+            offerFees.toStruct(),
+            agentId,
+            assistant.address
+          );
+
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(buyerId, buyer.address, offer.exchangeToken, offer.price);
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsEncumbered")
+          .withArgs(buyerId, offer.exchangeToken, price, assistant.address);
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsEncumbered")
+          .withArgs(seller.id, offer.exchangeToken, offer.sellerDeposit, assistant.address);
+
+        // Unconditional offer should not emit events
+        await expect(tx).to.not.emit(exchangeHandler, "ConditionalCommitAuthorized");
+        await expect(tx).to.not.emit(groupHandler, "GroupCreated");
+      });
+
+      it("use offer creator's deposited funds", async function () {
+        await fundsHandler
+          .connect(buyer)
+          .depositFunds(buyerId, ethers.ZeroAddress, offer.price, { value: offer.price });
+
+        const modifiedOffer = offer.clone();
+        modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+        message.offer = modifiedOffer;
+        message.useDepositedFunds = true;
+
+        // Collect the signature components
+        let signature = await prepareDataSignature(
+          buyer,
+          eip712TypeDefinition,
+          "FullOffer",
+          message,
+          await exchangeCommitHandler.getAddress()
+        );
+        // Commit to offer, retrieving the event
+        tx = await exchangeCommitHandler
+          .connect(assistant)
+          .createOfferAndCommit(
+            [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, true],
+            buyer.address,
+            assistant.address,
+            signature,
+            "0",
+            sellerParams,
+            { value: offer.sellerDeposit }
+          );
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        voucher.committedDate = block.timestamp.toString();
+        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "SellerCommitted")
+          .withArgs(offerId, seller.id, exchangeId, exchange.toStruct(), voucher.toStruct(), assistant.address);
+
+        offer.id = offerId;
+        await expect(tx)
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(
+            offerId,
+            offer.sellerId,
+            offer.toStruct(),
+            offerDates.toStruct(),
+            offerDurations.toStruct(),
+            disputeResolutionTerms.toStruct(),
+            offerFees.toStruct(),
+            agentId,
+            assistant.address
+          );
+
+        await expect(tx).to.not.emit(fundsHandler, "FundsDeposited");
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsEncumbered")
+          .withArgs(buyerId, offer.exchangeToken, price, assistant.address);
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsEncumbered")
+          .withArgs(seller.id, offer.exchangeToken, offer.sellerDeposit, assistant.address);
+
+        // Unconditional offer should not emit events
+        await expect(tx).to.not.emit(exchangeHandler, "ConditionalCommitAuthorized");
+        await expect(tx).to.not.emit(groupHandler, "GroupCreated");
+      });
+
+      it("conditional offer", async function () {
+        offer.price = "0";
+        offer.buyerCancelPenalty = "0";
+        offerFees.protocolFee = "0";
+        const modifiedOffer = offer.clone();
+        modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+        message.offer = modifiedOffer;
+
+        const conditionalTokenId = "12";
+        condition = mockCondition({
+          tokenAddress: await foreign721.getAddress(),
+          threshold: "0",
+          maxCommits: "3",
+          tokenType: TokenType.NonFungibleToken,
+          minTokenId: conditionalTokenId,
+          method: EvaluationMethod.SpecificToken,
+          maxTokenId: "22",
+          gating: GatingType.PerAddress,
+        });
+        message.condition = condition;
+
+        // mint correct token for the buyer
+        await foreign721.connect(buyer).mint(conditionalTokenId, "1");
+
+        // Collect the signature components
+        let signature = await prepareDataSignature(
+          buyer,
+          eip712TypeDefinition,
+          "FullOffer",
+          message,
+          await exchangeCommitHandler.getAddress()
+        );
+        // Commit to offer, retrieving the event
+        tx = await exchangeCommitHandler
+          .connect(assistant)
+          .createOfferAndCommit(
+            [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+            buyer.address,
+            assistant.address,
+            signature,
+            conditionalTokenId,
+            sellerParams,
+            { value: offer.sellerDeposit }
+          );
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        voucher.committedDate = block.timestamp.toString();
+        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "SellerCommitted")
+          .withArgs(offerId, seller.id, exchangeId, exchange.toStruct(), voucher.toStruct(), assistant.address);
+
+        offer.id = offerId;
+        await expect(tx)
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(
+            offerId,
+            offer.sellerId,
+            offer.toStruct(),
+            offerDates.toStruct(),
+            offerDurations.toStruct(),
+            disputeResolutionTerms.toStruct(),
+            offerFees.toStruct(),
+            agentId,
+            assistant.address
+          );
+
+        await expect(tx).to.not.emit(fundsHandler, "FundsDeposited");
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsEncumbered")
+          .withArgs(seller.id, offer.exchangeToken, offer.sellerDeposit, assistant.address);
+
+        // Conditional offer emits additional events
+        const groupId = "1";
+        const offerIds = [offerId];
+        const group = new Group(groupId, offer.sellerId, offerIds);
+
+        await expect(tx)
+          .to.emit(groupHandler, "GroupCreated")
+          .withArgs(groupId, offer.sellerId, group.toStruct(), condition.toStruct(), assistant.address);
+        await expect(tx)
+          .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
+          .withArgs(offerId, condition.gating, buyer.address, conditionalTokenId, 1, condition.maxCommits);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Insufficient payment", async function () {
+          offer.price = "0";
+          offer.buyerCancelPenalty = "0";
+          offerFees.protocolFee = "0";
+          const modifiedOffer = offer.clone();
+          modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+          message.offer = modifiedOffer;
+          let signature = await prepareDataSignature(
+            buyer,
+            eip712TypeDefinition,
+            "FullOffer",
+            message,
+            await exchangeCommitHandler.getAddress()
+          );
+
+          // Attempt to create an exchange, expecting revert
+          await expect(
+            exchangeCommitHandler
+              .connect(assistant)
+              .createOfferAndCommit(
+                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+                buyer.address,
+                assistant.address,
+                signature,
+                "0",
+                sellerParams,
+                { value: BigInt(offer.sellerDeposit) - 1n }
+              )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+        });
+
+        it("Insufficient price", async function () {
+          offer.exchangeToken = await foreign20.getAddress();
+
+          const modifiedOffer = offer.clone();
+          modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+          message.offer = modifiedOffer;
+          let signature = await prepareDataSignature(
+            buyer,
+            eip712TypeDefinition,
+            "FullOffer",
+            message,
+            await exchangeCommitHandler.getAddress()
+          );
+          // Attempt to create an exchange, expecting revert
+          await expect(
+            exchangeCommitHandler
+              .connect(assistant)
+              .createOfferAndCommit(
+                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+                buyer.address,
+                assistant.address,
+                signature,
+                "0",
+                sellerParams
+              )
+          ).to.revertedWith(RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE);
+        });
+
+        it("Offer is voided", async function () {
+          offer.price = "0";
+          offer.buyerCancelPenalty = "0";
+          offerFees.protocolFee = "0";
+
+          await offerHandler
+            .connect(buyer)
+            .voidNonListedOffer([
+              offer,
+              offerDates,
+              offerDurations,
+              drParams,
+              condition,
+              agentId,
+              offerFeeLimit,
+              false,
+            ]);
+
+          const modifiedOffer = offer.clone();
+          modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+          message.offer = modifiedOffer;
+          let signature = await prepareDataSignature(
+            buyer,
+            eip712TypeDefinition,
+            "FullOffer",
+            message,
+            await exchangeCommitHandler.getAddress()
+          );
+
+          // Attempt to create an exchange, expecting revert
+          await expect(
+            exchangeCommitHandler
+              .connect(assistant)
+              .createOfferAndCommit(
+                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+                buyer.address,
+                assistant.address,
+                signature,
+                "0",
+                sellerParams,
+                { value: offer.sellerDeposit }
+              )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
+        });
+
+        it("Offer is used", async function () {
+          offer.price = "0";
+          offer.buyerCancelPenalty = "0";
+          offerFees.protocolFee = "0";
+          const modifiedOffer = offer.clone();
+          modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+          message.offer = modifiedOffer;
+          let signature = await prepareDataSignature(
+            buyer,
+            eip712TypeDefinition,
+            "FullOffer",
+            message,
+            await exchangeCommitHandler.getAddress()
+          );
+
+          await exchangeCommitHandler
+            .connect(assistant)
+            .createOfferAndCommit(
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+              buyer.address,
+              assistant.address,
+              signature,
+              "0",
+              sellerParams,
+              { value: offer.sellerDeposit }
+            );
+
+          // Attempt to create an exchange, expecting revert
+          await expect(
+            exchangeCommitHandler
+              .connect(assistant)
+              .createOfferAndCommit(
+                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+                buyer.address,
+                assistant.address,
+                signature,
+                "0",
+                sellerParams,
+                { value: offer.sellerDeposit }
+              )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_SOLD_OUT);
+        });
+
+        it("Buyer id does not belong to the assistant", async function () {
+          offer.buyerId = "123";
+
+          // Attempt to create an exchange, expecting revert
+          await expect(
+            exchangeCommitHandler
+              .connect(assistant)
+              .createOfferAndCommit(
+                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+                buyer.address,
+                assistant.address,
+                ethers.ZeroHash,
+                "0",
+                sellerParams,
+                { value: offer.sellerDeposit }
+              )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_BUYER_WALLET);
+        });
+      });
+    });
+
+    context("💔 Revert Reasons", async function () {
+      const signature = ethers.ZeroHash;
+      it("The exchanges region of protocol is paused", async function () {
+        // Pause the exchanges region of the protocol
+        await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
+
+        // Attempt to create an exchange, expecting revert
+        await expect(
+          exchangeCommitHandler
+            .connect(buyer)
+            .createOfferAndCommit(
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+              assistant.address,
+              buyer.address,
+              signature,
+              "0",
+              sellerParams,
+              { value: price }
+            )
+        )
+          .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+          .withArgs(PausableRegion.Exchanges);
+      });
+
+      it("The buyers region of protocol is paused", async function () {
+        // Pause the buyers region of the protocol
+        await pauseHandler.connect(pauser).pause([PausableRegion.Buyers]);
+
+        // Attempt to create an exchange, expecting revert
+        await expect(
+          exchangeCommitHandler
+            .connect(buyer)
+            .createOfferAndCommit(
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+              assistant.address,
+              buyer.address,
+              signature,
+              "0",
+              sellerParams,
+              { value: price }
+            )
+        )
+          .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+          .withArgs(PausableRegion.Buyers);
+      });
+
+      it("The sellers region of protocol is paused", async function () {
+        // Pause the sellers region of the protocol
+        await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
+
+        // Attempt to create an exchange, expecting revert
+        await expect(
+          exchangeCommitHandler
+            .connect(buyer)
+            .createOfferAndCommit(
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+              assistant.address,
+              buyer.address,
+              signature,
+              "0",
+              sellerParams,
+              { value: price }
+            )
+        )
+          .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+          .withArgs(PausableRegion.Sellers);
+      });
+
+      it("Offer id is not 0", async function () {
+        offer.id = "2";
+
+        // Attempt to create an exchange, expecting revert
+        await expect(
+          exchangeCommitHandler
+            .connect(buyer)
+            .createOfferAndCommit(
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+              assistant.address,
+              buyer.address,
+              signature,
+              "0",
+              sellerParams,
+              { value: price }
+            )
+        ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_OFFER);
+      });
+
+      it("Invalid royalty info", async function () {
+        // more than one entry
+        offer.royaltyInfo.push(new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage]));
+
+        // Attempt to create an exchange, expecting revert
+        await expect(
+          exchangeCommitHandler
+            .connect(buyer)
+            .createOfferAndCommit(
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+              assistant.address,
+              buyer.address,
+              signature,
+              "0",
+              sellerParams,
+              { value: price }
+            )
+        ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_OFFER);
+
+        // Missing royalty info
+        offer.royaltyInfo = [];
+        await expect(
+          exchangeCommitHandler
+            .connect(buyer)
+            .createOfferAndCommit(
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+              assistant.address,
+              buyer.address,
+              signature,
+              "0",
+              sellerParams,
+              { value: price }
+            )
+        ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_OFFER);
+      });
+
+      it("Wrong price type", async function () {
+        offer.priceType = PriceType.Discovery;
+
+        // Attempt to create an exchange, expecting revert
+        await expect(
+          exchangeCommitHandler
+            .connect(buyer)
+            .createOfferAndCommit(
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+              assistant.address,
+              buyer.address,
+              signature,
+              "0",
+              sellerParams,
+              { value: price }
+            )
+        ).to.revertedWithCustomError(bosonErrors, RevertReasons.INVALID_OFFER);
       });
     });
   });

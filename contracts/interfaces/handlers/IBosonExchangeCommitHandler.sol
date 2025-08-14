@@ -12,7 +12,7 @@ import { IBosonFundsBaseEvents } from "../events/IBosonFundsEvents.sol";
  * @notice Handles exchange commitment and creation within the protocol.
  * This interface contains functions for committing to offers and creating new exchanges.
  *
- * The ERC-165 identifier for this interface is: 0xcdafde08
+ * The ERC-165 identifier for this interface is: 0x20807062
  */
 interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBosonFundsBaseEvents {
     /**
@@ -111,6 +111,54 @@ interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBos
      * @param _tokenId - the id of the token to use for the conditional commit
      */
     function commitToConditionalOffer(address payable _buyer, uint256 _offerId, uint256 _tokenId) external payable;
+
+    /**
+     * @notice Creates an offer and commits to it immediately.
+     * The caller is the committer and must provide the offer creator's signature.
+     *
+     * Emits an OfferCreated, FundsEncumbered, BuyerCommitted and SellerCommitted event if successful.
+     *
+     * Reverts if:
+     * - The offers region of protocol is paused
+     * - Valid from date is greater than valid until date
+     * - Valid until date is not in the future
+     * - Both voucher expiration date and voucher expiration period are defined
+     * - Neither of voucher expiration date and voucher expiration period are defined
+     * - Voucher redeemable period is fixed, but it ends before it starts
+     * - Voucher redeemable period is fixed, but it ends before offer expires
+     * - Dispute period is less than minimum dispute period
+     * - Resolution period is not between the minimum and the maximum resolution period
+     * - Voided is set to true
+     * - Available quantity is 0
+     * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     * - Seller is not on dispute resolver's seller allow list
+     * - Dispute resolver does not accept fees in the exchange token
+     * - Buyer cancel penalty is greater than price
+     * - Collection does not exist
+     * - When agent id is non zero and the agent does not exist
+     * - If the sum of agent fee amount and protocol fee amount is greater than the offer fee limit determined by the protocol
+     * - If the sum of agent fee amount and protocol fee amount is greater than fee limit set by seller
+     * - Royalty recipient is not on seller's allow list
+     * - Royalty percentage is less than the value decided by the admin
+     * - Total royalty percentage is more than max royalty percentage
+     * - Not enough funds can be encumbered
+     *
+     * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
+     * @param _offerCreator - the address of the other party
+     * @param _committer - the address of the committer (buyer for seller-created offers, seller for buyer-created offers)
+     * @param _signature - signature of the other party. If the signer is EOA, it must be ECDSA signature in the format of (r,s,v) struct, otherwise, it must be a valid ERC1271 signature.
+     * @param _conditionalTokenId - the token id to use for the conditional commit, if applicable
+     * @param _sellerParams - the seller-specific parameters (collection index, royalty info, mutualizer address), if applicable
+     */
+    function createOfferAndCommit(
+        BosonTypes.FullOffer calldata _fullOffer,
+        address _offerCreator,
+        address payable _committer,
+        bytes calldata _signature,
+        uint256 _conditionalTokenId,
+        BosonTypes.SellerOfferParams calldata _sellerParams
+    ) external payable;
 
     /**
      * @notice Handle pre-minted voucher transfer

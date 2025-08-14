@@ -3,6 +3,7 @@ const { getContractAt, getContractFactory, ZeroAddress, getSigners, MaxUint256, 
 const { assert, expect } = require("chai");
 
 const Offer = require("../../scripts/domain/Offer");
+const OfferCreator = require("../../scripts/domain/OfferCreator");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
@@ -25,6 +26,7 @@ const {
   deriveTokenId,
   compareOfferStructs,
   compareRoyaltyInfo,
+  prepareDataSignature,
 } = require("../util/utils.js");
 const { oneWeek, oneMonth, oneDay } = require("../util/constants");
 const {
@@ -35,6 +37,8 @@ const {
   mockVoucherInitValues,
   mockAuthToken,
   accountId,
+  mockCondition,
+  mockBuyer,
 } = require("../util/mock");
 const { encodeBytes32String } = require("ethers");
 const PriceType = require("../../scripts/domain/PriceType.js");
@@ -57,7 +61,8 @@ describe("IBosonOfferHandler", function () {
     clerkDR,
     treasuryDR,
     other,
-    other2;
+    other2,
+    buyer;
   let erc165,
     accountHandler,
     offerHandler,
@@ -134,7 +139,7 @@ describe("IBosonOfferHandler", function () {
     };
 
     ({
-      signers: [pauser, admin, treasury, rando, adminDR, treasuryDR, other, other2],
+      signers: [pauser, admin, treasury, rando, adminDR, treasuryDR, other, other2, buyer],
       contractInstances: {
         erc165,
         accountHandler,
@@ -1893,6 +1898,245 @@ describe("IBosonOfferHandler", function () {
             bosonErrors,
             RevertReasons.OFFER_HAS_BEEN_VOIDED
           );
+        });
+      });
+    });
+
+    context("NonListeOffers", async function () {
+      let offerToVoid;
+      const condition = mockCondition();
+
+      const customTransactionType = {
+        FullOffer: [
+          { name: "offer", type: "Offer" },
+          { name: "offerDates", type: "OfferDates" },
+          { name: "offerDurations", type: "OfferDurations" },
+          { name: "drParameters", type: "DRParameters" },
+          { name: "condition", type: "Condition" },
+          { name: "agentId", type: "uint256" },
+          { name: "feeLimit", type: "uint256" },
+          { name: "useDepositedFunds", type: "bool" },
+        ],
+        Condition: [
+          { name: "method", type: "uint8" },
+          { name: "tokenType", type: "uint8" },
+          { name: "tokenAddress", type: "address" },
+          { name: "gating", type: "uint8" },
+          { name: "minTokenId", type: "uint256" },
+          { name: "threshold", type: "uint256" },
+          { name: "maxCommits", type: "uint256" },
+          { name: "maxTokenId", type: "uint256" },
+        ],
+        DRParameters: [
+          { name: "disputeResolverId", type: "uint256" },
+          { name: "mutualizerAddress", type: "address" },
+        ],
+        OfferDurations: [
+          { name: "disputePeriod", type: "uint256" },
+          { name: "voucherValid", type: "uint256" },
+          { name: "resolutionPeriod", type: "uint256" },
+        ],
+        OfferDates: [
+          { name: "validFrom", type: "uint256" },
+          { name: "validUntil", type: "uint256" },
+          { name: "voucherRedeemableFrom", type: "uint256" },
+          { name: "voucherRedeemableUntil", type: "uint256" },
+        ],
+        Offer: [
+          { name: "sellerId", type: "uint256" },
+          { name: "price", type: "uint256" },
+          { name: "sellerDeposit", type: "uint256" },
+          { name: "buyerCancelPenalty", type: "uint256" },
+          { name: "quantityAvailable", type: "uint256" },
+          { name: "exchangeToken", type: "address" },
+          { name: "metadataUri", type: "string" },
+          { name: "metadataHash", type: "string" },
+          { name: "collectionIndex", type: "uint256" },
+          { name: "royaltyInfo", type: "RoyaltyInfo" },
+          { name: "creator", type: "uint8" },
+          { name: "buyerId", type: "uint256" },
+        ],
+        RoyaltyInfo: [
+          { name: "recipients", type: "address[]" },
+          { name: "bps", type: "uint256[]" },
+        ],
+      };
+
+      beforeEach(async function () {
+        offerToVoid = {
+          offer,
+          offerDates,
+          offerDurations,
+          drParameters: { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
+          condition,
+          agentId,
+          feeLimit: offerFeeLimit,
+          useDepositedFunds: false,
+        };
+      });
+
+      context("👉 voidNonListedOffer()", async function () {
+        context("Seller offers", async function () {
+          it("Seller can void an offer", async function () {
+            const message = { ...offerToVoid };
+            const modifiedOffer = message.offer.clone();
+            modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+            message.offer = modifiedOffer;
+
+            const hash = await prepareDataSignature(
+              assistant,
+              customTransactionType,
+              "FullOffer",
+              message,
+              await offerHandler.getAddress(),
+              { hashOnly: true }
+            );
+
+            // Void the offer, testing for the event
+            await expect(offerHandler.connect(assistant).voidNonListedOffer(offerToVoid))
+              .to.emit(offerHandler, "NonListedOfferVoided")
+              .withArgs(hash, offer.sellerId, assistant.address);
+          });
+
+          context("💔 Revert Reasons", async function () {
+            it("Caller is not seller", async function () {
+              // caller is not the assistant of any seller
+              // Attempt to void the offer, expecting revert
+              await expect(offerHandler.connect(rando).voidNonListedOffer(offerToVoid)).to.revertedWithCustomError(
+                bosonErrors,
+                RevertReasons.NOT_ASSISTANT
+              );
+
+              // caller is an assistant of another seller
+              // Create a valid seller, then set fields in tests directly
+              seller = mockSeller(
+                await rando.getAddress(),
+                await rando.getAddress(),
+                ZeroAddress,
+                await rando.getAddress()
+              );
+
+              // AuthToken
+              emptyAuthToken = mockAuthToken();
+              expect(emptyAuthToken.isValid()).is.true;
+              await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+              // Attempt to void the offer, expecting revert
+              await expect(offerHandler.connect(rando).voidNonListedOffer(offerToVoid)).to.revertedWithCustomError(
+                bosonErrors,
+                RevertReasons.NOT_ASSISTANT
+              );
+            });
+
+            it("Offer already voided", async function () {
+              // Void the offer first
+              await offerHandler.connect(assistant).voidNonListedOffer(offerToVoid);
+
+              // Attempt to void the offer again, expecting revert
+              await expect(offerHandler.connect(assistant).voidNonListedOffer(offerToVoid)).to.revertedWithCustomError(
+                bosonErrors,
+                RevertReasons.OFFER_HAS_BEEN_VOIDED
+              );
+            });
+          });
+        });
+
+        context("Buyer offers", async function () {
+          beforeEach(async function () {
+            //create buyer
+            const buyerId = accountId.next().value;
+            await accountHandler.connect(buyer).createBuyer(mockBuyer(await buyer.getAddress()));
+
+            offer.sellerId = "0";
+            offer.buyerId = buyerId;
+            offer.royaltyInfo = [new RoyaltyInfo([], [])];
+            offer.creator = OfferCreator.Buyer;
+          });
+
+          it("Buyer can void an offer", async function () {
+            const message = { ...offerToVoid };
+            const modifiedOffer = message.offer.clone();
+            modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+            message.offer = modifiedOffer;
+
+            const hash = await prepareDataSignature(
+              buyer,
+              customTransactionType,
+              "FullOffer",
+              message,
+              await offerHandler.getAddress(),
+              { hashOnly: true }
+            );
+
+            // Void the offer, testing for the event
+            await expect(offerHandler.connect(buyer).voidNonListedOffer(offerToVoid))
+              .to.emit(offerHandler, "NonListedOfferVoided")
+              .withArgs(hash, offer.buyerId, buyer.address);
+          });
+
+          context("💔 Revert Reasons", async function () {
+            it("Caller is not buyer", async function () {
+              // caller is not the buyer specified in the offer
+              // Attempt to void the offer, expecting revert
+              await expect(offerHandler.connect(rando).voidNonListedOffer(offerToVoid)).to.revertedWithCustomError(
+                bosonErrors,
+                RevertReasons.NOT_BUYER_WALLET
+              );
+
+              // caller is another buyer
+              await accountHandler.connect(rando).createBuyer(mockBuyer(await rando.getAddress()));
+
+              // Attempt to void the offer, expecting revert
+              await expect(offerHandler.connect(rando).voidNonListedOffer(offerToVoid)).to.revertedWithCustomError(
+                bosonErrors,
+                RevertReasons.NOT_BUYER_WALLET
+              );
+            });
+
+            it("Offer already voided", async function () {
+              // Void the offer first
+              await offerHandler.connect(buyer).voidNonListedOffer(offerToVoid);
+
+              // Attempt to void the offer again, expecting revert
+              await expect(offerHandler.connect(buyer).voidNonListedOffer(offerToVoid)).to.revertedWithCustomError(
+                bosonErrors,
+                RevertReasons.OFFER_HAS_BEEN_VOIDED
+              );
+            });
+          });
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("The offers region of protocol is paused", async function () {
+            // Pause the offers region of the protocol
+            await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
+
+            // Attempt to void an offer expecting revert
+            await expect(offerHandler.connect(assistant).voidNonListedOffer(offerToVoid))
+              .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+              .withArgs(PausableRegion.Offers);
+          });
+        });
+      });
+
+      context("👉 getHash()", async function () {
+        it("Returned hash is correct", async function () {
+          const message = { ...offerToVoid };
+          const modifiedOffer = message.offer.clone();
+          modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+          message.offer = modifiedOffer;
+
+          const expectedHash = await prepareDataSignature(
+            assistant,
+            customTransactionType,
+            "FullOffer",
+            message,
+            await offerHandler.getAddress(),
+            { hashOnly: true }
+          );
+          const hash = await offerHandler.getOfferHash(offerToVoid);
+
+          expect(hash).to.equal(expectedHash);
         });
       });
     });
@@ -4202,6 +4446,289 @@ describe("IBosonOfferHandler", function () {
             bosonErrors,
             RevertReasons.OFFER_HAS_BEEN_VOIDED
           );
+        });
+      });
+    });
+
+    context("👉 voidNonListedOfferBatch()", async function () {
+      let offersToVoid;
+
+      const customTransactionType = {
+        FullOffer: [
+          { name: "offer", type: "Offer" },
+          { name: "offerDates", type: "OfferDates" },
+          { name: "offerDurations", type: "OfferDurations" },
+          { name: "drParameters", type: "DRParameters" },
+          { name: "condition", type: "Condition" },
+          { name: "agentId", type: "uint256" },
+          { name: "feeLimit", type: "uint256" },
+          { name: "useDepositedFunds", type: "bool" },
+        ],
+        Condition: [
+          { name: "method", type: "uint8" },
+          { name: "tokenType", type: "uint8" },
+          { name: "tokenAddress", type: "address" },
+          { name: "gating", type: "uint8" },
+          { name: "minTokenId", type: "uint256" },
+          { name: "threshold", type: "uint256" },
+          { name: "maxCommits", type: "uint256" },
+          { name: "maxTokenId", type: "uint256" },
+        ],
+        DRParameters: [
+          { name: "disputeResolverId", type: "uint256" },
+          { name: "mutualizerAddress", type: "address" },
+        ],
+        OfferDurations: [
+          { name: "disputePeriod", type: "uint256" },
+          { name: "voucherValid", type: "uint256" },
+          { name: "resolutionPeriod", type: "uint256" },
+        ],
+        OfferDates: [
+          { name: "validFrom", type: "uint256" },
+          { name: "validUntil", type: "uint256" },
+          { name: "voucherRedeemableFrom", type: "uint256" },
+          { name: "voucherRedeemableUntil", type: "uint256" },
+        ],
+        Offer: [
+          { name: "sellerId", type: "uint256" },
+          { name: "price", type: "uint256" },
+          { name: "sellerDeposit", type: "uint256" },
+          { name: "buyerCancelPenalty", type: "uint256" },
+          { name: "quantityAvailable", type: "uint256" },
+          { name: "exchangeToken", type: "address" },
+          { name: "metadataUri", type: "string" },
+          { name: "metadataHash", type: "string" },
+          { name: "collectionIndex", type: "uint256" },
+          { name: "royaltyInfo", type: "RoyaltyInfo" },
+          { name: "creator", type: "uint8" },
+          { name: "buyerId", type: "uint256" },
+        ],
+        RoyaltyInfo: [
+          { name: "recipients", type: "address[]" },
+          { name: "bps", type: "uint256[]" },
+        ],
+      };
+
+      beforeEach(async function () {
+        sellerId = "1";
+
+        const condition = mockCondition();
+
+        offersToVoid = [
+          {
+            offer: offers[1],
+            offerDates: offerDatesList[1],
+            offerDurations: offerDurationsList[1],
+            drParameters: drParameters[1],
+            condition,
+            agentId: agentIds[1],
+            feeLimit: offerFeeLimits[1],
+            useDepositedFunds: false,
+          },
+          {
+            offer: offers[3],
+            offerDates: offerDatesList[3],
+            offerDurations: offerDurationsList[3],
+            drParameters: drParameters[3],
+            condition,
+            agentId: agentIds[3],
+            feeLimit: offerFeeLimits[3],
+            useDepositedFunds: true,
+          },
+          {
+            offer: offers[4],
+            offerDates: offerDatesList[4],
+            offerDurations: offerDurationsList[4],
+            drParameters: drParameters[4],
+            condition,
+            agentId: agentIds[4],
+            feeLimit: offerFeeLimits[4],
+            useDepositedFunds: false,
+          },
+        ];
+      });
+
+      context("Seller offers", async function () {
+        it("Seller can void an multiple offers", async function () {
+          const messages = offersToVoid.map((o) => {
+            const message = { ...o };
+            const modifiedOffer = message.offer.clone();
+            modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+            message.offer = modifiedOffer;
+            return message;
+          });
+
+          const offerHandlerAddress = await offerHandler.getAddress();
+          const hashes = await Promise.all(
+            messages.map((message) =>
+              prepareDataSignature(assistant, customTransactionType, "FullOffer", message, offerHandlerAddress, {
+                hashOnly: true,
+              })
+            )
+          );
+
+          // Void offers, testing for the event
+          const tx = await offerHandler.connect(assistant).voidNonListedOfferBatch(offersToVoid);
+          await expect(tx)
+            .to.emit(offerHandler, "NonListedOfferVoided")
+            .withArgs(hashes[0], offer.sellerId, assistant.address);
+
+          await expect(tx)
+            .to.emit(offerHandler, "NonListedOfferVoided")
+            .withArgs(hashes[1], offer.sellerId, assistant.address);
+
+          await expect(tx)
+            .to.emit(offerHandler, "NonListedOfferVoided")
+            .withArgs(hashes[2], offer.sellerId, assistant.address);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("Caller is not seller", async function () {
+            // caller is not the assistant of any seller
+            // Attempt to update the offer, expecting revert
+            await expect(offerHandler.connect(rando).voidNonListedOfferBatch(offersToVoid)).to.revertedWithCustomError(
+              bosonErrors,
+              RevertReasons.NOT_ASSISTANT
+            );
+
+            // caller is an assistant of another seller
+            seller = mockSeller(
+              await rando.getAddress(),
+              await rando.getAddress(),
+              ZeroAddress,
+              await rando.getAddress()
+            );
+
+            // AuthToken
+            emptyAuthToken = mockAuthToken();
+            expect(emptyAuthToken.isValid()).is.true;
+
+            await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+            // Attempt to update the offer, expecting revert
+            await expect(offerHandler.connect(rando).voidNonListedOfferBatch(offersToVoid)).to.revertedWithCustomError(
+              bosonErrors,
+              RevertReasons.NOT_ASSISTANT
+            );
+          });
+
+          it("Offer already voided", async function () {
+            // Void the offer first
+            await offerHandler.connect(assistant).voidNonListedOffer(offersToVoid[0]);
+
+            // Attempt to void the offer again, expecting revert
+            await expect(
+              offerHandler.connect(assistant).voidNonListedOfferBatch(offersToVoid)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
+
+            // try to void the same offer twice
+            offersToVoid = [offersToVoid[1], offersToVoid[2], offersToVoid[1]];
+
+            // Attempt to void the offer again, expecting revert
+            await expect(
+              offerHandler.connect(assistant).voidNonListedOfferBatch(offersToVoid)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_HAS_BEEN_VOIDED);
+          });
+        });
+      });
+
+      context("Buyer offers", async function () {
+        beforeEach(async function () {
+          //create buyer
+          const buyerId = accountId.next().value;
+          await accountHandler.connect(buyer).createBuyer(mockBuyer(await buyer.getAddress()));
+
+          offersToVoid.forEach((offer) => {
+            offer.offer.sellerId = "0";
+            offer.offer.buyerId = buyerId;
+            offer.offer.royaltyInfo = [new RoyaltyInfo([], [])];
+            offer.offer.creator = OfferCreator.Buyer;
+          });
+        });
+
+        it("Buyer can void an multiple offers", async function () {
+          const messages = offersToVoid.map((o) => {
+            const message = { ...o };
+            const modifiedOffer = message.offer.clone();
+            modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+            message.offer = modifiedOffer;
+            return message;
+          });
+
+          const offerHandlerAddress = await offerHandler.getAddress();
+          const hashes = await Promise.all(
+            messages.map((message) =>
+              prepareDataSignature(buyer, customTransactionType, "FullOffer", message, offerHandlerAddress, {
+                hashOnly: true,
+              })
+            )
+          );
+
+          // Void offers, testing for the event
+          const tx = await offerHandler.connect(buyer).voidNonListedOfferBatch(offersToVoid);
+          await expect(tx)
+            .to.emit(offerHandler, "NonListedOfferVoided")
+            .withArgs(hashes[0], offer.buyerId, buyer.address);
+
+          await expect(tx)
+            .to.emit(offerHandler, "NonListedOfferVoided")
+            .withArgs(hashes[1], offer.buyerId, buyer.address);
+
+          await expect(tx)
+            .to.emit(offerHandler, "NonListedOfferVoided")
+            .withArgs(hashes[2], offer.buyerId, buyer.address);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("Caller is not seller", async function () {
+            // caller is not the  buyer specified in the offer
+            // Attempt to update the offer, expecting revert
+            await expect(offerHandler.connect(rando).voidNonListedOfferBatch(offersToVoid)).to.revertedWithCustomError(
+              bosonErrors,
+              RevertReasons.NOT_BUYER_WALLET
+            );
+
+            // caller is another buyer
+            await accountHandler.connect(rando).createBuyer(mockBuyer(await rando.getAddress()));
+
+            // Attempt to update the offer, expecting revert
+            await expect(offerHandler.connect(rando).voidNonListedOfferBatch(offersToVoid)).to.revertedWithCustomError(
+              bosonErrors,
+              RevertReasons.NOT_BUYER_WALLET
+            );
+          });
+
+          it("Offer already voided", async function () {
+            // Void the offer first
+            await offerHandler.connect(buyer).voidNonListedOffer(offersToVoid[0]);
+
+            // Attempt to void the offer again, expecting revert
+            await expect(offerHandler.connect(buyer).voidNonListedOfferBatch(offersToVoid)).to.revertedWithCustomError(
+              bosonErrors,
+              RevertReasons.OFFER_HAS_BEEN_VOIDED
+            );
+
+            // try to void the same offer twice
+            offersToVoid = [offersToVoid[1], offersToVoid[2], offersToVoid[1]];
+
+            // Attempt to void the offer again, expecting revert
+            await expect(offerHandler.connect(buyer).voidNonListedOfferBatch(offersToVoid)).to.revertedWithCustomError(
+              bosonErrors,
+              RevertReasons.OFFER_HAS_BEEN_VOIDED
+            );
+          });
+        });
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("The offers region of protocol is paused", async function () {
+          // Pause the offers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
+
+          // Attempt to void offer batch, expecting revert
+          await expect(offerHandler.connect(assistant).voidNonListedOfferBatch(offersToVoid))
+            .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
+            .withArgs(PausableRegion.Offers);
         });
       });
     });

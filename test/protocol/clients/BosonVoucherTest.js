@@ -241,9 +241,7 @@ describe("IBosonVoucher", function () {
         "ForwardRequest",
         message,
         await forwarder.getAddress(),
-        "MockForwarder",
-        "0.0.1",
-        "0Z"
+        { domainName: "MockForwarder", domainVersion: "0.0.1", type: "0Z" }
       );
 
       const tx = await forwarder.execute(message, signature);
@@ -670,9 +668,7 @@ describe("IBosonVoucher", function () {
           "ForwardRequest",
           message,
           await forwarder.getAddress(),
-          "MockForwarder",
-          "0.0.1",
-          "0Z"
+          { domainName: "MockForwarder", domainVersion: "0.0.1", type: "0Z" }
         );
 
         const tx = await forwarder.execute(message, signature);

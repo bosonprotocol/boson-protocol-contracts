@@ -32,6 +32,7 @@ exports.RevertReasons = {
   // Offer related
   NOT_ASSISTANT: "NotAssistant",
   NO_SUCH_OFFER: "NoSuchOffer",
+  INVALID_OFFER: "InvalidOffer",
   OFFER_HAS_BEEN_VOIDED: "OfferHasBeenVoided",
   OFFER_PERIOD_INVALID: "InvalidOfferPeriod",
   OFFER_PENALTY_INVALID: "InvalidOfferPenalty",
@@ -55,6 +56,7 @@ exports.RevertReasons = {
   INVALID_ROYALTY_RECIPIENT: "InvalidRoyaltyRecipient",
   INVALID_ROYALTY_PERCENTAGE: "InvalidRoyaltyPercentage",
   INVALID_PRICE_DISCOVERY_PRICE: "InvalidPriceDiscoveryPrice",
+  SELLER_PARAMS_NOT_ALLOWED: "SellerParametersNotAllowed",
 
   // Group related
   NO_SUCH_GROUP: "NoSuchGroup",

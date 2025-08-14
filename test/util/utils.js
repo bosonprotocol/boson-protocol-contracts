@@ -196,19 +196,26 @@ async function getCurrentBlockAndSetTimeForward(seconds) {
   await setNextBlockTimestamp(newTime);
 }
 
+/** Helper function to sign the typed data (EIP-712)
+ *
+ * @returns the signature of `message`, unless options.hashOnly is true; then it returns the data to be signed
+ */
 async function prepareDataSignature(
   user,
   customTransactionTypes,
   primaryType,
   message,
   forwarderAddress,
-  domainName = "Boson Protocol",
-  domainVersion = "V2",
-  type = "Protocol"
+  options = {
+    domainName: "Boson Protocol",
+    domainVersion: "V2",
+    type: "Protocol",
+    hashOnly: false,
+  }
 ) {
   // Initialize data
   const domainType =
-    type == "Protocol"
+    options?.type == "Protocol"
       ? [
           { name: "name", type: "string" },
           { name: "version", type: "string" },
@@ -223,12 +230,12 @@ async function prepareDataSignature(
         ];
 
   const domainData = {
-    name: domainName ?? "Boson Protocol",
-    version: domainVersion ?? "V2",
+    name: options?.domainName,
+    version: options?.domainVersion,
     verifyingContract: forwarderAddress,
   };
 
-  if (type == "Protocol") {
+  if (options?.type == "Protocol") {
     //hardhat default chain id is 31337
     domainData.salt = zeroPadValue(toHexString(31337n), 32);
   } else {
@@ -243,12 +250,19 @@ async function prepareDataSignature(
   metaTxTypes = Object.assign({}, metaTxTypes, customTransactionTypes);
 
   // Prepare the data to sign
-  let dataToSign = JSON.stringify({
-    types: metaTxTypes,
+  const typedData = {
+    types: options?.hashOnly ? customTransactionTypes : metaTxTypes,
     domain: domainData,
     primaryType: primaryType,
     message: message,
-  });
+  };
+
+  if (options?.hashOnly) {
+    // If only the hash is needed, return it
+    const typedDataEncoder = new ethers.TypedDataEncoder(typedData.types);
+    return typedDataEncoder.hash(typedData.message);
+  }
+  let dataToSign = JSON.stringify(typedData);
 
   // Sign the data
   const signature = await provider.send("eth_signTypedData_v4", [await user.getAddress(), dataToSign]);
