@@ -256,8 +256,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
                         disputeResolutionTerms.escalationResponsePeriod = disputeResolver.escalationResponsePeriod;
                         disputeResolutionTerms.feeAmount = feeAmount;
                         disputeResolutionTerms.buyerEscalationDeposit =
-                            (feeAmount * fees.buyerEscalationDepositPercentage) /
-                            HUNDRED_PERCENT;
+                            (feeAmount * fees.buyerEscalationDepositPercentage) / HUNDRED_PERCENT;
                         disputeResolutionTerms.mutualizerAddress = _drParameters.mutualizerAddress;
 
                         // Validate mutualizer interface if address is not zero (non-zero means external mutualizer)

@@ -360,8 +360,7 @@ abstract contract FundsBase is Context {
             {
                 if (effectivePriceMultiplier > 0) {
                     protocolFee =
-                        protocolFee +
-                        applyPercent(secondaryCommit.protocolFeeAmount, effectivePriceMultiplier);
+                        protocolFee + applyPercent(secondaryCommit.protocolFeeAmount, effectivePriceMultiplier);
                     sellerRoyalties += distributeRoyalties(
                         _exchangeId,
                         _offer,
