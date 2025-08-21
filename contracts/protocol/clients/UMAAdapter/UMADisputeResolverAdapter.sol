@@ -63,6 +63,7 @@ contract UMADisputeResolverAdapter is
     error AssertionAlreadyExists();
     error NotRegistered();
     error AlreadyRegistered();
+    error NotAssignedDisputeResolver();
 
     /**
      * @notice Constructor for UMADisputeResolverAdapter
@@ -154,6 +155,7 @@ contract UMADisputeResolverAdapter is
      * - _buyerPercent > 10000
      * - Exchange does not exist
      * - Dispute is not in Escalated state
+     * - This contract is not the assigned dispute resolver for the offer
      * - Assertion already exists for this exchange
      * - UMA bond transfer fails
      * - UMA assertion creation fails
@@ -171,6 +173,8 @@ contract UMADisputeResolverAdapter is
         );
         if (!exists) revert InvalidExchangeId();
         if (state != BosonTypes.DisputeState.Escalated) revert DisputeNotEscalated();
+
+        _validateAssignedDisputeResolver(_exchangeId);
 
         if (exchangeToAssertion[_exchangeId] != bytes32(0)) revert AssertionAlreadyExists();
 
@@ -319,6 +323,27 @@ contract UMADisputeResolverAdapter is
         )
     {
         return IBosonDisputeResolverHandler(BOSON_PROTOCOL).getDisputeResolver(disputeResolverId);
+    }
+
+    /**
+     * @notice Validates that this contract is the assigned dispute resolver for the exchange
+     * @param _exchangeId The exchange ID to validate
+     * Reverts if:
+     * - Exchange does not exist
+     * - Offer does not exist
+     * - This contract is not registered as a dispute resolver
+     * - This contract is not the assigned dispute resolver for this exchange
+     */
+    function _validateAssignedDisputeResolver(uint256 _exchangeId) internal view {
+        // it is already validated that there is a valid dispute for this exchange, so we assume exchange and offer exist
+        (, BosonTypes.Exchange memory exchange, ) = IBosonExchangeHandler(BOSON_PROTOCOL).getExchange(_exchangeId);
+        (, BosonTypes.Offer memory offer, , , , ) = IBosonOfferHandler(BOSON_PROTOCOL).getOffer(exchange.offerId);
+        (, , , , BosonTypes.DisputeResolutionTerms memory disputeResolutionTerms, ) = IBosonOfferHandler(BOSON_PROTOCOL)
+            .getOffer(offer.id);
+
+        if (disputeResolutionTerms.disputeResolverId != disputeResolverId) {
+            revert NotAssignedDisputeResolver();
+        }
     }
 
     /**

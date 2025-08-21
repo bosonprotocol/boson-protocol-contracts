@@ -43,6 +43,14 @@ interface IUMADisputeResolverAdapter {
      * @param _exchangeId The exchange ID of the escalated dispute
      * @param _buyerPercent The buyer's proposed percentage split (0-10000)
      * @param _additionalInfo Additional information to include in the claim
+     * Reverts if:
+     * - _buyerPercent > 10000
+     * - Exchange does not exist
+     * - Dispute is not in Escalated state
+     * - This contract is not the assigned dispute resolver for the offer
+     * - Assertion already exists for this exchange
+     * - UMA bond transfer fails
+     * - UMA assertion creation fails
      */
     function assertTruthForDispute(uint256 _exchangeId, uint256 _buyerPercent, string memory _additionalInfo) external;
 
