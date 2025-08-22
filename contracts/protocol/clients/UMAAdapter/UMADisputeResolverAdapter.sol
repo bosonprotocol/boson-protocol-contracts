@@ -64,6 +64,7 @@ contract UMADisputeResolverAdapter is
     error NotRegistered();
     error AlreadyRegistered();
     error NotAssignedDisputeResolver();
+    error InvalidDisputeResolverId();
 
     /**
      * @notice Constructor for UMADisputeResolverAdapter
@@ -86,14 +87,13 @@ contract UMADisputeResolverAdapter is
     }
 
     /**
-     * @notice Register this contract as a dispute resolver in Boson Protocol (owner only)
-     * @param _assistant Assistant address for the dispute resolver (should be msg.sender)
+     * @notice Register the caller as a dispute resolver and configure this adapter to serve them
      * @param _treasury Treasury address for the dispute resolver
      * @param _metadataUri Metadata URI for the dispute resolver
      * @param _disputeResolverFees Array of fee structures
      * @param _sellerAllowList Array of seller IDs allowed to use this DR (empty = no restrictions)
-     * @dev Must be called after deployment. Sets both admin and assistant to msg.sender to satisfy Boson's requirements.
-     *      Boson Protocol requires msg.sender == admin == assistant for dispute resolver registration.
+     * @dev The caller becomes both admin and assistant for the dispute resolver to satisfy Boson's requirements.
+     *      This adapter will then proxy dispute resolution calls for them.
      *
      * Emits:
      * - DisputeResolverRegistered event with the assigned dispute resolver ID
@@ -101,26 +101,21 @@ contract UMADisputeResolverAdapter is
      * Reverts if:
      * - Caller is not owner
      * - Contract is already registered
-     * - _assistant is not msg.sender
      * - Boson Protocol registration fails
      */
-    function registerAsDisputeResolver(
-        address _assistant,
+    function registerDisputeResolver(
         address payable _treasury,
         string memory _metadataUri,
         BosonTypes.DisputeResolverFee[] memory _disputeResolverFees,
         uint256[] memory _sellerAllowList
     ) external onlyOwner {
         if (disputeResolverId != 0) revert AlreadyRegistered();
-        // Boson Protocol requires msg.sender == admin == assistant for DR registering
-        if (_assistant != msg.sender) revert InvalidAddress();
 
-        // Create dispute resolver struct
         BosonTypes.DisputeResolver memory disputeResolver = BosonTypes.DisputeResolver({
             id: 0, // Will be set by the protocol
             escalationResponsePeriod: challengePeriod,
-            assistant: _assistant,
-            admin: _assistant,
+            assistant: address(this),
+            admin: address(this),
             clerk: address(0), // Deprecated field
             treasury: _treasury,
             metadataUri: _metadataUri,
@@ -134,7 +129,7 @@ contract UMADisputeResolverAdapter is
         );
 
         (, BosonTypes.DisputeResolver memory registeredDR, , ) = IBosonDisputeResolverHandler(BOSON_PROTOCOL)
-            .getDisputeResolverByAddress(msg.sender);
+            .getDisputeResolverByAddress(address(this));
 
         disputeResolverId = registeredDR.id;
         emit DisputeResolverRegistered(disputeResolverId);
@@ -191,8 +186,9 @@ contract UMADisputeResolverAdapter is
      * @notice Callback from UMA when an assertion is resolved
      * @param assertionId The ID of the resolved assertion
      * @param assertedTruthfully Whether the assertion was deemed truthful
-     * @dev Only callable by UMA Oracle. Resolves Boson dispute based on UMA's decision and cleans up state.
+     * @dev Only callable by UMA Oracle. Automatically resolves Boson dispute based on UMA's decision.
      *      If assertedTruthfully=true, uses original buyer percentage. If false, buyer gets 0%.
+     *      This contract must be registered as the dispute resolver assistant for this to work.
      *
      * Emits:
      * - UMAAssertionResolved event with assertion ID, exchange ID, and resolution result
@@ -221,7 +217,6 @@ contract UMADisputeResolverAdapter is
             buyerPercent = proposedBuyerPercent;
         }
 
-        // Submit decision to Boson Protocol
         IBosonDisputeHandler(BOSON_PROTOCOL).decideDispute(exchangeId, buyerPercent);
 
         emit UMAAssertionResolved(assertionId, exchangeId, assertedTruthfully);
@@ -367,16 +362,10 @@ contract UMADisputeResolverAdapter is
         string memory _additionalInfo
     ) internal returns (bytes32 assertionId) {
         // Get exchange and offer details
-        (bool exchangeExists, BosonTypes.Exchange memory exchange, ) = IBosonExchangeHandler(BOSON_PROTOCOL)
-            .getExchange(_exchangeId);
-        if (!exchangeExists) revert InvalidExchangeId();
+        (, BosonTypes.Exchange memory exchange, ) = IBosonExchangeHandler(BOSON_PROTOCOL).getExchange(_exchangeId);
+        (, BosonTypes.Offer memory offer, , , , ) = IBosonOfferHandler(BOSON_PROTOCOL).getOffer(exchange.offerId);
 
-        (bool offerExists, BosonTypes.Offer memory offer, , , , ) = IBosonOfferHandler(BOSON_PROTOCOL).getOffer(
-            exchange.offerId
-        );
-        if (!offerExists) revert InvalidExchangeId();
-
-        // Create human-readable claim following UMA's documented approach
+        // Create human-readable claim following UMA's example
         bytes memory claim = abi.encodePacked(
             "Boson Protocol dispute for exchange ",
             Strings.toString(_exchangeId),
@@ -389,6 +378,10 @@ contract UMADisputeResolverAdapter is
         );
 
         uint256 bond = UMA_ORACLE.getMinimumBond(offer.exchangeToken);
+        IERC20 exchangeToken = IERC20(offer.exchangeToken);
+
+        exchangeToken.transferFrom(msg.sender, address(this), bond);
+        exchangeToken.approve(address(UMA_ORACLE), bond);
 
         bytes32 domainId = bytes32(_exchangeId);
         assertionId = UMA_ORACLE.assertTruth(
@@ -397,7 +390,7 @@ contract UMADisputeResolverAdapter is
             address(this),
             address(0), // we don't use specific escalation manager, but use the default one (DVN).
             challengePeriod,
-            IERC20(offer.exchangeToken),
+            exchangeToken,
             bond,
             UMA_ASSERTION_IDENTIFIER,
             domainId
