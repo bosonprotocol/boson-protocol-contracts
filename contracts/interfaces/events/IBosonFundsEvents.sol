@@ -8,7 +8,7 @@ pragma solidity 0.8.22;
  */
 interface IBosonFundsEvents {
     event FundsDeposited(
-        uint256 indexed sellerId,
+        uint256 indexed entityId,
         address indexed executedBy,
         address indexed tokenAddress,
         uint256 amount

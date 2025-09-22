@@ -8488,9 +8488,11 @@ describe("IBosonExchangeHandler", function () {
           );
 
         await expect(tx)
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(buyerId, buyer.address, offer.exchangeToken, offer.price);
+        await expect(tx)
           .to.emit(fundsHandler, "FundsEncumbered")
           .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
-        await expect(tx).to.not.emit(fundsHandler, "FundsDeposited");
 
         // Unconditional offer should not emit events
         await expect(tx).to.not.emit(exchangeHandler, "ConditionalCommitAuthorized");
@@ -8636,9 +8638,11 @@ describe("IBosonExchangeHandler", function () {
           );
 
         await expect(tx)
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(buyerId, buyer.address, offer.exchangeToken, offer.price);
+        await expect(tx)
           .to.emit(fundsHandler, "FundsEncumbered")
           .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
-        await expect(tx).to.not.emit(fundsHandler, "FundsDeposited");
         await expect(tx)
           .to.emit(fundsHandler, "FundsEncumbered")
           .withArgs(seller.id, offer.exchangeToken, offer.sellerDeposit, buyer.address);
@@ -8704,9 +8708,11 @@ describe("IBosonExchangeHandler", function () {
           .withArgs(offerId, buyerId, exchangeId, exchange.toStruct(), voucher.toStruct(), buyer.address);
 
         await expect(tx)
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(buyerId, buyer.address, offer.exchangeToken, offer.price);
+        await expect(tx)
           .to.emit(fundsHandler, "FundsEncumbered")
           .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
-        await expect(tx).to.not.emit(fundsHandler, "FundsDeposited");
 
         // Offer should not be created again, as it already exists
         await expect(tx).to.not.emit(offerHandler, "OfferCreated");
@@ -8790,7 +8796,9 @@ describe("IBosonExchangeHandler", function () {
         await expect(tx)
           .to.emit(fundsHandler, "FundsEncumbered")
           .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
-        await expect(tx).to.not.emit(fundsHandler, "FundsDeposited");
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(buyerId, buyer.address, offer.exchangeToken, offer.price);
 
         // Conditional offer emits additional events
         const groupId = "1";
@@ -9114,9 +9122,11 @@ describe("IBosonExchangeHandler", function () {
           );
 
         await expect(tx)
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(seller.id, assistant.address, offer.exchangeToken, offer.sellerDeposit);
+        await expect(tx)
           .to.emit(fundsHandler, "FundsEncumbered")
           .withArgs(seller.id, offer.exchangeToken, offer.sellerDeposit, assistant.address);
-        await expect(tx).to.not.emit(fundsHandler, "FundsDeposited");
 
         // Unconditional offer should not emit events
         await expect(tx).to.not.emit(exchangeHandler, "ConditionalCommitAuthorized");
@@ -9257,10 +9267,12 @@ describe("IBosonExchangeHandler", function () {
             assistant.address
           );
 
-        await expect(tx).to.not.emit(fundsHandler, "FundsDeposited");
         await expect(tx)
           .to.emit(fundsHandler, "FundsEncumbered")
           .withArgs(buyerId, offer.exchangeToken, price, assistant.address);
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(seller.id, assistant.address, offer.exchangeToken, offer.sellerDeposit);
         await expect(tx)
           .to.emit(fundsHandler, "FundsEncumbered")
           .withArgs(seller.id, offer.exchangeToken, offer.sellerDeposit, assistant.address);
@@ -9342,7 +9354,9 @@ describe("IBosonExchangeHandler", function () {
             assistant.address
           );
 
-        await expect(tx).to.not.emit(fundsHandler, "FundsDeposited");
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(seller.id, assistant.address, offer.exchangeToken, offer.sellerDeposit);
         await expect(tx)
           .to.emit(fundsHandler, "FundsEncumbered")
           .withArgs(seller.id, offer.exchangeToken, offer.sellerDeposit, assistant.address);
