@@ -316,7 +316,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
           exchange.buyerId = newBuyer.id;
         });
 
-        it("should emit FundsEncumbered and BuyerCommitted events", async function () {
+        it("should emit FundsDeposited, FundsEncumbered and BuyerCommitted events", async function () {
           // Commit to offer
           tx = await priceDiscoveryHandler
             .connect(buyer)
@@ -336,6 +336,10 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             .withArgs(seller.id, ZeroAddress, offer.sellerDeposit, expectedCloneAddress);
 
           // Buyers funds
+          await expect(tx)
+            .to.emit(priceDiscoveryHandler, "FundsDeposited")
+            .withArgs(newBuyer.id, buyer.address, ZeroAddress, price);
+
           await expect(tx)
             .to.emit(priceDiscoveryHandler, "FundsEncumbered")
             .withArgs(newBuyer.id, ZeroAddress, price, buyer.address);
@@ -480,6 +484,10 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             .withArgs(seller.id, ZeroAddress, offer.sellerDeposit, expectedCloneAddress);
 
           // Buyers funds - in ask order, they are taken from the seller deposit
+          await expect(tx)
+            .to.emit(priceDiscoveryHandler, "FundsDeposited")
+            .withArgs(newBuyer.id, buyer.address, ZeroAddress, price);
+
           await expect(tx)
             .to.emit(priceDiscoveryHandler, "FundsEncumbered")
             .withArgs(newBuyer.id, ZeroAddress, price, buyer.address);
@@ -795,7 +803,7 @@ describe("IPriceDiscoveryHandlerFacet", function () {
           exchange.buyerId = newBuyer.id;
         });
 
-        it("should emit FundsEncumbered and BuyerCommitted events", async function () {
+        it("should emit FundsDeposited, FundsEncumbered and BuyerCommitted events", async function () {
           // Commit to offer, retrieving the event
           const tx = await priceDiscoveryHandler
             .connect(assistant)
@@ -815,6 +823,10 @@ describe("IPriceDiscoveryHandlerFacet", function () {
             .withArgs(seller.id, ZeroAddress, offer.sellerDeposit, expectedCloneAddress);
 
           // Buyers funds - in bid order, they are taken directly from the buyer
+          await expect(tx)
+            .to.emit(priceDiscoveryHandler, "FundsDeposited")
+            .withArgs(newBuyer.id, assistant.address, ZeroAddress, price);
+
           await expect(tx)
             .to.emit(priceDiscoveryHandler, "FundsEncumbered")
             .withArgs(newBuyer.id, ZeroAddress, price, assistant.address);
