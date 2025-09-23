@@ -7,7 +7,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IBosonFundsEvents, IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
+import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { IDRFeeMutualizer } from "../../interfaces/clients/IDRFeeMutualizer.sol";
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
@@ -62,7 +62,7 @@ abstract contract FundsBase is Context {
 
         if (!_isPreminted) {
             validateIncomingPayment(exchangeToken, _incomingAmount);
-            emit IBosonFundsEvents.FundsDeposited(_entityId, sender, exchangeToken, _incomingAmount);
+            emit IBosonFundsBaseEvents.FundsDeposited(_entityId, sender, exchangeToken, _incomingAmount);
             emit IBosonFundsBaseEvents.FundsEncumbered(_entityId, exchangeToken, _incomingAmount, sender);
         }
 

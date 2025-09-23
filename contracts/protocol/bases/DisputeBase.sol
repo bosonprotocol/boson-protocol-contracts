@@ -2,7 +2,7 @@
 pragma solidity 0.8.22;
 
 import { IBosonDisputeEvents } from "../../interfaces/events/IBosonDisputeEvents.sol";
-import { IBosonFundsEvents, IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
+import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import "../../domain/BosonConstants.sol";
 
@@ -11,7 +11,7 @@ import "../../domain/BosonConstants.sol";
  * @title DisputeBase
  * @notice Provides methods for dispute that can be shared across facets.
  */
-contract DisputeBase is ProtocolBase, IBosonDisputeEvents, IBosonFundsEvents, IBosonFundsBaseEvents {
+contract DisputeBase is ProtocolBase, IBosonDisputeEvents, IBosonFundsBaseEvents {
     /**
      * @notice Raises a dispute
      *

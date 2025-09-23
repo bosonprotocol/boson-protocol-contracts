@@ -6,7 +6,7 @@ import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonExchangeCommitHandler } from "../../interfaces/handlers/IBosonExchangeCommitHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { IDRFeeMutualizer } from "../../interfaces/clients/IDRFeeMutualizer.sol";
-import { IBosonFundsEvents, IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
+import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BuyerBase } from "../bases/BuyerBase.sol";
 import { OfferBase } from "../bases/OfferBase.sol";
@@ -311,7 +311,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
             if (offerCreatorAmount > 0) {
                 transferFundsIn(_fullOffer.offer.exchangeToken, _offerCreator, offerCreatorAmount);
                 increaseAvailableFunds(offerCreatorId, _fullOffer.offer.exchangeToken, offerCreatorAmount);
-                emit IBosonFundsEvents.FundsDeposited(
+                emit IBosonFundsBaseEvents.FundsDeposited(
                     offerCreatorId,
                     _offerCreator,
                     _fullOffer.offer.exchangeToken,

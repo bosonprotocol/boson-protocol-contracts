@@ -6,16 +6,14 @@ pragma solidity 0.8.22;
  *
  * @notice Defines events related to management of funds within the protocol.
  */
-interface IBosonFundsEvents {
+interface IBosonFundsBaseEvents {
     event FundsDeposited(
         uint256 indexed entityId,
         address indexed executedBy,
         address indexed tokenAddress,
         uint256 amount
     );
-}
 
-interface IBosonFundsBaseEvents {
     event FundsEncumbered(
         uint256 indexed entityId,
         address indexed exchangeToken,

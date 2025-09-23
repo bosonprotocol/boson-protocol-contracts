@@ -5,7 +5,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonExchangeEvents } from "../events/IBosonExchangeEvents.sol";
 import { IBosonTwinEvents } from "../events/IBosonTwinEvents.sol";
-import { IBosonFundsEvents, IBosonFundsBaseEvents } from "../events/IBosonFundsEvents.sol";
+import { IBosonFundsBaseEvents } from "../events/IBosonFundsEvents.sol";
 
 /**
  * @title IBosonPriceDiscoveryHandler
@@ -14,13 +14,7 @@ import { IBosonFundsEvents, IBosonFundsBaseEvents } from "../events/IBosonFundsE
  *
  * The ERC-165 identifier for this interface is: 0xdec319c9
  */
-interface IBosonPriceDiscoveryHandler is
-    BosonErrors,
-    IBosonExchangeEvents,
-    IBosonFundsEvents,
-    IBosonFundsBaseEvents,
-    IBosonTwinEvents
-{
+interface IBosonPriceDiscoveryHandler is BosonErrors, IBosonExchangeEvents, IBosonFundsBaseEvents, IBosonTwinEvents {
     /**
      * @notice Commits to a price discovery offer (first step of an exchange).
      *
