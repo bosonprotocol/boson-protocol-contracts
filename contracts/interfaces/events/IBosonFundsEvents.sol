@@ -2,7 +2,7 @@
 pragma solidity 0.8.22;
 
 /**
- * @title IBosonFundsEvents
+ * @title IBosonFundsBaseEvents
  *
  * @notice Defines events related to management of funds within the protocol.
  */
