@@ -139,6 +139,7 @@ describe("IBosonExchangeHandler", function () {
   let tokenId;
   let offerFeeLimit;
   let bosonErrors;
+  let buyerEscalationDeposit;
 
   before(async function () {
     accountId.next(true);
@@ -266,7 +267,8 @@ describe("IBosonExchangeHandler", function () {
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
-      disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", parseEther("0.1").toString())];
+      const DRFee = parseEther("0.1");
+      disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", DRFee.toString())];
 
       // Make empty seller list, so every seller is allowed
       const sellerAllowList = [];
@@ -275,6 +277,10 @@ describe("IBosonExchangeHandler", function () {
       await accountHandler
         .connect(adminDR)
         .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+
+      // Use a default value for buyer escalation deposit percentage (10%)
+      const buyerEscalationDepositPercentage = "1000"; // 10% in basis points
+      buyerEscalationDeposit = applyPercentage(DRFee, buyerEscalationDepositPercentage);
 
       // Create the offer
       const mo = await mockOffer();
@@ -1042,9 +1048,6 @@ describe("IBosonExchangeHandler", function () {
           const drFeeAmount = parseUnits("0.1", "ether");
           const testDRFee = drFeeAmount.toString();
 
-          // Use a default value for buyer escalation deposit percentage (10%)
-          const buyerEscalationDepositPercentage = "1000"; // 10% in basis points
-
           // Remove existing zero fees and add non-zero fees (following FundsHandlerTest pattern)
           const feeTokenAddresses = [ZeroAddress];
           await accountHandler.connect(adminDR).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddresses);
@@ -1069,9 +1072,6 @@ describe("IBosonExchangeHandler", function () {
             offerDurationsWithFee,
             {
               disputeResolverId: disputeResolver.id,
-              escalationResponsePeriod: disputeResolver.escalationResponsePeriod,
-              feeAmount: testDRFee,
-              buyerEscalationDeposit: applyPercentage(testDRFee, buyerEscalationDepositPercentage),
               mutualizerAddress: await drFeeMutualizer.getAddress(),
             },
             agentId,
@@ -1169,7 +1169,7 @@ describe("IBosonExchangeHandler", function () {
         tokenId = deriveTokenId(mutualizerOfferId, exchangeId);
       });
 
-      it.only("seller can steal the protocol funds", async function () {
+      it("seller can steal the protocol funds", async function () {
         // commit via preminted vouchers
         await bosonVoucher.connect(rando).transferFrom(rando.address, rando.address, tokenId);
 
@@ -1182,7 +1182,7 @@ describe("IBosonExchangeHandler", function () {
         await drFeeMutualizer.connect(rando).withdraw(ZeroAddress, parseEther("5").toString(), rando.address);
 
         const endingBalance = await provider.getBalance(rando.address);
-        expect(endingBalance).to.be.equal(startingBalance + parseEther("5"));
+        expect(endingBalance).to.be.equal(startingBalance);
       });
     });
 
@@ -6446,7 +6446,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("should return false if exchange has a dispute in Escalated state", async function () {
           // Escalate the dispute
-          await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+          await disputeHandler.connect(buyer).escalateDispute(exchange.id, { value: buyerEscalationDeposit });
 
           // In Escalated state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
@@ -6457,7 +6457,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("should return true if exchange has a dispute in Decided state", async function () {
           // Escalate the dispute
-          await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+          await disputeHandler.connect(buyer).escalateDispute(exchange.id, { value: buyerEscalationDeposit });
 
           // Decide Dispute
           await disputeHandler.connect(assistantDR).decideDispute(exchange.id, "1111");
@@ -6471,7 +6471,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("should return true if exchange has a dispute in Refused state", async function () {
           // Escalate the dispute
-          tx = await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+          tx = await disputeHandler.connect(buyer).escalateDispute(exchange.id, { value: buyerEscalationDeposit });
 
           // Get the block timestamp of the confirmed tx and set escalatedDate
           blockNumber = tx.blockNumber;
@@ -6842,7 +6842,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("Receipt should contain escalatedDate if a dispute was raised and escalated", async function () {
           // Escalate a dispute
-          let tx = await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+          let tx = await disputeHandler.connect(buyer).escalateDispute(exchange.id, { value: buyerEscalationDeposit });
 
           // Get the block timestamp of the confirmed tx
           blockNumber = tx.blockNumber;

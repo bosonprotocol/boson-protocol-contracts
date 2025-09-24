@@ -635,7 +635,6 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
                         if (ps.incomingVoucherId != _tokenId) revert TokenIdMismatch();
                     }
                     commitToOfferInternal(_to, offer, exchangeId, true);
-
                     committed = true;
                 }
 
@@ -661,7 +660,9 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
             }
         } else if (offer.priceType == PriceType.Static) {
             // If price type is static, transaction can start from anywhere
+            protocolStatus().reentrancyStatus = ENTERED; // avoid reentrancy
             commitToOfferInternal(_to, offer, exchangeId, true);
+            protocolStatus().reentrancyStatus = NOT_ENTERED;
             committed = true;
         }
     }
