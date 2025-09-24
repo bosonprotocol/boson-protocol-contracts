@@ -1,5 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
+const { keccak256, toUtf8Bytes } = ethers;
 const { expect } = require("chai");
 const exchangeHandlerAbi_v2_4_2 = require("@bosonprotocol/common/src/abis/IBosonExchangeHandler.json");
 
@@ -14,6 +15,8 @@ const { setNextBlockTimestamp, getEvent } = require("../util/utils");
 const OfferCreator = require("../../scripts/domain/OfferCreator");
 const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo");
 const { mockOffer } = require("../util/mock");
+const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils");
+const upgradeConfig = require("../../scripts/config/upgrade/2.5.0.js");
 
 const newVersion = "2.5.0";
 
@@ -66,6 +69,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       bundleHandler: await ethers.getContractAt("IBosonBundleHandler", protocolDiamondAddress),
       groupHandler: await ethers.getContractAt("IBosonGroupHandler", protocolDiamondAddress),
       twinHandler: await ethers.getContractAt("IBosonTwinHandler", protocolDiamondAddress),
+      metaTransactionsHandler: await ethers.getContractAt("IBosonMetaTransactionsHandler", protocolDiamondAddress),
     };
 
     // Fund the accounts for deploying mock tokens and making transactions
@@ -264,11 +268,33 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
     describe("Metatx Allowlist", function () {
       it("Should verify old functions are not allowlisted anymore", async function () {
-        // Check that legacy meta-transaction functions are not allowlisted anymore
+        const removedFunctionSignatures_v2_4_2 = [
+          "createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,uint8,string,string,bool,(address[],uint256[])),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256)",
+          "createOfferBatch((uint256,uint256,uint256,uint256,uint256,uint256,address,uint8,string,string,bool,(address[],uint256[]))[],tuple(uint256,uint256,uint256,uint256)[],(uint256,uint256,uint256)[],uint256[],uint256[])",
+        ];
+
+        const removedFunctionHashes = removedFunctionSignatures_v2_4_2.map((sig) => keccak256(toUtf8Bytes(sig)));
+
+        for (const functionHash of removedFunctionHashes) {
+          expect(await protocolContracts.metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](functionHash)).to.be
+            .false;
+        }
       });
 
       it("Should verify new functions are allowlisted", async function () {
-        // Check that new v2.5.0 meta-transaction functions are properly allowlisted
+        const { addOrUpgrade } = await upgradeConfig.getFacets();
+
+        const getFunctionHashesClosure = getStateModifyingFunctionsHashes(
+          addOrUpgrade, // All facets being upgraded in 2.5.0
+          ["executeMetaTransaction"],
+          []
+        );
+        const addedFunctionHashes = await getFunctionHashesClosure();
+
+        for (const functionHash of addedFunctionHashes) {
+          expect(await protocolContracts.metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](functionHash)).to.be
+            .true;
+        }
       });
     });
   });
