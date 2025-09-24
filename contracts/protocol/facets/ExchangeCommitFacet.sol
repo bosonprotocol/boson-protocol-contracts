@@ -660,9 +660,11 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
             }
         } else if (offer.priceType == PriceType.Static) {
             // If price type is static, transaction can start from anywhere
-            protocolStatus().reentrancyStatus = ENTERED; // avoid reentrancy
+            ProtocolLib.ProtocolStatus storage ps = ProtocolLib.protocolStatus();
+            if (ps.reentrancyStatus == ENTERED) revert BosonErrors.ReentrancyGuard();
+            ps.reentrancyStatus = ENTERED; // avoid reentrancy
             commitToOfferInternal(_to, offer, exchangeId, true);
-            protocolStatus().reentrancyStatus = NOT_ENTERED;
+            ps.reentrancyStatus = NOT_ENTERED;
             committed = true;
         }
     }
