@@ -61,7 +61,7 @@ let Condition = require("../../scripts/domain/Condition");
 // Common vars
 const versionsWithActivateDRFunction = ["v2.0.0", "v2.1.0"];
 const versionsBelowV2_3 = ["v2.0.0", "v2.1.0", "v2.2.0", "v2.2.1"]; // have clerk role, don't have collections, different way to get available funds
-const versionsBelowV2_4 = [...versionsBelowV2_3, "v2.3.0"]; // different offer struct, different createOffer function
+const versionsBelowV2_4 = [...versionsBelowV2_3, "v2.3.0", "v2.4.0", "v2.4.1"]; // different offer struct, different createOffer function
 let rando;
 let preUpgradeInterfaceIds, preUpgradeVersions;
 let facets, versionTags;
@@ -90,28 +90,23 @@ async function deploySuite(deployer, newVersion) {
 
   // checkout old version
   const { oldVersion: tag, deployScript: scriptsTag, updateDomain } = versionTags;
-  console.log(`Fetching tags`);
   shell.exec(`git fetch --force --tags origin`);
 
-  console.log(`Checking out version ${tag}`);
   shell.exec(`rm -rf contracts/*`);
   shell.exec(`git checkout ${tag} contracts/**`);
 
   if (scriptsTag) {
-    console.log(`Checking out scripts on version ${scriptsTag}`);
     shell.exec(`rm -rf scripts/*`);
     shell.exec(`git checkout ${scriptsTag} scripts/**`);
   }
 
   if (updateDomain) {
-    console.log(`Updating the domain definitions to ${tag}`);
     const filesToUpdate = updateDomain.map((file) => `scripts/domain/${file}.js`).join(" ");
     shell.exec(`git checkout ${tag} ${filesToUpdate}`);
   }
 
   const isOldOZVersion = ["v2.0", "v2.1", "v2.2"].some((v) => tag.startsWith(v));
   if (isOldOZVersion) {
-    console.log("Installing correct version of OZ");
     // Temporary install old OZ contracts
     shell.exec("npm i @openzeppelin/contracts-upgradeable@4.7.1");
   }
@@ -172,11 +167,11 @@ async function deploySuite(deployer, newVersion) {
     protocolDiamondAddress
   );
 
-  // create mock token for auth
-  const [mockAuthERC721Contract] = await deployMockTokens(["Foreign721"]);
-  configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.Lens, await mockAuthERC721Contract.getAddress());
+  // create mock token for auth - only if not provided
+  const authTokenContract = await deployMockTokens(["Foreign721"])[0];
+  configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.Lens, await authTokenContract.getAddress());
 
-  // create mock token for offers
+  // create fresh mock tokens for offers since deploySuite doesn't receive any parameters
   const [mockToken, mockConditionalToken, mockTwin721_1, mockTwin721_2, mockTwin20, mockTwin1155] =
     await deployMockTokens(["Foreign20", "Foreign20", "Foreign721", "Foreign721", "Foreign20", "Foreign1155"]);
   const mockTwinTokens = [mockTwin721_1, mockTwin721_2];
@@ -209,7 +204,7 @@ async function deploySuite(deployer, newVersion) {
       protocolInitializationHandler,
     },
     mockContracts: {
-      mockAuthERC721Contract,
+      mockAuthERC721Contract: authTokenContract,
       mockToken,
       mockConditionalToken,
       mockTwinTokens,
@@ -232,25 +227,20 @@ async function upgradeSuite(protocolDiamondAddress, upgradedInterfaces, override
   shell.exec(`rm -rf scripts/*`);
 
   if (scriptsTag) {
-    console.log(`Checking out scripts on version ${scriptsTag}`);
     shell.exec(`git checkout ${scriptsTag} scripts`);
   } else {
-    console.log(`Checking out latest scripts`);
     shell.exec(`git checkout HEAD scripts`);
   }
 
   if (tag) {
     // checkout the new tag
-    console.log(`Checking out version ${tag}`);
     shell.exec(`git checkout ${tag} contracts`);
   } else {
     // if tag was not created yet, use the latest code
-    console.log(`Checking out latest code`);
     shell.exec(`git checkout HEAD contracts`);
   }
 
   if (updateDomain) {
-    console.log(`Updating the domain definitions to ${tag || "HEAD"}`);
     const filesToUpdate = updateDomain.map((file) => `scripts/domain/${file}.js`).join(" ");
     shell.exec(`git checkout ${tag || "HEAD"} ${filesToUpdate}`);
   }
@@ -286,7 +276,6 @@ async function upgradeClients() {
 
   // checkout the new tag
   shell.exec(`rm -rf contracts/*`);
-  console.log(`Checking out version ${tag}`);
   shell.exec(`git checkout ${tag} contracts`);
 
   await hre.run("compile");
@@ -447,9 +436,18 @@ async function populateProtocolContract(
           authToken = mockAuthToken();
         } else {
           // use auth token
+          const tokenId = 101 * id;
           seller.admin = ZeroAddress;
-          await mockAuthERC721Contract.connect(connectedWallet).mint(101 * id, 1);
-          authToken = new AuthToken(`${101 * id}`, AuthTokenType.Lens);
+
+          try {
+            // Try Foreign721.mint(tokenId, supply) first
+            await mockAuthERC721Contract.connect(connectedWallet).mint(tokenId, 1);
+          } catch (error) {
+            // Try standard ERC721 mint(to, tokenId) signature
+            await mockAuthERC721Contract.connect(deployer).mint(await connectedWallet.getAddress(), tokenId);
+          }
+
+          authToken = new AuthToken(tokenId.toString(), AuthTokenType.Lens);
         }
 
         // set unique new voucherInitValues
@@ -475,7 +473,7 @@ async function populateProtocolContract(
         bosonVouchers.push(bosonVoucher);
 
         // mint mock token to sellers just in case they need them
-        await mockToken.mint(await connectedWallet.getAddress(), "10000000000");
+        await mockToken.connect(deployer).mint(await connectedWallet.getAddress(), "10000000000");
         await mockToken.connect(connectedWallet).approve(protocolDiamondAddress, "10000000000");
 
         break;
@@ -496,7 +494,7 @@ async function populateProtocolContract(
         buyers.push({ wallet: connectedWallet, id: buyer.id, buyer });
 
         // mint them conditional token in case they need it
-        await mockConditionalToken.mint(await wallet.getAddress(), "10");
+        await mockConditionalToken.connect(deployer).mint(await wallet.getAddress(), "10");
 
         break;
       }
@@ -555,6 +553,10 @@ async function populateProtocolContract(
 
       // choose one DR and agent
       const disputeResolverId = DRs[offerId % 3].disputeResolver.id;
+      const drParams = {
+        disputeResolverId: disputeResolverId,
+        mutualizerAddress: ZeroAddress,
+      };
       const agentId = agents[offerId % 2].agent.id;
       const offerFeeLimit = MaxUint256; // unlimited offer fee to not affect the tests
 
@@ -574,10 +576,10 @@ async function populateProtocolContract(
         offer.royaltyInfo = royaltyInfo;
         await offerHandler
           .connect(sellers[j].wallet)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+          .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
       }
 
-      offers.push({ offer, offerDates, offerDurations, disputeResolverId, agentId, royaltyInfo });
+      offers.push({ offer, offerDates, offerDurations, drParams, agentId, royaltyInfo });
       sellers[j].offerIds.push(offerId);
 
       // Deposit seller funds so the commit will succeed
@@ -714,7 +716,7 @@ async function populateProtocolContract(
         // approve token transfer
         msgValue = 0;
         await mockToken.connect(buyerWallet).approve(protocolDiamondAddress, offerPrice);
-        await mockToken.mint(await buyerWallet.getAddress(), offerPrice);
+        await mockToken.connect(deployer).mint(await buyerWallet.getAddress(), offerPrice);
       }
       // v2.3.0 introduces commitToConditionalOffer method which should be used for conditional offers
       const isAfterV2_3_0 = !versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion);
@@ -756,12 +758,10 @@ async function populateProtocolContract(
       for (const twinId of twinsIds) {
         const [, twin] = await twinHandler.getTwin(twinId);
         if (twin.tokenType == TokenType.NonFungibleToken) {
-          await mockTwinTokens[0]
-            .connect(seller.wallet)
-            .mint(BigInt(twin.tokenId) + BigInt(twin.supplyAvailable) - 1n, 1);
-          await mockTwinTokens[1]
-            .connect(seller.wallet)
-            .mint(BigInt(twin.tokenId) + BigInt(twin.supplyAvailable) - 1n, 1);
+          // Foreign721.mint(tokenId, supply) mints to msg.sender
+          const tokenId = BigInt(twin.tokenId) + BigInt(twin.supplyAvailable) - 1n;
+          await mockTwinTokens[0].connect(seller.wallet).mint(tokenId, 1);
+          await mockTwinTokens[1].connect(seller.wallet).mint(tokenId, 1);
         } else if (twin.tokenType == TokenType.MultiToken) {
           await mockTwin1155.connect(seller.wallet).mint(twin.tokenId, twin.supplyAvailable);
         }
@@ -1868,8 +1868,6 @@ function compareStorageLayouts(storageBefore, storageAfter, equalCustomTypes, re
     ) {
       storageOk = false;
       console.error("Storage layout mismatch");
-      console.log("State variable before", stateVariableBefore);
-      console.log("State variable after", stateVariableAfter);
     }
   }
 
@@ -2019,7 +2017,7 @@ async function populateVoucherContract(
           bosonVouchers.push(bosonVoucher);
 
           // mint mock token to sellers just in case they need them
-          await mockToken.mint(await connectedWallet.getAddress(), "10000000000");
+          await mockToken.connect(deployer).mint(await connectedWallet.getAddress(), "10000000000");
           await mockToken.connect(connectedWallet).approve(protocolDiamondAddress, "10000000000");
           break;
         }
@@ -2123,7 +2121,7 @@ async function populateVoucherContract(
         // approve token transfer
         msgValue = 0;
         await mockToken.connect(buyerWallet).approve(protocolDiamondAddress, offerPrice);
-        await mockToken.mint(await buyerWallet.getAddress(), offerPrice);
+        await mockToken.connect(deployer).mint(await buyerWallet.getAddress(), offerPrice);
       }
 
       // v2.3.0 introduces commitToConditionalOffer method which should be used for conditional offers
@@ -2229,6 +2227,10 @@ function revertState() {
   shell.exec(`git reset HEAD contracts scripts package.json package-lock.json`);
 }
 
+function setVersionTags(tags) {
+  versionTags = tags;
+}
+
 async function getDisputeResolver(accountHandler, value, { getBy }) {
   let exist, DR, DRFees, sellerAllowList;
   if (getBy == "address") {
@@ -2284,3 +2286,4 @@ exports.compareStorageLayouts = compareStorageLayouts;
 exports.populateVoucherContract = populateVoucherContract;
 exports.getVoucherContractState = getVoucherContractState;
 exports.revertState = revertState;
+exports.setVersionTags = setVersionTags;

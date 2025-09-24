@@ -85,7 +85,8 @@ async function mockOffer({ refreshModule, legacyOffer } = {}) {
   // Create a valid offer, then set fields in tests directly
   let offer;
   if (legacyOffer) {
-    offer = new Offer(
+    // Create legacy offer object compatible with v2.4.2 (without new fields)
+    offer = {
       id,
       sellerId,
       price,
@@ -94,14 +95,11 @@ async function mockOffer({ refreshModule, legacyOffer } = {}) {
       quantityAvailable,
       exchangeToken,
       priceType,
-      creator,
       metadataUri,
       metadataHash,
       voided,
-      collectionIndex,
-      royaltyInfo,
-      buyerId
-    );
+      // Exclude new fields: creator, collectionIndex, royaltyInfo, buyerId
+    };
   } else {
     offer = new Offer(
       id,
