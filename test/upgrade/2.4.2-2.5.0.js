@@ -1,6 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { keccak256, toUtf8Bytes } = ethers;
+const { keccak256, toUtf8Bytes, ZeroAddress } = ethers;
 const { expect } = require("chai");
 const exchangeHandlerAbi_v2_4_2 = require("@bosonprotocol/common/src/abis/IBosonExchangeHandler.json");
 
@@ -11,12 +11,14 @@ const { tagsByVersion } = require("./00_config");
 const { ACCOUNTS } = require("./utils/accounts");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
-const { setNextBlockTimestamp, getEvent } = require("../util/utils");
+const { getEvent, getCurrentBlockAndSetTimeForward, applyPercentage } = require("../util/utils");
 const OfferCreator = require("../../scripts/domain/OfferCreator");
 const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo");
-const { mockOffer } = require("../util/mock");
+const { mockOffer, mockCondition, mockVoucherInitValues, mockAuthToken, mockSeller } = require("../util/mock");
 const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils");
 const upgradeConfig = require("../../scripts/config/upgrade/2.5.0.js");
+const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
+const { prepareDataSignature } = require("../util/utils");
 
 const newVersion = "2.5.0";
 
@@ -36,11 +38,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
   let preUpgradeEntities;
 
   before(async function () {
-    // Deploy docker container
     dockerUtils = new DockerUtils();
     await dockerUtils.startContainer();
 
-    // Setup accounts from Docker
     deployer = new ethers.Wallet(ACCOUNTS[0].privateKey, ethers.provider);
     buyer1 = new ethers.Wallet(ACCOUNTS[1].privateKey, ethers.provider);
     buyer2 = new ethers.Wallet(ACCOUNTS[2].privateKey, ethers.provider);
@@ -50,7 +50,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       return [deployer, buyer1, buyer2];
     };
 
-    // Read protocol addresses from Docker container
     const chainId = Number((await ethers.provider.getNetwork()).chainId);
     const contractsFile = readContracts(chainId, "localhost", "localhost");
 
@@ -59,7 +58,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       throw new Error("ProtocolDiamond address not found");
     }
 
-    // Create protocol contract interfaces
     protocolContracts = {
       accountHandler: await ethers.getContractAt("IBosonAccountHandler", protocolDiamondAddress),
       exchangeHandler: new ethers.Contract(protocolDiamondAddress, exchangeHandlerAbi_v2_4_2, deployer),
@@ -70,21 +68,8 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       groupHandler: await ethers.getContractAt("IBosonGroupHandler", protocolDiamondAddress),
       twinHandler: await ethers.getContractAt("IBosonTwinHandler", protocolDiamondAddress),
       metaTransactionsHandler: await ethers.getContractAt("IBosonMetaTransactionsHandler", protocolDiamondAddress),
+      configHandler: await ethers.getContractAt("IBosonConfigHandler", protocolDiamondAddress),
     };
-
-    // Fund the accounts for deploying mock tokens and making transactions
-    await ethers.provider.send("hardhat_setBalance", [
-      deployer.address,
-      "0x1000000000000000000", // 1 ETH
-    ]);
-    await ethers.provider.send("hardhat_setBalance", [
-      buyer1.address,
-      "0x1000000000000000000", // 1 ETH
-    ]);
-    await ethers.provider.send("hardhat_setBalance", [
-      buyer2.address,
-      "0x1000000000000000000", // 1 ETH
-    ]);
 
     // Deploy additional Foreign721 for twin as only 1 has been deployed in the Docker container
     const [additionalForeign721] = await deployMockTokens(["Foreign721"]);
@@ -109,7 +94,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     // Since we are not using deploySuite, we need to set the version tags manually
     setVersionTags(tagsByVersion[newVersion]);
 
-    // Populate entities
     preUpgradeEntities = await populateProtocolContract(
       deployer,
       protocolDiamondAddress,
@@ -118,18 +102,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       true // isBefore = true to use v2.4.2 compatible function signatures
     );
 
-    // Execute migration to v2.5.0
     await hre.run("migrate", {
       newVersion: newVersion,
       env: "localhost",
     });
 
-    // Update protocol address after migration
     const updatedContractsFile = readContracts(chainId, "localhost", "localhost");
     const protocolContract = updatedContractsFile.contracts.find((c) => c.name === "ProtocolDiamond");
-    if (!protocolContract) {
-      throw new Error("ProtocolDiamond not found in contracts file after migration");
-    }
     protocolAddress = protocolContract.address;
   });
 
@@ -144,7 +123,6 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     let exchangeCommitHandler;
 
     before(async function () {
-      // Get the new v2.5.0 exchange interfaces (reuse other contracts from protocolContracts)
       exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolAddress);
       exchangeCommitHandler = await ethers.getContractAt("IBosonExchangeCommitHandler", protocolAddress);
     });
@@ -170,13 +148,9 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         const [, redeemedExchange] = await exchangeHandler.getExchange(exchange.exchangeId);
         expect(redeemedExchange.state).to.equal(ExchangeState.Redeemed);
 
-        // Fast-forward time past the dispute period
         const offer = preUpgradeEntities.offers.find((o) => o.offer.id == exchange.offerId);
-        const disputePeriod = offer.offerDurations.disputePeriod;
-        const currentTime = Math.floor(Date.now() / 1000);
-        await setNextBlockTimestamp(currentTime + Number(disputePeriod) + 1, true);
+        await getCurrentBlockAndSetTimeForward(Number(offer.offerDurations.disputePeriod) + 1);
 
-        // Complete the exchange
         await exchangeHandler.connect(buyer.wallet).completeExchange(exchange.exchangeId);
         const [, completedExchange] = await exchangeHandler.getExchange(exchange.exchangeId);
         expect(completedExchange.state).to.equal(ExchangeState.Completed);
@@ -188,15 +162,15 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         const { ZeroAddress } = ethers;
         const { offer, offerDates, offerDurations } = await mockOffer();
 
-        // Create buyer-initiated offer
+        const nextBuyerId = await protocolContracts.accountHandler.getNextAccountId();
+
         const buyerCreatedOffer = offer.clone();
         buyerCreatedOffer.sellerId = "0";
         buyerCreatedOffer.creator = OfferCreator.Buyer;
-        buyerCreatedOffer.buyerId = "1";
+        buyerCreatedOffer.buyerId = nextBuyerId.toString();
         buyerCreatedOffer.collectionIndex = "0";
         buyerCreatedOffer.royaltyInfo = [new RoyaltyInfo([], [])];
 
-        // Create offer and get offer ID from event
         const createOfferTx = await protocolContracts.offerHandler
           .connect(buyer1)
           .createOffer(
@@ -210,37 +184,17 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
         const receipt = await createOfferTx.wait();
         const offerCreatedEvent = getEvent(receipt, protocolContracts.offerHandler, "OfferCreated");
+        const buyerCreatedEvent = getEvent(receipt, protocolContracts.accountHandler, "BuyerCreated");
         const offerId = offerCreatedEvent.offerId.toString();
+        const buyerId = buyerCreatedEvent.buyerId.toString();
 
-        console.log("🔍 OfferCreated event details:", {
-          offerId: offerCreatedEvent.offerId.toString(),
-          sellerId: offerCreatedEvent.sellerId.toString(),
-          offer: offerCreatedEvent.offer,
-          offerDates: offerCreatedEvent.offerDates,
-          offerDurations: offerCreatedEvent.offerDurations,
-          disputeResolutionTerms: offerCreatedEvent.disputeResolutionTerms,
-          offerFees: offerCreatedEvent.offerFees,
-          agentId: offerCreatedEvent.agentId.toString(),
-          executedBy: offerCreatedEvent.executedBy,
-        });
-        console.log("Found OfferCreated event with offer ID:", offerId);
+        const offerPrice = buyerCreatedOffer.price;
+        await protocolContracts.fundsHandler
+          .connect(buyer1)
+          .depositFunds(buyerId, ZeroAddress, offerPrice, { value: offerPrice });
 
-        console.log("✅ Buyer-initiated offer created successfully, offer ID:", offerId);
-
-        // Seller commits to buyer offer
         const seller = preUpgradeEntities.sellers[0];
         const sellerDepositRequired = buyerCreatedOffer.sellerDeposit;
-        console.log(`Seller deposit required: ${sellerDepositRequired}`);
-
-        await protocolContracts.fundsHandler
-          .connect(seller.wallet)
-          .depositFunds(seller.seller.id, ZeroAddress, sellerDepositRequired, { value: sellerDepositRequired });
-
-        console.log("✅ Seller deposited funds successfully");
-
-        console.log("🔍 Debugging seller data:");
-        console.log("seller.voucherInitValues:", seller.voucherInitValues);
-        console.log("seller.voucherInitValues.royaltyPercentage:", seller.voucherInitValues.royaltyPercentage);
 
         const sellerParams = {
           collectionIndex: 0,
@@ -251,18 +205,217 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           mutualizerAddress: ZeroAddress,
         };
 
-        console.log("🔍 Final sellerParams:", JSON.stringify(sellerParams, null, 2));
+        const commitTx = await exchangeCommitHandler
+          .connect(seller.wallet)
+          .commitToBuyerOffer(offerId, sellerParams, { value: sellerDepositRequired });
 
-        // This fails with error 0xe5bd9639 (unrecognized custom error)
-        await exchangeCommitHandler.connect(seller.wallet).commitToBuyerOffer(offerId, sellerParams);
+        const commitReceipt = await commitTx.wait();
+        const sellerCommittedEvent = getEvent(commitReceipt, exchangeHandler, "SellerCommitted");
+        const exchangeId = sellerCommittedEvent.exchangeId.toString();
 
-        console.log("✅ Seller successfully committed to buyer-initiated offer");
+        const [, exchangeStruct] = await exchangeHandler.getExchange(exchangeId);
+        expect(exchangeStruct.state).to.equal(ExchangeState.Committed);
+
+        const voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+        const currentBlock = await ethers.provider.getBlock("latest");
+        const secondsToAdd = Math.max(0, Number(voucherRedeemableFrom) - currentBlock.timestamp);
+        if (secondsToAdd > 0) {
+          await getCurrentBlockAndSetTimeForward(secondsToAdd);
+        }
+
+        await exchangeHandler.connect(buyer1).redeemVoucher(exchangeId);
+
+        const [, redeemedExchange] = await exchangeHandler.getExchange(exchangeId);
+        expect(redeemedExchange.state).to.equal(ExchangeState.Redeemed);
+
+        const disputePeriod = offerDurations.disputePeriod;
+        await getCurrentBlockAndSetTimeForward(Number(disputePeriod) + 1);
+
+        const completeExchangeTx = await exchangeHandler.connect(buyer1).completeExchange(exchangeId);
+        const [, completedExchange] = await exchangeHandler.getExchange(exchangeId);
+        expect(completedExchange.state).to.equal(ExchangeState.Completed);
+
+        const protocolFeePercent = await protocolContracts.configHandler.getProtocolFeePercentage();
+        const protocolFee = applyPercentage(buyerCreatedOffer.price, protocolFeePercent);
+
+        const sellerPayoff =
+          BigInt(buyerCreatedOffer.sellerDeposit) + BigInt(buyerCreatedOffer.price) - BigInt(protocolFee);
+        await expect(completeExchangeTx)
+          .to.emit(exchangeHandler, "FundsReleased")
+          .withArgs(exchangeId, seller.id, ZeroAddress, sellerPayoff, buyer1.address);
       });
 
       it("createOfferAndCommit functionality", async function () {
-        // Test the new single transaction offer creation and commit
-        // This would test:
-        // - Creating offer and committing in one transaction
+        const message = {};
+        const voucherInitValues = mockVoucherInitValues();
+        const emptyAuthToken = mockAuthToken();
+
+        const newSeller = mockSeller(deployer.address, deployer.address, ZeroAddress, deployer.address);
+
+        const createSellerTx = await protocolContracts.accountHandler
+          .connect(deployer)
+          .createSeller(newSeller, emptyAuthToken, voucherInitValues);
+
+        let receipt = await createSellerTx.wait();
+        const sellerCreatedEvent = getEvent(receipt, protocolContracts.accountHandler, "SellerCreated");
+        const actualSellerId = sellerCreatedEvent.sellerId.toString();
+
+        const { offer, offerDates, offerDurations } = await mockOffer();
+
+        offer.id = "0"; // Must be 0 for createOfferAndCommit
+        offer.sellerId = actualSellerId;
+        offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], ["30"])];
+        offer.sellerDeposit = "0";
+
+        const drParams = {
+          disputeResolverId: "1",
+          mutualizerAddress: ZeroAddress,
+        };
+
+        const condition = mockCondition({
+          method: EvaluationMethod.None,
+          tokenAddress: ZeroAddress,
+          threshold: "0",
+          maxCommits: "0",
+        });
+
+        const agentId = "0";
+        const offerFeeLimit = ethers.MaxUint256;
+
+        const sellerParams = {
+          collectionIndex: 0,
+          royaltyInfo: {
+            recipients: [],
+            bps: [],
+          },
+          mutualizerAddress: ZeroAddress,
+        };
+
+        const eip712TypeDefinition = {
+          FullOffer: [
+            { name: "offer", type: "Offer" },
+            { name: "offerDates", type: "OfferDates" },
+            { name: "offerDurations", type: "OfferDurations" },
+            { name: "drParameters", type: "DRParameters" },
+            { name: "condition", type: "Condition" },
+            { name: "agentId", type: "uint256" },
+            { name: "feeLimit", type: "uint256" },
+            { name: "useDepositedFunds", type: "bool" },
+          ],
+          Condition: [
+            { name: "method", type: "uint8" },
+            { name: "tokenType", type: "uint8" },
+            { name: "tokenAddress", type: "address" },
+            { name: "gating", type: "uint8" },
+            { name: "minTokenId", type: "uint256" },
+            { name: "threshold", type: "uint256" },
+            { name: "maxCommits", type: "uint256" },
+            { name: "maxTokenId", type: "uint256" },
+          ],
+          DRParameters: [
+            { name: "disputeResolverId", type: "uint256" },
+            { name: "mutualizerAddress", type: "address" },
+          ],
+          OfferDurations: [
+            { name: "disputePeriod", type: "uint256" },
+            { name: "voucherValid", type: "uint256" },
+            { name: "resolutionPeriod", type: "uint256" },
+          ],
+          OfferDates: [
+            { name: "validFrom", type: "uint256" },
+            { name: "validUntil", type: "uint256" },
+            { name: "voucherRedeemableFrom", type: "uint256" },
+            { name: "voucherRedeemableUntil", type: "uint256" },
+          ],
+          Offer: [
+            { name: "sellerId", type: "uint256" },
+            { name: "price", type: "uint256" },
+            { name: "sellerDeposit", type: "uint256" },
+            { name: "buyerCancelPenalty", type: "uint256" },
+            { name: "quantityAvailable", type: "uint256" },
+            { name: "exchangeToken", type: "address" },
+            { name: "metadataUri", type: "string" },
+            { name: "metadataHash", type: "string" },
+            { name: "collectionIndex", type: "uint256" },
+            { name: "royaltyInfo", type: "RoyaltyInfo" },
+            { name: "creator", type: "uint8" },
+            { name: "buyerId", type: "uint256" },
+          ],
+          RoyaltyInfo: [
+            { name: "recipients", type: "address[]" },
+            { name: "bps", type: "uint256[]" },
+          ],
+        };
+
+        const modifiedOffer = offer.clone();
+        modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+
+        message.offer = modifiedOffer;
+        message.offerDates = offerDates;
+        message.offerDurations = offerDurations;
+        message.drParameters = drParams;
+        message.condition = condition;
+        message.agentId = agentId.toString();
+        message.feeLimit = offerFeeLimit.toString();
+        message.useDepositedFunds = false;
+
+        const signature = await prepareDataSignature(
+          deployer,
+          eip712TypeDefinition,
+          "FullOffer",
+          message,
+          await exchangeCommitHandler.getAddress()
+        );
+
+        const tx = await exchangeCommitHandler.connect(buyer1).createOfferAndCommit(
+          [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+          deployer.address,
+          buyer1.address,
+          signature,
+          "0", // conditional token ID
+          sellerParams,
+          { value: offer.price }
+        );
+
+        receipt = await tx.wait();
+
+        const offerCreatedEvent = getEvent(receipt, protocolContracts.offerHandler, "OfferCreated");
+        expect(offerCreatedEvent.offerId).to.not.be.null;
+
+        const buyerCommittedEvent = getEvent(receipt, exchangeHandler, "BuyerCommitted");
+        expect(buyerCommittedEvent.exchangeId).to.not.be.null;
+
+        const exchangeId = buyerCommittedEvent.exchangeId.toString();
+
+        const [, exchangeStruct] = await exchangeHandler.getExchange(exchangeId);
+        expect(exchangeStruct.state).to.equal(ExchangeState.Committed);
+
+        const voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+        const currentBlock = await ethers.provider.getBlock("latest");
+        const secondsToAdd = Math.max(0, Number(voucherRedeemableFrom) - currentBlock.timestamp);
+        if (secondsToAdd > 0) {
+          await getCurrentBlockAndSetTimeForward(secondsToAdd);
+        }
+
+        await exchangeHandler.connect(buyer1).redeemVoucher(exchangeId);
+
+        const [, redeemedExchange] = await exchangeHandler.getExchange(exchangeId);
+        expect(redeemedExchange.state).to.equal(ExchangeState.Redeemed);
+
+        const disputePeriod = offerDurations.disputePeriod;
+        await getCurrentBlockAndSetTimeForward(Number(disputePeriod) + 1);
+
+        const completeExchangeTx = await exchangeHandler.connect(buyer1).completeExchange(exchangeId);
+        const [, completedExchange] = await exchangeHandler.getExchange(exchangeId);
+        expect(completedExchange.state).to.equal(ExchangeState.Completed);
+
+        const protocolFeePercent = await protocolContracts.configHandler.getProtocolFeePercentage();
+        const protocolFee = applyPercentage(offer.price, protocolFeePercent);
+
+        const sellerPayoff = BigInt(offer.sellerDeposit) + BigInt(offer.price) - BigInt(protocolFee);
+        await expect(completeExchangeTx)
+          .to.emit(exchangeHandler, "FundsReleased")
+          .withArgs(exchangeId, actualSellerId, ZeroAddress, sellerPayoff, buyer1.address);
       });
     });
 
@@ -284,11 +437,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       it("Should verify new functions are allowlisted", async function () {
         const { addOrUpgrade } = await upgradeConfig.getFacets();
 
-        const getFunctionHashesClosure = getStateModifyingFunctionsHashes(
-          addOrUpgrade, // All facets being upgraded in 2.5.0
-          ["executeMetaTransaction"],
-          []
-        );
+        const getFunctionHashesClosure = getStateModifyingFunctionsHashes(addOrUpgrade, ["executeMetaTransaction"], []);
         const addedFunctionHashes = await getFunctionHashesClosure();
 
         for (const functionHash of addedFunctionHashes) {
