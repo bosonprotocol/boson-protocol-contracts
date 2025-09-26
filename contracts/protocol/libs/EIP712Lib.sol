@@ -46,15 +46,22 @@ library EIP712Lib {
      *
      * Reverts if:
      * - User is the zero address
-     * - User is a contract that does not implement ERC1271
-     * - User is a contract that implements ERC1271 but returns an unexpected value
+     * - User is a contract that or a smart account does not implement ERC1271.isValidSignature or fallback
+     * - User is a contract that implements ERC1271.isValidSignature or fallback, but returns an unexpected value (including wrong magic value, wrong return data size, etc.)
      * - User is a contract that reverts when called with the signature
-     * - User is an EOA (including smart accounts) but the signature is not a valid ECDSA signature
+     * - User is an EOA (including smart accounts that do not implement ERC1271) but the signature is not a valid ECDSA signature
      * - Recovered signer does not match the user address
+     *
+     * N.B. If the user is a smart account that supports ERC1271, it does not have to provide a valid ECDSA signature.
+     *      If the user is EOA and it provides a valid ECDSA signature, it does not have to implement ERC1271.
+     *      Even if the smart account supports ERC1271, and the validation fails, if the signature is a valid ECDSA signature, it will be accepted.
      *
      * @param _user  - the message signer
      * @param _hashedMessage - hashed message
-     * @param _signature - signature. If the signer is EOA, it must be ECDSA signature in the format of concatenated r,s,v values, otherwise, it must be a valid ERC1271 signature.
+     * @param _signature - signature. 
+                           If the user is ordinary EOA, it must be ECDSA signature in the format of concatenated r,s,v values. 
+                           If the user is a contract, it must be a valid ERC1271 signature.
+                           If the user is a EIP-7702 smart account, it can be either a valid ERC1271 signature or a valid ECDSA signature.
      */
     function verify(address _user, bytes32 _hashedMessage, bytes calldata _signature) internal {
         if (_user == address(0)) revert BosonErrors.InvalidAddress();
@@ -70,9 +77,14 @@ library EIP712Lib {
             );
 
             // if the call succeeded, check the return value, only if it's correctly formatted (bytes4)
-            // if the returned value matches the expected selector, the signature is valid. 
+            // if the returned value matches the expected selector, the signature is valid.
             // in all other cases, try the ECDSA signature verification below and if that fails, bubble up the error
-            if (isValidSignatureCallSuccess && returnData.length == SLOT_SIZE && (uint256(bytes32(returnData)) & type(uint224).max) == 0 && abi.decode(returnData, (bytes4)) == IERC1271.isValidSignature.selector) {
+            if (
+                isValidSignatureCallSuccess &&
+                returnData.length == SLOT_SIZE &&
+                (uint256(bytes32(returnData)) & type(uint224).max) == 0 &&
+                abi.decode(returnData, (bytes4)) == IERC1271.isValidSignature.selector
+            ) {
                 return;
             }
         }
