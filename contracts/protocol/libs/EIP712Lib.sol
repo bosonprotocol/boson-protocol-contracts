@@ -42,47 +42,38 @@ library EIP712Lib {
     }
 
     /**
-     * @notice Verifies that the signer really signed the message.
-     * It works for both ECDSA signatures and ERC1271 signatures.
+     * @notice Verifies that the user either signed or the user is a contract implementing ERC1271.
      *
      * Reverts if:
-     * - Signer is the zero address
-     * - Signer is a contract that does not implement ERC1271
-     * - Signer is a contract that implements ERC1271 but returns an unexpected value
-     * - Signer is a contract that reverts when called with the signature
-     * - Signer is an EOA but the signature is not a valid ECDSA signature
+     * - User is the zero address
+     * - User is a contract that does not implement ERC1271
+     * - User is a contract that implements ERC1271 but returns an unexpected value
+     * - User is a contract that reverts when called with the signature
+     * - User is an EOA (including smart accounts) but the signature is not a valid ECDSA signature
      * - Recovered signer does not match the user address
      *
      * @param _user  - the message signer
      * @param _hashedMessage - hashed message
-     * @param _signature - signature. If the signer is EOA, it must be ECDSA signature in the format of (r,s,v) struct, otherwise, it must be a valid ERC1271 signature.
+     * @param _signature - signature. If the signer is EOA, it must be ECDSA signature in the format of concatenated r,s,v values, otherwise, it must be a valid ERC1271 signature.
      */
     function verify(address _user, bytes32 _hashedMessage, bytes calldata _signature) internal {
         if (_user == address(0)) revert BosonErrors.InvalidAddress();
 
         bytes32 typedMessageHash = toTypedMessageHash(_hashedMessage);
 
-        // Check if user is a contract implementing ERC1271
+        // Check if user is a contract implementing ERC1271 or a EIP-7702 smart account
         bytes memory returnData; // Make this available for later if needed
+        bool isValidSignatureCallSuccess;
         if (_user.code.length > 0) {
-            bool success;
-            (success, returnData) = _user.staticcall(
+            (isValidSignatureCallSuccess, returnData) = _user.staticcall(
                 abi.encodeCall(IERC1271.isValidSignature, (typedMessageHash, _signature))
             );
-            if (success) {
-                if (returnData.length != SLOT_SIZE) {
-                    revert BosonErrors.UnexpectedDataReturned(returnData);
-                } else {
-                    // Make sure that the lowest 224 bits (28 bytes) are not set
-                    if (uint256(bytes32(returnData)) & type(uint224).max != 0) {
-                        revert BosonErrors.UnexpectedDataReturned(returnData);
-                    }
 
-                    if (abi.decode(returnData, (bytes4)) != IERC1271.isValidSignature.selector)
-                        revert BosonErrors.SignatureValidationFailed();
-
-                    return;
-                }
+            // if the call succeeded, check the return value, only if it's correctly formatted (bytes4)
+            // if the returned value matches the expected selector, the signature is valid. 
+            // in all other cases, try the ECDSA signature verification below and if that fails, bubble up the error
+            if (isValidSignatureCallSuccess && returnData.length == SLOT_SIZE && (uint256(bytes32(returnData)) & type(uint224).max) == 0 && abi.decode(returnData, (bytes4)) == IERC1271.isValidSignature.selector) {
+                return;
             }
         }
 
@@ -107,9 +98,11 @@ library EIP712Lib {
         }
 
         if (signer != _user) {
-            if (returnData.length > 0) {
-                // In case 1271 verification failed with a revert reason, bubble it up
+            // ECDSA failed, while EIP-1271 verification call succeeded but returned something different than the magic value
+            if (isValidSignatureCallSuccess) revert BosonErrors.UnexpectedDataReturned(returnData);
 
+            // If both ECDSA and EIP-1271 verification call failed, bubble up the revert reason
+            if (returnData.length > 0) {
                 /// @solidity memory-safe-assembly
                 assembly {
                     revert(add(SLOT_SIZE, returnData), mload(returnData))

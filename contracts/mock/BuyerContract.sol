@@ -40,6 +40,11 @@ contract BuyerContract is IERC721Receiver {
     }
 }
 
+contract BuyerContractWithFallback is BuyerContract {
+    receive() external payable {}
+    fallback() external payable {}
+}
+
 contract BuyerContractMalicious is BuyerContract {
     /**
      * @dev Return wrong selector to test revert

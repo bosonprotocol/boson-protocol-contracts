@@ -88,4 +88,6 @@ contract ContractWallet is IERC1271 {
         }
         return returnData;
     }
+
+    fallback() external payable {}
 }
