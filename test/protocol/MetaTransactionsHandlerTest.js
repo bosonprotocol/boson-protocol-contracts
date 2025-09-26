@@ -4443,7 +4443,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
       });
 
-      context("Smart account (EIP-7702) signer", async function () {
+      // coverage is skipped, since it sets non-zero gasPrice, which is incompatible with authorizationList
+      context("[@skip-on-coverage] Smart account (EIP-7702) signer", async function () {
         beforeEach(async function () {
           // Create a valid seller for meta transaction
           seller = mockSeller(
