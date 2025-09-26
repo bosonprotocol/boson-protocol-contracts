@@ -4443,8 +4443,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
       });
 
-      // coverage is skipped, since it sets non-zero gasPrice, which is incompatible with authorizationList
-      context("[@skip-on-coverage] Smart account (EIP-7702) signer", async function () {
+      context("Smart account (EIP-7702) signer", async function () {
         beforeEach(async function () {
           // Create a valid seller for meta transaction
           seller = mockSeller(
@@ -4487,9 +4486,12 @@ describe("IBosonMetaTransactionsHandler", function () {
           };
 
           authorizationData = await assistant.authorize(authorizationData);
+          const feeData = await ethers.provider.getFeeData();
           await assistant.sendTransaction({
             to: await assistant.getAddress(),
             authorizationList: [authorizationData],
+            maxFeePerGas: feeData.maxFeePerGas,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
           });
 
           // Collect the signature components.
@@ -4529,10 +4531,13 @@ describe("IBosonMetaTransactionsHandler", function () {
           };
 
           authorizationData = await assistant.authorize(authorizationData);
+          const feeData = await ethers.provider.getFeeData();
           await assistant.sendTransaction({
             to: await assistant.getAddress(),
             data: contractWallet.interface.encodeFunctionData("setValidity", [1]), // 1=invalid, returns wrong magic value
             authorizationList: [authorizationData],
+            maxFeePerGas: feeData.maxFeePerGas,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
           });
 
           // Collect the signature components.
@@ -4578,9 +4583,12 @@ describe("IBosonMetaTransactionsHandler", function () {
           };
 
           authorizationData = await assistant.authorize(authorizationData);
+          const feeData = await ethers.provider.getFeeData();
           await assistant.sendTransaction({
             to: rando.address,
             authorizationList: [authorizationData],
+            maxFeePerGas: feeData.maxFeePerGas,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
           });
 
           // Collect the signature components. Since the delegated call fails, we need to use ECDSA signature
@@ -4626,9 +4634,12 @@ describe("IBosonMetaTransactionsHandler", function () {
           };
 
           authorizationData = await assistant.authorize(authorizationData);
+          const feeData = await ethers.provider.getFeeData();
           await assistant.sendTransaction({
             to: rando.address,
             authorizationList: [authorizationData],
+            maxFeePerGas: feeData.maxFeePerGas,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
           });
 
           // Collect the signature components. Since the delegated call fails, we need to use ECDSA signature
