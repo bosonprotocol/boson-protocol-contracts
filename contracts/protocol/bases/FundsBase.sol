@@ -11,6 +11,7 @@ import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { IDRFeeMutualizer } from "../../interfaces/clients/IDRFeeMutualizer.sol";
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
+import "hardhat/console.sol";
 
 /**
  * @title FundsBase
@@ -265,17 +266,20 @@ abstract contract FundsBase is Context {
                     );
                 }
             } else {
+                uint256 exchangeId = _exchangeId; // stack too deep ToDO: any other way to avoid this?
+                uint256 nativeReturnAmount;
                 if (exchangeToken == address(0)) {
-                    IDRFeeMutualizer(exchange.mutualizerAddress).returnDRFee{ value: returnAmount }(
-                        _exchangeId,
-                        returnAmount
-                    );
+                    nativeReturnAmount = returnAmount;
                 } else {
                     if (returnAmount > 0) {
                         IERC20(exchangeToken).safeApprove(exchange.mutualizerAddress, returnAmount);
                     }
-                    IDRFeeMutualizer(exchange.mutualizerAddress).returnDRFee(_exchangeId, returnAmount);
                 }
+
+                IDRFeeMutualizer(exchange.mutualizerAddress).returnDRFee{
+                    value: nativeReturnAmount,
+                    gas: RETURN_DR_FEE_GAS
+                }(exchangeId, returnAmount);
             }
         }
     }

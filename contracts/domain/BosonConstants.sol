@@ -23,6 +23,9 @@ uint256 constant ALL_REGIONS_MASK = (1 << (uint256(type(BosonTypes.PausableRegio
 uint256 constant NOT_ENTERED = 1;
 uint256 constant ENTERED = 2;
 
+// DR Fee Mutualizer
+uint256 constant RETURN_DR_FEE_GAS = 100000; // Gas to forward when returning DR fee to mutualizer
+
 // Twin handler
 uint256 constant SINGLE_TWIN_RESERVED_GAS = 160000;
 uint256 constant MINIMAL_RESIDUAL_GAS = 230000;
