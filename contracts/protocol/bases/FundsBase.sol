@@ -276,10 +276,19 @@ abstract contract FundsBase is Context {
                     }
                 }
 
-                IDRFeeMutualizer(exchange.mutualizerAddress).returnDRFee{
-                    value: nativeReturnAmount,
-                    gas: RETURN_DR_FEE_GAS
-                }(exchangeId, returnAmount);
+                try
+                    IDRFeeMutualizer(exchange.mutualizerAddress).returnDRFee{
+                        value: nativeReturnAmount,
+                        gas: RETURN_DR_FEE_GAS
+                    }(exchangeId, returnAmount)
+                {} catch {
+                    // Ignore failure to not block the main flow
+                    // Funds are collected by the protocol and can be manually returned later
+                    if (returnAmount > 0) {
+                        increaseAvailableFunds(PROTOCOL_ENTITY_ID, exchangeToken, returnAmount);
+                    }
+                    emit IBosonFundsBaseEvents.DRFeeReturnFailed(_exchangeId);
+                }
             }
         }
     }

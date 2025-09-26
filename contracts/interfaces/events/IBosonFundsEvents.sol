@@ -56,4 +56,5 @@ interface IBosonFundsBaseEvents {
         address payable mutualizerAddress,
         address executedBy
     );
+    event DRFeeReturnFailed(uint256 indexed exchangeId);
 }
