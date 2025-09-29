@@ -346,9 +346,11 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *
      * Reverts if:
      * - The offers region of protocol is paused
+     * - The new mutualizer contract does not implement the IDRFeeMutualizer interface
      * - Offer does not exist
      * - Caller is not the assistant of the offer
      * - Offer has already been voided
+     * - New mutualizer address is the same as the existing one
      *
      * @param _offerId - the id of the offer to update
      * @param _newMutualizer - the new mutualizer address (can be zero for self-mutualization)
@@ -496,7 +498,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * Emits an OfferMutualizerUpdated event if successful.
      *
      * Reverts if:
-     * - The offers region of protocol is paused
+     * - The new mutualizer contract does not implement the IDRFeeMutualizer interface
      * - Offer does not exist
      * - Caller is not the assistant of the offer
      * - Offer has already been voided
@@ -506,6 +508,8 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @param _newMutualizer - the new mutualizer address (can be zero for self-mutualization)
      */
     function updateOfferMutualizerInternal(uint256 _offerId, address _newMutualizer) internal {
+        validateMutualizerInterface(_newMutualizer);
+
         // Make sure the caller is the assistant, offer exists and is not voided
         Offer storage offer = getValidOfferWithSellerCheck(_offerId);
 
