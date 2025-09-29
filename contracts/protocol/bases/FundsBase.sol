@@ -272,7 +272,7 @@ abstract contract FundsBase is Context {
                     );
                 } else {
                     if (returnAmount > 0) {
-                        IERC20(exchangeToken).safeApprove(exchange.mutualizerAddress, returnAmount);
+                        IERC20(exchangeToken).forceApprove(exchange.mutualizerAddress, returnAmount);
                     }
                     IDRFeeMutualizer(exchange.mutualizerAddress).returnDRFee(_exchangeId, returnAmount);
                 }

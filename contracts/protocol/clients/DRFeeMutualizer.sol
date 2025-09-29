@@ -422,7 +422,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
                     // Deposit seller's refund through BP funds handler
                     address tokenAddress = agreement.tokenAddress;
                     if (tokenAddress != address(0)) {
-                        IERC20(tokenAddress).safeApprove(BOSON_PROTOCOL, refundAmount);
+                        IERC20(tokenAddress).forceApprove(BOSON_PROTOCOL, refundAmount);
                         IBosonFundsHandler(BOSON_PROTOCOL).depositFunds(agreement.sellerId, tokenAddress, refundAmount);
                     } else {
                         IBosonFundsHandler(BOSON_PROTOCOL).depositFunds{ value: refundAmount }(
