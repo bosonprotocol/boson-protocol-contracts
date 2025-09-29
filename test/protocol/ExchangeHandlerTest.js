@@ -9545,7 +9545,8 @@ describe("IBosonExchangeHandler", function () {
             await exchangeCommitHandler.getAddress()
           );
 
-          sellerParams.mutualizerAddress = buyer.address;
+          const invalidSellerParams = { ...sellerParams };
+          invalidSellerParams.mutualizerAddress = buyer.address;
           // Attempt to create an exchange, expecting revert
           await expect(
             exchangeCommitHandler
@@ -9556,7 +9557,7 @@ describe("IBosonExchangeHandler", function () {
                 assistant.address,
                 signature,
                 "0",
-                sellerParams,
+                invalidSellerParams,
                 { value: offer.sellerDeposit }
               )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNSUPPORTED_MUTUALIZER);
@@ -9580,7 +9581,8 @@ describe("IBosonExchangeHandler", function () {
             await exchangeCommitHandler.getAddress()
           );
 
-          sellerParams.mutualizerAddress = await foreign20.getAddress();
+          const invalidSellerParams = { ...sellerParams };
+          invalidSellerParams.mutualizerAddress = await foreign20.getAddress();
           // Attempt to create an exchange, expecting revert
           await expect(
             exchangeCommitHandler
@@ -9591,7 +9593,7 @@ describe("IBosonExchangeHandler", function () {
                 assistant.address,
                 signature,
                 "0",
-                sellerParams,
+                invalidSellerParams,
                 { value: offer.sellerDeposit }
               )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNSUPPORTED_MUTUALIZER);

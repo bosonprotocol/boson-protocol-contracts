@@ -1,5 +1,14 @@
 const { ethers } = require("hardhat");
-const { getContractAt, ZeroAddress, ZeroHash, getSigners, MaxUint256, parseUnits, encodeBytes32String } = ethers;
+const {
+  getContractAt,
+  ZeroAddress,
+  ZeroHash,
+  getSigners,
+  MaxUint256,
+  parseUnits,
+  encodeBytes32String,
+  getContractFactory,
+} = ethers;
 const { expect } = require("chai");
 
 const Offer = require("../../scripts/domain/Offer");
@@ -674,7 +683,55 @@ describe("Buyer-Initiated Exchange", function () {
       });
 
       it("should execute mutualizer address assignment when provided in seller params", async function () {
-        const mutualizerAddress = await assistant2.getAddress();
+        const DRFeeNative = parseUnits("0.1", "ether");
+        const disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", DRFeeNative)];
+        await accountHandler.connect(adminDR).removeFeesFromDisputeResolver(disputeResolver.id, [ZeroAddress]);
+        await accountHandler.connect(adminDR).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees);
+
+        const protocolAddress = await exchangeHandler.getAddress();
+
+        // Deploy mock forwarder for meta-transactions (required by DRFeeMutualizer)
+        const MockForwarder = await getContractFactory("MockForwarder");
+        const mockForwarder = await MockForwarder.deploy();
+        await mockForwarder.waitForDeployment();
+
+        const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
+        const drFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolAddress, await mockForwarder.getAddress());
+        await drFeeMutualizer.waitForDeployment();
+
+        // Fund mutualizer with ETH for testing using the deposit function
+        await drFeeMutualizer.deposit(ZeroAddress, parseUnits("2", "ether"), {
+          value: parseUnits("2", "ether"),
+        });
+
+        // Create a simple agreement for the seller to be covered
+        const sellerId = "1"; // Standard seller ID
+        const maxAmountPerTx = parseUnits("1", "ether");
+        const maxAmountTotal = parseUnits("10", "ether");
+        const timePeriod = 365 * 24 * 60 * 60; // 1 year
+        const premium = parseUnits("0.1", "ether");
+
+        // Create agreement for native currency (ZeroAddress) with universal dispute resolver (0)
+        const tx = await drFeeMutualizer.newAgreement(
+          sellerId,
+          ZeroAddress,
+          0, // Universal dispute resolver
+          maxAmountPerTx,
+          maxAmountTotal,
+          timePeriod,
+          premium,
+          false // refundOnCancel
+        );
+
+        const receipt = await tx.wait();
+        const agreementCreatedEvent = receipt.logs.find(
+          (log) => log.fragment && log.fragment.name === "AgreementCreated"
+        );
+        const agreementId = agreementCreatedEvent.args.agreementId;
+
+        await drFeeMutualizer.payPremium(agreementId, sellerId, {
+          value: premium,
+        });
 
         const sellerParams = {
           collectionIndex: 0,
@@ -682,7 +739,7 @@ describe("Buyer-Initiated Exchange", function () {
             recipients: [ZeroAddress],
             bps: [0],
           },
-          mutualizerAddress: mutualizerAddress,
+          mutualizerAddress: await drFeeMutualizer.getAddress(),
         };
 
         await expect(
