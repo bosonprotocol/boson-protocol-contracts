@@ -2567,6 +2567,18 @@ describe("IBosonOfferHandler", function () {
           offerHandler.connect(assistant).updateOfferMutualizer(offer.id, await drFeeMutualizer.getAddress())
         ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.SAME_MUTUALIZER_ADDRESS);
       });
+
+      it("should revert when new mutualizer is EOA", async function () {
+        await expect(
+          offerHandler.connect(assistant).updateOfferMutualizer(offer.id, assistant.address)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.UNSUPPORTED_MUTUALIZER);
+      });
+
+      it("should revert when new mutualizer does not support IDRFeeMutualizer interface", async function () {
+        await expect(
+          offerHandler.connect(assistant).updateOfferMutualizer(offer.id, await bosonToken.getAddress())
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.UNSUPPORTED_MUTUALIZER);
+      });
     });
 
     context("👉 reserveRange()", async function () {

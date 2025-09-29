@@ -31,6 +31,7 @@ const {
   mockAuthToken,
   accountId,
 } = require("../util/mock");
+const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 
 /**
  * Test the Buyer-Initiated Exchange feature (BPIP-9)
@@ -779,6 +780,40 @@ describe("Buyer-Initiated Exchange", function () {
               value: sellerDeposit,
             })
           ).to.be.revertedWithCustomError(exchangeCommitHandler, "NoSuchCollection");
+        });
+
+        it("should revert if mutualizer is EOA", async function () {
+          const sellerParams = {
+            collectionIndex: 0,
+            royaltyInfo: {
+              recipients: [ZeroAddress],
+              bps: [0],
+            },
+            mutualizerAddress: assistant.address,
+          };
+
+          await expect(
+            exchangeCommitHandler.connect(assistant).commitToBuyerOffer(nextOfferId, sellerParams, {
+              value: sellerDeposit,
+            })
+          ).to.be.revertedWithCustomError(exchangeCommitHandler, RevertReasons.UNSUPPORTED_MUTUALIZER);
+        });
+
+        it("should revert if mutualizer does not support IDRFeeMutualizer interface", async function () {
+          const sellerParams = {
+            collectionIndex: 0,
+            royaltyInfo: {
+              recipients: [ZeroAddress],
+              bps: [0],
+            },
+            mutualizerAddress: await mockToken.getAddress(),
+          };
+
+          await expect(
+            exchangeCommitHandler.connect(assistant).commitToBuyerOffer(nextOfferId, sellerParams, {
+              value: sellerDeposit,
+            })
+          ).to.be.revertedWithCustomError(exchangeCommitHandler, RevertReasons.UNSUPPORTED_MUTUALIZER);
         });
       });
     });
