@@ -283,7 +283,7 @@ abstract contract FundsBase is Context {
                     }(exchangeId, returnAmount)
                 {} catch {
                     // Ignore failure to not block the main flow
-                    // Funds are collected by the protocol and can be manually returned later
+                    // Funds are collected by the protocol and can be manually returned later // ToDO: need to confirm a flow when fee is unsuccessfully returned
                     if (returnAmount > 0) {
                         increaseAvailableFunds(PROTOCOL_ENTITY_ID, exchangeToken, returnAmount);
                     }

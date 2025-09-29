@@ -6314,5 +6314,132 @@ describe("IBosonFundsHandler", function () {
           .withArgs(exchangeId, disputeResolver.id, ZeroAddress, testDRFee, await assistantDR.getAddress());
       });
     });
+
+    context("👉 releaseFunds() - mutualizer attacks", async function () {
+      let drFeeMutualizer;
+
+      beforeEach(async function () {
+        protocolId = "0";
+        buyerId = "4";
+        exchangeId = "1";
+
+        const DRFeeMutualizerFactory = await getContractFactory("MaliciousMutualizer3");
+        drFeeMutualizer = await DRFeeMutualizerFactory.connect(rando).deploy("0", await offerHandler.getAddress());
+        await drFeeMutualizer.waitForDeployment();
+
+        await offerHandler.connect(assistant).updateOfferMutualizer(offerToken.id, await drFeeMutualizer.getAddress());
+
+        await mockToken.mint(assistant.address, parseUnits("1", "ether"));
+        await mockToken.connect(assistant).approve(await drFeeMutualizer.getAddress(), parseUnits("1", "ether"));
+        await drFeeMutualizer.connect(assistant).deposit(offerToken.exchangeToken, parseUnits("1", "ether"));
+
+        await exchangeCommitHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+
+        // payoffs
+        sellerPayoff = (
+          BigInt(offerToken.sellerDeposit) +
+          BigInt(offerToken.price) -
+          BigInt(offerTokenProtocolFee)
+        ).toString();
+        protocolPayoff = offerTokenProtocolFee;
+
+        await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+        await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+      });
+
+      it("If mutualizer consumes all gas, other funds are still released", async function () {
+        await drFeeMutualizer.setAttackType(0); // consume all gas
+
+        const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+
+        await expect(tx).to.emit(exchangeHandler, "DRFeeReturnFailed").withArgs(exchangeId);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "FundsReleased")
+          .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, buyer.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "ProtocolFeeCollected")
+          .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, buyer.address);
+      });
+
+      it("If mutualizer returns bomb, other funds are still released", async function () {
+        await drFeeMutualizer.setAttackType(1); // return bomb
+
+        const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+
+        // returns are ignored, there is no execution failure
+        await expect(tx).to.not.emit(exchangeHandler, "DRFeeReturnFailed");
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "FundsReleased")
+          .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, buyer.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "ProtocolFeeCollected")
+          .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, buyer.address);
+      });
+
+      it("If mutualizer reverts with a reason, other funds are still released", async function () {
+        await drFeeMutualizer.setAttackType(2); // revert with reason
+
+        const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+
+        await expect(tx).to.emit(exchangeHandler, "DRFeeReturnFailed").withArgs(exchangeId);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "FundsReleased")
+          .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, buyer.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "ProtocolFeeCollected")
+          .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, buyer.address);
+      });
+
+      it("If mutualizer reverts with runtime error, other funds are still released", async function () {
+        await drFeeMutualizer.setAttackType(3); // revert with runtime error
+
+        const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+
+        await expect(tx).to.emit(exchangeHandler, "DRFeeReturnFailed").withArgs(exchangeId);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "FundsReleased")
+          .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, buyer.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "ProtocolFeeCollected")
+          .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, buyer.address);
+      });
+
+      it("If mutualizer does not implement returnDRFee, other funds are still released", async function () {
+        const DRFeeMutualizerFactory = await getContractFactory("PartiallyImplementedMutualizer");
+        drFeeMutualizer = await DRFeeMutualizerFactory.connect(rando).deploy("0", await offerHandler.getAddress());
+        await drFeeMutualizer.waitForDeployment();
+
+        await offerHandler.connect(assistant).updateOfferMutualizer(offerToken.id, await drFeeMutualizer.getAddress());
+
+        await mockToken.mint(assistant.address, parseUnits("1", "ether"));
+        await mockToken.connect(assistant).approve(await drFeeMutualizer.getAddress(), parseUnits("1", "ether"));
+        await drFeeMutualizer.connect(assistant).deposit(offerToken.exchangeToken, parseUnits("1", "ether"));
+
+        await exchangeCommitHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+
+        exchangeId++;
+        // await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+        await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+        const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+
+        await expect(tx).to.emit(exchangeHandler, "DRFeeReturnFailed").withArgs(exchangeId);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "FundsReleased")
+          .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, buyer.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "ProtocolFeeCollected")
+          .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, buyer.address);
+      });
+    });
   });
 });
