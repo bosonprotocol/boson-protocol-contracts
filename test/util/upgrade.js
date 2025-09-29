@@ -90,23 +90,28 @@ async function deploySuite(deployer, newVersion) {
 
   // checkout old version
   const { oldVersion: tag, deployScript: scriptsTag, updateDomain } = versionTags;
+  console.log(`Fetching tags`);
   shell.exec(`git fetch --force --tags origin`);
 
+  console.log(`Checking out version ${tag}`);
   shell.exec(`rm -rf contracts/*`);
   shell.exec(`git checkout ${tag} contracts/**`);
 
   if (scriptsTag) {
+    console.log(`Checking out scripts on version ${scriptsTag}`);
     shell.exec(`rm -rf scripts/*`);
     shell.exec(`git checkout ${scriptsTag} scripts/**`);
   }
 
   if (updateDomain) {
+    console.log(`Updating the domain definitions to ${tag}`);
     const filesToUpdate = updateDomain.map((file) => `scripts/domain/${file}.js`).join(" ");
     shell.exec(`git checkout ${tag} ${filesToUpdate}`);
   }
 
   const isOldOZVersion = ["v2.0", "v2.1", "v2.2"].some((v) => tag.startsWith(v));
   if (isOldOZVersion) {
+    console.log("Installing correct version of OZ");
     // Temporary install old OZ contracts
     shell.exec("npm i @openzeppelin/contracts-upgradeable@4.7.1");
   }
@@ -227,20 +232,25 @@ async function upgradeSuite(protocolDiamondAddress, upgradedInterfaces, override
   shell.exec(`rm -rf scripts/*`);
 
   if (scriptsTag) {
+    console.log(`Checking out scripts on version ${scriptsTag}`);
     shell.exec(`git checkout ${scriptsTag} scripts`);
   } else {
+    console.log(`Checking out latest scripts`);
     shell.exec(`git checkout HEAD scripts`);
   }
 
   if (tag) {
     // checkout the new tag
+    console.log(`Checking out version ${tag}`);
     shell.exec(`git checkout ${tag} contracts`);
   } else {
     // if tag was not created yet, use the latest code
+    console.log(`Checking out latest code`);
     shell.exec(`git checkout HEAD contracts`);
   }
 
   if (updateDomain) {
+    console.log(`Updating the domain definitions to ${tag || "HEAD"}`);
     const filesToUpdate = updateDomain.map((file) => `scripts/domain/${file}.js`).join(" ");
     shell.exec(`git checkout ${tag || "HEAD"} ${filesToUpdate}`);
   }
@@ -276,6 +286,7 @@ async function upgradeClients() {
 
   // checkout the new tag
   shell.exec(`rm -rf contracts/*`);
+  console.log(`Checking out version ${tag}`);
   shell.exec(`git checkout ${tag} contracts`);
 
   await hre.run("compile");
@@ -438,15 +449,7 @@ async function populateProtocolContract(
           // use auth token
           const tokenId = 101 * id;
           seller.admin = ZeroAddress;
-
-          try {
-            // Try Foreign721.mint(tokenId, supply) first
-            await mockAuthERC721Contract.connect(connectedWallet).mint(tokenId, 1);
-          } catch (error) {
-            // Try standard ERC721 mint(to, tokenId) signature
-            await mockAuthERC721Contract.connect(deployer).mint(await connectedWallet.getAddress(), tokenId);
-          }
-
+          await mockAuthERC721Contract.connect(deployer).mint(await connectedWallet.getAddress(), tokenId);
           authToken = new AuthToken(tokenId.toString(), AuthTokenType.Lens);
         }
 
