@@ -455,13 +455,9 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         if (agreement.isVoided) revert AgreementIsVoided();
         if (agreement.sellerId != _sellerId) revert InvalidSellerId();
         if (currentTime > type(uint256).max - agreement.timePeriod) revert AgreementTimePeriodTooLong();
-        if (agreement.tokenAddress == address(0)) {
-            if (msg.value != agreement.premium) revert BosonErrors.InsufficientValueReceived();
-        } else {
-            if (msg.value != 0) revert BosonErrors.NativeNotAllowed();
-            transferFundsIn(agreement.tokenAddress, _msgSender(), agreement.premium);
-        }
-        poolBalances[agreement.tokenAddress] += agreement.premium;
+        uint256 agreementPremium = agreement.premium;
+        validateIncomingPayment(agreement.tokenAddress, agreementPremium);
+        poolBalances[agreement.tokenAddress] += agreementPremium;
         agreement.startTime = currentTime;
 
         emit AgreementActivated(_agreementId, _sellerId);
