@@ -42,8 +42,6 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
     error AgreementIsVoided();
     error DepositsRestrictedToOwner();
     error AccessDenied();
-    error InsufficientValueReceived();
-    error NativeNotAllowed();
     error AgreementTimePeriodTooLong();
 
     struct Agreement {
@@ -252,12 +250,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         if (depositRestrictedToOwner && msgSender != owner()) revert DepositsRestrictedToOwner();
         if (_amount == 0) revert InvalidAmount();
 
-        if (_tokenAddress == address(0)) {
-            if (msg.value != _amount) revert BosonErrors.InsufficientValueReceived();
-        } else {
-            if (msg.value != 0) revert BosonErrors.NativeNotAllowed();
-            transferFundsIn(_tokenAddress, msgSender, _amount);
-        }
+        validateIncomingPayment(_tokenAddress, _amount);
 
         poolBalances[_tokenAddress] += _amount;
         emit FundsDeposited(msgSender, _tokenAddress, _amount);
