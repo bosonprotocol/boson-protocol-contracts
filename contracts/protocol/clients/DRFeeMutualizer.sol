@@ -132,10 +132,13 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         uint256 _disputeResolverId
     ) public view override returns (bool) {
         // Check if agreement exists and is valid
-        uint256 agreementId = sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][_disputeResolverId];
+        mapping(uint256 => uint256) storage sellerTokenMapping = sellerToTokenToDisputeResolverToAgreement[_sellerId][
+            _tokenAddress
+        ];
+        uint256 agreementId = sellerTokenMapping[_disputeResolverId];
         if (agreementId == 0 && _disputeResolverId != 0) {
             // If no specific agreement exists, check for "any dispute resolver" agreement
-            agreementId = sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][0];
+            agreementId = sellerTokenMapping[0];
         }
         if (agreementId == 0) return false;
 
@@ -179,10 +182,13 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
             return false;
         }
 
-        uint256 agreementId = sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][_disputeResolverId];
+        mapping(uint256 => uint256) storage sellerTokenMapping = sellerToTokenToDisputeResolverToAgreement[_sellerId][
+            _tokenAddress
+        ];
+        uint256 agreementId = sellerTokenMapping[_disputeResolverId];
         if (agreementId == 0 && _disputeResolverId != 0) {
             // If no specific agreement exists, check for "any dispute resolver" agreement
-            agreementId = sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][0];
+            agreementId = sellerTokenMapping[0];
         }
         Agreement storage agreement = agreements[agreementId];
 
@@ -339,9 +345,10 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         if (_maxAmountPerTx == 0) revert MaxAmountPerTxMustBeGreaterThanZero();
         if (_maxAmountTotal < _maxAmountPerTx) revert MaxTotalMustBeGreaterThanOrEqualToMaxPerTx();
         if (_timePeriod == 0) revert TimePeriodMustBeGreaterThanZero();
-        uint256 existingAgreementId = sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][
-            _disputeResolverId
+        mapping(uint256 => uint256) storage sellerTokenMapping = sellerToTokenToDisputeResolverToAgreement[_sellerId][
+            _tokenAddress
         ];
+        uint256 existingAgreementId = sellerTokenMapping[_disputeResolverId];
         if (existingAgreementId != 0) {
             Agreement storage existingAgreement = agreements[existingAgreementId];
             if (
@@ -376,7 +383,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
             })
         );
 
-        sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][_disputeResolverId] = agreementId;
+        sellerTokenMapping[_disputeResolverId] = agreementId;
 
         emit AgreementCreated(agreementId, _sellerId, _tokenAddress, _disputeResolverId);
     }
@@ -515,10 +522,13 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         address _tokenAddress,
         uint256 _disputeResolverId
     ) external view returns (uint256) {
-        uint256 agreementId = sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][_disputeResolverId];
+        mapping(uint256 => uint256) storage sellerTokenMapping = sellerToTokenToDisputeResolverToAgreement[_sellerId][
+            _tokenAddress
+        ];
+        uint256 agreementId = sellerTokenMapping[_disputeResolverId];
         if (agreementId == 0 && _disputeResolverId != 0) {
             // If no specific agreement exists, check for "any dispute resolver" agreement
-            agreementId = sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][0];
+            agreementId = sellerTokenMapping[0];
         }
         return agreementId;
     }
