@@ -269,7 +269,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
                                 )
                             );
 
-                            if (!success || data.length != 32 || abi.decode(data, (bool)) == false) {
+                            if (!success || data.length != 32 || !abi.decode(data, (bool))) {
                                 revert UnsupportedMutualizer();
                             }
                         }
