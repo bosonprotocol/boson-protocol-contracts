@@ -220,10 +220,10 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         FeeInfo storage feeInfo = feeInfoByExchange[_exchangeId];
         uint256 requestedFeeAmount = feeInfo.amount;
         if (requestedFeeAmount == 0) revert InvalidExchangeId();
+        validateIncomingPayment(feeInfo.token, _returnedFeeAmount);
 
         // Fee is being returned, add back to pool (if any)
         if (_returnedFeeAmount > 0) {
-            validateIncomingPayment(feeInfo.token, _returnedFeeAmount);
             poolBalances[feeInfo.token] += _returnedFeeAmount;
         }
 
