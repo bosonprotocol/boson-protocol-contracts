@@ -11,7 +11,6 @@ import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { IDRFeeMutualizer } from "../../interfaces/clients/IDRFeeMutualizer.sol";
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
-import "hardhat/console.sol";
 
 /**
  * @title FundsBase
@@ -255,7 +254,8 @@ abstract contract FundsBase is Context {
             uint256 returnAmount = drTerms.feeAmount - payoff.disputeResolver;
 
             // Use exchange-level mutualizer address (locked at commitment time)
-            if (exchange.mutualizerAddress == address(0)) {
+            address mutualizerAddress = exchange.mutualizerAddress;
+            if (mutualizerAddress == address(0)) {
                 if (returnAmount > 0) {
                     increaseAvailableFundsAndEmitEvent(
                         _exchangeId,
@@ -267,26 +267,24 @@ abstract contract FundsBase is Context {
                 }
             } else {
                 uint256 exchangeId = _exchangeId; // stack too deep ToDO: any other way to avoid this?
-                uint256 nativeReturnAmount;
                 if (exchangeToken == address(0)) {
-                    nativeReturnAmount = returnAmount;
                 } else {
                     if (returnAmount > 0) {
-                        IERC20(exchangeToken).safeApprove(exchange.mutualizerAddress, returnAmount);
+                        uint256 oldAllowance = IERC20(exchangeToken).allowance(
+                            address(this),
+                            mutualizerAddress
+                        );
+                        IERC20(exchangeToken).forceApprove(mutualizerAddress, returnAmount + oldAllowance);
                     }
                 }
 
                 try
-                    IDRFeeMutualizer(exchange.mutualizerAddress).returnDRFee{
-                        value: nativeReturnAmount,
+                    IDRFeeMutualizer(mutualizerAddress).returnDRFee{
+                        value: 0,
                         gas: RETURN_DR_FEE_GAS
                     }(exchangeId, returnAmount)
                 {} catch {
                     // Ignore failure to not block the main flow
-                    // Funds are collected by the protocol and can be manually returned later // ToDO: need to confirm a flow when fee is unsuccessfully returned
-                    if (returnAmount > 0) {
-                        increaseAvailableFunds(PROTOCOL_ENTITY_ID, exchangeToken, returnAmount);
-                    }
                     emit IBosonFundsBaseEvents.DRFeeReturnFailed(_exchangeId);
                 }
             }
