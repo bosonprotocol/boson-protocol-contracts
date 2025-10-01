@@ -545,6 +545,8 @@ async function setupTestEnvironment(contracts, { bosonTokenAddress, forwarderAdd
   if (wethAddress) {
     facetsToDeploy["SequentialCommitHandlerFacet"].constructorArgs[0] = wethAddress; // update only weth address
     facetsToDeploy["PriceDiscoveryHandlerFacet"].constructorArgs[0] = wethAddress; // update only weth address
+    facetsToDeploy["ExchangeHandlerFacet"].constructorArgs[1] = wethAddress; // update only weth address
+    facetsToDeploy["DisputeHandlerFacet"].constructorArgs[0] = wethAddress; // update only weth address
   }
   // Cut the protocol handler facets into the Diamond
   await deployAndCutFacets(await protocolDiamond.getAddress(), facetsToDeploy, maxPriorityFeePerGas);

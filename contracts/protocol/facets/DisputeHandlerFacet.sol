@@ -3,6 +3,7 @@ pragma solidity 0.8.22;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonDisputeHandler } from "../../interfaces/handlers/IBosonDisputeHandler.sol";
+import { IWrappedNative } from "../../interfaces/IWrappedNative.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
@@ -15,6 +16,19 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
 contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     bytes32 private constant RESOLUTION_TYPEHASH =
         keccak256(bytes("Resolution(uint256 exchangeId,uint256 buyerPercentBasisPoints)")); // needed for verification during the resolveDispute
+
+    /**
+     * @notice
+     * For offers with native exchange token, the DRFee is returned to the mutualizer in wrapped native token.
+     * Set the address of the wrapped native token in the constructor.
+     *
+     * @param _wNative - the address of the wrapped native token
+     */
+    //solhint-disable-next-line
+    constructor(address _wNative) {
+        if (_wNative == address(0)) revert InvalidAddress();
+        wNative = IWrappedNative(_wNative);
+    }
 
     /**
      * @notice Initializes Facet.

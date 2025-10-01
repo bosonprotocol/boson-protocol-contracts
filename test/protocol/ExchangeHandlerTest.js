@@ -9679,7 +9679,7 @@ describe("IBosonExchangeHandler", function () {
     beforeEach(async function () {
       // Deploy test facet and cut the test functions
       const TestExchangeHandlerFacet = await ethers.getContractFactory("TestExchangeHandlerFacet");
-      const testExchangeHandlerFacet = await TestExchangeHandlerFacet.deploy(0);
+      const testExchangeHandlerFacet = await TestExchangeHandlerFacet.deploy(0, ZeroAddress);
       await testExchangeHandlerFacet.waitForDeployment();
 
       const cutFacetViaDiamond = await getContractAt("DiamondCutFacet", protocolDiamondAddress);

@@ -11,6 +11,7 @@ import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { IDRFeeMutualizer } from "../../interfaces/clients/IDRFeeMutualizer.sol";
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
+import { IWrappedNative } from "../../interfaces/IWrappedNative.sol";
 
 /**
  * @title FundsBase
@@ -19,6 +20,7 @@ import { Context } from "@openzeppelin/contracts/utils/Context.sol";
  */
 abstract contract FundsBase is Context {
     using SafeERC20 for IERC20;
+    IWrappedNative internal immutable wNative;
 
     /**
      * @notice Takes in the offer id and entity id and encumbers the appropriate funds during commitToOffer.
@@ -267,25 +269,19 @@ abstract contract FundsBase is Context {
                 }
             } else {
                 uint256 exchangeId = _exchangeId; // stack too deep ToDO: any other way to avoid this?
-                if (exchangeToken == address(0)) {
-                } else {
-                    if (returnAmount > 0) {
-                        uint256 oldAllowance = IERC20(exchangeToken).allowance(
-                            address(this),
-                            mutualizerAddress
-                        );
-                        IERC20(exchangeToken).forceApprove(mutualizerAddress, returnAmount + oldAllowance);
-                    }
+
+                if (exchangeToken == address(0)) exchangeToken = address(wNative);
+
+                if (returnAmount > 0) {
+                    uint256 oldAllowance = IERC20(exchangeToken).allowance(address(this), mutualizerAddress);
+                    IERC20(exchangeToken).forceApprove(mutualizerAddress, returnAmount + oldAllowance);
                 }
 
                 try
-                    IDRFeeMutualizer(mutualizerAddress).returnDRFee{
-                        value: 0,
-                        gas: RETURN_DR_FEE_GAS
-                    }(exchangeId, returnAmount)
+                    IDRFeeMutualizer(mutualizerAddress).returnDRFee{ gas: RETURN_DR_FEE_GAS }(exchangeId, returnAmount)
                 {} catch {
                     // Ignore failure to not block the main flow
-                    emit IBosonFundsBaseEvents.DRFeeReturnFailed(_exchangeId);
+                    emit IBosonFundsBaseEvents.DRFeeReturnFailed(exchangeId);
                 }
             }
         }

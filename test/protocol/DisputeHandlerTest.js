@@ -3231,7 +3231,7 @@ describe("IBosonDisputeHandler", function () {
     beforeEach(async function () {
       // Deploy test facet and cut the test functions
       const TestDisputeHandlerFacet = await ethers.getContractFactory("TestDisputeHandlerFacet");
-      const testDisputeHandlerFacet = await TestDisputeHandlerFacet.deploy();
+      const testDisputeHandlerFacet = await TestDisputeHandlerFacet.deploy(rando.address);
       await testDisputeHandlerFacet.waitForDeployment();
 
       const protocolDiamondAddress = await disputeHandler.getAddress();
