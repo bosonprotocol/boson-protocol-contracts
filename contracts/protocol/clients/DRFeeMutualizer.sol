@@ -84,6 +84,8 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
 
     event AgreementVoided(uint256 indexed agreementId, bool premiumRefunded, uint256 amountRefunded);
 
+    event DepositRestrictionApplied(bool restricted);
+
     address private immutable BOSON_PROTOCOL;
 
     // Storage
@@ -486,6 +488,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
      */
     function setDepositRestriction(bool _restricted) external onlyOwner {
         depositRestrictedToOwner = _restricted;
+        emit DepositRestrictionApplied(_restricted);
     }
 
     /**
