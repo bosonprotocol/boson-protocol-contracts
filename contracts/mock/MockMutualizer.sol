@@ -59,7 +59,7 @@ contract PartiallyImplementedMutualizer is Ownable, FundsBase {
 /**
  * @title MaliciousMutualizer
  *
- * @notice Contract that acts as a malicious dispute resolver
+ * @notice Contract that acts as a malicious mutualizer
  */
 contract MaliciousMutualizer is PartiallyImplementedMutualizer {
     using SafeERC20 for IERC20;

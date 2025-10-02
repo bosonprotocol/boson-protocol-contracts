@@ -205,7 +205,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
     }
 
     /**
-     * @notice Returns a DR fee to the mutualizer
+     * @notice Notifies the mutualizer that the exchange has been finalized and any unused fee can be returned
      * @param _exchangeId The exchange ID
      * @param _returnedFeeAmount The amount being returned (0 means protocol kept all fees)
      * @dev Only callable by the Boson protocol. For native currency, token is wrapped and must be transferred as ERC20.
@@ -227,11 +227,8 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         // Fee is being returned, add back to pool (if any)
         if (_returnedFeeAmount > 0) {
             bool isWrapped = feeInfo.token == address(0);
-
             validateIncomingPayment(isWrapped ? address(wNative) : feeInfo.token, _returnedFeeAmount);
-
             if (isWrapped) wNative.withdraw(_returnedFeeAmount);
-
             poolBalances[feeInfo.token] += _returnedFeeAmount;
         }
 

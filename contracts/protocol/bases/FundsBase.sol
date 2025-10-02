@@ -270,21 +270,32 @@ abstract contract FundsBase is Context {
             } else {
                 uint256 exchangeId = _exchangeId; // stack too deep ToDO: any other way to avoid this?
 
-                if (exchangeToken == address(0)) exchangeToken = address(wNative);
-
                 if (returnAmount > 0) {
+                    if (exchangeToken == address(0)) {
+                        exchangeToken = address(wNative);
+                        wNative.deposit{ value: returnAmount }();
+                    }
                     uint256 oldAllowance = IERC20(exchangeToken).allowance(address(this), mutualizerAddress);
                     IERC20(exchangeToken).forceApprove(mutualizerAddress, returnAmount + oldAllowance);
                 }
 
-                try
-                    IDRFeeMutualizer(mutualizerAddress).finalizeExchange{ gas: RETURN_DR_FEE_GAS }(
+                try IDRFeeMutualizer(mutualizerAddress).finalizeExchange(exchangeId, returnAmount) {
+                    emit IBosonFundsBaseEvents.DRFeeReturned(
                         exchangeId,
-                        returnAmount
-                    )
-                {} catch {
+                        exchangeToken,
+                        returnAmount,
+                        mutualizerAddress,
+                        sender
+                    );
+                } catch {
                     // Ignore failure to not block the main flow
-                    emit IBosonFundsBaseEvents.DRFeeReturnFailed(exchangeId);
+                    emit IBosonFundsBaseEvents.DRFeeReturnFailed(
+                        exchangeId,
+                        exchangeToken,
+                        returnAmount,
+                        mutualizerAddress,
+                        sender
+                    );
                 }
             }
         }
@@ -456,13 +467,10 @@ abstract contract FundsBase is Context {
         if (_amount > 0) {
             // protocol balance before the transfer
             uint256 protocolTokenBalanceBefore = IERC20(_tokenAddress).balanceOf(address(this));
-
             // transfer ERC20 tokens from the caller
             IERC20(_tokenAddress).safeTransferFrom(_from, address(this), _amount);
-
             // protocol balance after the transfer
             uint256 protocolTokenBalanceAfter = IERC20(_tokenAddress).balanceOf(address(this));
-
             // make sure that expected amount of tokens was transferred
             if (protocolTokenBalanceAfter - protocolTokenBalanceBefore != _amount)
                 revert BosonErrors.InsufficientValueReceived();

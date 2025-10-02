@@ -4268,26 +4268,84 @@ describe("IBosonFundsHandler", function () {
         await exchangeHandler.connect(buyer).redeemVoucher(mutualizerExchangeId);
 
         // Complete the exchange - funds should be released automatically
-        await expect(exchangeHandler.connect(buyer).completeExchange(mutualizerExchangeId)).to.emit(
-          exchangeHandler,
-          "FundsReleased"
-        );
+        const tx = await exchangeHandler.connect(buyer).completeExchange(mutualizerExchangeId);
+        await expect(tx).to.emit(exchangeHandler, "FundsReleased");
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "DRFeeReturned")
+          .withArgs(
+            mutualizerExchangeId,
+            await weth.getAddress(),
+            DRFee,
+            await drFeeMutualizer.getAddress(),
+            buyer.address
+          );
       });
 
       it("should work with canceled exchange", async function () {
         // Cancel the exchange - funds should be released automatically
-        await expect(exchangeHandler.connect(buyer).cancelVoucher(mutualizerExchangeId)).to.emit(
-          exchangeHandler,
-          "FundsReleased"
-        );
+        const tx = await exchangeHandler.connect(buyer).cancelVoucher(mutualizerExchangeId);
+        await expect(tx).to.emit(exchangeHandler, "FundsReleased");
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "DRFeeReturned")
+          .withArgs(
+            mutualizerExchangeId,
+            await weth.getAddress(),
+            DRFee,
+            await drFeeMutualizer.getAddress(),
+            buyer.address
+          );
       });
 
       it("should work with revoked exchange", async function () {
         // Seller can revoke voucher while in committed state - funds should be released automatically
-        await expect(exchangeHandler.connect(assistant).revokeVoucher(mutualizerExchangeId)).to.emit(
-          exchangeHandler,
-          "FundsReleased"
-        );
+        const tx = await exchangeHandler.connect(assistant).revokeVoucher(mutualizerExchangeId);
+        await expect(tx).to.emit(exchangeHandler, "FundsReleased");
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "DRFeeReturned")
+          .withArgs(
+            mutualizerExchangeId,
+            await weth.getAddress(),
+            DRFee,
+            await drFeeMutualizer.getAddress(),
+            assistant.address
+          );
+      });
+
+      context("Escalated dispute", async function () {
+        beforeEach(async function () {
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+          await exchangeHandler.connect(buyer).redeemVoucher(mutualizerExchangeId);
+          await disputeHandler.connect(buyer).raiseDispute(mutualizerExchangeId);
+          await disputeHandler.connect(buyer).escalateDispute(mutualizerExchangeId, { value: buyerEscalationDeposit });
+        });
+
+        it("Buyer retracts the dispute", async function () {
+          // Buyer retracts the dispute - funds should be released automatically
+          const tx = await disputeHandler.connect(buyer).retractDispute(mutualizerExchangeId);
+          await expect(tx).to.emit(exchangeHandler, "FundsReleased");
+
+          // No fee is returned since DR got paid
+          await expect(tx)
+            .to.emit(exchangeHandler, "DRFeeReturned")
+            .withArgs(mutualizerExchangeId, ZeroAddress, 0, await drFeeMutualizer.getAddress(), buyer.address);
+        });
+
+        it("DR decides the dispute", async function () {
+          // Assistant DR decides the dispute - funds should be released automatically
+          const buyerPercentBasisPoints = "7000"; // 70% to buyer, 30% to seller
+          const tx = await disputeHandler
+            .connect(assistantDR)
+            .decideDispute(mutualizerExchangeId, buyerPercentBasisPoints);
+          await expect(tx).to.emit(exchangeHandler, "FundsReleased");
+
+          // No fee is returned since DR got paid
+          await expect(tx)
+            .to.emit(exchangeHandler, "DRFeeReturned")
+            .withArgs(mutualizerExchangeId, ZeroAddress, 0, await drFeeMutualizer.getAddress(), assistantDR.address);
+        });
       });
     });
 
@@ -6357,7 +6415,9 @@ describe("IBosonFundsHandler", function () {
 
         const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
 
-        await expect(tx).to.emit(exchangeHandler, "DRFeeReturnFailed").withArgs(exchangeId);
+        await expect(tx)
+          .to.emit(exchangeHandler, "DRFeeReturnFailed")
+          .withArgs(exchangeId, offerToken.exchangeToken, DRFee, await drFeeMutualizer.getAddress(), buyer.address);
 
         await expect(tx)
           .to.emit(exchangeHandler, "FundsReleased")
@@ -6390,7 +6450,9 @@ describe("IBosonFundsHandler", function () {
 
         const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
 
-        await expect(tx).to.emit(exchangeHandler, "DRFeeReturnFailed").withArgs(exchangeId);
+        await expect(tx)
+          .to.emit(exchangeHandler, "DRFeeReturnFailed")
+          .withArgs(exchangeId, offerToken.exchangeToken, DRFee, await drFeeMutualizer.getAddress(), buyer.address);
 
         await expect(tx)
           .to.emit(exchangeHandler, "FundsReleased")
@@ -6406,7 +6468,9 @@ describe("IBosonFundsHandler", function () {
 
         const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
 
-        await expect(tx).to.emit(exchangeHandler, "DRFeeReturnFailed").withArgs(exchangeId);
+        await expect(tx)
+          .to.emit(exchangeHandler, "DRFeeReturnFailed")
+          .withArgs(exchangeId, offerToken.exchangeToken, DRFee, await drFeeMutualizer.getAddress(), buyer.address);
 
         await expect(tx)
           .to.emit(exchangeHandler, "FundsReleased")
@@ -6435,7 +6499,9 @@ describe("IBosonFundsHandler", function () {
         await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
         const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
 
-        await expect(tx).to.emit(exchangeHandler, "DRFeeReturnFailed").withArgs(exchangeId);
+        await expect(tx)
+          .to.emit(exchangeHandler, "DRFeeReturnFailed")
+          .withArgs(exchangeId, offerToken.exchangeToken, DRFee, await drFeeMutualizer.getAddress(), buyer.address);
 
         await expect(tx)
           .to.emit(exchangeHandler, "FundsReleased")
