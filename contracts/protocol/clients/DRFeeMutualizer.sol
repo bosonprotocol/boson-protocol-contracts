@@ -411,8 +411,9 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         uint256 refundAmount;
 
         if (
-            (agreement.startTime > 0 && agreement.refundOnCancel) &&
-            (agreement.startTime + agreement.timePeriod > block.timestamp)
+            agreement.startTime > 0 &&
+            agreement.refundOnCancel &&
+            agreement.startTime + agreement.timePeriod > block.timestamp
         ) {
             unchecked {
                 uint256 remainingTime = agreement.startTime + agreement.timePeriod - block.timestamp;
