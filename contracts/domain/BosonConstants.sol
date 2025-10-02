@@ -24,7 +24,7 @@ uint256 constant NOT_ENTERED = 1;
 uint256 constant ENTERED = 2;
 
 // DR Fee Mutualizer
-uint256 constant RETURN_DR_FEE_GAS = 100000; // Gas to forward when returning DR fee to mutualizer
+uint256 constant FINALIZE_EXCHANGE_FEE_GAS = 100000; // Gas to forward when returning DR fee to mutualizer
 
 // Twin handler
 uint256 constant SINGLE_TWIN_RESERVED_GAS = 160000;

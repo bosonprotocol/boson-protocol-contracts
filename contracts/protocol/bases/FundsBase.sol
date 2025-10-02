@@ -279,7 +279,7 @@ abstract contract FundsBase is Context {
                     IERC20(exchangeToken).forceApprove(mutualizerAddress, returnAmount + oldAllowance);
                 }
 
-                try IDRFeeMutualizer(mutualizerAddress).finalizeExchange(exchangeId, returnAmount) {
+                try IDRFeeMutualizer(mutualizerAddress).finalizeExchange{gas: FINALIZE_EXCHANGE_FEE_GAS}(exchangeId, returnAmount) {
                     emit IBosonFundsBaseEvents.DRFeeReturned(
                         exchangeId,
                         exchangeToken,
