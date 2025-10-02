@@ -42,8 +42,6 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
     error AgreementIsVoided();
     error DepositsRestrictedToOwner();
     error AccessDenied();
-    error InsufficientValueReceived();
-    error NativeNotAllowed();
     error AgreementTimePeriodTooLong();
 
     struct Agreement {
@@ -254,12 +252,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         if (depositRestrictedToOwner && msgSender != owner()) revert DepositsRestrictedToOwner();
         if (_amount == 0) revert InvalidAmount();
 
-        if (_tokenAddress == address(0)) {
-            if (msg.value != _amount) revert BosonErrors.InsufficientValueReceived();
-        } else {
-            if (msg.value != 0) revert BosonErrors.NativeNotAllowed();
-            transferFundsIn(_tokenAddress, msgSender, _amount);
-        }
+        validateIncomingPayment(_tokenAddress, _amount);
 
         poolBalances[_tokenAddress] += _amount;
         emit FundsDeposited(msgSender, _tokenAddress, _amount);
@@ -464,13 +457,9 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         if (agreement.isVoided) revert AgreementIsVoided();
         if (agreement.sellerId != _sellerId) revert InvalidSellerId();
         if (currentTime > type(uint256).max - agreement.timePeriod) revert AgreementTimePeriodTooLong();
-        if (agreement.tokenAddress == address(0)) {
-            if (msg.value != agreement.premium) revert BosonErrors.InsufficientValueReceived();
-        } else {
-            if (msg.value != 0) revert BosonErrors.NativeNotAllowed();
-            transferFundsIn(agreement.tokenAddress, _msgSender(), agreement.premium);
-        }
-        poolBalances[agreement.tokenAddress] += agreement.premium;
+        uint256 agreementPremium = agreement.premium;
+        validateIncomingPayment(agreement.tokenAddress, agreementPremium);
+        poolBalances[agreement.tokenAddress] += agreementPremium;
         agreement.startTime = currentTime;
 
         emit AgreementActivated(_agreementId, _sellerId);
