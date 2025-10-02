@@ -1688,7 +1688,9 @@ describe("IBosonDisputeHandler", function () {
                 disputeHandler
                   .connect(assistant)
                   .resolveDispute(exchangeId, buyerPercentBasisPoints, contractWalletSignature)
-              ).to.be.revertedWithCustomError(disputeHandler, "SignatureValidationFailed");
+              )
+                .to.be.revertedWithCustomError(disputeHandler, "UnexpectedDataReturned")
+                .withArgs("0xfffffffa00000000000000000000000000000000000000000000000000000000");
             });
 
             it("Contract reverts", async function () {

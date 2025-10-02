@@ -241,11 +241,15 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
      * - Royalty percentage is less than the value decided by the admin
      * - Total royalty percentage is more than max royalty percentage
      * - Not enough funds can be encumbered
+     * - Signature is invalid. Refer to EIP712Lib.verify for details
      *
      * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
-     * @param _offerCreator - the address of the other party
+     * @param _offerCreator - the address of the offer creator
      * @param _committer - the address of the committer (buyer for seller-created offers, seller for buyer-created offers)
-     * @param _signature - signature of the other party. If the signer is EOA, it must be ECDSA signature in the format of (r,s,v) struct, otherwise, it must be a valid ERC1271 signature.
+     * @param _signature - signature of the offer creator 
+                           If the offer creator is ordinary EOA, it must be ECDSA signature in the format of concatenated r,s,v values. 
+                           If the offer creator is a contract, it must be a valid ERC1271 signature.
+                           If the offer creator is a EIP-7702 smart account, it can be either a valid ERC1271 signature or a valid ECDSA signature.
      * @param _conditionalTokenId - the token id to use for the conditional commit, if applicable
      * @param _sellerParams - the seller-specific parameters (collection index, royalty info, mutualizer address), if applicable
      */
@@ -341,11 +345,14 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
      * Reverts if:
      * - Offer is not valid
      * - Offer has been voided
-     * - Signature is invalid
+     * - Signature is invalid. Refer to EIP712Lib.verify for details
      *
      * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
      * @param _offerCreator - the address of the offer creator
      * @param _signature - the signature of the offer creator
+                           If the offer creator is ordinary EOA, it must be ECDSA signature in the format of concatenated r,s,v values. 
+                           If the offer creator is a contract, it must be a valid ERC1271 signature.
+                           If the offer creator is a EIP-7702 smart account, it can be either a valid ERC1271 signature or a valid ECDSA signature.
      */
     function verifyOffer(
         BosonTypes.FullOffer calldata _fullOffer,

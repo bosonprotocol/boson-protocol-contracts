@@ -241,7 +241,7 @@ abstract contract FundsBase is Context {
             uint256 agentId = ProtocolLib.protocolLookups().agentIdByOffer[exchange.offerId];
             increaseAvailableFundsAndEmitEvent(_exchangeId, agentId, exchangeToken, payoff.agent, sender);
         }
-        BosonTypes.DisputeResolutionTerms storage drTerms = pe.disputeResolutionTerms[offer.id];
+        BosonTypes.DisputeResolutionTerms memory drTerms = pe.disputeResolutionTerms[offer.id];
         if (payoff.disputeResolver > 0) {
             increaseAvailableFundsAndEmitEvent(
                 _exchangeId,
