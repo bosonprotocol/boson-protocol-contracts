@@ -62,6 +62,7 @@ abstract contract FundsBase is Context {
 
         if (!_isPreminted) {
             validateIncomingPayment(exchangeToken, _incomingAmount);
+            emit IBosonFundsBaseEvents.FundsDeposited(_entityId, sender, exchangeToken, _incomingAmount);
             emit IBosonFundsBaseEvents.FundsEncumbered(_entityId, exchangeToken, _incomingAmount, sender);
         }
 
