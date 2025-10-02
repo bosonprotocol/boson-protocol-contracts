@@ -140,6 +140,7 @@ describe("IBosonExchangeHandler", function () {
   let offerFeeLimit;
   let bosonErrors;
   let weth;
+  let buyerEscalationDeposit;
 
   before(async function () {
     accountId.next(true);
@@ -274,7 +275,8 @@ describe("IBosonExchangeHandler", function () {
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
-      disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", "0")];
+      const DRFee = parseEther("0.1");
+      disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", DRFee.toString())];
 
       // Make empty seller list, so every seller is allowed
       const sellerAllowList = [];
@@ -283,6 +285,10 @@ describe("IBosonExchangeHandler", function () {
       await accountHandler
         .connect(adminDR)
         .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+
+      // Use a default value for buyer escalation deposit percentage (10%)
+      const buyerEscalationDepositPercentage = "1000"; // 10% in basis points
+      buyerEscalationDeposit = applyPercentage(DRFee, buyerEscalationDepositPercentage);
 
       // Create the offer
       const mo = await mockOffer();
@@ -335,7 +341,7 @@ describe("IBosonExchangeHandler", function () {
     });
 
     context("👉 commitToOffer()", async function () {
-      it("should emit a BuyerCommitted event", async function () {
+      it("should emit a BuyerCommitted, FundsDeposited and FundsEncumbered event", async function () {
         // Commit to offer, retrieving the event
         tx = await exchangeCommitHandler
           .connect(buyer)
@@ -370,6 +376,13 @@ describe("IBosonExchangeHandler", function () {
 
         // Unconditional offer should not emit a ConditionalCommitAuthorized event
         await expect(tx).to.not.emit(exchangeHandler, "ConditionalCommitAuthorized");
+
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(buyerId, buyer.address, offer.exchangeToken, offer.price);
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsEncumbered")
+          .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
       });
 
       it("should increment the next exchange id counter", async function () {
@@ -1054,9 +1067,6 @@ describe("IBosonExchangeHandler", function () {
           const drFeeAmount = parseUnits("0.1", "ether");
           const testDRFee = drFeeAmount.toString();
 
-          // Use a default value for buyer escalation deposit percentage (10%)
-          const buyerEscalationDepositPercentage = "1000"; // 10% in basis points
-
           // Remove existing zero fees and add non-zero fees (following FundsHandlerTest pattern)
           const feeTokenAddresses = [ZeroAddress];
           await accountHandler.connect(adminDR).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddresses);
@@ -1081,9 +1091,6 @@ describe("IBosonExchangeHandler", function () {
             offerDurationsWithFee,
             {
               disputeResolverId: disputeResolver.id,
-              escalationResponsePeriod: disputeResolver.escalationResponsePeriod,
-              feeAmount: testDRFee,
-              buyerEscalationDeposit: applyPercentage(testDRFee, buyerEscalationDepositPercentage),
               mutualizerAddress: await drFeeMutualizer.getAddress(),
             },
             agentId,
@@ -1123,7 +1130,7 @@ describe("IBosonExchangeHandler", function () {
           await groupHandler.connect(assistant).createGroup(group, condition);
         });
 
-        it("should emit BuyerCommitted and ConditionalCommitAuthorized events if user meets condition", async function () {
+        it("should emit BuyerCommitted, FundsDeposited, FundsEncumbered, and ConditionalCommitAuthorized events if user meets condition", async function () {
           // mint enough tokens for the buyer
           await foreign20.connect(buyer).mint(await buyer.getAddress(), condition.threshold);
 
@@ -1137,6 +1144,13 @@ describe("IBosonExchangeHandler", function () {
           await expect(tx)
             .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
             .withArgs(offerId, condition.gating, buyer.address, 0, 1, condition.maxCommits);
+
+          await expect(tx)
+            .to.emit(fundsHandler, "FundsDeposited")
+            .withArgs(buyerId, buyer.address, offer.exchangeToken, offer.price);
+          await expect(tx)
+            .to.emit(fundsHandler, "FundsEncumbered")
+            .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
         });
 
         it("should allow buyer to commit up to the max times for the group", async function () {
@@ -1230,7 +1244,7 @@ describe("IBosonExchangeHandler", function () {
           await groupHandler.connect(assistant).createGroup(group, condition);
         });
 
-        it("should emit BuyerCommitted and ConditionalCommitAuthorized events if user meets condition", async function () {
+        it("should emit BuyerCommitted, FundsDeposited, FundsEncumbered, and ConditionalCommitAuthorized events if user meets condition", async function () {
           // mint enough tokens for the buyer
           await foreign721.connect(buyer).mint(condition.minTokenId, condition.threshold);
 
@@ -1244,6 +1258,13 @@ describe("IBosonExchangeHandler", function () {
           await expect(tx)
             .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
             .withArgs(offerId, condition.gating, buyer.address, 0, 1, condition.maxCommits);
+
+          await expect(tx)
+            .to.emit(fundsHandler, "FundsDeposited")
+            .withArgs(buyerId, buyer.address, offer.exchangeToken, offer.price);
+          await expect(tx)
+            .to.emit(fundsHandler, "FundsEncumbered")
+            .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
         });
 
         it("should allow buyer to commit up to the max times for the group", async function () {
@@ -1333,7 +1354,7 @@ describe("IBosonExchangeHandler", function () {
           await foreign721.connect(buyer).mint(tokenId, "1");
         });
 
-        it("should emit BuyerCommitted and ConditionalCommitAuthorized event if user meets condition", async function () {
+        it("should emit BuyerCommitted, FundsDeposited, FundsEncumbered, and ConditionalCommitAuthorized event if user meets condition", async function () {
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
           const tx = exchangeCommitHandler
@@ -1344,6 +1365,13 @@ describe("IBosonExchangeHandler", function () {
           await expect(tx)
             .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
             .withArgs(offerId, condition.gating, buyer.address, tokenId, 1, condition.maxCommits);
+
+          await expect(tx)
+            .to.emit(fundsHandler, "FundsDeposited")
+            .withArgs(buyerId, buyer.address, offer.exchangeToken, offer.price);
+          await expect(tx)
+            .to.emit(fundsHandler, "FundsEncumbered")
+            .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
         });
 
         it("should allow buyer to commit up to the max times for the group", async function () {
@@ -1460,7 +1488,7 @@ describe("IBosonExchangeHandler", function () {
           await foreign721.connect(buyer).mint(tokenId, "1");
         });
 
-        it("should emit BuyerCommitted and ConditionalCommitAuthorized event if user meets condition", async function () {
+        it("should emit BuyerCommitted, FundsDeposited, FundsEncumbered, and ConditionalCommitAuthorized event if user meets condition", async function () {
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
           const tx = exchangeCommitHandler
@@ -1472,6 +1500,13 @@ describe("IBosonExchangeHandler", function () {
           await expect(tx)
             .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
             .withArgs(offerId, condition.gating, buyer.address, tokenId, 1, condition.maxCommits);
+
+          await expect(tx)
+            .to.emit(fundsHandler, "FundsDeposited")
+            .withArgs(buyerId, buyer.address, offer.exchangeToken, offer.price);
+          await expect(tx)
+            .to.emit(fundsHandler, "FundsEncumbered")
+            .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
         });
 
         it("should allow buyer to commit up to the max times for the group", async function () {
@@ -1588,7 +1623,7 @@ describe("IBosonExchangeHandler", function () {
           tokenId = "123";
         });
 
-        it("should emit BuyerCommitted and ConditionalCommitAuthorized events if user meets condition", async function () {
+        it("should emit BuyerCommitted, FundsDeposited, FundsEncumbered and ConditionalCommitAuthorized events if user meets condition", async function () {
           // mint enough tokens for the buyer
           await foreign1155.connect(buyer).mint(tokenId, condition.threshold);
 
@@ -1602,6 +1637,13 @@ describe("IBosonExchangeHandler", function () {
           await expect(tx)
             .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
             .withArgs(offerId, condition.gating, buyer.address, tokenId, 1, condition.maxCommits);
+
+          await expect(tx)
+            .to.emit(fundsHandler, "FundsDeposited")
+            .withArgs(buyerId, buyer.address, offer.exchangeToken, offer.price);
+          await expect(tx)
+            .to.emit(fundsHandler, "FundsEncumbered")
+            .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
         });
 
         it("should allow buyer to commit up to the max times for the group", async function () {
@@ -1684,7 +1726,7 @@ describe("IBosonExchangeHandler", function () {
           await foreign1155.connect(buyer).mint(tokenId, "1");
         });
 
-        it("should emit BuyerCommitted and ConditionalCommitAuthorized events if user meets condition", async function () {
+        it("should emit BuyerCommitted, FundsDeposited, FundsEncumbered, and ConditionalCommitAuthorized events if user meets condition", async function () {
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
           const tx = exchangeCommitHandler
@@ -1695,6 +1737,13 @@ describe("IBosonExchangeHandler", function () {
           await expect(tx)
             .to.emit(exchangeHandler, "ConditionalCommitAuthorized")
             .withArgs(offerId, condition.gating, buyer.address, tokenId, 1, condition.maxCommits);
+
+          await expect(tx)
+            .to.emit(fundsHandler, "FundsDeposited")
+            .withArgs(buyerId, buyer.address, offer.exchangeToken, offer.price);
+          await expect(tx)
+            .to.emit(fundsHandler, "FundsEncumbered")
+            .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
         });
 
         it("should allow buyer to commit up to the max times for the group", async function () {
@@ -6366,7 +6415,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("should return false if exchange has a dispute in Escalated state", async function () {
           // Escalate the dispute
-          await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+          await disputeHandler.connect(buyer).escalateDispute(exchange.id, { value: buyerEscalationDeposit });
 
           // In Escalated state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
@@ -6377,7 +6426,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("should return true if exchange has a dispute in Decided state", async function () {
           // Escalate the dispute
-          await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+          await disputeHandler.connect(buyer).escalateDispute(exchange.id, { value: buyerEscalationDeposit });
 
           // Decide Dispute
           await disputeHandler.connect(assistantDR).decideDispute(exchange.id, "1111");
@@ -6391,7 +6440,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("should return true if exchange has a dispute in Refused state", async function () {
           // Escalate the dispute
-          tx = await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+          tx = await disputeHandler.connect(buyer).escalateDispute(exchange.id, { value: buyerEscalationDeposit });
 
           // Get the block timestamp of the confirmed tx and set escalatedDate
           blockNumber = tx.blockNumber;
@@ -6762,7 +6811,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("Receipt should contain escalatedDate if a dispute was raised and escalated", async function () {
           // Escalate a dispute
-          let tx = await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+          let tx = await disputeHandler.connect(buyer).escalateDispute(exchange.id, { value: buyerEscalationDeposit });
 
           // Get the block timestamp of the confirmed tx
           blockNumber = tx.blockNumber;
@@ -8266,6 +8315,130 @@ describe("IBosonExchangeHandler", function () {
         });
       });
     });
+
+    context("👉 reentrancy guard in onPremintedVoucherTransferred()", async function () {
+      let drFeeMutualizer;
+      let mutualizerOfferId;
+      let protocolAddress;
+      let sellerId, disputeResolverId;
+
+      beforeEach(async function () {
+        sellerId = await accountHandler.getNextAccountId();
+        disputeResolverId = sellerId + 1n;
+
+        // create a new seller, so it's obvious that the funds are stolen from protocol and not from seller deposit
+        const seller = mockSeller(rando.address, rando.address, clerk.address, rando.address);
+        emptyAuthToken = mockAuthToken();
+        voucherInitValues = mockVoucherInitValues();
+
+        await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+        // Create a valid dispute resolver
+        const disputeResolver = mockDisputeResolver(rando.address, rando.address, clerkDR.address, rando.address, true);
+
+        //Create DisputeResolverFee array so offer creation will succeed
+        disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", parseEther("5").toString())];
+        const sellerAllowList = [sellerId];
+        await accountHandler
+          .connect(rando)
+          .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+
+        // Deploy real DRFeeMutualizer contract
+        protocolAddress = await exchangeHandler.getAddress();
+
+        // Create offer with mutualizer
+        offer.sellerDeposit = "0";
+        offer.price = "0";
+        offer.buyerCancelPenalty = "0";
+        offer.quantityAvailable = 2;
+
+        mutualizerOfferId = await offerHandler.getNextOfferId();
+
+        tokenId = deriveTokenId(mutualizerOfferId, exchangeId);
+      });
+
+      it("reentrancy guard is raised when reentrancy via DepositFunds is attempted", async function () {
+        const DRFeeMutualizerFactory = await getContractFactory("MaliciousMutualizer");
+        drFeeMutualizer = await DRFeeMutualizerFactory.connect(rando).deploy(sellerId, protocolAddress);
+        await drFeeMutualizer.waitForDeployment();
+
+        // Fund mutualizer with ETH for testing using the deposit function
+        await drFeeMutualizer.deposit(ZeroAddress, parseUnits("5", "ether"), {
+          value: parseUnits("5", "ether"),
+        });
+
+        await offerHandler.connect(rando).createOffer(
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolverId,
+            mutualizerAddress: await drFeeMutualizer.getAddress(),
+          },
+          agentId,
+          offerFeeLimit
+        );
+
+        await offerHandler.connect(rando).reserveRange(mutualizerOfferId, offer.quantityAvailable, rando.address);
+
+        const voucherCloneAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          rando.address
+        );
+        bosonVoucher = await getContractAt("BosonVoucher", voucherCloneAddress);
+        await bosonVoucher.connect(rando).preMint(mutualizerOfferId, offer.quantityAvailable);
+
+        // commit via preminted vouchers
+        await expect(
+          bosonVoucher.connect(rando).transferFrom(rando.address, rando.address, tokenId)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.REENTRANCY_GUARD);
+      });
+
+      it("seller can steal the protocol funds via onPremintedVoucher reentrancy", async function () {
+        const DRFeeMutualizerFactory = await getContractFactory("MaliciousMutualizer2");
+        drFeeMutualizer = await DRFeeMutualizerFactory.connect(rando).deploy(sellerId, protocolAddress);
+        await drFeeMutualizer.waitForDeployment();
+
+        // Fund mutualizer with ETH for testing using the deposit function
+        await drFeeMutualizer.deposit(ZeroAddress, parseUnits("5", "ether"), {
+          value: parseUnits("5", "ether"),
+        });
+
+        await offerHandler.connect(rando).createOffer(
+          offer,
+          offerDates,
+          offerDurations,
+          {
+            disputeResolverId: disputeResolverId,
+            mutualizerAddress: await drFeeMutualizer.getAddress(),
+          },
+          agentId,
+          offerFeeLimit
+        );
+
+        await offerHandler.connect(rando).reserveRange(mutualizerOfferId, offer.quantityAvailable, rando.address);
+
+        const voucherCloneAddress = calculateCloneAddress(
+          await accountHandler.getAddress(),
+          beaconProxyAddress,
+          rando.address
+        );
+        bosonVoucher = await getContractAt("BosonVoucher", voucherCloneAddress);
+        await bosonVoucher.connect(rando).preMint(mutualizerOfferId, offer.quantityAvailable);
+
+        // approve DR to transfer the 2nd preminted voucher
+        const secondTokenId = BigInt(tokenId) + 1n;
+        // await bosonVoucher.connect(rando).approve(drFeeMutualizer.getAddress(), secondTokenId);
+        await bosonVoucher.connect(rando).setApprovalForAll(await drFeeMutualizer.getAddress(), true);
+        await drFeeMutualizer.connect(rando).setPremintedVoucherData(voucherCloneAddress, secondTokenId);
+
+        // commit via preminted vouchers
+        await expect(
+          bosonVoucher.connect(rando).transferFrom(rando.address, rando.address, tokenId)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.REENTRANCY_GUARD);
+      });
+    });
   });
 
   context("👉 CreateOfferAndCommit", async function () {
@@ -8500,9 +8673,11 @@ describe("IBosonExchangeHandler", function () {
           );
 
         await expect(tx)
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(buyerId, buyer.address, offer.exchangeToken, offer.price);
+        await expect(tx)
           .to.emit(fundsHandler, "FundsEncumbered")
           .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
-        await expect(tx).to.not.emit(fundsHandler, "FundsDeposited");
 
         // Unconditional offer should not emit events
         await expect(tx).to.not.emit(exchangeHandler, "ConditionalCommitAuthorized");
@@ -8648,9 +8823,11 @@ describe("IBosonExchangeHandler", function () {
           );
 
         await expect(tx)
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(buyerId, buyer.address, offer.exchangeToken, offer.price);
+        await expect(tx)
           .to.emit(fundsHandler, "FundsEncumbered")
           .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
-        await expect(tx).to.not.emit(fundsHandler, "FundsDeposited");
         await expect(tx)
           .to.emit(fundsHandler, "FundsEncumbered")
           .withArgs(seller.id, offer.exchangeToken, offer.sellerDeposit, buyer.address);
@@ -8716,9 +8893,11 @@ describe("IBosonExchangeHandler", function () {
           .withArgs(offerId, buyerId, exchangeId, exchange.toStruct(), voucher.toStruct(), buyer.address);
 
         await expect(tx)
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(buyerId, buyer.address, offer.exchangeToken, offer.price);
+        await expect(tx)
           .to.emit(fundsHandler, "FundsEncumbered")
           .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
-        await expect(tx).to.not.emit(fundsHandler, "FundsDeposited");
 
         // Offer should not be created again, as it already exists
         await expect(tx).to.not.emit(offerHandler, "OfferCreated");
@@ -8802,7 +8981,9 @@ describe("IBosonExchangeHandler", function () {
         await expect(tx)
           .to.emit(fundsHandler, "FundsEncumbered")
           .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
-        await expect(tx).to.not.emit(fundsHandler, "FundsDeposited");
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(buyerId, buyer.address, offer.exchangeToken, offer.price);
 
         // Conditional offer emits additional events
         const groupId = "1";
@@ -9126,9 +9307,11 @@ describe("IBosonExchangeHandler", function () {
           );
 
         await expect(tx)
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(seller.id, assistant.address, offer.exchangeToken, offer.sellerDeposit);
+        await expect(tx)
           .to.emit(fundsHandler, "FundsEncumbered")
           .withArgs(seller.id, offer.exchangeToken, offer.sellerDeposit, assistant.address);
-        await expect(tx).to.not.emit(fundsHandler, "FundsDeposited");
 
         // Unconditional offer should not emit events
         await expect(tx).to.not.emit(exchangeHandler, "ConditionalCommitAuthorized");
@@ -9269,10 +9452,12 @@ describe("IBosonExchangeHandler", function () {
             assistant.address
           );
 
-        await expect(tx).to.not.emit(fundsHandler, "FundsDeposited");
         await expect(tx)
           .to.emit(fundsHandler, "FundsEncumbered")
           .withArgs(buyerId, offer.exchangeToken, price, assistant.address);
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(seller.id, assistant.address, offer.exchangeToken, offer.sellerDeposit);
         await expect(tx)
           .to.emit(fundsHandler, "FundsEncumbered")
           .withArgs(seller.id, offer.exchangeToken, offer.sellerDeposit, assistant.address);
@@ -9354,7 +9539,9 @@ describe("IBosonExchangeHandler", function () {
             assistant.address
           );
 
-        await expect(tx).to.not.emit(fundsHandler, "FundsDeposited");
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(seller.id, assistant.address, offer.exchangeToken, offer.sellerDeposit);
         await expect(tx)
           .to.emit(fundsHandler, "FundsEncumbered")
           .withArgs(seller.id, offer.exchangeToken, offer.sellerDeposit, assistant.address);

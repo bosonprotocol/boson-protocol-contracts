@@ -6,7 +6,7 @@ import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonExchangeCommitHandler } from "../../interfaces/handlers/IBosonExchangeCommitHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { IDRFeeMutualizer } from "../../interfaces/clients/IDRFeeMutualizer.sol";
-import { IBosonFundsEvents, IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
+import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BuyerBase } from "../bases/BuyerBase.sol";
 import { OfferBase } from "../bases/OfferBase.sol";
@@ -311,7 +311,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
             if (offerCreatorAmount > 0) {
                 transferFundsIn(_fullOffer.offer.exchangeToken, _offerCreator, offerCreatorAmount);
                 increaseAvailableFunds(offerCreatorId, _fullOffer.offer.exchangeToken, offerCreatorAmount);
-                emit IBosonFundsEvents.FundsDeposited(
+                emit IBosonFundsBaseEvents.FundsDeposited(
                     offerCreatorId,
                     _offerCreator,
                     _fullOffer.offer.exchangeToken,
@@ -617,7 +617,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
             //  transaction start from `commitToPriceDiscoveryOffer`, should commit
             if (ps.incomingVoucherCloneAddress != address(0)) {
                 // During price discovery, the voucher is firs transferred to the protocol, which should
-                // not resulte in a commit yet. The commit should happen when the voucher is transferred
+                // not result in a commit yet. The commit should happen when the voucher is transferred
                 // from the protocol to the buyer.
                 if (_to == protocolAddresses().priceDiscovery) {
                     // Avoid reentrancy
@@ -634,8 +634,9 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
                         // so ps.incomingVoucherId is set already. The incoming _tokenId must match.
                         if (ps.incomingVoucherId != _tokenId) revert TokenIdMismatch();
                     }
+                    // No need to setup reentrancy guard, since this line is reached only if `commitToPriceDiscoveryOffer` was called first
+                    // and reentrancy guard was setup there already.
                     commitToOfferInternal(_to, offer, exchangeId, true);
-
                     committed = true;
                 }
 
@@ -661,7 +662,14 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
             }
         } else if (offer.priceType == PriceType.Static) {
             // If price type is static, transaction can start from anywhere
+            // Setup reentrancy guard to enable only 1 commit at a time
+            ProtocolLib.ProtocolStatus storage ps = ProtocolLib.protocolStatus();
+            if (ps.reentrancyStatus == ENTERED) revert BosonErrors.ReentrancyGuard();
+            ps.reentrancyStatus = ENTERED; // avoid reentrancy
+
             commitToOfferInternal(_to, offer, exchangeId, true);
+
+            ps.reentrancyStatus = NOT_ENTERED;
             committed = true;
         }
     }
