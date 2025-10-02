@@ -46,7 +46,7 @@ library EIP712Lib {
      *
      * Reverts if:
      * - User is the zero address
-     * - User is a contract that or a smart account does not implement ERC1271.isValidSignature or fallback
+     * - User is a contract that does not implement ERC1271.isValidSignature or fallback
      * - User is a contract that implements ERC1271.isValidSignature or fallback, but returns an unexpected value (including wrong magic value, wrong return data size, etc.)
      * - User is a contract that reverts when called with the signature
      * - User is an EOA (including smart accounts that do not implement ERC1271) but the signature is not a valid ECDSA signature
