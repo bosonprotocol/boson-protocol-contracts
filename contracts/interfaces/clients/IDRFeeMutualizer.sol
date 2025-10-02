@@ -7,7 +7,7 @@ import { IERC165 } from "../IERC165.sol";
  * @title IDRFeeMutualizer
  * @notice Interface for dispute resolver fee mutualization
  *
- * The ERC-165 identifier for this interface is: 0x1e0b3a78
+ * The ERC-165 identifier for this interface is: 0xe627eff4
  */
 interface IDRFeeMutualizer is IERC165 {
     /**
