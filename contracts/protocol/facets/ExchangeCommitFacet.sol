@@ -662,7 +662,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
             }
         } else if (offer.priceType == PriceType.Static) {
             // If price type is static, transaction can start from anywhere
-            // Setup reentrancy guard to enable only 1 commit per transaction
+            // Setup reentrancy guard to enable only 1 commit at a time
             ProtocolLib.ProtocolStatus storage ps = ProtocolLib.protocolStatus();
             if (ps.reentrancyStatus == ENTERED) revert BosonErrors.ReentrancyGuard();
             ps.reentrancyStatus = ENTERED; // avoid reentrancy

@@ -15,7 +15,7 @@ import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 /**
  * @title MaliciousMutualizer
  *
- * @notice Contract that acts as a malicious dispute resolver
+ * @notice Contract that acts as a malicious DR fee mutualizer
  */
 contract MaliciousMutualizer is Ownable, FundsBase {
     using SafeERC20 for IERC20;
