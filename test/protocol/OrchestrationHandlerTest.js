@@ -418,11 +418,15 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(exchangeId, buyerId, seller.id, await buyer.getAddress());
       });
 
-      it("should emit FundsEncumbered and DisputeEscalated event", async function () {
+      it("should emit FundsDeposited, FundsEncumbered and DisputeEscalated event", async function () {
         // Raise and Escalate a dispute, testing for the events
         const tx = await orchestrationHandler
           .connect(buyer)
           .raiseAndEscalateDispute(exchangeId, { value: buyerEscalationDepositNative });
+
+        await expect(tx)
+          .to.emit(disputeHandler, "FundsDeposited")
+          .withArgs(buyerId, buyer.address, ZeroAddress, buyerEscalationDepositNative);
 
         await expect(tx)
           .to.emit(disputeHandler, "FundsEncumbered")
@@ -489,6 +493,9 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Escalate the dispute, testing for the events
         const tx = await orchestrationHandler.connect(buyer).raiseAndEscalateDispute(exchangeId);
+        await expect(tx)
+          .to.emit(disputeHandler, "FundsDeposited")
+          .withArgs(buyerId, buyer.address, await mockToken.getAddress(), buyerEscalationDepositToken);
 
         await expect(tx)
           .to.emit(disputeHandler, "FundsEncumbered")
