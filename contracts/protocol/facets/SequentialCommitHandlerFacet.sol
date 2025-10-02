@@ -173,7 +173,10 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
         // Since exchange and voucher are passed by reference, they are updated
         uint256 buyerId = exchange.buyerId;
         address sender = _msgSender();
-        if (thisExchangeCost.price > 0) emit FundsEncumbered(buyerId, exchangeToken, thisExchangeCost.price, sender);
+        if (thisExchangeCost.price > 0) {
+            emit FundsDeposited(buyerId, sender, exchangeToken, thisExchangeCost.price);
+            emit FundsEncumbered(buyerId, exchangeToken, thisExchangeCost.price, sender);
+        }
         if (immediatePayout > 0) {
             emit FundsReleased(exchangeId, thisExchangeCost.resellerId, exchangeToken, immediatePayout, sender);
             emit FundsWithdrawn(thisExchangeCost.resellerId, seller, exchangeToken, immediatePayout, sender);
