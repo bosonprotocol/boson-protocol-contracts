@@ -62,6 +62,7 @@ abstract contract FundsBase is Context {
 
         if (!_isPreminted) {
             validateIncomingPayment(exchangeToken, _incomingAmount);
+            emit IBosonFundsBaseEvents.FundsDeposited(_entityId, sender, exchangeToken, _incomingAmount);
             emit IBosonFundsBaseEvents.FundsEncumbered(_entityId, exchangeToken, _incomingAmount, sender);
         }
 
@@ -238,7 +239,7 @@ abstract contract FundsBase is Context {
             uint256 agentId = ProtocolLib.protocolLookups().agentIdByOffer[exchange.offerId];
             increaseAvailableFundsAndEmitEvent(_exchangeId, agentId, exchangeToken, payoff.agent, sender);
         }
-        BosonTypes.DisputeResolutionTerms storage drTerms = pe.disputeResolutionTerms[offer.id];
+        BosonTypes.DisputeResolutionTerms memory drTerms = pe.disputeResolutionTerms[offer.id];
         if (payoff.disputeResolver > 0) {
             increaseAvailableFundsAndEmitEvent(
                 _exchangeId,

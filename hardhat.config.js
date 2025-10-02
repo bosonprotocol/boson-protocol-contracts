@@ -158,7 +158,6 @@ module.exports = {
   networks: {
     hardhat: {
       accounts: { mnemonic: environments.hardhat.mnemonic },
-      gasPrice: 0,
       initialBaseFeePerGas: 0,
       allowUnlimitedContractSize: true,
     },
