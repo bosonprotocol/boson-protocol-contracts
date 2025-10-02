@@ -1928,10 +1928,14 @@ describe("DRFeeMutualizer", function () {
   context("📋 Admin Functions", async function () {
     context("👉 setDepositRestriction()", async function () {
       it("should set deposit restriction successfully", async function () {
-        await drFeeMutualizer.connect(owner).setDepositRestriction(true);
+        await expect(drFeeMutualizer.connect(owner).setDepositRestriction(true))
+          .to.emit(drFeeMutualizer, "DepositRestrictionApplied")
+          .withArgs(true);
         expect(await drFeeMutualizer.depositRestrictedToOwner()).to.be.true;
 
-        await drFeeMutualizer.connect(owner).setDepositRestriction(false);
+        await expect(drFeeMutualizer.connect(owner).setDepositRestriction(false))
+          .to.emit(drFeeMutualizer, "DepositRestrictionApplied")
+          .withArgs(false);
         expect(await drFeeMutualizer.depositRestrictedToOwner()).to.be.false;
       });
 
