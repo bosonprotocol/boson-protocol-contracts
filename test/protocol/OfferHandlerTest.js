@@ -2562,6 +2562,13 @@ describe("IBosonOfferHandler", function () {
           .withArgs(offer.id, offer.sellerId, await newDrFeeMutualizer.getAddress(), await assistant.getAddress());
       });
 
+      it("it is possible to change to self-mutualization", async function () {
+        // Update the mutualizer
+        await expect(offerHandler.connect(assistant).updateOfferMutualizer(offer.id, ZeroAddress))
+          .to.emit(offerHandler, "OfferMutualizerUpdated")
+          .withArgs(offer.id, offer.sellerId, ZeroAddress, await assistant.getAddress());
+      });
+
       it("should revert when new mutualizer is the same as current", async function () {
         await expect(
           offerHandler.connect(assistant).updateOfferMutualizer(offer.id, await drFeeMutualizer.getAddress())
