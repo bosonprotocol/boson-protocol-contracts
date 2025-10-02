@@ -1533,6 +1533,14 @@ describe("DRFeeMutualizer", function () {
               .returnDRFee(exchangeId, ZERO_POINT_ONE_ETHER, { value: ZERO_POINT_ONE_ETHER })
           ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.ONLY_PROTOCOL);
         });
+
+        it("should revert when native funds sent with zero returnedFeeAmount", async function () {
+          await expect(
+            mockProtocol.callReturnDRFee(await drFeeMutualizer.getAddress(), exchangeId, 0, {
+              value: ZERO_POINT_ONE_ETHER,
+            })
+          ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+        });
       });
     });
 
