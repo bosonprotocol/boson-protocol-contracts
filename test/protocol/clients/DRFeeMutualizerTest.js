@@ -1380,7 +1380,7 @@ describe("DRFeeMutualizer", function () {
       });
     });
 
-    context("👉 returnDRFee()", async function () {
+    context("👉 finalizeExchange()", async function () {
       let exchangeId;
       const disputeResolverId = 1;
 
@@ -1419,7 +1419,7 @@ describe("DRFeeMutualizer", function () {
         await weth.deposit({ value: returnAmount });
         await weth.transfer(await mockProtocol.getAddress(), returnAmount);
         // await mockProtocol.depositFunds(0, await weth.getAddress(), returnAmount);
-        await mockProtocol.callReturnDRFee(
+        await mockProtocol.callFinalizeExchange(
           await drFeeMutualizer.getAddress(),
           exchangeId,
           returnAmount,
@@ -1432,11 +1432,11 @@ describe("DRFeeMutualizer", function () {
 
       it("should allow returning DR fee with 0 amount and clean up tracking (native)", async function () {
         await expect(
-          mockProtocol.callReturnDRFee(await drFeeMutualizer.getAddress(), exchangeId, 0, await weth.getAddress())
+          mockProtocol.callFinalizeExchange(await drFeeMutualizer.getAddress(), exchangeId, 0, await weth.getAddress())
         ).to.not.be.reverted;
 
         await expect(
-          mockProtocol.callReturnDRFee(await drFeeMutualizer.getAddress(), exchangeId, 0, await weth.getAddress())
+          mockProtocol.callFinalizeExchange(await drFeeMutualizer.getAddress(), exchangeId, 0, await weth.getAddress())
         ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INVALID_EXCHANGE_ID);
       });
 
@@ -1473,7 +1473,7 @@ describe("DRFeeMutualizer", function () {
         );
         await mockProtocol.approveToken(await mockToken.getAddress(), await drFeeMutualizer.getAddress(), 0);
         await expect(
-          mockProtocol.callReturnDRFee(
+          mockProtocol.callFinalizeExchange(
             await drFeeMutualizer.getAddress(),
             EXCHANGE_ID_3,
             0,
@@ -1481,7 +1481,7 @@ describe("DRFeeMutualizer", function () {
           )
         ).to.not.be.reverted;
         await expect(
-          mockProtocol.callReturnDRFee(
+          mockProtocol.callFinalizeExchange(
             await drFeeMutualizer.getAddress(),
             EXCHANGE_ID_3,
             ZERO_POINT_ONE_ETHER,
@@ -1493,15 +1493,18 @@ describe("DRFeeMutualizer", function () {
       context("💔 Revert Reasons", async function () {
         it("should revert when exchange ID is invalid", async function () {
           await expect(
-            mockProtocol.callReturnDRFee(await drFeeMutualizer.getAddress(), INVALID_ID, 0, await weth.getAddress())
+            mockProtocol.callFinalizeExchange(
+              await drFeeMutualizer.getAddress(),
+              INVALID_ID,
+              0,
+              await weth.getAddress()
+            )
           ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.INVALID_EXCHANGE_ID);
         });
 
         it("should revert when caller is not protocol", async function () {
           await expect(
-            drFeeMutualizer
-              .connect(rando)
-              .returnDRFee(exchangeId, ZERO_POINT_ONE_ETHER, { value: ZERO_POINT_ONE_ETHER })
+            drFeeMutualizer.connect(rando).finalizeExchange(exchangeId, ZERO_POINT_ONE_ETHER)
           ).to.be.revertedWithCustomError(drFeeMutualizer, RevertReasons.ONLY_PROTOCOL);
         });
       });
@@ -1551,7 +1554,7 @@ describe("DRFeeMutualizer", function () {
       await mockToken.connect(owner).transfer(await mockProtocol.getAddress(), returnAmount);
       await mockProtocol.approveToken(await mockToken.getAddress(), await drFeeMutualizer.getAddress(), returnAmount);
 
-      await mockProtocol.callReturnDRFee(
+      await mockProtocol.callFinalizeExchange(
         await drFeeMutualizer.getAddress(),
         erc20ExchangeId,
         returnAmount,

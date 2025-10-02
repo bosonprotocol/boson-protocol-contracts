@@ -90,7 +90,7 @@ contract MaliciousMutualizer is PartiallyImplementedMutualizer {
         return true;
     }
 
-    function returnDRFee(uint256 _exchangeId, uint256 _feeAmount) external payable virtual {
+    function finalizeExchange(uint256 _exchangeId, uint256 _feeAmount) external payable virtual {
         // do nothing
     }
 }
@@ -163,20 +163,20 @@ contract MaliciousMutualizer3 is PartiallyImplementedMutualizer {
         attackType = _attackType;
     }
 
-    function returnDRFee(uint256 _exchangeId, uint256 _feeAmount) external payable {
+    function finalizeExchange(uint256 _exchangeId, uint256 _feeAmount) external payable {
         if (attackType == AttackType.GasTheft) {
             while (true) {
                 // consume all gas
             }
         } else if (attackType == AttackType.ReturnBomb) {
             assembly {
-                return(0, 202750) // a big return data
+                return(0, 200000) // a big return data
             }
         } else if (attackType == AttackType.RevertWithReason) {
             revert("MaliciousMutualizer3: reverting as planned");
         } else if (attackType == AttackType.RevertWithoutRuntimeError) {
             uint256 a;
-            a = 1 / (a - 1); // division by zero
+            a = 1 / a; // division by zero
         }
     }
 }

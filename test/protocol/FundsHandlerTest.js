@@ -6417,7 +6417,7 @@ describe("IBosonFundsHandler", function () {
           .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, buyer.address);
       });
 
-      it("If mutualizer does not implement returnDRFee, other funds are still released", async function () {
+      it("If mutualizer does not implement finalizeExchange, other funds are still released", async function () {
         const DRFeeMutualizerFactory = await getContractFactory("PartiallyImplementedMutualizer");
         drFeeMutualizer = await DRFeeMutualizerFactory.connect(rando).deploy("0", await offerHandler.getAddress());
         await drFeeMutualizer.waitForDeployment();

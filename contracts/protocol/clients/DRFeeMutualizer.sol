@@ -208,19 +208,19 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
      * @notice Returns a DR fee to the mutualizer
      * @param _exchangeId The exchange ID
      * @param _returnedFeeAmount The amount being returned (0 means protocol kept all fees)
-     * @dev Only callable by the Boson protocol. For native currency, returnedFeeAmount must equal msg.value.
+     * @dev Only callable by the Boson protocol. For native currency, token is wrapped and must be transferred as ERC20.
      *
      * Reverts if:
      * - Caller is not the Boson protocol
      * - exchangeId is not found
-     * - msg.value != returnedFeeAmount for native currency
-     * - msg.value > 0 for ERC20 tokens
-     * - ERC20 or native currency transfer fails
+     * - Caller is not the Boson protocol
+     * - exchangeId is not found
+     * - token transfer fails
      */
-    function returnDRFee(
+    function finalizeExchange(
         uint256 _exchangeId,
         uint256 _returnedFeeAmount
-    ) external payable override onlyProtocol nonReentrant {
+    ) external override onlyProtocol nonReentrant {
         FeeInfo memory feeInfo = feeInfoByExchange[_exchangeId];
         if (feeInfo.amount == 0) revert InvalidExchangeId();
 

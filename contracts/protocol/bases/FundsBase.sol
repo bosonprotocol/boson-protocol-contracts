@@ -278,7 +278,10 @@ abstract contract FundsBase is Context {
                 }
 
                 try
-                    IDRFeeMutualizer(mutualizerAddress).returnDRFee{ gas: RETURN_DR_FEE_GAS }(exchangeId, returnAmount)
+                    IDRFeeMutualizer(mutualizerAddress).finalizeExchange{ gas: RETURN_DR_FEE_GAS }(
+                        exchangeId,
+                        returnAmount
+                    )
                 {} catch {
                     // Ignore failure to not block the main flow
                     emit IBosonFundsBaseEvents.DRFeeReturnFailed(exchangeId);

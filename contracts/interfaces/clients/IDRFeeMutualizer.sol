@@ -53,19 +53,17 @@ interface IDRFeeMutualizer is IERC165 {
     ) external returns (bool success);
 
     /**
-     * @notice Returns a DR fee to the mutualizer
+     * @notice Notifies the mutualizer that the exchange has been finalized and any unused fee can be returned
      * @param _exchangeId The exchange ID
      * @param _feeAmount The amount being returned (0 means protocol kept all fees)
-     * @dev Only callable by the Boson protocol. For native currency, feeAmount must equal msg.value.
+     * @dev Only callable by the Boson protocol. For native currency, token is wrapped and must be transferred as ERC20.
      *
      * Emits a {DRFeeReturned} event.
      *
      * Reverts if:
      * - Caller is not the Boson protocol
      * - exchangeId is not found
-     * - msg.value != feeAmount for native currency
-     * - msg.value > 0 for ERC20 tokens
-     * - ERC20 or native currency transfer fails
+     * - token transfer fails
      */
-    function returnDRFee(uint256 _exchangeId, uint256 _feeAmount) external payable;
+    function finalizeExchange(uint256 _exchangeId, uint256 _feeAmount) external;
 }
