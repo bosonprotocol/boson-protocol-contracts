@@ -1640,7 +1640,11 @@ describe("IBosonOfferHandler", function () {
         await mockForwarder.waitForDeployment();
 
         const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
-        drFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolAddress, await mockForwarder.getAddress());
+        drFeeMutualizer = await DRFeeMutualizerFactory.deploy(
+          protocolAddress,
+          await mockForwarder.getAddress(),
+          rando.address
+        );
         await drFeeMutualizer.waitForDeployment();
       });
 
@@ -2525,7 +2529,11 @@ describe("IBosonOfferHandler", function () {
         // Create first DRFeeMutualizer contract
         const protocolAddress = await offerHandler.getAddress();
         const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
-        drFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolAddress, await mockForwarder.getAddress());
+        drFeeMutualizer = await DRFeeMutualizerFactory.deploy(
+          protocolAddress,
+          await mockForwarder.getAddress(),
+          rando.address
+        );
         await drFeeMutualizer.waitForDeployment();
 
         // Create an offer with mutualizer
@@ -2551,7 +2559,11 @@ describe("IBosonOfferHandler", function () {
         // Create new mutualizer
         const protocolAddress = await offerHandler.getAddress();
         const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
-        newDrFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolAddress, await mockForwarder.getAddress());
+        newDrFeeMutualizer = await DRFeeMutualizerFactory.deploy(
+          protocolAddress,
+          await mockForwarder.getAddress(),
+          rando.address
+        );
         await newDrFeeMutualizer.waitForDeployment();
 
         // Update the mutualizer

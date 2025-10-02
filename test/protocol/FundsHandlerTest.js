@@ -184,6 +184,7 @@ describe("IBosonFundsHandler", function () {
   let bosonErrors;
   let bpd;
   let drFeeMutualizer;
+  let weth;
 
   before(async function () {
     accountId.next(true);
@@ -194,7 +195,7 @@ describe("IBosonFundsHandler", function () {
 
     // Add WETH
     const wethFactory = await getContractFactory("WETH9");
-    const weth = await wethFactory.deploy();
+    weth = await wethFactory.deploy();
     await weth.waitForDeployment();
 
     // Specify contracts needed for this test
@@ -274,7 +275,7 @@ describe("IBosonFundsHandler", function () {
 
     // Deploy DRFeeMutualizer
     const DRFeeMutualizerFactory = await ethers.getContractFactory("DRFeeMutualizer");
-    drFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolDiamondAddress, ZeroAddress);
+    drFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolDiamondAddress, ZeroAddress, await weth.getAddress());
     await drFeeMutualizer.waitForDeployment();
 
     // Get the beacon proxy address
@@ -4223,7 +4224,11 @@ describe("IBosonFundsHandler", function () {
         await mockForwarder.waitForDeployment();
 
         const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
-        drFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolAddress, await mockForwarder.getAddress());
+        drFeeMutualizer = await DRFeeMutualizerFactory.deploy(
+          protocolAddress,
+          await mockForwarder.getAddress(),
+          await weth.getAddress()
+        );
         await drFeeMutualizer.waitForDeployment();
 
         // Create offer with mutualizer (no agreement needed for offer creation)

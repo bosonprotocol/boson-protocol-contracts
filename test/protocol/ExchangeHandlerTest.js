@@ -139,12 +139,18 @@ describe("IBosonExchangeHandler", function () {
   let tokenId;
   let offerFeeLimit;
   let bosonErrors;
+  let weth;
 
   before(async function () {
     accountId.next(true);
 
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
+
+    // Add WETH
+    const wethFactory = await getContractFactory("WETH9");
+    weth = await wethFactory.deploy();
+    await weth.waitForDeployment();
 
     // Specify contracts needed for this test
     const contracts = {
@@ -181,7 +187,9 @@ describe("IBosonExchangeHandler", function () {
       protocolConfig: [, , protocolFeePercentage],
       extraReturnValues: { voucherImplementation, accessController },
       diamondAddress: protocolDiamondAddress,
-    } = await setupTestEnvironment(contracts));
+    } = await setupTestEnvironment(contracts, {
+      wethAddress: await weth.getAddress(),
+    }));
 
     bosonErrors = await getContractAt("BosonErrors", protocolDiamondAddress);
 
@@ -930,7 +938,11 @@ describe("IBosonExchangeHandler", function () {
         await mockForwarder.waitForDeployment();
 
         const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
-        drFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolAddress, await mockForwarder.getAddress());
+        drFeeMutualizer = await DRFeeMutualizerFactory.deploy(
+          protocolAddress,
+          await mockForwarder.getAddress(),
+          await weth.getAddress()
+        );
         await drFeeMutualizer.waitForDeployment();
 
         // Fund mutualizer with ETH for testing using the deposit function
