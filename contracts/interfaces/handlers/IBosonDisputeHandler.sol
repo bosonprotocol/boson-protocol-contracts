@@ -111,14 +111,16 @@ interface IBosonDisputeHandler is BosonErrors, IBosonDisputeEvents, IBosonFundsB
      * - Exchange does not exist
      * - Exchange is not in the Disputed state
      * - Caller is neither the seller nor the buyer
-     * - Signature does not belong to the address of the other party
+     * - Signature does not belong to the address of the other party. Refer to EIP712Lib.verify for details
      * - Dispute state is neither Resolving nor escalated
      * - Dispute was escalated and escalation period has elapsed
      *
      * @param _exchangeId  - the id of the associated exchange
      * @param _buyerPercent - percentage of the pot that goes to the buyer
-     * @param _signature - signature of the other party. If the signer is EOA, it must be ECDSA signature in the format of (r,s,v) struct, otherwise, it must be a valid ERC1271 signature.
-
+     * @param _signature - signature of the other party 
+                           If the other party is ordinary EOA, it must be ECDSA signature in the format of concatenated r,s,v values. 
+                           If the other party is a contract, it must be a valid ERC1271 signature.
+                           If the other party is a EIP-7702 smart account, it can be either a valid ERC1271 signature or a valid ECDSA signature.
      */
     function resolveDispute(uint256 _exchangeId, uint256 _buyerPercent, bytes calldata _signature) external;
 
