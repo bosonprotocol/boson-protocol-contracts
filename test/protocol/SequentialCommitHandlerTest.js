@@ -337,11 +337,15 @@ describe("IBosonSequentialCommitHandler", function () {
             exchange.buyerId = newBuyer.id;
           });
 
-          it("should emit FundsEncumbered, FundsReleased, FundsWithdrawn and BuyerCommitted events", async function () {
+          it("should emit FundsDeposited, FundsEncumbered, FundsReleased, FundsWithdrawn and BuyerCommitted events", async function () {
             // Sequential commit to offer, retrieving the event
             const tx = await sequentialCommitHandler
               .connect(buyer2)
               .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery);
+
+            await expect(tx)
+              .to.emit(sequentialCommitHandler, "FundsDeposited")
+              .withArgs(newBuyer.id, buyer2.address, ZeroAddress, price2);
 
             await expect(tx)
               .to.emit(sequentialCommitHandler, "FundsEncumbered")
@@ -1029,6 +1033,10 @@ describe("IBosonSequentialCommitHandler", function () {
             const tx = sequentialCommitHandler
               .connect(reseller)
               .sequentialCommitToOffer(buyer2.address, tokenId, priceDiscovery);
+
+            await expect(tx)
+              .to.emit(sequentialCommitHandler, "FundsDeposited")
+              .withArgs(newBuyer.id, reseller.address, ZeroAddress, price2);
 
             await expect(tx)
               .to.emit(sequentialCommitHandler, "FundsEncumbered")

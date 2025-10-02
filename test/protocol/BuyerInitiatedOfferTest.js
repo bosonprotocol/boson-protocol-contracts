@@ -519,7 +519,7 @@ describe("Buyer-Initiated Exchange", function () {
     });
 
     context("👉 commitToOffer() - Seller Commits", async function () {
-      it("should emit SellerCommitted event when seller commits to buyer offer", async function () {
+      it("should emit SellerCommitted, FundsDeposited, and FundsEncumbered events when seller commits to buyer offer", async function () {
         const expectedExchangeId = "1";
 
         // Create seller parameters struct
@@ -555,6 +555,13 @@ describe("Buyer-Initiated Exchange", function () {
         const voucher = event[4];
         expect(voucher[0]).to.be.gt(0); // voucher.committedDate
         expect(voucher[1]).to.be.gt(0); // voucher.validUntilDate
+
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(sellerId, assistant.address, offer.exchangeToken, offer.sellerDeposit);
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsEncumbered")
+          .withArgs(sellerId, offer.exchangeToken, offer.sellerDeposit, assistant.address);
       });
 
       it("should update state correctly when seller commits to buyer offer", async function () {
