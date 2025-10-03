@@ -9,6 +9,8 @@ import { DisputeHandlerFacet } from "../protocol/facets/DisputeHandlerFacet.sol"
  * @notice Extended DisputeHandlerFacet with additional external functions for testing
  */
 contract TestDisputeHandlerFacet is DisputeHandlerFacet {
+    constructor(address _wNative) DisputeHandlerFacet(_wNative) {}
+
     /**
      * @notice Test function to test invalid final dispute state
      *

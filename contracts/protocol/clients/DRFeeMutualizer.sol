@@ -3,6 +3,7 @@ pragma solidity 0.8.22;
 
 import { IDRFeeMutualizer } from "../../interfaces/clients/IDRFeeMutualizer.sol";
 import { IERC165 } from "../../interfaces/IERC165.sol";
+import { IWrappedNative } from "../../interfaces/IWrappedNative.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -100,9 +101,12 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
      * @param _bosonProtocol The address of the Boson protocol contract
      * @param _forwarder The address of the trusted forwarder for meta-transactions
      */
-    constructor(address _bosonProtocol, address _forwarder) ERC2771Context(_forwarder) {
+    constructor(address _bosonProtocol, address _forwarder, address _wNative) ERC2771Context(_forwarder) {
         if (_bosonProtocol == address(0)) revert InvalidProtocolAddress();
+        if (_wNative == address(0)) revert BosonErrors.InvalidAddress();
+
         BOSON_PROTOCOL = _bosonProtocol;
+        wNative = IWrappedNative(_wNative);
         // Initialize with empty agreement at index 0 for 1-indexed access
         agreements.push();
     }
@@ -207,35 +211,36 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
     }
 
     /**
-     * @notice Returns a DR fee to the mutualizer
+     * @notice Notifies the mutualizer that the exchange has been finalized and any unused fee can be returned
      * @param _exchangeId The exchange ID
      * @param _returnedFeeAmount The amount being returned (0 means protocol kept all fees)
-     * @dev Only callable by the Boson protocol. For native currency, returnedFeeAmount must equal msg.value.
+     * @dev Only callable by the Boson protocol. For native currency, token is wrapped and must be transferred as ERC20.
      *
      * Reverts if:
      * - Caller is not the Boson protocol
      * - exchangeId is not found
-     * - msg.value != returnedFeeAmount for native currency
-     * - msg.value > 0 for ERC20 tokens
-     * - ERC20 or native currency transfer fails
+     * - Caller is not the Boson protocol
+     * - exchangeId is not found
+     * - token transfer fails
      */
-    function returnDRFee(
+    function finalizeExchange(
         uint256 _exchangeId,
         uint256 _returnedFeeAmount
-    ) external payable override onlyProtocol nonReentrant {
-        FeeInfo storage feeInfo = feeInfoByExchange[_exchangeId];
-        uint256 requestedFeeAmount = feeInfo.amount;
-        if (requestedFeeAmount == 0) revert InvalidExchangeId();
+    ) external override onlyProtocol nonReentrant {
+        FeeInfo memory feeInfo = feeInfoByExchange[_exchangeId];
+        if (feeInfo.amount == 0) revert InvalidExchangeId();
 
         // Fee is being returned, add back to pool (if any)
         if (_returnedFeeAmount > 0) {
-            validateIncomingPayment(feeInfo.token, _returnedFeeAmount);
+            bool isWrapped = feeInfo.token == address(0);
+            validateIncomingPayment(isWrapped ? address(wNative) : feeInfo.token, _returnedFeeAmount);
+            if (isWrapped) wNative.withdraw(_returnedFeeAmount);
             poolBalances[feeInfo.token] += _returnedFeeAmount;
         }
 
         delete feeInfoByExchange[_exchangeId];
 
-        emit DRFeeReturned(_exchangeId, requestedFeeAmount, _returnedFeeAmount);
+        emit DRFeeReturned(_exchangeId, feeInfo.amount, _returnedFeeAmount);
     }
 
     // ============= Pool Management =============
@@ -560,4 +565,10 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
     function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
         return interfaceId == type(IDRFeeMutualizer).interfaceId || interfaceId == type(IERC165).interfaceId;
     }
+
+    /**
+     * @notice Fallback function to accept native currency deposits
+     * @dev Required for receiving native currency when unwrapping WETH
+     */
+    receive() external payable {}
 }

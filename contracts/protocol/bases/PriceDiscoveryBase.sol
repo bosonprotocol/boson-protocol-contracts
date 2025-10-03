@@ -14,8 +14,6 @@ import { ProtocolBase } from "./../bases/ProtocolBase.sol";
  * @dev Provides methods for fulfiling orders on external price discovery contracts.
  */
 contract PriceDiscoveryBase is ProtocolBase {
-    IWrappedNative internal immutable wNative;
-
     /**
      * @notice
      * For offers with native exchange token, it is expected that the price discovery contracts will

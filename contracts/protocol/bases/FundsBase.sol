@@ -11,6 +11,7 @@ import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { IDRFeeMutualizer } from "../../interfaces/clients/IDRFeeMutualizer.sol";
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
+import { IWrappedNative } from "../../interfaces/IWrappedNative.sol";
 
 /**
  * @title FundsBase
@@ -19,6 +20,7 @@ import { Context } from "@openzeppelin/contracts/utils/Context.sol";
  */
 abstract contract FundsBase is Context {
     using SafeERC20 for IERC20;
+    IWrappedNative internal immutable wNative;
 
     /**
      * @notice Takes in the offer id and entity id and encumbers the appropriate funds during commitToOffer.
@@ -255,7 +257,8 @@ abstract contract FundsBase is Context {
             uint256 returnAmount = drTerms.feeAmount - payoff.disputeResolver;
 
             // Use exchange-level mutualizer address (locked at commitment time)
-            if (exchange.mutualizerAddress == address(0)) {
+            address mutualizerAddress = exchange.mutualizerAddress;
+            if (mutualizerAddress == address(0)) {
                 if (returnAmount > 0) {
                     increaseAvailableFundsAndEmitEvent(
                         _exchangeId,
@@ -266,16 +269,39 @@ abstract contract FundsBase is Context {
                     );
                 }
             } else {
-                if (exchangeToken == address(0)) {
-                    IDRFeeMutualizer(exchange.mutualizerAddress).returnDRFee{ value: returnAmount }(
-                        _exchangeId,
-                        returnAmount
-                    );
-                } else {
-                    if (returnAmount > 0) {
-                        IERC20(exchangeToken).safeApprove(exchange.mutualizerAddress, returnAmount);
+                uint256 exchangeId = _exchangeId; // stack too deep ToDO: any other way to avoid this?
+
+                if (returnAmount > 0) {
+                    if (exchangeToken == address(0)) {
+                        exchangeToken = address(wNative);
+                        wNative.deposit{ value: returnAmount }();
                     }
-                    IDRFeeMutualizer(exchange.mutualizerAddress).returnDRFee(_exchangeId, returnAmount);
+                    uint256 oldAllowance = IERC20(exchangeToken).allowance(address(this), mutualizerAddress);
+                    IERC20(exchangeToken).forceApprove(mutualizerAddress, returnAmount + oldAllowance);
+                }
+
+                try
+                    IDRFeeMutualizer(mutualizerAddress).finalizeExchange{ gas: FINALIZE_EXCHANGE_FEE_GAS }(
+                        exchangeId,
+                        returnAmount
+                    )
+                {
+                    emit IBosonFundsBaseEvents.DRFeeReturned(
+                        exchangeId,
+                        exchangeToken,
+                        returnAmount,
+                        mutualizerAddress,
+                        sender
+                    );
+                } catch {
+                    // Ignore failure to not block the main flow
+                    emit IBosonFundsBaseEvents.DRFeeReturnFailed(
+                        exchangeId,
+                        exchangeToken,
+                        returnAmount,
+                        mutualizerAddress,
+                        sender
+                    );
                 }
             }
         }
@@ -447,13 +473,10 @@ abstract contract FundsBase is Context {
         if (_amount > 0) {
             // protocol balance before the transfer
             uint256 protocolTokenBalanceBefore = IERC20(_tokenAddress).balanceOf(address(this));
-
             // transfer ERC20 tokens from the caller
             IERC20(_tokenAddress).safeTransferFrom(_from, address(this), _amount);
-
             // protocol balance after the transfer
             uint256 protocolTokenBalanceAfter = IERC20(_tokenAddress).balanceOf(address(this));
-
             // make sure that expected amount of tokens was transferred
             if (protocolTokenBalanceAfter - protocolTokenBalanceBefore != _amount)
                 revert BosonErrors.InsufficientValueReceived();

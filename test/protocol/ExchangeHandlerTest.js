@@ -139,6 +139,7 @@ describe("IBosonExchangeHandler", function () {
   let tokenId;
   let offerFeeLimit;
   let bosonErrors;
+  let weth;
   let buyerEscalationDeposit;
 
   before(async function () {
@@ -146,6 +147,11 @@ describe("IBosonExchangeHandler", function () {
 
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
+
+    // Add WETH
+    const wethFactory = await getContractFactory("WETH9");
+    weth = await wethFactory.deploy();
+    await weth.waitForDeployment();
 
     // Specify contracts needed for this test
     const contracts = {
@@ -182,7 +188,9 @@ describe("IBosonExchangeHandler", function () {
       protocolConfig: [, , protocolFeePercentage],
       extraReturnValues: { voucherImplementation, accessController },
       diamondAddress: protocolDiamondAddress,
-    } = await setupTestEnvironment(contracts));
+    } = await setupTestEnvironment(contracts, {
+      wethAddress: await weth.getAddress(),
+    }));
 
     bosonErrors = await getContractAt("BosonErrors", protocolDiamondAddress);
 
@@ -943,7 +951,11 @@ describe("IBosonExchangeHandler", function () {
         await mockForwarder.waitForDeployment();
 
         const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
-        drFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolAddress, await mockForwarder.getAddress());
+        drFeeMutualizer = await DRFeeMutualizerFactory.deploy(
+          protocolAddress,
+          await mockForwarder.getAddress(),
+          await weth.getAddress()
+        );
         await drFeeMutualizer.waitForDeployment();
 
         // Fund mutualizer with ETH for testing using the deposit function
@@ -9938,7 +9950,7 @@ describe("IBosonExchangeHandler", function () {
     beforeEach(async function () {
       // Deploy test facet and cut the test functions
       const TestExchangeHandlerFacet = await ethers.getContractFactory("TestExchangeHandlerFacet");
-      const testExchangeHandlerFacet = await TestExchangeHandlerFacet.deploy(0);
+      const testExchangeHandlerFacet = await TestExchangeHandlerFacet.deploy(0, ZeroAddress);
       await testExchangeHandlerFacet.waitForDeployment();
 
       const cutFacetViaDiamond = await getContractAt("DiamondCutFacet", protocolDiamondAddress);
