@@ -383,6 +383,7 @@ contract BosonTypes {
         uint256 protocol;
         uint256 agent;
         uint256 disputeResolver;
+        uint256 mutualizer;
     }
 
     struct SellerOfferParams {
