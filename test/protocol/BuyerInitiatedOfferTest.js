@@ -76,6 +76,7 @@ describe("Buyer-Initiated Exchange", function () {
   let DRFeeNative, DRFeeToken;
   let sellerAllowList;
   let nextOfferId;
+  let weth
 
   before(async function () {
     [
@@ -94,6 +95,10 @@ describe("Buyer-Initiated Exchange", function () {
       buyer2,
       assistant2,
     ] = await getSigners();
+
+                const wethFactory = await getContractFactory("WETH9");
+    weth = await wethFactory.deploy();
+    await weth.waitForDeployment();
 
     const contracts = {
       accessController: "AccessController",
@@ -120,7 +125,7 @@ describe("Buyer-Initiated Exchange", function () {
         pauseHandler,
       },
       protocolConfig: [, , , , buyerEscalationDepositPercentage],
-    } = await setupTestEnvironment(contracts, {}));
+    } = await setupTestEnvironment(contracts, {wethAddress: await weth.getAddress()}));
 
     assistant = admin;
     assistantDR = adminDR;
@@ -703,7 +708,7 @@ describe("Buyer-Initiated Exchange", function () {
         await mockForwarder.waitForDeployment();
 
         const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
-        const drFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolAddress, await mockForwarder.getAddress());
+        const drFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolAddress, await mockForwarder.getAddress(), await weth.getAddress());
         await drFeeMutualizer.waitForDeployment();
 
         // Fund mutualizer with ETH for testing using the deposit function
