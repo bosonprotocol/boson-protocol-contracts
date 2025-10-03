@@ -12,7 +12,11 @@ contract MockDRFeeMutualizer is DRFeeMutualizer {
     bytes public data;
     address public sender;
 
-    constructor(address _bosonProtocol, address _forwarder) DRFeeMutualizer(_bosonProtocol, _forwarder) {}
+    constructor(
+        address _bosonProtocol,
+        address _forwarder,
+        address _wNative
+    ) DRFeeMutualizer(_bosonProtocol, _forwarder, _wNative) {}
 
     function testMsgData(bytes calldata) external {
         data = msg.data;

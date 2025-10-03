@@ -106,10 +106,16 @@ contract MockBosonProtocolForMutualizer {
     }
 
     /**
-     * @notice Proxy to call returnDRFee on DRFeeMutualizer as protocol
+     * @notice Proxy to call finalizeExchange on DRFeeMutualizer as protocol
      */
-    function callReturnDRFee(address _mutualizer, uint256 _exchangeId, uint256 _feeAmount) external payable {
-        IDRFeeMutualizer(_mutualizer).returnDRFee{ value: msg.value }(_exchangeId, _feeAmount);
+    function callFinalizeExchange(
+        address _mutualizer,
+        uint256 _exchangeId,
+        uint256 _feeAmount,
+        address _tokenAddress
+    ) external {
+        IERC20(_tokenAddress).forceApprove(_mutualizer, _feeAmount);
+        IDRFeeMutualizer(_mutualizer).finalizeExchange(_exchangeId, _feeAmount);
     }
 
     /**

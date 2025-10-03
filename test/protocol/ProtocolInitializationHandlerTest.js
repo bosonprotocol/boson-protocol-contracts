@@ -582,6 +582,8 @@ describe("ProtocolInitializationHandler", async function () {
       version = "2.2.0";
 
       const facetsToDeploy = await getV2_2_0DeployConfig();
+      facetsToDeploy.ExchangeHandlerFacet.constructorArgs[1] = rando.address; // not 2.2.0 constructor argument, but a simplification for tests
+      facetsToDeploy.DisputeHandlerFacet.constructorArgs = [rando.address]; // not 2.2.0 constructor argument, but a simplification for tests
 
       // Make initial deployment (simulate v2.2.0)
       await deployAndCutFacets(await protocolDiamond.getAddress(), facetsToDeploy, maxPriorityFeePerGas, version);
@@ -700,6 +702,8 @@ describe("ProtocolInitializationHandler", async function () {
           ...facetsToDeploy.ConfigHandlerFacet.init[0],
           voucherBeacon: await beacon.getAddress(),
         };
+        facetsToDeploy.ExchangeHandlerFacet.constructorArgs[1] = rando.address; // not 2.2.0 constructor argument, but a simplification for tests
+        facetsToDeploy.DisputeHandlerFacet.constructorArgs = [rando.address]; // not 2.2.0 constructor argument, but a simplification for tests
 
         let doPreprocess = true; // Due to "hardhat-preprocessor" way of caching, we need a workaround to toggle preprocessing on and off
         // Make initial deployment (simulate v2.2.1)
@@ -937,6 +941,8 @@ describe("ProtocolInitializationHandler", async function () {
         ...facetsToDeploy.ConfigHandlerFacet.init[0],
         voucherBeacon: await beacon.getAddress(),
       };
+      facetsToDeploy.ExchangeHandlerFacet.constructorArgs[1] = rando.address; // not 2.2.0 constructor argument, but a simplification for tests
+      facetsToDeploy.DisputeHandlerFacet.constructorArgs = [rando.address]; // not 2.2.0 constructor argument, but a simplification for tests
 
       // Make initial deployment (simulate v2.3.0)
       await deployAndCutFacets(await protocolDiamond.getAddress(), facetsToDeploy, maxPriorityFeePerGas, version);

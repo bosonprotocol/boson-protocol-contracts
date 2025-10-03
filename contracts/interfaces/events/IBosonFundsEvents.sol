@@ -51,7 +51,14 @@ interface IBosonFundsBaseEvents {
         uint256 indexed exchangeId,
         address indexed tokenAddress,
         uint256 returnAmount,
-        address payable mutualizerAddress,
+        address indexed mutualizerAddress,
+        address executedBy
+    );
+    event DRFeeReturnFailed(
+        uint256 indexed exchangeId,
+        address indexed tokenAddress,
+        uint256 returnAmount,
+        address indexed mutualizerAddress,
         address executedBy
     );
 }
