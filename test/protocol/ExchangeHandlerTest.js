@@ -9725,6 +9725,78 @@ describe("IBosonExchangeHandler", function () {
               )
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_BUYER_WALLET);
         });
+
+        it("Mutualizer is EOA", async function () {
+          offer.price = "0";
+          offer.buyerCancelPenalty = "0";
+          offerFees.protocolFee = "0";
+
+          const modifiedOffer = offer.clone();
+          modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+          message.offer = modifiedOffer;
+
+          // Collect the signature components
+          let signature = await prepareDataSignature(
+            buyer,
+            eip712TypeDefinition,
+            "FullOffer",
+            message,
+            await exchangeCommitHandler.getAddress()
+          );
+
+          const invalidSellerParams = { ...sellerParams };
+          invalidSellerParams.mutualizerAddress = buyer.address;
+          // Attempt to create an exchange, expecting revert
+          await expect(
+            exchangeCommitHandler
+              .connect(assistant)
+              .createOfferAndCommit(
+                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+                buyer.address,
+                assistant.address,
+                signature,
+                "0",
+                invalidSellerParams,
+                { value: offer.sellerDeposit }
+              )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNSUPPORTED_MUTUALIZER);
+        });
+
+        it("Mutualizer does not support IDRFeeMutualizer interface", async function () {
+          offer.price = "0";
+          offer.buyerCancelPenalty = "0";
+          offerFees.protocolFee = "0";
+
+          const modifiedOffer = offer.clone();
+          modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+          message.offer = modifiedOffer;
+
+          // Collect the signature components
+          let signature = await prepareDataSignature(
+            buyer,
+            eip712TypeDefinition,
+            "FullOffer",
+            message,
+            await exchangeCommitHandler.getAddress()
+          );
+
+          const invalidSellerParams = { ...sellerParams };
+          invalidSellerParams.mutualizerAddress = await foreign20.getAddress();
+          // Attempt to create an exchange, expecting revert
+          await expect(
+            exchangeCommitHandler
+              .connect(assistant)
+              .createOfferAndCommit(
+                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+                buyer.address,
+                assistant.address,
+                signature,
+                "0",
+                invalidSellerParams,
+                { value: offer.sellerDeposit }
+              )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.UNSUPPORTED_MUTUALIZER);
+        });
       });
     });
 

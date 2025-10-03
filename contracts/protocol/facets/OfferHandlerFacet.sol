@@ -346,9 +346,11 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *
      * Reverts if:
      * - The offers region of protocol is paused
+     * - The new mutualizer contract does not implement the IDRFeeMutualizer interface
      * - Offer does not exist
      * - Caller is not the assistant of the offer
      * - Offer has already been voided
+     * - New mutualizer address is the same as the existing one
      *
      * @param _offerId - the id of the offer to update
      * @param _newMutualizer - the new mutualizer address (can be zero for self-mutualization)
@@ -357,7 +359,18 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         uint256 _offerId,
         address _newMutualizer
     ) external override offersNotPaused nonReentrant {
-        updateOfferMutualizerInternal(_offerId, _newMutualizer);
+        if (_newMutualizer != address(0)) {
+            validateMutualizerInterface(_newMutualizer);
+        }
+
+        // Make sure the caller is the assistant, offer exists and is not voided
+        Offer storage offer = getValidOfferWithSellerCheck(_offerId);
+
+        DisputeResolutionTerms storage disputeResolutionTerms = fetchDisputeResolutionTerms(_offerId);
+        if (disputeResolutionTerms.mutualizerAddress == _newMutualizer) revert SameMutualizerAddress();
+        disputeResolutionTerms.mutualizerAddress = payable(_newMutualizer);
+
+        emit OfferMutualizerUpdated(_offerId, offer.sellerId, _newMutualizer, _msgSender());
     }
 
     /**
@@ -488,32 +501,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
 
         // Notify watchers of state change
         emit OfferRoyaltyInfoUpdated(_offerId, offer.sellerId, _royaltyInfo, _msgSender());
-    }
-
-    /**
-     * @notice Internal function to update the mutualizer address for an offer.
-     *
-     * Emits an OfferMutualizerUpdated event if successful.
-     *
-     * Reverts if:
-     * - The offers region of protocol is paused
-     * - Offer does not exist
-     * - Caller is not the assistant of the offer
-     * - Offer has already been voided
-     * - New mutualizer address is the same as the existing one
-     *
-     * @param _offerId - the id of the offer to update
-     * @param _newMutualizer - the new mutualizer address (can be zero for self-mutualization)
-     */
-    function updateOfferMutualizerInternal(uint256 _offerId, address _newMutualizer) internal {
-        // Make sure the caller is the assistant, offer exists and is not voided
-        Offer storage offer = getValidOfferWithSellerCheck(_offerId);
-
-        DisputeResolutionTerms storage disputeResolutionTerms = fetchDisputeResolutionTerms(_offerId);
-        if (disputeResolutionTerms.mutualizerAddress == _newMutualizer) revert SameMutualizerAddress();
-        disputeResolutionTerms.mutualizerAddress = payable(_newMutualizer);
-
-        emit OfferMutualizerUpdated(_offerId, offer.sellerId, _newMutualizer, _msgSender());
     }
 
     /**

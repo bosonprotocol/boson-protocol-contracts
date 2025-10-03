@@ -125,6 +125,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
      * - Seller has less funds available than seller deposit
      * - Buyer has less funds available than offer price
      * - Offer belongs to a group with a condition
+     * - The mutualizer contract does not implement the IDRFeeMutualizer interface
      *
      * @param _offerId - the id of the offer to commit to
      * @param _sellerParams - the seller-specific parameters (collection index, royalty info, mutualizer address)
@@ -241,6 +242,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
      * - Royalty percentage is less than the value decided by the admin
      * - Total royalty percentage is more than max royalty percentage
      * - Not enough funds can be encumbered
+     * - The mutualizer contract does not implement the IDRFeeMutualizer interface
      * - Signature is invalid. Refer to EIP712Lib.verify for details
      *
      * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
@@ -941,6 +943,7 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
      * - Seller does not exist or is not an assistant
      * - Collection index is invalid for the seller
      * - Royalty info is invalid
+     * - The mutualizer contract does not implement the IDRFeeMutualizer interface
      *
      * @param _committer - the seller's address. The caller can commit on behalf of a seller.
      * @param _offerId - the id of the offer to commit to
@@ -973,6 +976,8 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
             offer.royaltyInfo[0] = _sellerParams.royaltyInfo;
 
             if (_sellerParams.mutualizerAddress != address(0)) {
+                validateMutualizerInterface(_sellerParams.mutualizerAddress);
+
                 DisputeResolutionTerms storage disputeTerms = fetchDisputeResolutionTerms(_offerId);
                 disputeTerms.mutualizerAddress = _sellerParams.mutualizerAddress;
             }

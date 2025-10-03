@@ -83,6 +83,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
      * - Royalty recipient is not on seller's allow list
      * - Royalty percentage is less than the value decided by the admin
      * - Total royalty percentage is more than max royalty percentage
+     * - The mutualizer contract does not implement the IDRFeeMutualizer interface
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -176,6 +177,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
      * - Royalty recipient is not on seller's allow list
      * - Royalty percentage is less than the value decided by the admin
      * - Total royalty percentage is more than max royalty percentage
+     * - The mutualizer contract does not implement the IDRFeeMutualizer interface
      *
      * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -264,16 +266,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
 
                         // Validate mutualizer interface if address is not zero (non-zero means external mutualizer)
                         if (_drParameters.mutualizerAddress != address(0)) {
-                            (bool success, bytes memory data) = _drParameters.mutualizerAddress.staticcall(
-                                abi.encodeWithSelector(
-                                    IERC165.supportsInterface.selector,
-                                    type(IDRFeeMutualizer).interfaceId
-                                )
-                            );
-
-                            if (!success || data.length != 32 || abi.decode(data, (bool)) == false) {
-                                revert UnsupportedMutualizer();
-                            }
+                            validateMutualizerInterface(_drParameters.mutualizerAddress);
                         }
                     }
                     protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
@@ -500,6 +493,26 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
         }
 
         if (totalRoyalties > _limits.maxRoyaltyPercentage) revert InvalidRoyaltyPercentage();
+    }
+
+    /**
+     * @notice Validates that the mutualizer contract implements the IDRFeeMutualizer interface
+     *
+     * Reverts if:
+     * - Call to supportsInterface fails
+     * - Call to supportsInterface returns false
+     * - Call to supportsInterface returns data of incorrect length
+     *
+     * @param _mutualizerAddress - the address of the mutualizer contract
+     */
+    function validateMutualizerInterface(address _mutualizerAddress) internal view {
+        (bool success, bytes memory data) = _mutualizerAddress.staticcall(
+            abi.encodeWithSelector(IERC165.supportsInterface.selector, type(IDRFeeMutualizer).interfaceId)
+        );
+
+        if (!success || data.length != 32 || !abi.decode(data, (bool))) {
+            revert UnsupportedMutualizer();
+        }
     }
 
     /**

@@ -75,6 +75,7 @@ interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBos
      * - Received ERC20 token amount differs from the expected value
      * - Seller has less funds available than sellerDeposit
      * - Buyer has less funds available than item price
+     * - The mutualizer contract does not implement the IDRFeeMutualizer interface
      *
      * @param _offerId - the id of the offer to commit to
      * @param _sellerParams - the seller-specific parameters (collection index, royalty info, mutualizer address)
@@ -143,6 +144,7 @@ interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBos
      * - Royalty percentage is less than the value decided by the admin
      * - Total royalty percentage is more than max royalty percentage
      * - Not enough funds can be encumbered
+     * - The mutualizer contract does not implement the IDRFeeMutualizer interface
      * - Signature is invalid. Refer to EIP712Lib.verify for details
      *
      * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
