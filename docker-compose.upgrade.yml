@@ -1,0 +1,9 @@
+# Docker Compose file for upgrade testing
+# Used by test/upgrade/ tests to verify upgrade compatibility from v2.4.2 to newer versions
+
+services:
+  boson-protocol-node:
+    # Boson Protocol v2.4.2 with contracts pre-deployed
+    image: bosonprotocol/boson-protocol-node@sha256:a8fcc615de7344e669795cb106dfd4c67aee22d9cbbaffc74b916ee29be73ee0
+    ports:
+      - "8545:8545"
