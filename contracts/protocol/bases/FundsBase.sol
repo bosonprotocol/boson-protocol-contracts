@@ -254,51 +254,49 @@ abstract contract FundsBase is Context {
 
         // Return unused DR fee to mutualizer or seller's pool
         if (drTerms.feeAmount != 0) {
-            uint256 returnAmount = drTerms.feeAmount - payoff.disputeResolver;
+            payoff.mutualizer = drTerms.feeAmount - payoff.disputeResolver;
 
             // Use exchange-level mutualizer address (locked at commitment time)
             address mutualizerAddress = exchange.mutualizerAddress;
             if (mutualizerAddress == address(0)) {
-                if (returnAmount > 0) {
+                if (payoff.mutualizer > 0) {
                     increaseAvailableFundsAndEmitEvent(
                         _exchangeId,
                         offer.sellerId,
                         exchangeToken,
-                        returnAmount,
+                        payoff.mutualizer,
                         sender
                     );
                 }
             } else {
-                uint256 exchangeId = _exchangeId; // stack too deep ToDO: any other way to avoid this?
-
-                if (returnAmount > 0) {
+                if (payoff.mutualizer > 0) {
                     if (exchangeToken == address(0)) {
                         exchangeToken = address(wNative);
-                        wNative.deposit{ value: returnAmount }();
+                        wNative.deposit{ value: payoff.mutualizer }();
                     }
                     uint256 oldAllowance = IERC20(exchangeToken).allowance(address(this), mutualizerAddress);
-                    IERC20(exchangeToken).forceApprove(mutualizerAddress, returnAmount + oldAllowance);
+                    IERC20(exchangeToken).forceApprove(mutualizerAddress, payoff.mutualizer + oldAllowance);
                 }
 
                 try
                     IDRFeeMutualizer(mutualizerAddress).finalizeExchange{ gas: FINALIZE_EXCHANGE_FEE_GAS }(
-                        exchangeId,
-                        returnAmount
+                        _exchangeId,
+                        payoff.mutualizer
                     )
                 {
                     emit IBosonFundsBaseEvents.DRFeeReturned(
-                        exchangeId,
+                        _exchangeId,
                         exchangeToken,
-                        returnAmount,
+                        payoff.mutualizer,
                         mutualizerAddress,
                         sender
                     );
                 } catch {
                     // Ignore failure to not block the main flow
                     emit IBosonFundsBaseEvents.DRFeeReturnFailed(
-                        exchangeId,
+                        _exchangeId,
                         exchangeToken,
-                        returnAmount,
+                        payoff.mutualizer,
                         mutualizerAddress,
                         sender
                     );
