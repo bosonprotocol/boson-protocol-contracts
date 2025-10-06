@@ -42,11 +42,11 @@
     "estimate-limits": "npx hardhat clean && npx hardhat compile && npx hardhat estimate-limits"
   },
   "dependencies": {
-    "@bosonprotocol/common": "^1.31.0",
     "@openzeppelin/contracts": "^4.9.6",
     "@openzeppelin/contracts-upgradeable": "4.9.6"
   },
   "devDependencies": {
+    "@bosonprotocol/common": "1.31.0",
     "@bosonprotocol/solidoc": "3.0.3",
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "^9.30.1",

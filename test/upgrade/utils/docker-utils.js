@@ -35,7 +35,7 @@ class DockerUtils {
   async waitForContracts() {
     while (true) {
       try {
-        await execAsync(`docker-compose -f ${this.composeFile} exec boson-protocol-node ls /app/deploy.done`);
+        await execAsync(`docker-compose -f ${this.composeFile} exec -T boson-protocol-node ls /app/deploy.done`);
         console.log("✅ Successfully deployed contracts!");
         break;
       } catch (error) {

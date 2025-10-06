@@ -98,7 +98,8 @@ async function mockOffer({ refreshModule, legacyOffer } = {}) {
       metadataUri,
       metadataHash,
       voided,
-      // Exclude new fields: creator, collectionIndex, royaltyInfo, buyerId
+      collectionIndex,
+      royaltyInfo,
     };
   } else {
     offer = new Offer(

@@ -28,7 +28,7 @@ async function migrate(env) {
 
     // Accept both v2.4.1 and v2.4.2 as valid starting versions for Docker compatibility
     const currentVersion = contractsFile?.protocolVersion;
-    if (currentVersion !== "2.4.2") {
+    if (currentVersion !== "2.4.1" && currentVersion !== "2.4.2") {
       throw new Error(`Current contract version must be 2.4.1 or 2.4.2, but found: ${currentVersion}`);
     }
 

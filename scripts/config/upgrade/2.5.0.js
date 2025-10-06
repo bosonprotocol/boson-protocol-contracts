@@ -27,7 +27,8 @@ async function getFacets() {
     remove: [],
     skipSelectors: {},
     facetsToInit: {
-      ExchangeHandlerFacet: { constructorArgs: [EXCHANGE_ID_2_2_0[network]] },
+      ExchangeHandlerFacet: { constructorArgs: [EXCHANGE_ID_2_2_0[network], WrappedNative[network]] },
+      DisputeHandlerFacet: { constructorArgs: [WrappedNative[network]] },
       PriceDiscoveryHandlerFacet: { constructorArgs: [WrappedNative[network]] },
       SequentialCommitHandlerFacet: { constructorArgs: [WrappedNative[network]] },
       ExchangeCommitFacet: { constructorArgs: [] }, // New facet initialization
