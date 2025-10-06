@@ -211,7 +211,7 @@ jobs:
         uses: crytic/slither-action@v0.4.1
         id: slither
         with:
-          node-version: 16
+          node-version: 20.12.x
           sarif: results.sarif
           fail-on: none
       - name: Upload SARIF file

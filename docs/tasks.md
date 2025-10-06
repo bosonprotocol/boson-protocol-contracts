@@ -30,6 +30,16 @@ This builds the contracts and runs the code coverage. This is slower than testin
 
 `npm run coverage`
 
+### Test the upgrade
+
+Before every upgrade, a special upgrade tests are prepared. They make sure that the upgrade does not break the protocol. They deploy an older version of the protocol and populate it with entities and offers. Then the upgrade is performed and special tests make sure that old offers and exchanges are not broken and that the new features work as expected.  
+
+Prior to 2.5.0. all tests were run using a hardhat test instance, so they required no special setup. Starting with 2.5.0 upgrade, the test use docker image of older contracts, so in order to run them, you need to have `docker` and `docker-compose` on your machine.  
+To run the tests, use the command
+
+`npx hardhat test test/upgrade/2.4.2-2.5.0.js --network localhost`
+
+
 ### Deploy suite
 
 Deploy suite deploys protocol diamond, all facets, client and beacon, and initializes protocol diamond. The script cleans the cache, compiles contracts, deploys them and store the logs into a text file.

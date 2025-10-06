@@ -22,8 +22,8 @@
   ],
   "scripts": {
     "build": "npx hardhat compile",
-    "test": "npx hardhat test test/domain/** test/access/** test/protocol/**.js test/protocol/clients/** --parallel",
-    "test:integration": "npx hardhat test test/integration/** --parallel",
+    "test": "npx hardhat test test/domain/** test/access/** test/protocol/**.js test/protocol/clients/**",
+    "test:integration": "npx hardhat test test/integration/**",
     "test:gas-reporter": "npx hardhat test test/domain/** test/access/** test/protocol/**.js test/protocol/clients/**",
     "check:contracts": "solhint 'contracts/**/*.sol' && prettier --list-different contracts/**",
     "check:scripts": "eslint test/** scripts/** '*.js' && prettier --list-different test/** scripts/** '*.js'",
