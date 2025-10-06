@@ -2,18 +2,14 @@
 pragma solidity 0.8.22;
 
 import "../../domain/BosonConstants.sol";
-import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonExchangeManagementHandler } from "../../interfaces/handlers/IBosonExchangeManagementHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
-import { IDRFeeMutualizer } from "../../interfaces/clients/IDRFeeMutualizer.sol";
-import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
+import { IWrappedNative } from "../../interfaces/IWrappedNative.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BuyerBase } from "../bases/BuyerBase.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
 /**
@@ -33,12 +29,16 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeManagemen
      * @notice After v2.2.0, token ids are derived from offerId and exchangeId.
      * EXCHANGE_ID_2_2_0 is the first exchange id to use for 2.2.0.
      * Set EXCHANGE_ID_2_2_0 in the constructor.
+     * For offers with native exchange token, the DRFee is returned to the mutualizer in wrapped native token.
+     * Set the address of the wrapped native token in the constructor.
      *
      * @param _firstExchangeId2_2_0 - the first exchange id to use for 2.2.0
+     * @param _wNative - the address of the wrapped native token
      */
     //solhint-disable-next-line
-    constructor(uint256 _firstExchangeId2_2_0) {
+    constructor(uint256 _firstExchangeId2_2_0, address _wNative) {
         EXCHANGE_ID_2_2_0 = _firstExchangeId2_2_0;
+        wNative = IWrappedNative(_wNative);
     }
 
     /**

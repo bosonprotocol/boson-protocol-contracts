@@ -2,20 +2,18 @@
 pragma solidity 0.8.22;
 
 /**
- * @title IBosonFundsEvents
+ * @title IBosonFundsBaseEvents
  *
  * @notice Defines events related to management of funds within the protocol.
  */
-interface IBosonFundsEvents {
+interface IBosonFundsBaseEvents {
     event FundsDeposited(
-        uint256 indexed sellerId,
+        uint256 indexed entityId,
         address indexed executedBy,
         address indexed tokenAddress,
         uint256 amount
     );
-}
 
-interface IBosonFundsBaseEvents {
     event FundsEncumbered(
         uint256 indexed entityId,
         address indexed exchangeToken,
@@ -53,7 +51,14 @@ interface IBosonFundsBaseEvents {
         uint256 indexed exchangeId,
         address indexed tokenAddress,
         uint256 returnAmount,
-        address payable mutualizerAddress,
+        address indexed mutualizerAddress,
+        address executedBy
+    );
+    event DRFeeReturnFailed(
+        uint256 indexed exchangeId,
+        address indexed tokenAddress,
+        uint256 returnAmount,
+        address indexed mutualizerAddress,
         address executedBy
     );
 }

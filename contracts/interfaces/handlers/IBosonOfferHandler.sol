@@ -279,9 +279,11 @@ interface IBosonOfferHandler is BosonErrors, IBosonOfferEvents {
      *
      * Reverts if:
      * - The offers region of protocol is paused
+     * - The new mutualizer contract does not implement the IDRFeeMutualizer interface
      * - Offer does not exist
      * - Caller is not the assistant of the offer
      * - Offer has already been voided
+     * - New mutualizer address is the same as the existing one
      *
      * @param _offerId - the id of the offer to update
      * @param _newMutualizer - the new mutualizer address (can be zero for self-mutualization)

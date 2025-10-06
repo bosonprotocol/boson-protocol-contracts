@@ -69,6 +69,7 @@ const noArgFacetNames = [
   "ProtocolInitializationHandlerFacet", // args are generated on cutDiamond function
   "SequentialCommitHandlerFacet",
   "PriceDiscoveryHandlerFacet",
+  "ExchangeCommitFacet",
 ];
 
 async function getFacets(config) {
@@ -80,8 +81,14 @@ async function getFacets(config) {
   }, {});
 
   facetArgs["ConfigHandlerFacet"] = { init: ConfigHandlerFacetInitArgs };
-  facetArgs["ExchangeHandlerFacet"] = { init: [], constructorArgs: [protocolConfig.EXCHANGE_ID_2_2_0[network]] };
-  facetArgs["ExchangeCommitFacet"] = { init: [], constructorArgs: [] };
+  facetArgs["ExchangeHandlerFacet"] = {
+    init: [],
+    constructorArgs: [protocolConfig.EXCHANGE_ID_2_2_0[network], protocolConfig.WrappedNative[network]],
+  };
+  facetArgs["DisputeHandlerFacet"] = {
+    init: [],
+    constructorArgs: [protocolConfig.WrappedNative[network]],
+  };
   facetArgs["SequentialCommitHandlerFacet"] = {
     init: [],
     constructorArgs: [protocolConfig.WrappedNative[network]],

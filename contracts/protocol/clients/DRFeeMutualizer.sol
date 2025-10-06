@@ -3,6 +3,7 @@ pragma solidity 0.8.22;
 
 import { IDRFeeMutualizer } from "../../interfaces/clients/IDRFeeMutualizer.sol";
 import { IERC165 } from "../../interfaces/IERC165.sol";
+import { IWrappedNative } from "../../interfaces/IWrappedNative.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -42,8 +43,6 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
     error AgreementIsVoided();
     error DepositsRestrictedToOwner();
     error AccessDenied();
-    error InsufficientValueReceived();
-    error NativeNotAllowed();
     error AgreementTimePeriodTooLong();
 
     struct Agreement {
@@ -84,6 +83,8 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
 
     event AgreementVoided(uint256 indexed agreementId, bool premiumRefunded, uint256 amountRefunded);
 
+    event DepositRestrictionApplied(bool restricted);
+
     address private immutable BOSON_PROTOCOL;
 
     // Storage
@@ -100,9 +101,12 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
      * @param _bosonProtocol The address of the Boson protocol contract
      * @param _forwarder The address of the trusted forwarder for meta-transactions
      */
-    constructor(address _bosonProtocol, address _forwarder) ERC2771Context(_forwarder) {
+    constructor(address _bosonProtocol, address _forwarder, address _wNative) ERC2771Context(_forwarder) {
         if (_bosonProtocol == address(0)) revert InvalidProtocolAddress();
+        if (_wNative == address(0)) revert BosonErrors.InvalidAddress();
+
         BOSON_PROTOCOL = _bosonProtocol;
+        wNative = IWrappedNative(_wNative);
         // Initialize with empty agreement at index 0 for 1-indexed access
         agreements.push();
     }
@@ -132,10 +136,13 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         uint256 _disputeResolverId
     ) public view override returns (bool) {
         // Check if agreement exists and is valid
-        uint256 agreementId = sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][_disputeResolverId];
+        mapping(uint256 => uint256) storage sellerTokenMapping = sellerToTokenToDisputeResolverToAgreement[_sellerId][
+            _tokenAddress
+        ];
+        uint256 agreementId = sellerTokenMapping[_disputeResolverId];
         if (agreementId == 0 && _disputeResolverId != 0) {
             // If no specific agreement exists, check for "any dispute resolver" agreement
-            agreementId = sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][0];
+            agreementId = sellerTokenMapping[0];
         }
         if (agreementId == 0) return false;
 
@@ -179,10 +186,13 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
             return false;
         }
 
-        uint256 agreementId = sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][_disputeResolverId];
+        mapping(uint256 => uint256) storage sellerTokenMapping = sellerToTokenToDisputeResolverToAgreement[_sellerId][
+            _tokenAddress
+        ];
+        uint256 agreementId = sellerTokenMapping[_disputeResolverId];
         if (agreementId == 0 && _disputeResolverId != 0) {
             // If no specific agreement exists, check for "any dispute resolver" agreement
-            agreementId = sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][0];
+            agreementId = sellerTokenMapping[0];
         }
         Agreement storage agreement = agreements[agreementId];
 
@@ -201,35 +211,36 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
     }
 
     /**
-     * @notice Returns a DR fee to the mutualizer
+     * @notice Notifies the mutualizer that the exchange has been finalized and any unused fee can be returned
      * @param _exchangeId The exchange ID
      * @param _returnedFeeAmount The amount being returned (0 means protocol kept all fees)
-     * @dev Only callable by the Boson protocol. For native currency, returnedFeeAmount must equal msg.value.
+     * @dev Only callable by the Boson protocol. For native currency, token is wrapped and must be transferred as ERC20.
      *
      * Reverts if:
      * - Caller is not the Boson protocol
      * - exchangeId is not found
-     * - msg.value != returnedFeeAmount for native currency
-     * - msg.value > 0 for ERC20 tokens
-     * - ERC20 or native currency transfer fails
+     * - Caller is not the Boson protocol
+     * - exchangeId is not found
+     * - token transfer fails
      */
-    function returnDRFee(
+    function finalizeExchange(
         uint256 _exchangeId,
         uint256 _returnedFeeAmount
-    ) external payable override onlyProtocol nonReentrant {
-        FeeInfo storage feeInfo = feeInfoByExchange[_exchangeId];
-        uint256 requestedFeeAmount = feeInfo.amount;
-        if (requestedFeeAmount == 0) revert InvalidExchangeId();
+    ) external override onlyProtocol nonReentrant {
+        FeeInfo memory feeInfo = feeInfoByExchange[_exchangeId];
+        if (feeInfo.amount == 0) revert InvalidExchangeId();
 
         // Fee is being returned, add back to pool (if any)
         if (_returnedFeeAmount > 0) {
-            validateIncomingPayment(feeInfo.token, _returnedFeeAmount);
+            bool isWrapped = feeInfo.token == address(0);
+            validateIncomingPayment(isWrapped ? address(wNative) : feeInfo.token, _returnedFeeAmount);
+            if (isWrapped) wNative.withdraw(_returnedFeeAmount);
             poolBalances[feeInfo.token] += _returnedFeeAmount;
         }
 
         delete feeInfoByExchange[_exchangeId];
 
-        emit DRFeeReturned(_exchangeId, requestedFeeAmount, _returnedFeeAmount);
+        emit DRFeeReturned(_exchangeId, feeInfo.amount, _returnedFeeAmount);
     }
 
     // ============= Pool Management =============
@@ -252,12 +263,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         if (depositRestrictedToOwner && msgSender != owner()) revert DepositsRestrictedToOwner();
         if (_amount == 0) revert InvalidAmount();
 
-        if (_tokenAddress == address(0)) {
-            if (msg.value != _amount) revert BosonErrors.InsufficientValueReceived();
-        } else {
-            if (msg.value != 0) revert BosonErrors.NativeNotAllowed();
-            transferFundsIn(_tokenAddress, msgSender, _amount);
-        }
+        validateIncomingPayment(_tokenAddress, _amount);
 
         poolBalances[_tokenAddress] += _amount;
         emit FundsDeposited(msgSender, _tokenAddress, _amount);
@@ -339,9 +345,10 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         if (_maxAmountPerTx == 0) revert MaxAmountPerTxMustBeGreaterThanZero();
         if (_maxAmountTotal < _maxAmountPerTx) revert MaxTotalMustBeGreaterThanOrEqualToMaxPerTx();
         if (_timePeriod == 0) revert TimePeriodMustBeGreaterThanZero();
-        uint256 existingAgreementId = sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][
-            _disputeResolverId
+        mapping(uint256 => uint256) storage sellerTokenMapping = sellerToTokenToDisputeResolverToAgreement[_sellerId][
+            _tokenAddress
         ];
+        uint256 existingAgreementId = sellerTokenMapping[_disputeResolverId];
         if (existingAgreementId != 0) {
             Agreement storage existingAgreement = agreements[existingAgreementId];
             if (
@@ -376,7 +383,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
             })
         );
 
-        sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][_disputeResolverId] = agreementId;
+        sellerTokenMapping[_disputeResolverId] = agreementId;
 
         emit AgreementCreated(agreementId, _sellerId, _tokenAddress, _disputeResolverId);
     }
@@ -409,8 +416,9 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         uint256 refundAmount;
 
         if (
-            (agreement.startTime > 0 && agreement.refundOnCancel) &&
-            (agreement.startTime + agreement.timePeriod > block.timestamp)
+            agreement.startTime > 0 &&
+            agreement.refundOnCancel &&
+            agreement.startTime + agreement.timePeriod > block.timestamp
         ) {
             unchecked {
                 uint256 remainingTime = agreement.startTime + agreement.timePeriod - block.timestamp;
@@ -462,13 +470,9 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         if (agreement.isVoided) revert AgreementIsVoided();
         if (agreement.sellerId != _sellerId) revert InvalidSellerId();
         if (currentTime > type(uint256).max - agreement.timePeriod) revert AgreementTimePeriodTooLong();
-        if (agreement.tokenAddress == address(0)) {
-            if (msg.value != agreement.premium) revert BosonErrors.InsufficientValueReceived();
-        } else {
-            if (msg.value != 0) revert BosonErrors.NativeNotAllowed();
-            transferFundsIn(agreement.tokenAddress, _msgSender(), agreement.premium);
-        }
-        poolBalances[agreement.tokenAddress] += agreement.premium;
+        uint256 agreementPremium = agreement.premium;
+        validateIncomingPayment(agreement.tokenAddress, agreementPremium);
+        poolBalances[agreement.tokenAddress] += agreementPremium;
         agreement.startTime = currentTime;
 
         emit AgreementActivated(_agreementId, _sellerId);
@@ -486,6 +490,7 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
      */
     function setDepositRestriction(bool _restricted) external onlyOwner {
         depositRestrictedToOwner = _restricted;
+        emit DepositRestrictionApplied(_restricted);
     }
 
     /**
@@ -515,10 +520,13 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
         address _tokenAddress,
         uint256 _disputeResolverId
     ) external view returns (uint256) {
-        uint256 agreementId = sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][_disputeResolverId];
+        mapping(uint256 => uint256) storage sellerTokenMapping = sellerToTokenToDisputeResolverToAgreement[_sellerId][
+            _tokenAddress
+        ];
+        uint256 agreementId = sellerTokenMapping[_disputeResolverId];
         if (agreementId == 0 && _disputeResolverId != 0) {
             // If no specific agreement exists, check for "any dispute resolver" agreement
-            agreementId = sellerToTokenToDisputeResolverToAgreement[_sellerId][_tokenAddress][0];
+            agreementId = sellerTokenMapping[0];
         }
         return agreementId;
     }
@@ -557,4 +565,10 @@ contract DRFeeMutualizer is IDRFeeMutualizer, ReentrancyGuard, ERC2771Context, O
     function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
         return interfaceId == type(IDRFeeMutualizer).interfaceId || interfaceId == type(IERC165).interfaceId;
     }
+
+    /**
+     * @notice Fallback function to accept native currency deposits
+     * @dev Required for receiving native currency when unwrapping WETH
+     */
+    receive() external payable {}
 }

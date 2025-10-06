@@ -1640,7 +1640,11 @@ describe("IBosonOfferHandler", function () {
         await mockForwarder.waitForDeployment();
 
         const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
-        drFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolAddress, await mockForwarder.getAddress());
+        drFeeMutualizer = await DRFeeMutualizerFactory.deploy(
+          protocolAddress,
+          await mockForwarder.getAddress(),
+          rando.address
+        );
         await drFeeMutualizer.waitForDeployment();
       });
 
@@ -2525,7 +2529,11 @@ describe("IBosonOfferHandler", function () {
         // Create first DRFeeMutualizer contract
         const protocolAddress = await offerHandler.getAddress();
         const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
-        drFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolAddress, await mockForwarder.getAddress());
+        drFeeMutualizer = await DRFeeMutualizerFactory.deploy(
+          protocolAddress,
+          await mockForwarder.getAddress(),
+          rando.address
+        );
         await drFeeMutualizer.waitForDeployment();
 
         // Create an offer with mutualizer
@@ -2551,7 +2559,11 @@ describe("IBosonOfferHandler", function () {
         // Create new mutualizer
         const protocolAddress = await offerHandler.getAddress();
         const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
-        newDrFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolAddress, await mockForwarder.getAddress());
+        newDrFeeMutualizer = await DRFeeMutualizerFactory.deploy(
+          protocolAddress,
+          await mockForwarder.getAddress(),
+          rando.address
+        );
         await newDrFeeMutualizer.waitForDeployment();
 
         // Update the mutualizer
@@ -2562,10 +2574,29 @@ describe("IBosonOfferHandler", function () {
           .withArgs(offer.id, offer.sellerId, await newDrFeeMutualizer.getAddress(), await assistant.getAddress());
       });
 
+      it("it is possible to change to self-mutualization", async function () {
+        // Update the mutualizer
+        await expect(offerHandler.connect(assistant).updateOfferMutualizer(offer.id, ZeroAddress))
+          .to.emit(offerHandler, "OfferMutualizerUpdated")
+          .withArgs(offer.id, offer.sellerId, ZeroAddress, await assistant.getAddress());
+      });
+
       it("should revert when new mutualizer is the same as current", async function () {
         await expect(
           offerHandler.connect(assistant).updateOfferMutualizer(offer.id, await drFeeMutualizer.getAddress())
         ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.SAME_MUTUALIZER_ADDRESS);
+      });
+
+      it("should revert when new mutualizer is EOA", async function () {
+        await expect(
+          offerHandler.connect(assistant).updateOfferMutualizer(offer.id, assistant.address)
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.UNSUPPORTED_MUTUALIZER);
+      });
+
+      it("should revert when new mutualizer does not support IDRFeeMutualizer interface", async function () {
+        await expect(
+          offerHandler.connect(assistant).updateOfferMutualizer(offer.id, await bosonToken.getAddress())
+        ).to.be.revertedWithCustomError(bosonErrors, RevertReasons.UNSUPPORTED_MUTUALIZER);
       });
     });
 

@@ -545,7 +545,10 @@ contract MockExchangeHandlerFacetWithDefect is MockExchangeHandlerFacet {
  */
 contract TestExchangeHandlerFacet is ExchangeHandlerFacet {
     //solhint-disable-next-line
-    constructor(uint256 _firstExchangeId2_2_0) ExchangeHandlerFacet(_firstExchangeId2_2_0) {}
+    constructor(
+        uint256 _firstExchangeId2_2_0,
+        address _wNative
+    ) ExchangeHandlerFacet(_firstExchangeId2_2_0, _wNative) {}
 
     /**
      * @notice Test function to test invalid final exchange state

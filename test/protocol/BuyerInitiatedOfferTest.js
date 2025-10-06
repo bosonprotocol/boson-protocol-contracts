@@ -1,5 +1,14 @@
 const { ethers } = require("hardhat");
-const { getContractAt, ZeroAddress, ZeroHash, getSigners, MaxUint256, parseUnits, encodeBytes32String } = ethers;
+const {
+  getContractAt,
+  ZeroAddress,
+  ZeroHash,
+  getSigners,
+  MaxUint256,
+  parseUnits,
+  encodeBytes32String,
+  getContractFactory,
+} = ethers;
 const { expect } = require("chai");
 
 const Offer = require("../../scripts/domain/Offer");
@@ -31,6 +40,7 @@ const {
   mockAuthToken,
   accountId,
 } = require("../util/mock");
+const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 
 /**
  * Test the Buyer-Initiated Exchange feature (BPIP-9)
@@ -66,6 +76,7 @@ describe("Buyer-Initiated Exchange", function () {
   let DRFeeNative, DRFeeToken;
   let sellerAllowList;
   let nextOfferId;
+  let weth;
 
   before(async function () {
     [
@@ -84,6 +95,10 @@ describe("Buyer-Initiated Exchange", function () {
       buyer2,
       assistant2,
     ] = await getSigners();
+
+    const wethFactory = await getContractFactory("WETH9");
+    weth = await wethFactory.deploy();
+    await weth.waitForDeployment();
 
     const contracts = {
       accessController: "AccessController",
@@ -110,7 +125,7 @@ describe("Buyer-Initiated Exchange", function () {
         pauseHandler,
       },
       protocolConfig: [, , , , buyerEscalationDepositPercentage],
-    } = await setupTestEnvironment(contracts, {}));
+    } = await setupTestEnvironment(contracts, { wethAddress: await weth.getAddress() }));
 
     assistant = admin;
     assistantDR = adminDR;
@@ -519,7 +534,7 @@ describe("Buyer-Initiated Exchange", function () {
     });
 
     context("👉 commitToOffer() - Seller Commits", async function () {
-      it("should emit SellerCommitted event when seller commits to buyer offer", async function () {
+      it("should emit SellerCommitted, FundsDeposited, and FundsEncumbered events when seller commits to buyer offer", async function () {
         const expectedExchangeId = "1";
 
         // Create seller parameters struct
@@ -555,6 +570,13 @@ describe("Buyer-Initiated Exchange", function () {
         const voucher = event[4];
         expect(voucher[0]).to.be.gt(0); // voucher.committedDate
         expect(voucher[1]).to.be.gt(0); // voucher.validUntilDate
+
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(sellerId, assistant.address, offer.exchangeToken, offer.sellerDeposit);
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsEncumbered")
+          .withArgs(sellerId, offer.exchangeToken, offer.sellerDeposit, assistant.address);
       });
 
       it("should update state correctly when seller commits to buyer offer", async function () {
@@ -673,7 +695,59 @@ describe("Buyer-Initiated Exchange", function () {
       });
 
       it("should execute mutualizer address assignment when provided in seller params", async function () {
-        const mutualizerAddress = await assistant2.getAddress();
+        const DRFeeNative = parseUnits("0.1", "ether");
+        const disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", DRFeeNative)];
+        await accountHandler.connect(adminDR).removeFeesFromDisputeResolver(disputeResolver.id, [ZeroAddress]);
+        await accountHandler.connect(adminDR).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees);
+
+        const protocolAddress = await exchangeHandler.getAddress();
+
+        // Deploy mock forwarder for meta-transactions (required by DRFeeMutualizer)
+        const MockForwarder = await getContractFactory("MockForwarder");
+        const mockForwarder = await MockForwarder.deploy();
+        await mockForwarder.waitForDeployment();
+
+        const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
+        const drFeeMutualizer = await DRFeeMutualizerFactory.deploy(
+          protocolAddress,
+          await mockForwarder.getAddress(),
+          await weth.getAddress()
+        );
+        await drFeeMutualizer.waitForDeployment();
+
+        // Fund mutualizer with ETH for testing using the deposit function
+        await drFeeMutualizer.deposit(ZeroAddress, parseUnits("2", "ether"), {
+          value: parseUnits("2", "ether"),
+        });
+
+        // Create a simple agreement for the seller to be covered
+        const sellerId = "1"; // Standard seller ID
+        const maxAmountPerTx = parseUnits("1", "ether");
+        const maxAmountTotal = parseUnits("10", "ether");
+        const timePeriod = 365 * 24 * 60 * 60; // 1 year
+        const premium = parseUnits("0.1", "ether");
+
+        // Create agreement for native currency (ZeroAddress) with universal dispute resolver (0)
+        const tx = await drFeeMutualizer.newAgreement(
+          sellerId,
+          ZeroAddress,
+          0, // Universal dispute resolver
+          maxAmountPerTx,
+          maxAmountTotal,
+          timePeriod,
+          premium,
+          false // refundOnCancel
+        );
+
+        const receipt = await tx.wait();
+        const agreementCreatedEvent = receipt.logs.find(
+          (log) => log.fragment && log.fragment.name === "AgreementCreated"
+        );
+        const agreementId = agreementCreatedEvent.args.agreementId;
+
+        await drFeeMutualizer.payPremium(agreementId, sellerId, {
+          value: premium,
+        });
 
         const sellerParams = {
           collectionIndex: 0,
@@ -681,7 +755,7 @@ describe("Buyer-Initiated Exchange", function () {
             recipients: [ZeroAddress],
             bps: [0],
           },
-          mutualizerAddress: mutualizerAddress,
+          mutualizerAddress: await drFeeMutualizer.getAddress(),
         };
 
         await expect(
@@ -779,6 +853,40 @@ describe("Buyer-Initiated Exchange", function () {
               value: sellerDeposit,
             })
           ).to.be.revertedWithCustomError(exchangeCommitHandler, "NoSuchCollection");
+        });
+
+        it("should revert if mutualizer is EOA", async function () {
+          const sellerParams = {
+            collectionIndex: 0,
+            royaltyInfo: {
+              recipients: [ZeroAddress],
+              bps: [0],
+            },
+            mutualizerAddress: assistant.address,
+          };
+
+          await expect(
+            exchangeCommitHandler.connect(assistant).commitToBuyerOffer(nextOfferId, sellerParams, {
+              value: sellerDeposit,
+            })
+          ).to.be.revertedWithCustomError(exchangeCommitHandler, RevertReasons.UNSUPPORTED_MUTUALIZER);
+        });
+
+        it("should revert if mutualizer does not support IDRFeeMutualizer interface", async function () {
+          const sellerParams = {
+            collectionIndex: 0,
+            royaltyInfo: {
+              recipients: [ZeroAddress],
+              bps: [0],
+            },
+            mutualizerAddress: await mockToken.getAddress(),
+          };
+
+          await expect(
+            exchangeCommitHandler.connect(assistant).commitToBuyerOffer(nextOfferId, sellerParams, {
+              value: sellerDeposit,
+            })
+          ).to.be.revertedWithCustomError(exchangeCommitHandler, RevertReasons.UNSUPPORTED_MUTUALIZER);
         });
       });
     });

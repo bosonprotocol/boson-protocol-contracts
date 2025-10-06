@@ -184,6 +184,7 @@ describe("IBosonFundsHandler", function () {
   let bosonErrors;
   let bpd;
   let drFeeMutualizer;
+  let weth;
 
   before(async function () {
     accountId.next(true);
@@ -194,7 +195,7 @@ describe("IBosonFundsHandler", function () {
 
     // Add WETH
     const wethFactory = await getContractFactory("WETH9");
-    const weth = await wethFactory.deploy();
+    weth = await wethFactory.deploy();
     await weth.waitForDeployment();
 
     // Specify contracts needed for this test
@@ -274,7 +275,7 @@ describe("IBosonFundsHandler", function () {
 
     // Deploy DRFeeMutualizer
     const DRFeeMutualizerFactory = await ethers.getContractFactory("DRFeeMutualizer");
-    drFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolDiamondAddress, ZeroAddress);
+    drFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolDiamondAddress, ZeroAddress, await weth.getAddress());
     await drFeeMutualizer.waitForDeployment();
 
     // Get the beacon proxy address
@@ -4223,7 +4224,11 @@ describe("IBosonFundsHandler", function () {
         await mockForwarder.waitForDeployment();
 
         const DRFeeMutualizerFactory = await getContractFactory("DRFeeMutualizer");
-        drFeeMutualizer = await DRFeeMutualizerFactory.deploy(protocolAddress, await mockForwarder.getAddress());
+        drFeeMutualizer = await DRFeeMutualizerFactory.deploy(
+          protocolAddress,
+          await mockForwarder.getAddress(),
+          await weth.getAddress()
+        );
         await drFeeMutualizer.waitForDeployment();
 
         // Create offer with mutualizer (no agreement needed for offer creation)
@@ -4263,26 +4268,84 @@ describe("IBosonFundsHandler", function () {
         await exchangeHandler.connect(buyer).redeemVoucher(mutualizerExchangeId);
 
         // Complete the exchange - funds should be released automatically
-        await expect(exchangeHandler.connect(buyer).completeExchange(mutualizerExchangeId)).to.emit(
-          exchangeHandler,
-          "FundsReleased"
-        );
+        const tx = await exchangeHandler.connect(buyer).completeExchange(mutualizerExchangeId);
+        await expect(tx).to.emit(exchangeHandler, "FundsReleased");
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "DRFeeReturned")
+          .withArgs(
+            mutualizerExchangeId,
+            await weth.getAddress(),
+            DRFee,
+            await drFeeMutualizer.getAddress(),
+            buyer.address
+          );
       });
 
       it("should work with canceled exchange", async function () {
         // Cancel the exchange - funds should be released automatically
-        await expect(exchangeHandler.connect(buyer).cancelVoucher(mutualizerExchangeId)).to.emit(
-          exchangeHandler,
-          "FundsReleased"
-        );
+        const tx = await exchangeHandler.connect(buyer).cancelVoucher(mutualizerExchangeId);
+        await expect(tx).to.emit(exchangeHandler, "FundsReleased");
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "DRFeeReturned")
+          .withArgs(
+            mutualizerExchangeId,
+            await weth.getAddress(),
+            DRFee,
+            await drFeeMutualizer.getAddress(),
+            buyer.address
+          );
       });
 
       it("should work with revoked exchange", async function () {
         // Seller can revoke voucher while in committed state - funds should be released automatically
-        await expect(exchangeHandler.connect(assistant).revokeVoucher(mutualizerExchangeId)).to.emit(
-          exchangeHandler,
-          "FundsReleased"
-        );
+        const tx = await exchangeHandler.connect(assistant).revokeVoucher(mutualizerExchangeId);
+        await expect(tx).to.emit(exchangeHandler, "FundsReleased");
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "DRFeeReturned")
+          .withArgs(
+            mutualizerExchangeId,
+            await weth.getAddress(),
+            DRFee,
+            await drFeeMutualizer.getAddress(),
+            assistant.address
+          );
+      });
+
+      context("Escalated dispute", async function () {
+        beforeEach(async function () {
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+          await exchangeHandler.connect(buyer).redeemVoucher(mutualizerExchangeId);
+          await disputeHandler.connect(buyer).raiseDispute(mutualizerExchangeId);
+          await disputeHandler.connect(buyer).escalateDispute(mutualizerExchangeId, { value: buyerEscalationDeposit });
+        });
+
+        it("Buyer retracts the dispute", async function () {
+          // Buyer retracts the dispute - funds should be released automatically
+          const tx = await disputeHandler.connect(buyer).retractDispute(mutualizerExchangeId);
+          await expect(tx).to.emit(exchangeHandler, "FundsReleased");
+
+          // No fee is returned since DR got paid
+          await expect(tx)
+            .to.emit(exchangeHandler, "DRFeeReturned")
+            .withArgs(mutualizerExchangeId, ZeroAddress, 0, await drFeeMutualizer.getAddress(), buyer.address);
+        });
+
+        it("DR decides the dispute", async function () {
+          // Assistant DR decides the dispute - funds should be released automatically
+          const buyerPercentBasisPoints = "7000"; // 70% to buyer, 30% to seller
+          const tx = await disputeHandler
+            .connect(assistantDR)
+            .decideDispute(mutualizerExchangeId, buyerPercentBasisPoints);
+          await expect(tx).to.emit(exchangeHandler, "FundsReleased");
+
+          // No fee is returned since DR got paid
+          await expect(tx)
+            .to.emit(exchangeHandler, "DRFeeReturned")
+            .withArgs(mutualizerExchangeId, ZeroAddress, 0, await drFeeMutualizer.getAddress(), assistantDR.address);
+        });
       });
     });
 
@@ -6312,6 +6375,141 @@ describe("IBosonFundsHandler", function () {
         await expect(tx)
           .to.emit(disputeHandler, "FundsReleased")
           .withArgs(exchangeId, disputeResolver.id, ZeroAddress, testDRFee, await assistantDR.getAddress());
+      });
+    });
+
+    context("👉 releaseFunds() - mutualizer attacks", async function () {
+      let drFeeMutualizer;
+
+      beforeEach(async function () {
+        protocolId = "0";
+        buyerId = "4";
+        exchangeId = "1";
+
+        const DRFeeMutualizerFactory = await getContractFactory("MaliciousMutualizer3");
+        drFeeMutualizer = await DRFeeMutualizerFactory.connect(rando).deploy("0", await offerHandler.getAddress());
+        await drFeeMutualizer.waitForDeployment();
+
+        await offerHandler.connect(assistant).updateOfferMutualizer(offerToken.id, await drFeeMutualizer.getAddress());
+
+        await mockToken.mint(assistant.address, parseUnits("1", "ether"));
+        await mockToken.connect(assistant).approve(await drFeeMutualizer.getAddress(), parseUnits("1", "ether"));
+        await drFeeMutualizer.connect(assistant).deposit(offerToken.exchangeToken, parseUnits("1", "ether"));
+
+        await exchangeCommitHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+
+        // payoffs
+        sellerPayoff = (
+          BigInt(offerToken.sellerDeposit) +
+          BigInt(offerToken.price) -
+          BigInt(offerTokenProtocolFee)
+        ).toString();
+        protocolPayoff = offerTokenProtocolFee;
+
+        await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+        await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+      });
+
+      it("If mutualizer consumes all gas, other funds are still released", async function () {
+        await drFeeMutualizer.setAttackType(0); // consume all gas
+
+        const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "DRFeeReturnFailed")
+          .withArgs(exchangeId, offerToken.exchangeToken, DRFee, await drFeeMutualizer.getAddress(), buyer.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "FundsReleased")
+          .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, buyer.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "ProtocolFeeCollected")
+          .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, buyer.address);
+      });
+
+      it("If mutualizer returns bomb, other funds are still released", async function () {
+        await drFeeMutualizer.setAttackType(1); // return bomb
+
+        const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+
+        // returns are ignored, there is no execution failure
+        await expect(tx).to.not.emit(exchangeHandler, "DRFeeReturnFailed");
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "FundsReleased")
+          .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, buyer.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "ProtocolFeeCollected")
+          .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, buyer.address);
+      });
+
+      it("If mutualizer reverts with a reason, other funds are still released", async function () {
+        await drFeeMutualizer.setAttackType(2); // revert with reason
+
+        const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "DRFeeReturnFailed")
+          .withArgs(exchangeId, offerToken.exchangeToken, DRFee, await drFeeMutualizer.getAddress(), buyer.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "FundsReleased")
+          .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, buyer.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "ProtocolFeeCollected")
+          .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, buyer.address);
+      });
+
+      it("If mutualizer reverts with runtime error, other funds are still released", async function () {
+        await drFeeMutualizer.setAttackType(3); // revert with runtime error
+
+        const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "DRFeeReturnFailed")
+          .withArgs(exchangeId, offerToken.exchangeToken, DRFee, await drFeeMutualizer.getAddress(), buyer.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "FundsReleased")
+          .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, buyer.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "ProtocolFeeCollected")
+          .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, buyer.address);
+      });
+
+      it("If mutualizer does not implement finalizeExchange, other funds are still released", async function () {
+        const DRFeeMutualizerFactory = await getContractFactory("PartiallyImplementedMutualizer");
+        drFeeMutualizer = await DRFeeMutualizerFactory.connect(rando).deploy("0", await offerHandler.getAddress());
+        await drFeeMutualizer.waitForDeployment();
+
+        await offerHandler.connect(assistant).updateOfferMutualizer(offerToken.id, await drFeeMutualizer.getAddress());
+
+        await mockToken.mint(assistant.address, parseUnits("1", "ether"));
+        await mockToken.connect(assistant).approve(await drFeeMutualizer.getAddress(), parseUnits("1", "ether"));
+        await drFeeMutualizer.connect(assistant).deposit(offerToken.exchangeToken, parseUnits("1", "ether"));
+
+        await exchangeCommitHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+
+        exchangeId++;
+        // await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+        await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+        const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "DRFeeReturnFailed")
+          .withArgs(exchangeId, offerToken.exchangeToken, DRFee, await drFeeMutualizer.getAddress(), buyer.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "FundsReleased")
+          .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, buyer.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "ProtocolFeeCollected")
+          .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, buyer.address);
       });
     });
   });

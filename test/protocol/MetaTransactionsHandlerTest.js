@@ -4284,7 +4284,9 @@ describe("IBosonMetaTransactionsHandler", function () {
                     nonce,
                     contractWalletSignature
                   )
-              ).to.be.revertedWithCustomError(metaTransactionsHandler, "SignatureValidationFailed");
+              )
+                .to.be.revertedWithCustomError(metaTransactionsHandler, "UnexpectedDataReturned")
+                .withArgs("0xfffffffa00000000000000000000000000000000000000000000000000000000");
             });
 
             it("Contract reverts", async function () {
@@ -4438,6 +4440,236 @@ describe("IBosonMetaTransactionsHandler", function () {
               ).to.be.revertedWithCustomError(metaTransactionsHandler, "SignatureValidationFailed");
             });
           });
+        });
+      });
+
+      context("Smart account (EIP-7702) signer", async function () {
+        beforeEach(async function () {
+          // Create a valid seller for meta transaction
+          seller = mockSeller(
+            await assistant.getAddress(),
+            await assistant.getAddress(),
+            ZeroAddress,
+            await assistant.getAddress()
+          );
+          voucherInitValues = mockVoucherInitValues();
+          emptyAuthToken = mockAuthToken();
+
+          // Prepare the message
+          message = {};
+          message.nonce = parseInt(nonce);
+          message.from = await assistant.getAddress();
+          message.contractAddress = await accountHandler.getAddress();
+          message.functionName =
+            "createSeller((uint256,address,address,address,address,bool,string),(uint256,uint8),(string,uint256,bytes32))";
+
+          // Prepare the function signature for the facet function.
+          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
+            seller,
+            emptyAuthToken,
+            voucherInitValues,
+          ]);
+
+          message.functionSignature = functionSignature;
+        });
+
+        it("Delegated code supports EIP-1271", async function () {
+          const contractWalletFactory = await getContractFactory("ContractWallet");
+          const contractWallet = await contractWalletFactory.deploy();
+          await contractWallet.waitForDeployment();
+
+          // Create a smart wallet that supports EIP-1271
+          const currentNonce = await ethers.provider.getTransactionCount(assistant.address);
+          let authorizationData = {
+            address: await contractWallet.getAddress(),
+            nonce: ethers.toBeHex(currentNonce + 1),
+          };
+
+          authorizationData = await assistant.authorize(authorizationData);
+          const feeData = await ethers.provider.getFeeData();
+          await assistant.sendTransaction({
+            to: await assistant.getAddress(),
+            authorizationList: [authorizationData],
+            maxFeePerGas: feeData.maxFeePerGas,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
+          });
+
+          // Collect the signature components.
+          let signature = randomBytes(64); // Use random bytes, since ECDSA is not used in this case
+
+          // send a meta transaction, check for event
+          await expect(
+            metaTransactionsHandler
+              .connect(deployer)
+              .executeMetaTransaction(
+                await assistant.getAddress(),
+                message.functionName,
+                functionSignature,
+                nonce,
+                signature
+              )
+          )
+            .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
+            .withArgs(await assistant.getAddress(), await deployer.getAddress(), message.functionName, nonce);
+
+          // Verify that nonce is used. Expect true.
+          let expectedResult = true;
+          result = await metaTransactionsHandler.connect(assistant).isUsedNonce(await assistant.getAddress(), nonce);
+          assert.equal(result, expectedResult, "Nonce is unused");
+        });
+
+        it("If EIP-1271 verification fails, ECDSA can still be used", async function () {
+          const contractWalletFactory = await getContractFactory("ContractWallet");
+          const contractWallet = await contractWalletFactory.deploy();
+          await contractWallet.waitForDeployment();
+
+          // Create a smart wallet that supports EIP-1271
+          const currentNonce = await ethers.provider.getTransactionCount(assistant.address);
+          let authorizationData = {
+            address: await contractWallet.getAddress(),
+            nonce: ethers.toBeHex(currentNonce + 1),
+          };
+
+          authorizationData = await assistant.authorize(authorizationData);
+          const feeData = await ethers.provider.getFeeData();
+          await assistant.sendTransaction({
+            to: await assistant.getAddress(),
+            data: contractWallet.interface.encodeFunctionData("setValidity", [1]), // 1=invalid, returns wrong magic value
+            authorizationList: [authorizationData],
+            maxFeePerGas: feeData.maxFeePerGas,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
+          });
+
+          // Collect the signature components.
+          let signature = await prepareDataSignature(
+            assistant,
+            customTransactionType,
+            "MetaTransaction",
+            message,
+            await metaTransactionsHandler.getAddress()
+          );
+
+          // send a meta transaction, check for event
+          await expect(
+            metaTransactionsHandler
+              .connect(deployer)
+              .executeMetaTransaction(
+                await assistant.getAddress(),
+                message.functionName,
+                functionSignature,
+                nonce,
+                signature
+              )
+          )
+            .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
+            .withArgs(await assistant.getAddress(), await deployer.getAddress(), message.functionName, nonce);
+
+          // Verify that nonce is used. Expect true.
+          let expectedResult = true;
+          result = await metaTransactionsHandler.connect(assistant).isUsedNonce(await assistant.getAddress(), nonce);
+          assert.equal(result, expectedResult, "Nonce is unused");
+        });
+
+        it("Delegated code does not support EIP-1271 (and revert), use ECDSA signature", async function () {
+          const contractWalletFactory = await getContractFactory("BuyerContract"); // any contract that does not implement EIP-1271
+          const contractWallet = await contractWalletFactory.deploy();
+          await contractWallet.waitForDeployment();
+
+          // Create a smart wallet that supports EIP-1271
+          const currentNonce = await ethers.provider.getTransactionCount(assistant.address);
+          let authorizationData = {
+            address: await contractWallet.getAddress(),
+            nonce: ethers.toBeHex(currentNonce + 1),
+          };
+
+          authorizationData = await assistant.authorize(authorizationData);
+          const feeData = await ethers.provider.getFeeData();
+          await assistant.sendTransaction({
+            to: rando.address,
+            authorizationList: [authorizationData],
+            maxFeePerGas: feeData.maxFeePerGas,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
+          });
+
+          // Collect the signature components. Since the delegated call fails, we need to use ECDSA signature
+          let signature = await prepareDataSignature(
+            assistant,
+            customTransactionType,
+            "MetaTransaction",
+            message,
+            await metaTransactionsHandler.getAddress()
+          );
+
+          // send a meta transaction, check for event
+          await expect(
+            metaTransactionsHandler
+              .connect(deployer)
+              .executeMetaTransaction(
+                await assistant.getAddress(),
+                message.functionName,
+                functionSignature,
+                nonce,
+                signature
+              )
+          )
+            .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
+            .withArgs(await assistant.getAddress(), await deployer.getAddress(), message.functionName, nonce);
+
+          // Verify that nonce is used. Expect true.
+          let expectedResult = true;
+          result = await metaTransactionsHandler.connect(assistant).isUsedNonce(await assistant.getAddress(), nonce);
+          assert.equal(result, expectedResult, "Nonce is unused");
+        });
+
+        it("Delegated code does not support EIP-1271 (without revert), use ECDSA signature", async function () {
+          const contractWalletFactory = await getContractFactory("BuyerContractWithFallback"); // any contract that does not implement EIP-1271
+          const contractWallet = await contractWalletFactory.deploy();
+          await contractWallet.waitForDeployment();
+
+          // Create a smart wallet that supports EIP-1271
+          const currentNonce = await ethers.provider.getTransactionCount(assistant.address);
+          let authorizationData = {
+            address: await contractWallet.getAddress(),
+            nonce: ethers.toBeHex(currentNonce + 1),
+          };
+
+          authorizationData = await assistant.authorize(authorizationData);
+          const feeData = await ethers.provider.getFeeData();
+          await assistant.sendTransaction({
+            to: rando.address,
+            authorizationList: [authorizationData],
+            maxFeePerGas: feeData.maxFeePerGas,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
+          });
+
+          // Collect the signature components. Since the delegated call fails, we need to use ECDSA signature
+          let signature = await prepareDataSignature(
+            assistant,
+            customTransactionType,
+            "MetaTransaction",
+            message,
+            await metaTransactionsHandler.getAddress()
+          );
+
+          // send a meta transaction, check for event
+          await expect(
+            metaTransactionsHandler
+              .connect(deployer)
+              .executeMetaTransaction(
+                await assistant.getAddress(),
+                message.functionName,
+                functionSignature,
+                nonce,
+                signature
+              )
+          )
+            .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
+            .withArgs(await assistant.getAddress(), await deployer.getAddress(), message.functionName, nonce);
+
+          // Verify that nonce is used. Expect true.
+          let expectedResult = true;
+          result = await metaTransactionsHandler.connect(assistant).isUsedNonce(await assistant.getAddress(), nonce);
+          assert.equal(result, expectedResult, "Nonce is unused");
         });
       });
     });

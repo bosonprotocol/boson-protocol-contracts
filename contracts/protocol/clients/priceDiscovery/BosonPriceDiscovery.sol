@@ -22,8 +22,6 @@ contract BosonPriceDiscovery is ERC165, FundsBase, IBosonPriceDiscovery, BosonEr
     using Address for address;
     using SafeERC20 for IERC20;
 
-    IWrappedNative internal immutable wNative;
-
     address private incomingTokenAddress;
 
     address private immutable bosonProtocolAddress;

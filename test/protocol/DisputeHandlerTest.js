@@ -1688,7 +1688,9 @@ describe("IBosonDisputeHandler", function () {
                 disputeHandler
                   .connect(assistant)
                   .resolveDispute(exchangeId, buyerPercentBasisPoints, contractWalletSignature)
-              ).to.be.revertedWithCustomError(disputeHandler, "SignatureValidationFailed");
+              )
+                .to.be.revertedWithCustomError(disputeHandler, "UnexpectedDataReturned")
+                .withArgs("0xfffffffa00000000000000000000000000000000000000000000000000000000");
             });
 
             it("Contract reverts", async function () {
@@ -1849,11 +1851,15 @@ describe("IBosonDisputeHandler", function () {
           timeout = BigInt(disputedDate) + BigInt(resolutionPeriod);
         });
 
-        it("should emit FundsEncumbered and DisputeEscalated events", async function () {
+        it("should emit FundsDeposited, FundsEncumbered and DisputeEscalated events", async function () {
           // Escalate the dispute, testing for the event
           const tx = await disputeHandler
             .connect(buyer)
             .escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
+
+          await expect(tx)
+            .to.emit(disputeHandler, "FundsDeposited")
+            .withArgs(buyerId, buyer.address, ZeroAddress, buyerEscalationDepositNative);
 
           await expect(tx)
             .to.emit(disputeHandler, "FundsEncumbered")
@@ -1864,7 +1870,7 @@ describe("IBosonDisputeHandler", function () {
             .withArgs(exchangeId, drParams.disputeResolverId, await buyer.getAddress());
         });
 
-        it("Does not emit FundsEncumbered if buyerEscalationDeposit is 0", async function () {
+        it("Does not emit FundsDeposited and FundsEncumbered if buyerEscalationDeposit is 0", async function () {
           DRFeeNative = "0";
           buyerEscalationDepositNative = "0";
 
@@ -1890,10 +1896,10 @@ describe("IBosonDisputeHandler", function () {
           await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
           // Escalate the dispute, testing for the event
-          await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.not.emit(
-            disputeHandler,
-            "FundsEncumbered"
-          );
+          const tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId);
+          await expect(tx).to.not.emit(disputeHandler, "FundsDeposited");
+
+          await expect(tx).to.not.emit(disputeHandler, "FundsEncumbered");
         });
 
         it("should update state", async function () {
@@ -1950,6 +1956,10 @@ describe("IBosonDisputeHandler", function () {
           // Escalate the dispute, testing for the events
           const tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId);
           await expect(tx)
+            .to.emit(disputeHandler, "FundsDeposited")
+            .withArgs(buyerId, buyer.address, await mockToken.getAddress(), buyerEscalationDepositToken);
+
+          await expect(tx)
             .to.emit(disputeHandler, "FundsEncumbered")
             .withArgs(buyerId, await mockToken.getAddress(), buyerEscalationDepositToken, await buyer.getAddress());
 
@@ -1965,7 +1975,7 @@ describe("IBosonDisputeHandler", function () {
           );
         });
 
-        it("Does not emit FundsEncumbered if buyerEscalationDeposit is 0", async function () {
+        it("Does not emit FundsDeposited and FundsEncumbered if buyerEscalationDeposit is 0", async function () {
           const [mockToken] = await deployMockTokens(["Foreign20"]);
 
           DRFeeToken = "0";
@@ -1992,10 +2002,11 @@ describe("IBosonDisputeHandler", function () {
           await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
           // Escalate the dispute, testing for the event
-          await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.not.emit(
-            disputeHandler,
-            "FundsEncumbered"
-          );
+          const tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId);
+
+          await expect(tx).to.not.emit(disputeHandler, "FundsDeposited");
+
+          await expect(tx).to.not.emit(disputeHandler, "FundsEncumbered");
         });
 
         context("💔 Revert Reasons", async function () {
@@ -3231,7 +3242,7 @@ describe("IBosonDisputeHandler", function () {
     beforeEach(async function () {
       // Deploy test facet and cut the test functions
       const TestDisputeHandlerFacet = await ethers.getContractFactory("TestDisputeHandlerFacet");
-      const testDisputeHandlerFacet = await TestDisputeHandlerFacet.deploy();
+      const testDisputeHandlerFacet = await TestDisputeHandlerFacet.deploy(rando.address);
       await testDisputeHandlerFacet.waitForDeployment();
 
       const protocolDiamondAddress = await disputeHandler.getAddress();

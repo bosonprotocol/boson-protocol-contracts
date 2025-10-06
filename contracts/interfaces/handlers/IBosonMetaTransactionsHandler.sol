@@ -29,15 +29,16 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents, BosonEr
      * - Nonce is already used by the msg.sender for another transaction
      * - Function is not allowlisted to be called using metatransactions
      * - Function name does not match the bytes4 version of the function signature
-     * - sender does not match the recovered signer
-     * - Any code executed in the signed transaction reverts
-     * - Signature is invalid
+     * - Signature is not valid. Refer to EIP712Lib.verify for details
      *
      * @param _userAddress - the sender of the transaction
      * @param _functionName - the name of the function to be executed
      * @param _functionSignature - the function signature
      * @param _nonce - the nonce value of the transaction
-     * @param _signature - meta transaction signature. If the signer is EOA, it must be ECDSA signature in the format of (r,s,v) struct, otherwise, it must be a valid ERC1271 signature.
+     * @param _signature - meta transaction signature. 
+                           If the user is ordinary EOA, it must be ECDSA signature in the format of concatenated r,s,v values. 
+                           If the user is a contract, it must be a valid ERC1271 signature.
+                           If the user is a EIP-7702 smart account, it can be either a valid ERC1271 signature or a valid ECDSA signature.
      */
     function executeMetaTransaction(
         address _userAddress,

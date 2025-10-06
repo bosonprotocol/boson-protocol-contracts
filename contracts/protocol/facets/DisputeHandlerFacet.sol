@@ -3,6 +3,7 @@ pragma solidity 0.8.22;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonDisputeHandler } from "../../interfaces/handlers/IBosonDisputeHandler.sol";
+import { IWrappedNative } from "../../interfaces/IWrappedNative.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
@@ -15,6 +16,19 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
 contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     bytes32 private constant RESOLUTION_TYPEHASH =
         keccak256(bytes("Resolution(uint256 exchangeId,uint256 buyerPercentBasisPoints)")); // needed for verification during the resolveDispute
+
+    /**
+     * @notice
+     * For offers with native exchange token, the DRFee is returned to the mutualizer in wrapped native token.
+     * Set the address of the wrapped native token in the constructor.
+     *
+     * @param _wNative - the address of the wrapped native token
+     */
+    //solhint-disable-next-line
+    constructor(address _wNative) {
+        if (_wNative == address(0)) revert InvalidAddress();
+        wNative = IWrappedNative(_wNative);
+    }
 
     /**
      * @notice Initializes Facet.
@@ -218,13 +232,16 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * - Exchange does not exist
      * - Exchange is not in the Disputed state
      * - Caller is neither the seller nor the buyer
-     * - Signature does not belong to the address of the other party
+     * - Signature does not belong to the address of the other party. Refer to EIP712Lib.verify for details
      * - Dispute state is neither Resolving nor escalated
      * - Dispute was escalated and escalation period has elapsed
      *
      * @param _exchangeId  - the id of the associated exchange
      * @param _buyerPercent - percentage of the pot that goes to the buyer
-     * @param _signature - signature of the other party. If the signer is EOA, it must be ECDSA signature in the format of (r,s,v) struct, otherwise, it must be a valid ERC1271 signature.
+     * @param _signature - signature of the other party 
+                           If the other party is ordinary EOA, it must be ECDSA signature in the format of concatenated r,s,v values. 
+                           If the other party is a contract, it must be a valid ERC1271 signature.
+                           If the other party is a EIP-7702 smart account, it can be either a valid ERC1271 signature or a valid ECDSA signature.
      */
     function resolveDispute(
         uint256 _exchangeId,

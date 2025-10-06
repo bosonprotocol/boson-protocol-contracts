@@ -75,6 +75,7 @@ interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBos
      * - Received ERC20 token amount differs from the expected value
      * - Seller has less funds available than sellerDeposit
      * - Buyer has less funds available than item price
+     * - The mutualizer contract does not implement the IDRFeeMutualizer interface
      *
      * @param _offerId - the id of the offer to commit to
      * @param _sellerParams - the seller-specific parameters (collection index, royalty info, mutualizer address)
@@ -143,11 +144,16 @@ interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBos
      * - Royalty percentage is less than the value decided by the admin
      * - Total royalty percentage is more than max royalty percentage
      * - Not enough funds can be encumbered
+     * - The mutualizer contract does not implement the IDRFeeMutualizer interface
+     * - Signature is invalid. Refer to EIP712Lib.verify for details
      *
      * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
      * @param _offerCreator - the address of the other party
      * @param _committer - the address of the committer (buyer for seller-created offers, seller for buyer-created offers)
-     * @param _signature - signature of the other party. If the signer is EOA, it must be ECDSA signature in the format of (r,s,v) struct, otherwise, it must be a valid ERC1271 signature.
+     * @param _signature - signature of the offer creator 
+                           If the offer creator is ordinary EOA, it must be ECDSA signature in the format of concatenated r,s,v values. 
+                           If the offer creator is a contract, it must be a valid ERC1271 signature.
+                           If the offer creator is a EIP-7702 smart account, it can be either a valid ERC1271 signature or a valid ECDSA signature.
      * @param _conditionalTokenId - the token id to use for the conditional commit, if applicable
      * @param _sellerParams - the seller-specific parameters (collection index, royalty info, mutualizer address), if applicable
      */
