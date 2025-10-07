@@ -311,6 +311,7 @@ async function main(env, facetConfig, version, functionNamesToSelector) {
     }
     if (selectorsToRemove.length > 0) {
       deployedFacets[index].cut.push([ZeroAddress, FacetCutAction.Remove, [...selectorsToRemove]]);
+      removedSelectors.push(selectorsToRemove); // add to global list
     }
 
     if (oldFacet && (selectorsToAdd.length > 0 || selectorsToRemove.length > 0)) {
