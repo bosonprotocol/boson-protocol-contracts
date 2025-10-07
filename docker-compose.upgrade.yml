@@ -4,6 +4,6 @@
 services:
   boson-protocol-node:
     # Boson Protocol v2.4.2 with contracts pre-deployed
-    image: bosonprotocol/boson-protocol-node@sha256:a8fcc615de7344e669795cb106dfd4c67aee22d9cbbaffc74b916ee29be73ee0
+    image: bosonprotocol/boson-protocol-node@sha256:f2cc0509316c0638d9abd5ba79d3151b7278f4117a9e2ea1400b56be589b3ec9
     ports:
       - "8545:8545"
