@@ -143,10 +143,12 @@ async function getFacetRemoveCut(facet, omitFunctions = []) {
   return [address, FacetCutAction.Remove, selectors];
 }
 
-async function getStateModifyingFunctions(facetNames, omitFunctions = [], onlyFunctions = []) {
+async function getStateModifyingFunctions(facetNamesOrAbis, omitFunctions = [], onlyFunctions = [], isAbi = false) {
   let stateModifyingFunctions = [];
-  for (const facetName of facetNames) {
-    let FacetContractFactory = await getContractFactory(facetName);
+  for (const facetNameOrAbi of facetNamesOrAbis) {
+    let FacetContractFactory = isAbi
+      ? new hre.ethers.Contract(ZeroAddress, facetNameOrAbi)
+      : await getContractFactory(facetNameOrAbi);
     const functions = FacetContractFactory.interface.fragments;
     const facetStateModifyingFunctions = functions
       .filter((fn) => {
@@ -169,13 +171,14 @@ async function getStateModifyingFunctions(facetNames, omitFunctions = [], onlyFu
   return stateModifyingFunctions;
 }
 
-function getStateModifyingFunctionsHashes(facetNames, omitFunctions = [], onlyFunctions = []) {
+function getStateModifyingFunctionsHashes(facetNames, omitFunctions = [], onlyFunctions = [], isAbi = false) {
   return async function getFunctionsHashes() {
     //  Allowlist contract methods
     const stateModifyingFunctions = await getStateModifyingFunctions(
       facetNames,
       [...omitFunctions, "initialize"],
-      onlyFunctions
+      onlyFunctions,
+      isAbi
     );
     return stateModifyingFunctions.map((smf) => keccak256(toUtf8Bytes(smf)));
   };
