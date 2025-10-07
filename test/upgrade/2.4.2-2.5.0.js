@@ -126,6 +126,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     before(async function () {
       exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolAddress);
       exchangeCommitHandler = await ethers.getContractAt("IBosonExchangeCommitHandler", protocolAddress);
+      protocolContracts.offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolAddress);
     });
 
     it(`New Protocol Version should be ${newVersion}`, async function () {
