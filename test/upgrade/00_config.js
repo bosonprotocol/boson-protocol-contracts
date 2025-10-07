@@ -225,6 +225,10 @@ const tagsByVersion = {
     newVersion: "HEAD",
     updateDomain: ["Offer"],
   },
+  "2.5.0": {
+    oldVersion: "v2.4.2",
+    newVersion: "v2.5.0",
+  },
 };
 
 exports.getFacets = getFacets;

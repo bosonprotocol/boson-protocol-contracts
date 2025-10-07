@@ -80,12 +80,20 @@ async function deployAndCutFacets(
  * @param maxPriorityFeePerGas - maxPriorityFeePerGas for transactions
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployProtocolFacets(facetNames, facetsToInit, maxPriorityFeePerGas) {
+async function deployProtocolFacets(facetNames, facetsToInit, maxPriorityFeePerGas, deployer = null) {
   let deployedFacets = [];
 
   // Deploy all handler facets
   for (const facetName of facetNames) {
-    let FacetContractFactory = await getContractFactory(facetName);
+    let FacetContractFactory;
+
+    // Use specific deployer for localhost Docker environment
+    if (deployer) {
+      FacetContractFactory = await getContractFactory(facetName, deployer);
+    } else {
+      FacetContractFactory = await getContractFactory(facetName);
+    }
+
     const constructorArgs = (facetsToInit[facetName] && facetsToInit[facetName].constructorArgs) || [];
     const facetContract = await FacetContractFactory.deploy(...constructorArgs, await getFees(maxPriorityFeePerGas));
     await facetContract.waitForDeployment(confirmations);
