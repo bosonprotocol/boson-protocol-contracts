@@ -286,27 +286,16 @@ async function mockReceipt() {
   );
 }
 
-function mockCondition(
-  { method, tokenType, tokenAddress, gating, minTokenId, threshold, maxCommits, maxTokenId } = {},
-  { refreshModule, legacyCondition } = {}
-) {
-  if (refreshModule) {
-    decache("../../scripts/domain/Condition.js");
-    Condition = require("../../scripts/domain/Condition.js");
-  }
-
-  if (legacyCondition) {
-    const tokenId = minTokenId;
-    return new Condition(
-      method ?? EvaluationMethod.Threshold,
-      tokenType ?? TokenType.FungibleToken,
-      tokenAddress ?? ZeroAddress,
-      tokenId ?? "0",
-      threshold ?? "1",
-      maxCommits ?? "1"
-    );
-  }
-
+function mockCondition({
+  method,
+  tokenType,
+  tokenAddress,
+  gating,
+  minTokenId,
+  threshold,
+  maxCommits,
+  maxTokenId,
+} = {}) {
   return new Condition(
     method ?? EvaluationMethod.Threshold,
     tokenType ?? TokenType.FungibleToken,
