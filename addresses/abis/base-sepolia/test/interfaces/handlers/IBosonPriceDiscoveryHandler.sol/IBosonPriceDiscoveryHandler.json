@@ -100,6 +100,11 @@
     },
     {
       "inputs": [],
+      "name": "DRFeeMutualizerCannotProvideCoverage",
+      "type": "error"
+    },
+    {
+      "inputs": [],
       "name": "DRUnsupportedFee",
       "type": "error"
     },
@@ -171,11 +176,6 @@
     {
       "inputs": [],
       "name": "ExternalCallFailed",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "FeeAmountNotYetSupported",
       "type": "error"
     },
     {
@@ -265,7 +265,17 @@
     },
     {
       "inputs": [],
+      "name": "InvalidBuyerOfferFields",
+      "type": "error"
+    },
+    {
+      "inputs": [],
       "name": "InvalidBuyerPercent",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidCollectionIndex",
       "type": "error"
     },
     {
@@ -306,6 +316,16 @@
     {
       "inputs": [],
       "name": "InvalidFunctionName",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidOffer",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidOfferCreator",
       "type": "error"
     },
     {
@@ -381,6 +401,11 @@
     {
       "inputs": [],
       "name": "InvalidRoyaltyRecipientId",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidSellerOfferFields",
       "type": "error"
     },
     {
@@ -505,6 +530,11 @@
     },
     {
       "inputs": [],
+      "name": "NoSuchEntity",
+      "type": "error"
+    },
+    {
+      "inputs": [],
       "name": "NoSuchExchange",
       "type": "error"
     },
@@ -586,6 +616,11 @@
     {
       "inputs": [],
       "name": "NotDisputeResolverAssistant",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotOfferCreator",
       "type": "error"
     },
     {
@@ -706,6 +741,11 @@
     },
     {
       "inputs": [],
+      "name": "SameMutualizerAddress",
+      "type": "error"
+    },
+    {
+      "inputs": [],
       "name": "SellerAddressMustBeUnique",
       "type": "error"
     },
@@ -721,12 +761,17 @@
     },
     {
       "inputs": [],
+      "name": "SellerParametersNotAllowed",
+      "type": "error"
+    },
+    {
+      "inputs": [],
       "name": "SellerSaltNotUnique",
       "type": "error"
     },
     {
       "inputs": [],
-      "name": "SignerAndSignatureDoNotMatch",
+      "name": "SignatureValidationFailed",
       "type": "error"
     },
     {
@@ -785,8 +830,24 @@
       "type": "error"
     },
     {
+      "inputs": [
+        {
+          "internalType": "bytes",
+          "name": "data",
+          "type": "bytes"
+        }
+      ],
+      "name": "UnexpectedDataReturned",
+      "type": "error"
+    },
+    {
       "inputs": [],
       "name": "UnexpectedERC721Received",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "UnsupportedMutualizer",
       "type": "error"
     },
     {
@@ -906,6 +967,11 @@
               "internalType": "enum BosonTypes.ExchangeState",
               "name": "state",
               "type": "uint8"
+            },
+            {
+              "internalType": "address payable",
+              "name": "mutualizerAddress",
+              "type": "address"
             }
           ],
           "indexed": false,
@@ -961,6 +1027,66 @@
           "type": "uint256"
         },
         {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "sellerId",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "collectionIndex",
+              "type": "uint256"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "address payable[]",
+                  "name": "recipients",
+                  "type": "address[]"
+                },
+                {
+                  "internalType": "uint256[]",
+                  "name": "bps",
+                  "type": "uint256[]"
+                }
+              ],
+              "internalType": "struct BosonTypes.RoyaltyInfo",
+              "name": "royaltyInfo",
+              "type": "tuple"
+            },
+            {
+              "internalType": "address payable",
+              "name": "mutualizerAddress",
+              "type": "address"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.SellerOfferParams",
+          "name": "sellerParams",
+          "type": "tuple"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "BuyerInitiatedOfferSetSellerParams",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "offerId",
+          "type": "uint256"
+        },
+        {
           "indexed": false,
           "internalType": "enum BosonTypes.GatingType",
           "name": "gating",
@@ -1000,6 +1126,117 @@
         {
           "indexed": true,
           "internalType": "uint256",
+          "name": "exchangeId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "tokenAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "feeAmount",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "mutualizerAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "DRFeeRequested",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "exchangeId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "tokenAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "returnAmount",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "mutualizerAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "DRFeeReturnFailed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "exchangeId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "tokenAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "returnAmount",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "mutualizerAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "DRFeeReturned",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
           "name": "offerId",
           "type": "uint256"
         },
@@ -1023,6 +1260,37 @@
         }
       ],
       "name": "ExchangeCompleted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "entityId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "tokenAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "FundsDeposited",
       "type": "event"
     },
     {
@@ -1159,6 +1427,103 @@
         }
       ],
       "name": "ProtocolFeeCollected",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "offerId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "sellerId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "exchangeId",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "offerId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "buyerId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "finalizedDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum BosonTypes.ExchangeState",
+              "name": "state",
+              "type": "uint8"
+            },
+            {
+              "internalType": "address payable",
+              "name": "mutualizerAddress",
+              "type": "address"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.Exchange",
+          "name": "exchange",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "committedDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "validUntilDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "redeemedDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "expired",
+              "type": "bool"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.Voucher",
+          "name": "voucher",
+          "type": "tuple"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "SellerCommitted",
       "type": "event"
     },
     {
