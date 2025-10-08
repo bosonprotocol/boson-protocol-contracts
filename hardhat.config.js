@@ -214,6 +214,16 @@ module.exports = {
   },
   etherscan: {
     apiKey: environments.etherscan.apiKey,
+    customChains: [
+      {
+        network: "optimism-sepolia",
+        chainId: 11155420,
+        urls: {
+          apiURL: "https://api-sepolia-optimistic.etherscan.io/api",
+          browserURL: "https://sepolia-optimism.etherscan.io",
+        },
+      },
+    ],
   },
   solidity: {
     compilers: [
