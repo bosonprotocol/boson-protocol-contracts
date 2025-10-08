@@ -2,7 +2,8 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { keccak256, toUtf8Bytes, ZeroAddress } = ethers;
 const { expect } = require("chai");
-const exchangeHandlerAbi_v2_4_2 = require("@bosonprotocol/common/src/abis/IBosonExchangeHandler.json");
+const { abis } = require("@bosonprotocol/common");
+const { IBosonExchangeHandlerABI: exchangeHandlerAbi_v2_4_2, IBosonOfferHandlerABI: offerHandlerAbi_v2_4_2 } = abis;
 
 const DockerUtils = require("./utils/docker-utils");
 const { readContracts } = require("../../scripts/util/utils");
@@ -61,7 +62,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     protocolContracts = {
       accountHandler: await ethers.getContractAt("IBosonAccountHandler", protocolDiamondAddress),
       exchangeHandler: new ethers.Contract(protocolDiamondAddress, exchangeHandlerAbi_v2_4_2, deployer),
-      offerHandler: await ethers.getContractAt("IBosonOfferHandler", protocolDiamondAddress),
+      offerHandler: new ethers.Contract(protocolDiamondAddress, offerHandlerAbi_v2_4_2, deployer),
       fundsHandler: await ethers.getContractAt("IBosonFundsHandler", protocolDiamondAddress),
       disputeHandler: await ethers.getContractAt("IBosonDisputeHandler", protocolDiamondAddress),
       bundleHandler: await ethers.getContractAt("IBosonBundleHandler", protocolDiamondAddress),
@@ -77,18 +78,18 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
 
     // Connect to existing deployed mock tokens from Docker container
     mockContracts = {
-      mockToken: await ethers.getContractAt("Foreign20", "0x70e0bA845a1A0F2DA3359C97E0285013525FFC49"),
-      mockConditionalToken: await ethers.getContractAt("Foreign20", "0x70e0bA845a1A0F2DA3359C97E0285013525FFC49"),
+      mockToken: await ethers.getContractAt("Foreign20", "0x998abeb3e57409262ae5b751f60747921b33613e"),
+      mockConditionalToken: await ethers.getContractAt("Foreign20", "0x998abeb3e57409262ae5b751f60747921b33613e"),
       mockAuthERC721Contract: await ethers.getContractAt(
         "MockNFTAuth721",
         "0x5FbDB2315678afecb367f032d93F642f64180aa3"
       ),
       mockTwinTokens: [
-        await ethers.getContractAt("Foreign721", "0x4826533B4897376654Bb4d4AD88B7faFD0C98528"),
+        await ethers.getContractAt("Foreign721", "0x70e0ba845a1a0f2da3359c97e0285013525ffc49"),
         await ethers.getContractAt("Foreign721", additionalForeign721Address),
       ],
-      mockTwin20: await ethers.getContractAt("Foreign20", "0x70e0bA845a1A0F2DA3359C97E0285013525FFC49"),
-      mockTwin1155: await ethers.getContractAt("Foreign1155", "0x99bbA657f2BbC93c02D617f8bA121cB8Fc104Acf"),
+      mockTwin20: await ethers.getContractAt("Foreign20", "0x998abeb3e57409262ae5b751f60747921b33613e"),
+      mockTwin1155: await ethers.getContractAt("Foreign1155", "0x4826533b4897376654bb4d4ad88b7fafd0c98528"),
     };
 
     // Since we are not using deploySuite, we need to set the version tags manually
@@ -125,6 +126,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     before(async function () {
       exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolAddress);
       exchangeCommitHandler = await ethers.getContractAt("IBosonExchangeCommitHandler", protocolAddress);
+      protocolContracts.offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolAddress);
     });
 
     it(`New Protocol Version should be ${newVersion}`, async function () {

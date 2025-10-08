@@ -22,6 +22,7 @@ const {
   removeSelectors,
   cutDiamond,
   getInitializeCalldata,
+  getStateModifyingFunctionsHashes,
 } = require("./util/diamond-utils.js");
 const { getInterfaceIds, interfaceImplementers } = require("./config/supported-interfaces.js");
 const packageFile = require("../package.json");
@@ -34,6 +35,7 @@ const rl = readline.createInterface({
 });
 const { ACCOUNTS } = require("../test/upgrade/utils/accounts.js");
 const { Wallet } = require("ethers");
+const { abis } = require("@bosonprotocol/common");
 
 /**
  * Upgrades or removes existing facets, or adds new facets.
@@ -172,6 +174,7 @@ async function main(env, facetConfig, version, functionNamesToSelector) {
   const interfacesToRemove = {},
     interfacesToAdd = {};
   const removedSelectors = []; // global list of selectors to be removed
+  const addedSelectors = []; // global list of selectors to be added
 
   functionNamesToSelector = JSON.parse(functionNamesToSelector);
 
@@ -194,7 +197,7 @@ async function main(env, facetConfig, version, functionNamesToSelector) {
 
     // All selectors must be removed
     let selectorsToRemove = registeredSelectors; // all selectors must be removed
-    removedSelectors.push(selectorsToRemove); // add to global list
+    removedSelectors.push(...selectorsToRemove); // add to global list
 
     // Removing the selectors
     facetCutRemove.push([ZeroAddress, FacetCutAction.Remove, selectorsToRemove]);
@@ -271,7 +274,7 @@ async function main(env, facetConfig, version, functionNamesToSelector) {
     let skipAll, replaceAll;
 
     for (const selectorToAdd of selectorsToAdd) {
-      if (removedSelectors.flat().includes(selectorToAdd)) {
+      if (removedSelectors.includes(selectorToAdd)) {
         continue;
       }
 
@@ -305,12 +308,14 @@ async function main(env, facetConfig, version, functionNamesToSelector) {
 
     if (selectorsToAdd.length > 0) {
       deployedFacets[index].cut.push([newFacetAddress, FacetCutAction.Add, [...selectorsToAdd]]);
+      addedSelectors.push(...selectorsToAdd); // add to global list
     }
     if (selectorsToReplace.length > 0) {
       deployedFacets[index].cut.push([newFacetAddress, FacetCutAction.Replace, [...selectorsToReplace]]);
     }
     if (selectorsToRemove.length > 0) {
       deployedFacets[index].cut.push([ZeroAddress, FacetCutAction.Remove, [...selectorsToRemove]]);
+      removedSelectors.push(...selectorsToRemove); // add to global list
     }
 
     if (oldFacet && (selectorsToAdd.length > 0 || selectorsToRemove.length > 0)) {
@@ -392,6 +397,36 @@ async function main(env, facetConfig, version, functionNamesToSelector) {
         .map((v) => `${v[1]} (${v[0]})`)
         .join("\n\t")}`
     );
+
+  console.log(divider);
+
+  // Remove old allowlisted functions that are no longer present
+  const metaTransactionsHandler = await getContractAt("IBosonMetaTransactionsHandler", protocolAddress);
+  const getOldFunctionHashesClosure = getStateModifyingFunctionsHashes(
+    Object.values(abis),
+    ["executeMetaTransaction"],
+    [],
+    true
+  );
+  const fullOldFunctionHashes = await getOldFunctionHashesClosure();
+  const oldAllowlisted = fullOldFunctionHashes.filter((h) => removedSelectors.includes(h.slice(0, 10)));
+
+  // Allowlist new functions in MetaTransactionsHandlerFacet
+  const getNewFunctionHashesClosure = getStateModifyingFunctionsHashes(
+    facets.addOrUpgrade,
+    ["executeMetaTransaction", "initV2_4_0External"],
+    [],
+    false
+  );
+  const fullNewFunctionHashes = await getNewFunctionHashesClosure();
+  const newAllowlisted = fullNewFunctionHashes.filter((h) => addedSelectors.includes(h.slice(0, 10)));
+
+  // if the function is removed and added again, remove it from both lists
+  const oldAllowlistedClean = oldAllowlisted.filter((h) => !newAllowlisted.includes(h));
+  const newAllowlistedClean = newAllowlisted.filter((h) => !oldAllowlisted.includes(h));
+
+  await metaTransactionsHandler.setAllowlistedFunctions(oldAllowlistedClean, false);
+  await metaTransactionsHandler.setAllowlistedFunctions(newAllowlistedClean, true);
 
   console.log(divider);
 

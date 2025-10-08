@@ -59,9 +59,6 @@ const { tagsByVersion } = require("../upgrade/00_config");
 let Condition = require("../../scripts/domain/Condition");
 
 // Common vars
-const versionsWithActivateDRFunction = ["v2.0.0", "v2.1.0"];
-const versionsBelowV2_3 = ["v2.0.0", "v2.1.0", "v2.2.0", "v2.2.1"]; // have clerk role, don't have collections, different way to get available funds
-const versionsBelowV2_4 = [...versionsBelowV2_3, "v2.3.0", "v2.4.0", "v2.4.1"]; // different offer struct, different createOffer function
 let rando;
 let preUpgradeInterfaceIds, preUpgradeVersions;
 let facets, versionTags;
@@ -180,15 +177,6 @@ async function deploySuite(deployer, newVersion) {
   const [mockToken, mockConditionalToken, mockTwin721_1, mockTwin721_2, mockTwin20, mockTwin1155] =
     await deployMockTokens(["Foreign20", "Foreign20", "Foreign721", "Foreign721", "Foreign20", "Foreign1155"]);
   const mockTwinTokens = [mockTwin721_1, mockTwin721_2];
-
-  // After v2.3.0, the deploy suite does deploy beacon proxy anymore, since it's deployed by the protocol itself
-  // To make upgrade tests consistent, we deploy it here
-  if (versionsBelowV2_3.includes(tag)) {
-    const ClientProxy = await getContractFactory("BeaconClientProxy");
-    const bosonVoucherProxy = await ClientProxy.deploy();
-
-    await configHandler.setBeaconProxyAddress(await bosonVoucherProxy.getAddress());
-  }
 
   return {
     protocolDiamondAddress,
@@ -393,9 +381,7 @@ async function populateProtocolContract(
     // create entities
     switch (entity) {
       case entityType.DR: {
-        const clerkAddress = versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)
-          ? wallet.address
-          : ZeroAddress;
+        const clerkAddress = ZeroAddress;
 
         const disputeResolver = mockDisputeResolver(
           await wallet.getAddress(),
@@ -424,18 +410,11 @@ async function populateProtocolContract(
           sellerAllowList,
         });
 
-        if (versionsWithActivateDRFunction.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)) {
-          //ADMIN role activates Dispute Resolver
-          await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
-        }
-
         break;
       }
 
       case entityType.SELLER: {
-        const clerkAddress = versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)
-          ? wallet.address
-          : ZeroAddress;
+        const clerkAddress = ZeroAddress;
         const seller = mockSeller(wallet.address, wallet.address, clerkAddress, wallet.address, true);
         const id = (seller.id = nextAccountId.toString());
 
@@ -454,9 +433,7 @@ async function populateProtocolContract(
         }
 
         // set unique new voucherInitValues
-        const voucherInitValues = versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)
-          ? new VoucherInitValues(`http://seller${id}.com/uri`, id * 10)
-          : new VoucherInitValues(`http://seller${id}.com/uri`, id * 10, ZeroHash);
+        const voucherInitValues = new VoucherInitValues(`http://seller${id}.com/uri`, id * 10, ZeroHash);
         const tx = await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
 
         const receipt = await tx.wait();
@@ -525,10 +502,9 @@ async function populateProtocolContract(
   for (let i = 0; i < sellers.length; i++) {
     for (let j = i; j >= 0; j--) {
       // Mock offer, offerDates and offerDurations
-      const offerStructV2_3 = versionsBelowV2_4.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion);
       const { offer, offerDates, offerDurations } = await mockOffer({
         refreshModule: true,
-        legacyOffer: offerStructV2_3,
+        legacyOffer: isBefore,
       });
 
       // Set unique offer properties based on offer id
@@ -570,13 +546,13 @@ async function populateProtocolContract(
         },
       ];
 
+      offer.royaltyInfo = royaltyInfo;
       // create an offer
-      if (offerStructV2_3) {
+      if (isBefore) {
         await offerHandler
           .connect(sellers[j].wallet)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
       } else {
-        offer.royaltyInfo = royaltyInfo;
         await offerHandler
           .connect(sellers[j].wallet)
           .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
@@ -602,16 +578,10 @@ async function populateProtocolContract(
     const seller = sellers[i];
     const { offerIds } = seller;
     const group = new Group(groupId, seller.seller.id, offerIds); // group all seller's offers
-    const condition = mockCondition(
-      {
-        tokenAddress: await mockConditionalToken.getAddress(),
-        maxCommits: "10",
-      },
-      {
-        refreshModule: true,
-        legacyCondition: versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion),
-      }
-    );
+    const condition = mockCondition({
+      tokenAddress: await mockConditionalToken.getAddress(),
+      maxCommits: "10",
+    });
     await groupHandler.connect(seller.wallet).createGroup(group, condition);
 
     groups.push(group);
@@ -721,9 +691,8 @@ async function populateProtocolContract(
         await mockToken.connect(buyerWallet).approve(protocolDiamondAddress, offerPrice);
         await mockToken.connect(deployer).mint(await buyerWallet.getAddress(), offerPrice);
       }
-      // v2.3.0 introduces commitToConditionalOffer method which should be used for conditional offers
-      const isAfterV2_3_0 = !versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion);
-      if (groupId && isAfterV2_3_0) {
+
+      if (groupId) {
         // get condition
         let [, , condition] = await groupHandler.getGroup(groupId);
         decache("../../scripts/domain/Condition.js");
@@ -877,7 +846,7 @@ async function getProtocolContractState(
   };
 }
 
-async function getAccountContractState(accountHandler, { DRs, sellers, buyers, agents }, isBefore = false) {
+async function getAccountContractState(accountHandler, { DRs, sellers, buyers, agents }) {
   const accountHandlerRando = accountHandler.connect(rando);
   // all accounts
   const accounts = [...sellers, ...DRs, ...buyers, ...agents];
@@ -900,12 +869,7 @@ async function getAccountContractState(accountHandler, { DRs, sellers, buyers, a
     sellerState.push(await getSeller(accountHandlerRando, id, { getBy: "id" }));
     agentsState.push(await getAgent(accountHandlerRando, id));
     buyersState.push(await getBuyer(accountHandlerRando, id));
-
-    if (!versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)) {
-      sellersCollections.push(await accountHandlerRando.getSellersCollections(id));
-    } else {
-      sellersCollections.push([ZeroAddress, []]);
-    }
+    sellersCollections.push(await accountHandlerRando.getSellersCollections(id));
 
     for (const account2 of accounts) {
       const id2 = account2.id;
@@ -1037,9 +1001,7 @@ async function getBundleContractState(bundleHandler, bundles) {
   return { bundlesState, bundleIdByOfferState, bundleIdByTwinState, nextBundleId };
 }
 
-async function getConfigContractState(configHandler, isBefore = false) {
-  const isBefore2_3_0 = versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion);
-  const isBefore2_4_0 = versionsBelowV2_4.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion);
+async function getConfigContractState(configHandler) {
   const configHandlerRando = configHandler.connect(rando);
   const [
     tokenAddress,
@@ -1048,27 +1010,16 @@ async function getConfigContractState(configHandler, isBefore = false) {
     beaconProxyAddress,
     protocolFeePercentage,
     protocolFeeFlatBoson,
-    maxOffersPerBatch,
-    maxOffersPerGroup,
-    maxTwinsPerBundle,
-    maxOffersPerBundle,
-    maxTokensPerWithdrawal,
-    maxFeesPerDisputeResolver,
-    maxEscalationResponsePeriod,
-    maxDisputesPerBatch,
     maxTotalOfferFeePercentage,
-    maxAllowedSellers,
     buyerEscalationDepositPercentage,
     authTokenContractNone,
     authTokenContractCustom,
     authTokenContractLens,
     authTokenContractENS,
-    maxExchangesPerBatch,
     maxRoyaltyPercentage,
     maxResolutionPeriod,
     minDisputePeriod,
     accessControllerAddress,
-    maxPremintedVouchers,
     minResolutionPeriod,
   ] = await Promise.all([
     configHandlerRando.getTokenAddress(),
@@ -1077,28 +1028,17 @@ async function getConfigContractState(configHandler, isBefore = false) {
     configHandlerRando.getBeaconProxyAddress(),
     configHandlerRando.getProtocolFeePercentage(),
     configHandlerRando.getProtocolFeeFlatBoson(),
-    isBefore2_3_0 ? configHandlerRando.getMaxOffersPerBatch() : Promise.resolve(0n),
-    isBefore2_3_0 ? configHandlerRando.getMaxOffersPerGroup() : Promise.resolve(0n),
-    isBefore2_3_0 ? configHandlerRando.getMaxTwinsPerBundle() : Promise.resolve(0n),
-    isBefore2_3_0 ? configHandlerRando.getMaxOffersPerBundle() : Promise.resolve(0n),
-    isBefore2_3_0 ? configHandlerRando.getMaxTokensPerWithdrawal() : Promise.resolve(0n),
-    isBefore2_3_0 ? configHandlerRando.getMaxFeesPerDisputeResolver() : Promise.resolve(0n),
-    isBefore2_3_0 ? configHandlerRando.getMaxEscalationResponsePeriod() : Promise.resolve(0n),
-    isBefore2_3_0 ? configHandlerRando.getMaxDisputesPerBatch() : Promise.resolve(0n),
     configHandlerRando.getMaxTotalOfferFeePercentage(),
-    isBefore2_3_0 ? configHandlerRando.getMaxAllowedSellers() : Promise.resolve(0n),
     configHandlerRando.getBuyerEscalationDepositPercentage(),
     configHandlerRando.getAuthTokenContract(AuthTokenType.None),
     configHandlerRando.getAuthTokenContract(AuthTokenType.Custom),
     configHandlerRando.getAuthTokenContract(AuthTokenType.Lens),
     configHandlerRando.getAuthTokenContract(AuthTokenType.ENS),
-    isBefore2_3_0 ? configHandlerRando.getMaxExchangesPerBatch() : Promise.resolve(0n),
-    isBefore2_4_0 ? configHandlerRando.getMaxRoyaltyPecentage() : configHandlerRando.getMaxRoyaltyPercentage(),
+    configHandlerRando.getMaxRoyaltyPercentage(),
     configHandlerRando.getMaxResolutionPeriod(),
     configHandlerRando.getMinDisputePeriod(),
     configHandlerRando.getAccessControllerAddress(),
-    isBefore2_3_0 ? configHandlerRando.getMaxPremintedVouchers() : Promise.resolve(0n),
-    !isBefore2_3_0 ? configHandlerRando.getMinResolutionPeriod() : Promise.resolve(0n),
+    configHandlerRando.getMinResolutionPeriod(),
   ]);
 
   return {
@@ -1108,27 +1048,16 @@ async function getConfigContractState(configHandler, isBefore = false) {
     beaconProxyAddress,
     protocolFeePercentage: protocolFeePercentage.toString(),
     protocolFeeFlatBoson: protocolFeeFlatBoson.toString(),
-    maxOffersPerBatch: maxOffersPerBatch.toString(),
-    maxOffersPerGroup: maxOffersPerGroup.toString(),
-    maxTwinsPerBundle: maxTwinsPerBundle.toString(),
-    maxOffersPerBundle: maxOffersPerBundle.toString(),
-    maxTokensPerWithdrawal: maxTokensPerWithdrawal.toString(),
-    maxFeesPerDisputeResolver: maxFeesPerDisputeResolver.toString(),
-    maxEscalationResponsePeriod: maxEscalationResponsePeriod.toString(),
-    maxDisputesPerBatch: maxDisputesPerBatch.toString(),
     maxTotalOfferFeePercentage: maxTotalOfferFeePercentage.toString(),
-    maxAllowedSellers: maxAllowedSellers.toString(),
     buyerEscalationDepositPercentage: buyerEscalationDepositPercentage.toString(),
     authTokenContractNone,
     authTokenContractCustom,
     authTokenContractLens,
     authTokenContractENS,
-    maxExchangesPerBatch: maxExchangesPerBatch.toString(),
     maxRoyaltyPercentage: maxRoyaltyPercentage.toString(),
     maxResolutionPeriod: maxResolutionPeriod.toString(),
     minDisputePeriod: minDisputePeriod.toString(),
     accessControllerAddress,
-    maxPremintedVouchers: maxPremintedVouchers.toString(),
     minResolutionPeriod: minResolutionPeriod.toString(),
   };
 }
@@ -1158,17 +1087,13 @@ async function getDisputeContractState(disputeHandler, exchanges) {
   return { disputesState, disputesStatesState, disputeTimeoutState, isDisputeFinalizedState };
 }
 
-async function getFundsContractState(fundsHandler, { DRs, sellers, buyers, agents }, isBefore = false) {
+async function getFundsContractState(fundsHandler, { DRs, sellers, buyers, agents }) {
   const fundsHandlerRando = fundsHandler.connect(rando);
 
   // Query even the ids where it's not expected to get the entity
   const accountIds = [...DRs, ...sellers, ...buyers, ...agents].map((account) => account.id);
-  let fundsState = [];
-  if (versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)) {
-    fundsState = await Promise.all(accountIds.map((id) => fundsHandlerRando.getAvailableFunds(id)));
-  } else {
-    fundsState = await Promise.all(accountIds.map((id) => fundsHandlerRando.getAllAvailableFunds(id)));
-  }
+  const fundsState = await Promise.all(accountIds.map((id) => fundsHandlerRando.getAllAvailableFunds(id)));
+
   return { fundsState };
 }
 
@@ -1944,9 +1869,7 @@ async function populateVoucherContract(
       // create entities
       switch (entity) {
         case entityType.DR: {
-          const clerkAddress = versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)
-            ? wallet.address
-            : ZeroAddress;
+          const clerkAddress = ZeroAddress;
 
           const disputeResolver = mockDisputeResolver(
             await wallet.getAddress(),
@@ -1976,10 +1899,6 @@ async function populateVoucherContract(
             sellerAllowList,
           });
 
-          if (versionsWithActivateDRFunction.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion)) {
-            //ADMIN role activates Dispute Resolver
-            await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
-          }
           break;
         }
         case entityType.SELLER: {
@@ -1998,11 +1917,7 @@ async function populateVoucherContract(
           let authToken = mockAuthToken();
 
           // set unique new voucherInitValues
-          const voucherInitValues = versionsBelowV2_3.includes(
-            isBefore ? versionTags.oldVersion : versionTags.newVersion
-          )
-            ? new VoucherInitValues(`http://seller${id}.com/uri`, id * 10)
-            : new VoucherInitValues(`http://seller${id}.com/uri`, id * 10, ZeroHash);
+          const voucherInitValues = new VoucherInitValues(`http://seller${id}.com/uri`, id * 10, ZeroHash);
           const tx = await accountHandler.connect(connectedWallet).createSeller(seller, authToken, voucherInitValues);
           const receipt = await tx.wait();
           const [, , voucherContractAddress] = receipt.logs.find((e) => e?.fragment?.name === "SellerCreated").args;
@@ -2042,10 +1957,9 @@ async function populateVoucherContract(
   for (let i = 0; i < sellers.length; i++) {
     for (let j = i; j >= 0; j--) {
       // Mock offer, offerDates and offerDurations
-      const offerStructV2_3 = versionsBelowV2_4.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion);
       const { offer, offerDates, offerDurations } = await mockOffer({
         refreshModule: true,
-        legacyOffer: offerStructV2_3,
+        legacyOffer: isBefore,
       });
 
       // Set unique offer properties based on offer id
@@ -2083,16 +1997,17 @@ async function populateVoucherContract(
         },
       ];
 
+      offer.royaltyInfo = royaltyInfo;
+
       // create an offer
-      if (offerStructV2_3) {
-        await offerHandler
-          .connect(sellers[j].wallet)
-          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
-      } else {
-        offer.royaltyInfo = royaltyInfo;
+      if (isBefore) {
         await offerHandler
           .connect(sellers[j].wallet)
           .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit);
+      } else {
+        await offerHandler
+          .connect(sellers[j].wallet)
+          .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId, offerFeeLimit); // < toDo drTerms
       }
 
       offers.push({ offer, offerDates, offerDurations, disputeResolverId, agentId, royaltyInfo });
@@ -2127,9 +2042,7 @@ async function populateVoucherContract(
         await mockToken.connect(deployer).mint(await buyerWallet.getAddress(), offerPrice);
       }
 
-      // v2.3.0 introduces commitToConditionalOffer method which should be used for conditional offers
-      const isAfterV2_3_0 = !versionsBelowV2_3.includes(isBefore ? versionTags.oldVersion : versionTags.newVersion);
-      if (groupId && isAfterV2_3_0) {
+      if (groupId) {
         // get condition
         decache("../../scripts/domain/Condition.js");
         Condition = require("../../scripts/domain/Condition.js");
