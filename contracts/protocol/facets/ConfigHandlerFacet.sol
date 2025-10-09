@@ -51,6 +51,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxResolutionPeriod(_limits.maxResolutionPeriod);
         setMinResolutionPeriod(_limits.minResolutionPeriod);
         setMinDisputePeriod(_limits.minDisputePeriod);
+        setMutualizerGasStipend(_limits.mutualizerGasStipend);
 
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -648,6 +649,34 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function getAccessControllerAddress() external view returns (address) {
         return address(DiamondLib.diamondStorage().accessController);
+    }
+
+    /**
+     * @notice Sets the gas stipend forwarded when calling IDRFeeMutualizer.finalizeExchange
+     *
+     * Emits a MutualizerGasStipendChanged event if successful.
+     *
+     * Reverts if the _mutualizerGasStipend is zero.
+     *
+     * @dev Caller must have ADMIN role.
+     *
+     * @param _mutualizerGasStipend - the gas stipend that is forwarded when calling IDRFeeMutualizer.finalizeExchange
+     */
+    function setMutualizerGasStipend(uint256 _mutualizerGasStipend) public override onlyRole(ADMIN) nonReentrant {
+        // Make sure _mutualizerGasStipend is greater than 0
+        checkNonZeroValue(_mutualizerGasStipend);
+
+        protocolLimits().mutualizerGasStipend = _mutualizerGasStipend;
+        emit MutualizerGasStipendChanged(_mutualizerGasStipend, _msgSender());
+    }
+
+    /**
+     * @notice Gets the gas stipend forwarded when calling IDRFeeMutualizer.finalizeExchange
+     *
+     * @return the gas stipend that is forwarded when calling IDRFeeMutualizer.finalizeExchange
+     */
+    function getMutualizerGasStipend() external view override returns (uint256) {
+        return protocolLimits().mutualizerGasStipend;
     }
 
     /**

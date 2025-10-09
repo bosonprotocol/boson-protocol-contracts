@@ -39,7 +39,8 @@ describe("IBosonConfigHandler", function () {
     minResolutionPeriod,
     maxResolutionPeriod,
     minDisputePeriod,
-    maxPremintedVouchers;
+    maxPremintedVouchers,
+    mutualizerGasStipend;
   let protocolFeePercentage, protocolFeeFlatBoson;
   let erc165, protocolDiamond, accessController, configHandler;
   let snapshotId;
@@ -79,6 +80,7 @@ describe("IBosonConfigHandler", function () {
     maxResolutionPeriod = oneMonth;
     minDisputePeriod = oneWeek;
     maxPremintedVouchers = 10000;
+    mutualizerGasStipend = 100000;
 
     // Cast Diamond to IERC165
     erc165 = await getContractAt("ERC165Facet", await protocolDiamond.getAddress());
@@ -130,6 +132,7 @@ describe("IBosonConfigHandler", function () {
             maxResolutionPeriod,
             minDisputePeriod,
             maxPremintedVouchers,
+            mutualizerGasStipend,
           },
           //Protocol fees
           protocolFeePercentage,
@@ -195,6 +198,10 @@ describe("IBosonConfigHandler", function () {
         await expect(cutTransaction)
           .to.emit(configHandler, "MinDisputePeriodChanged")
           .withArgs(minDisputePeriod, await deployer.getAddress());
+
+        await expect(cutTransaction)
+          .to.emit(configHandler, "MutualizerGasStipendChanged")
+          .withArgs(mutualizerGasStipend, await deployer.getAddress());
       });
     });
   });
@@ -229,6 +236,7 @@ describe("IBosonConfigHandler", function () {
           maxResolutionPeriod,
           minDisputePeriod,
           maxPremintedVouchers,
+          mutualizerGasStipend,
         },
         // Protocol fees
         protocolFeePercentage,
@@ -1059,6 +1067,45 @@ describe("IBosonConfigHandler", function () {
           });
         });
       });
+
+      context("👉 setMutualizerGasStipend()", async function () {
+        let mutualizerGasStipend;
+        beforeEach(async function () {
+          // set new value
+          mutualizerGasStipend = 250000;
+        });
+
+        it("should emit a MutualizerGasStipendChanged event", async function () {
+          // Set new mutualizer gas stipend
+          await expect(configHandler.connect(deployer).setMutualizerGasStipend(mutualizerGasStipend))
+            .to.emit(configHandler, "MutualizerGasStipendChanged")
+            .withArgs(mutualizerGasStipend, await deployer.getAddress());
+        });
+
+        it("should update state", async function () {
+          // Set new mutualizer gas stipend
+          await configHandler.connect(deployer).setMutualizerGasStipend(mutualizerGasStipend);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMutualizerGasStipend()).to.equal(mutualizerGasStipend);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new value, expecting revert
+            await expect(
+              configHandler.connect(rando).setMutualizerGasStipend(mutualizerGasStipend)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.ACCESS_DENIED);
+          });
+
+          it("mutualizerGasStipend is zero", async function () {
+            mutualizerGasStipend = 0;
+            await expect(
+              configHandler.connect(deployer).setMutualizerGasStipend(mutualizerGasStipend)
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.VALUE_ZERO_NOT_ALLOWED);
+          });
+        });
+      });
     });
 
     context("📋 Getters", async function () {
@@ -1136,6 +1183,10 @@ describe("IBosonConfigHandler", function () {
         expect(await configHandler.connect(rando).getMinDisputePeriod()).to.equal(
           minDisputePeriod,
           "Invalid min dispute period"
+        );
+        expect(await configHandler.connect(rando).getMutualizerGasStipend()).to.equal(
+          mutualizerGasStipend,
+          "Invalid mutualizer gas stipend"
         );
       });
     });

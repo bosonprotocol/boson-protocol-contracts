@@ -27,6 +27,7 @@ module.exports = {
     maxResolutionPeriod: ninetyDays.toString(),
     minDisputePeriod: oneWeek.toString(),
     maxPremintedVouchers: "10000",
+    mutualizerGasStipend: "100000",
   },
 
   // Boson Token (ERC-20) contract address

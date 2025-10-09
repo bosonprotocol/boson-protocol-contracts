@@ -146,6 +146,7 @@ describe("SnapshotGate", function () {
         maxResolutionPeriod: oneMonth,
         minDisputePeriod: oneWeek,
         maxPremintedVouchers: 10000,
+        mutualizerGasStipend: 100000,
       },
       // Protocol fees
       protocolFeePercentage,
