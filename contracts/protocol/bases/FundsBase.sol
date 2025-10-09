@@ -279,10 +279,9 @@ abstract contract FundsBase is Context {
                 }
 
                 try
-                    IDRFeeMutualizer(mutualizerAddress).finalizeExchange{ gas: FINALIZE_EXCHANGE_FEE_GAS }(
-                        _exchangeId,
-                        payoff.mutualizer
-                    )
+                    IDRFeeMutualizer(mutualizerAddress).finalizeExchange{
+                        gas: ProtocolLib.protocolLimits().mutualizerGasStipend
+                    }(_exchangeId, payoff.mutualizer)
                 {
                     emit IBosonFundsBaseEvents.DRFeeReturned(
                         _exchangeId,

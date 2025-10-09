@@ -66,6 +66,8 @@ library ProtocolLib {
         uint256 maxPremintedVouchers;
         // lower limit for resolution period
         uint256 minResolutionPeriod;
+        // Gas to forward when returning DR fee to mutualizer
+        uint256 mutualizerGasStipend;
     }
 
     // Protocol fees storage
