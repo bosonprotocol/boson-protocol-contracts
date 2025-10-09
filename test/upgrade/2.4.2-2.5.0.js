@@ -137,6 +137,13 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
       expect(versionString).to.equal(newVersion);
     });
 
+    it("Mutualizer gas stipend is set correctly", async function () {
+      const expectedGasStipend = 100000;
+      const configHandler = await ethers.getContractAt("ConfigHandlerFacet", protocolAddress);
+      const currentStipend = await configHandler.getMutualizerGasStipend();
+      expect(currentStipend).to.equal(expectedGasStipend);
+    });
+
     describe("Old Offers Compatibility", function () {
       it("Can finalise offers created in v2.4.2", async function () {
         const exchange = preUpgradeEntities.exchanges[0];
