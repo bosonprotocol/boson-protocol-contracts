@@ -409,4 +409,24 @@ interface IBosonConfigHandler is IBosonConfigEvents, BosonErrors {
      * @return the access controller address
      */
     function getAccessControllerAddress() external view returns (address);
+
+    /**
+     * @notice Sets the gas stipend forwarded when calling IDRFeeMutualizer.finalizeExchange
+     *
+     * Emits a MutualizerGasStipendChanged event if successful.
+     *
+     * Reverts if the _mutualizerGasStipend is zero.
+     *
+     * @dev Caller must have ADMIN role.
+     *
+     * @param _mutualizerGasStipend - the gas stipend that is forwarded when calling IDRFeeMutualizer.finalizeExchange
+     */
+    function setMutualizerGasStipend(uint256 _mutualizerGasStipend) external;
+
+    /**
+     * @notice Gets the gas stipend forwarded when calling IDRFeeMutualizer.finalizeExchange
+     *
+     * @return the gas stipend that is forwarded when calling IDRFeeMutualizer.finalizeExchange
+     */
+    function getMutualizerGasStipend() external view returns (uint256);
 }

@@ -36,4 +36,5 @@ interface IBosonConfigEvents {
         uint256[] feePercentages,
         address indexed executedBy
     );
+    event MutualizerGasStipendChanged(uint256 mutualizerGasStipend, address indexed executedBy);
 }
