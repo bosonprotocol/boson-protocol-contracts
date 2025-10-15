@@ -206,16 +206,17 @@ async function prepareDataSignature(
   primaryType,
   message,
   forwarderAddress,
-  options = {
-    domainName: "Boson Protocol",
-    domainVersion: "V2",
-    type: "Protocol",
-    hashOnly: false,
-  }
+  {
+    domainName = "Boson Protocol",
+    domainVersion = "V2",
+    type = "Protocol",
+    hashOnly = false,
+    localSigner = false, // If true, use local signer to sign the data
+  } = {}
 ) {
   // Initialize data
   const domainType =
-    options?.type == "Protocol"
+    type == "Protocol"
       ? [
           { name: "name", type: "string" },
           { name: "version", type: "string" },
@@ -230,16 +231,16 @@ async function prepareDataSignature(
         ];
 
   const domainData = {
-    name: options?.domainName,
-    version: options?.domainVersion,
+    name: domainName,
+    version: domainVersion,
     verifyingContract: forwarderAddress,
   };
 
-  if (options?.type == "Protocol") {
+  const { chainId } = await provider.getNetwork();
+  if (type == "Protocol") {
     //hardhat default chain id is 31337
-    domainData.salt = zeroPadValue(toHexString(31337n), 32);
+    domainData.salt = zeroPadValue(toHexString(chainId), 32);
   } else {
-    const { chainId } = await provider.getNetwork();
     domainData.chainId = chainId.toString();
   }
 
@@ -251,13 +252,13 @@ async function prepareDataSignature(
 
   // Prepare the data to sign
   const typedData = {
-    types: options?.hashOnly ? customTransactionTypes : metaTxTypes,
+    types: hashOnly ? customTransactionTypes : metaTxTypes,
     domain: domainData,
     primaryType: primaryType,
     message: message,
   };
 
-  if (options?.hashOnly) {
+  if (hashOnly) {
     // If only the hash is needed, return it
     const typedDataEncoder = new ethers.TypedDataEncoder(typedData.types);
     return typedDataEncoder.hash(typedData.message);
@@ -265,6 +266,11 @@ async function prepareDataSignature(
   let dataToSign = JSON.stringify(typedData);
 
   // Sign the data
+  if (localSigner) {
+    const signature = await user.signTypedData(domainData, customTransactionTypes, message);
+    return signature;
+  }
+
   const signature = await provider.send("eth_signTypedData_v4", [await user.getAddress(), dataToSign]);
 
   return signature;

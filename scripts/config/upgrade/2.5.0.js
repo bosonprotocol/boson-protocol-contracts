@@ -27,11 +27,12 @@ async function getFacets() {
     remove: [],
     skipSelectors: {},
     facetsToInit: {
-      ExchangeHandlerFacet: { constructorArgs: [EXCHANGE_ID_2_2_0[network], WrappedNative[network]] },
-      DisputeHandlerFacet: { constructorArgs: [WrappedNative[network]] },
+      ExchangeHandlerFacet: { constructorArgs: [EXCHANGE_ID_2_2_0[network], WrappedNative[network]], init: [] },
+      DisputeHandlerFacet: { constructorArgs: [WrappedNative[network]], init: [] },
       PriceDiscoveryHandlerFacet: { constructorArgs: [WrappedNative[network]] },
       SequentialCommitHandlerFacet: { constructorArgs: [WrappedNative[network]] },
-      ExchangeCommitFacet: { constructorArgs: [] }, // New facet initialization
+      ExchangeCommitFacet: { constructorArgs: [], init: [] }, // New facet initialization
+      MetaTransactionsHandlerFacet: { constructorArgs: [], init: [[]] }, // Init mappings; but don't allowlist
     },
     initializationData: "0x",
   };

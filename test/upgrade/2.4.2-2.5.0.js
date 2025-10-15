@@ -1,6 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { keccak256, toUtf8Bytes, ZeroAddress } = ethers;
+const { keccak256, toUtf8Bytes, ZeroAddress, randomBytes } = ethers;
 const { expect } = require("chai");
 const { abis } = require("@bosonprotocol/common");
 const { IBosonExchangeHandlerABI: exchangeHandlerAbi_v2_4_2, IBosonOfferHandlerABI: offerHandlerAbi_v2_4_2 } = abis;
@@ -425,6 +425,55 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         await expect(completeExchangeTx)
           .to.emit(exchangeHandler, "FundsReleased")
           .withArgs(exchangeId, actualSellerId, ZeroAddress, sellerPayoff, buyer1.address);
+      });
+
+      it("Use new metaTransactionHandler", async function () {
+        const exchange = preUpgradeEntities.exchanges[6]; // Use an exchange that has not been redeemed yet
+        const buyer = preUpgradeEntities.buyers[exchange.buyerIndex].wallet;
+
+        const metaTransactionType = [
+          { name: "nonce", type: "uint256" },
+          { name: "from", type: "address" },
+          { name: "contractAddress", type: "address" },
+          { name: "functionName", type: "string" },
+          { name: "exchangeDetails", type: "MetaTxExchangeDetails" },
+        ];
+
+        // Set the offer Type
+        const exchangeType = [{ name: "exchangeId", type: "uint256" }];
+
+        const customTransactionType = {
+          MetaTxExchange: metaTransactionType,
+          MetaTxExchangeDetails: exchangeType,
+        };
+
+        const message = {};
+        message.nonce = parseInt(randomBytes(8));
+        message.from = buyer.address;
+        message.contractAddress = protocolAddress;
+        message.functionName = "redeemVoucher(uint256)";
+
+        message.exchangeDetails = {
+          exchangeId: exchange.exchangeId,
+        };
+
+        const signature = await prepareDataSignature(
+          buyer,
+          customTransactionType,
+          "MetaTxExchange",
+          message,
+          protocolAddress,
+          { localSigner: true }
+        );
+
+        const functionSignature = exchangeHandler.interface.encodeFunctionData("redeemVoucher", [exchange.exchangeId]);
+        await expect(
+          protocolContracts.metaTransactionsHandler
+            .connect(deployer) // Anyone can submit the meta-transaction
+            .executeMetaTransaction(buyer.address, message.functionName, functionSignature, message.nonce, signature)
+        )
+          .to.emit(protocolContracts.metaTransactionsHandler, "MetaTransactionExecuted")
+          .withArgs(buyer.address, deployer.address, message.functionName, message.nonce);
       });
     });
 
