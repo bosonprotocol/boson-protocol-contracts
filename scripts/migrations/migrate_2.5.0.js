@@ -8,6 +8,7 @@ const version = "2.5.0-rc.2";
 const confirmations = hre.network.name === "hardhat" ? 1 : environments.confirmations;
 const { ACCOUNTS } = require("../../test/upgrade/utils/accounts.js");
 const Role = require("../domain/Role");
+const mutualizerGasStipend = 100000;
 
 /**
  * Migration script for v2.5.0
@@ -82,6 +83,11 @@ async function migrate(env) {
       functionNamesToSelector: "{}",
       facetConfig: JSON.stringify(facetConfig),
     });
+
+    // Set the mutualizer gas stipend
+    const configHandler = await getContractAt("ConfigHandlerFacet", protocolAddress);
+    const tx = await configHandler.setMutualizerGasStipend(mutualizerGasStipend);
+    await tx.wait(confirmations);
 
     // Re-read contracts file to get updated facet addresses
     const updatedContractsFile = readContracts(chainId, network, env);
