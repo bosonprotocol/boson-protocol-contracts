@@ -50,6 +50,11 @@
               "internalType": "enum BosonTypes.ExchangeState",
               "name": "state",
               "type": "uint8"
+            },
+            {
+              "internalType": "address payable",
+              "name": "mutualizerAddress",
+              "type": "address"
             }
           ],
           "indexed": false,
@@ -93,6 +98,66 @@
         }
       ],
       "name": "BuyerCommitted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "offerId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "sellerId",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "collectionIndex",
+              "type": "uint256"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "address payable[]",
+                  "name": "recipients",
+                  "type": "address[]"
+                },
+                {
+                  "internalType": "uint256[]",
+                  "name": "bps",
+                  "type": "uint256[]"
+                }
+              ],
+              "internalType": "struct BosonTypes.RoyaltyInfo",
+              "name": "royaltyInfo",
+              "type": "tuple"
+            },
+            {
+              "internalType": "address payable",
+              "name": "mutualizerAddress",
+              "type": "address"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.SellerOfferParams",
+          "name": "sellerParams",
+          "type": "tuple"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "BuyerInitiatedOfferSetSellerParams",
       "type": "event"
     },
     {
@@ -167,6 +232,103 @@
         }
       ],
       "name": "ExchangeCompleted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "offerId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "sellerId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "exchangeId",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "offerId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "buyerId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "finalizedDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum BosonTypes.ExchangeState",
+              "name": "state",
+              "type": "uint8"
+            },
+            {
+              "internalType": "address payable",
+              "name": "mutualizerAddress",
+              "type": "address"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.Exchange",
+          "name": "exchange",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "committedDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "validUntilDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "redeemedDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "expired",
+              "type": "bool"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.Voucher",
+          "name": "voucher",
+          "type": "tuple"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "SellerCommitted",
       "type": "event"
     },
     {
