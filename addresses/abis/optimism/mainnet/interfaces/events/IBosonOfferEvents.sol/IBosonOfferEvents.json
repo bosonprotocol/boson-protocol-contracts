@@ -7,6 +7,31 @@
       "anonymous": false,
       "inputs": [
         {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "offerHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "offererId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "NonListedOfferVoided",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
           "indexed": true,
           "internalType": "uint256",
           "name": "offerId",
@@ -61,6 +86,11 @@
               "type": "uint8"
             },
             {
+              "internalType": "enum BosonTypes.OfferCreator",
+              "name": "creator",
+              "type": "uint8"
+            },
+            {
               "internalType": "string",
               "name": "metadataUri",
               "type": "string"
@@ -96,6 +126,11 @@
               "internalType": "struct BosonTypes.RoyaltyInfo[]",
               "name": "royaltyInfo",
               "type": "tuple[]"
+            },
+            {
+              "internalType": "uint256",
+              "name": "buyerId",
+              "type": "uint256"
             }
           ],
           "indexed": false,
@@ -175,6 +210,11 @@
               "internalType": "uint256",
               "name": "buyerEscalationDeposit",
               "type": "uint256"
+            },
+            {
+              "internalType": "address payable",
+              "name": "mutualizerAddress",
+              "type": "address"
             }
           ],
           "indexed": false,
@@ -263,6 +303,37 @@
           "type": "uint256"
         },
         {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newMutualizer",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "OfferMutualizerUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "offerId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "sellerId",
+          "type": "uint256"
+        },
+        {
           "components": [
             {
               "internalType": "address payable[]",
@@ -302,7 +373,7 @@
         {
           "indexed": true,
           "internalType": "uint256",
-          "name": "sellerId",
+          "name": "creatorId",
           "type": "uint256"
         },
         {
