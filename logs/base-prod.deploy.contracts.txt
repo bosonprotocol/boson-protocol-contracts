@@ -1,0 +1,722 @@
+Sending 1 ether to the admin
+Granting roles to upgrader
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: hardhat
+📅 Tue Jan 28 2025 15:33:32 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0xc1EB40763165b3543C30725dBC14433c4c671FCA
+✅ DiamondLoupeFacet deployed to: 0x4eAe795e9d4F0a5f33B952B2750c9a64BB6D3453
+✅ DiamondCutFacet deployed to: 0xe8637906721051D860af222E6021826887d9e358
+✅ ERC165Facet deployed to: 0x469eF8b9F583920318Ce3dd095A0402A4b061bb0
+✅ ProtocolDiamond deployed to: 0x0ab0Fec353C6653F2eD05b5E5ceb4fB27c7d7902
+
+💎 Granting UPGRADER role...
+
+💸 Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0x187cE27d0ed0661521b86CDc9ef60466A4519FD1
+
+💎 Deploying and initializing protocol handler facets...
+✅ AccountHandlerFacet deployed to: 0xFFcd4c407B60B0d4351945484F9354d2C9E34EA1
+✅ SellerHandlerFacet deployed to: 0xFDD51a6DB1cE50d1C33b98782035f3cB1E7E1f14
+✅ BuyerHandlerFacet deployed to: 0x9c28d54C4b7F3EAc94AaCf8418D0f72cf8b36d8F
+✅ DisputeResolverHandlerFacet deployed to: 0x05675d70664A12cB66c9C3549e7264A1e35515AE
+✅ AgentHandlerFacet deployed to: 0x661A3e65CD3247c5EAb7f398e0617072C4Cdf19B
+✅ BundleHandlerFacet deployed to: 0x8d014fC7AeC2cC8c578da00260A7ba024678774E
+✅ DisputeHandlerFacet deployed to: 0x08bD56383cFAeE8098e9CFa2278474E52395C822
+✅ FundsHandlerFacet deployed to: 0xbE500D976DF53526699ab9d3aDF631dC4a1B6381
+✅ GroupHandlerFacet deployed to: 0x8D5778887049148c1A88Ba31786837f03D8e358B
+✅ OfferHandlerFacet deployed to: 0xb1aE60d574173aa6A26CD15655Af6dC5Ae88f834
+✅ OrchestrationHandlerFacet1 deployed to: 0x5997A458973D8f9d07437Fb0aFAb788Ae4237a18
+✅ OrchestrationHandlerFacet2 deployed to: 0x5eAF197764890e1dFBCB45CeD17ebe9A9BB8D18A
+✅ TwinHandlerFacet deployed to: 0x904983c284EbC7c8e7bcDff6831C80B786dA62d2
+✅ PauseHandlerFacet deployed to: 0xCF3167A8b4b7a33Fd5783fc721751c556B303CEf
+✅ ProtocolInitializationHandlerFacet deployed to: 0x65714585eC5A371a441297b1f3458d308e375da4
+✅ SequentialCommitHandlerFacet deployed to: 0x46b10a88872c47c8749574900571e168A7B4E2d6
+✅ PriceDiscoveryHandlerFacet deployed to: 0x5d3bE51d529b6e82C9f3436C5Dce76c75dCbe7bf
+✅ ConfigHandlerFacet deployed to: 0x2e8a01f35ff76d666aB04A1C11a2Da87947f582e
+✅ ExchangeHandlerFacet deployed to: 0x9a8dA0306645C7b5C9C0B75C36D8b072C0642b34
+✅ MetaTransactionsHandlerFacet deployed to: 0x846F41DBb3660149d0Ff2F42817740133AaB3ac2
+
+⧉ Deploying Protocol Client implementation/proxy pairs...
+✅ BosonVoucher Logic deployed to: 0xD5FDC575Cb1242D9A7C0a466eFd5A87a1E8e3CDF
+✅ BosonVoucher Beacon deployed to: 0x8c25447AE830993eCeFAB50Bfe825D85DB69bcFC
+
+🌐️Configuring and granting roles...
+✅ ConfigHandlerFacet updated with remaining post-initialization config.
+✅ Granted roles to appropriate contract and addresses.
+✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/31337-hardhat-prod-dry-run.json
+Ether spent:  0.000730603968573271
+
+Sending 1 ether to the admin
+Granting roles to upgrader
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: hardhat
+📅 Thu Jan 30 2025 08:10:44 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0xc1EB40763165b3543C30725dBC14433c4c671FCA
+✅ DiamondLoupeFacet deployed to: 0x4eAe795e9d4F0a5f33B952B2750c9a64BB6D3453
+✅ DiamondCutFacet deployed to: 0xe8637906721051D860af222E6021826887d9e358
+✅ ERC165Facet deployed to: 0x469eF8b9F583920318Ce3dd095A0402A4b061bb0
+✅ ProtocolDiamond deployed to: 0x0ab0Fec353C6653F2eD05b5E5ceb4fB27c7d7902
+
+💎 Granting UPGRADER role...
+
+💸 Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0x187cE27d0ed0661521b86CDc9ef60466A4519FD1
+
+💎 Deploying and initializing protocol handler facets...
+✅ AccountHandlerFacet deployed to: 0xFFcd4c407B60B0d4351945484F9354d2C9E34EA1
+✅ SellerHandlerFacet deployed to: 0xFDD51a6DB1cE50d1C33b98782035f3cB1E7E1f14
+✅ BuyerHandlerFacet deployed to: 0x9c28d54C4b7F3EAc94AaCf8418D0f72cf8b36d8F
+✅ DisputeResolverHandlerFacet deployed to: 0x05675d70664A12cB66c9C3549e7264A1e35515AE
+✅ AgentHandlerFacet deployed to: 0x661A3e65CD3247c5EAb7f398e0617072C4Cdf19B
+✅ BundleHandlerFacet deployed to: 0x8d014fC7AeC2cC8c578da00260A7ba024678774E
+✅ DisputeHandlerFacet deployed to: 0x08bD56383cFAeE8098e9CFa2278474E52395C822
+✅ FundsHandlerFacet deployed to: 0xbE500D976DF53526699ab9d3aDF631dC4a1B6381
+✅ GroupHandlerFacet deployed to: 0x8D5778887049148c1A88Ba31786837f03D8e358B
+✅ OfferHandlerFacet deployed to: 0xb1aE60d574173aa6A26CD15655Af6dC5Ae88f834
+✅ OrchestrationHandlerFacet1 deployed to: 0x5997A458973D8f9d07437Fb0aFAb788Ae4237a18
+✅ OrchestrationHandlerFacet2 deployed to: 0x5eAF197764890e1dFBCB45CeD17ebe9A9BB8D18A
+✅ TwinHandlerFacet deployed to: 0x904983c284EbC7c8e7bcDff6831C80B786dA62d2
+✅ PauseHandlerFacet deployed to: 0xCF3167A8b4b7a33Fd5783fc721751c556B303CEf
+✅ ProtocolInitializationHandlerFacet deployed to: 0x65714585eC5A371a441297b1f3458d308e375da4
+✅ SequentialCommitHandlerFacet deployed to: 0x46b10a88872c47c8749574900571e168A7B4E2d6
+✅ PriceDiscoveryHandlerFacet deployed to: 0x5d3bE51d529b6e82C9f3436C5Dce76c75dCbe7bf
+✅ ConfigHandlerFacet deployed to: 0x2e8a01f35ff76d666aB04A1C11a2Da87947f582e
+✅ ExchangeHandlerFacet deployed to: 0x9a8dA0306645C7b5C9C0B75C36D8b072C0642b34
+✅ MetaTransactionsHandlerFacet deployed to: 0x846F41DBb3660149d0Ff2F42817740133AaB3ac2
+
+⧉ Deploying Protocol Client implementation/proxy pairs...
+✅ BosonVoucher Logic deployed to: 0xD5FDC575Cb1242D9A7C0a466eFd5A87a1E8e3CDF
+✅ BosonVoucher Beacon deployed to: 0x8c25447AE830993eCeFAB50Bfe825D85DB69bcFC
+
+🌐️Configuring and granting roles...
+✅ ConfigHandlerFacet updated with remaining post-initialization config.
+✅ Granted roles to appropriate contract and addresses.
+✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/31337-hardhat-prod-dry-run.json
+Ether spent:  0.002009796991074632
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: hardhat
+📅 Thu Jan 30 2025 08:16:09 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0xf47E4fd9d2eBd6182F597eE12E487CcA37FC524c
+✅ DiamondLoupeFacet deployed to: 0xc1EB40763165b3543C30725dBC14433c4c671FCA
+✅ DiamondCutFacet deployed to: 0x4eAe795e9d4F0a5f33B952B2750c9a64BB6D3453
+✅ ERC165Facet deployed to: 0xe8637906721051D860af222E6021826887d9e358
+✅ ProtocolDiamond deployed to: 0x469eF8b9F583920318Ce3dd095A0402A4b061bb0
+
+💎 Granting UPGRADER role...
+
+💸 Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0xf7EEBa6c7a4eC07735b4AcaC8f8AF608f9Ecb8Cf
+
+💎 Deploying and initializing protocol handler facets...
+✅ AccountHandlerFacet deployed to: 0x187cE27d0ed0661521b86CDc9ef60466A4519FD1
+✅ SellerHandlerFacet deployed to: 0xFFcd4c407B60B0d4351945484F9354d2C9E34EA1
+✅ BuyerHandlerFacet deployed to: 0xFDD51a6DB1cE50d1C33b98782035f3cB1E7E1f14
+✅ DisputeResolverHandlerFacet deployed to: 0x9c28d54C4b7F3EAc94AaCf8418D0f72cf8b36d8F
+✅ AgentHandlerFacet deployed to: 0x05675d70664A12cB66c9C3549e7264A1e35515AE
+✅ BundleHandlerFacet deployed to: 0x661A3e65CD3247c5EAb7f398e0617072C4Cdf19B
+✅ DisputeHandlerFacet deployed to: 0x8d014fC7AeC2cC8c578da00260A7ba024678774E
+✅ FundsHandlerFacet deployed to: 0x08bD56383cFAeE8098e9CFa2278474E52395C822
+✅ GroupHandlerFacet deployed to: 0xbE500D976DF53526699ab9d3aDF631dC4a1B6381
+✅ OfferHandlerFacet deployed to: 0x8D5778887049148c1A88Ba31786837f03D8e358B
+✅ OrchestrationHandlerFacet1 deployed to: 0xb1aE60d574173aa6A26CD15655Af6dC5Ae88f834
+✅ OrchestrationHandlerFacet2 deployed to: 0x5997A458973D8f9d07437Fb0aFAb788Ae4237a18
+✅ TwinHandlerFacet deployed to: 0x5eAF197764890e1dFBCB45CeD17ebe9A9BB8D18A
+✅ PauseHandlerFacet deployed to: 0x904983c284EbC7c8e7bcDff6831C80B786dA62d2
+✅ ProtocolInitializationHandlerFacet deployed to: 0xCF3167A8b4b7a33Fd5783fc721751c556B303CEf
+✅ SequentialCommitHandlerFacet deployed to: 0x65714585eC5A371a441297b1f3458d308e375da4
+✅ PriceDiscoveryHandlerFacet deployed to: 0x46b10a88872c47c8749574900571e168A7B4E2d6
+✅ ConfigHandlerFacet deployed to: 0x5d3bE51d529b6e82C9f3436C5Dce76c75dCbe7bf
+✅ ExchangeHandlerFacet deployed to: 0x2e8a01f35ff76d666aB04A1C11a2Da87947f582e
+✅ MetaTransactionsHandlerFacet deployed to: 0x9a8dA0306645C7b5C9C0B75C36D8b072C0642b34
+
+⧉ Deploying Protocol Client implementation/proxy pairs...
+✅ BosonVoucher Logic deployed to: 0x4dde9958bAA56203Ac877F8764CA28805a5f317b
+✅ BosonVoucher Beacon deployed to: 0xD5FDC575Cb1242D9A7C0a466eFd5A87a1E8e3CDF
+
+🌐️Configuring and granting roles...
+✅ ConfigHandlerFacet updated with remaining post-initialization config.
+✅ Granted roles to appropriate contract and addresses.
+✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/31337-hardhat-prod-dry-run.json
+Ether spent:  0.002092982341917847
+Sending 1 ether to the admin
+
+
+Sending 1 ether to the admin
+Granting roles to upgrader
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: hardhat
+📅 Thu Jan 30 2025 08:20:40 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0xE92A1F3f25246Fb38be056DE659b18fDe9D7CC28
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0xc1EB40763165b3543C30725dBC14433c4c671FCA
+✅ DiamondLoupeFacet deployed to: 0x4eAe795e9d4F0a5f33B952B2750c9a64BB6D3453
+✅ DiamondCutFacet deployed to: 0xe8637906721051D860af222E6021826887d9e358
+✅ ERC165Facet deployed to: 0x469eF8b9F583920318Ce3dd095A0402A4b061bb0
+✅ ProtocolDiamond deployed to: 0x0ab0Fec353C6653F2eD05b5E5ceb4fB27c7d7902
+
+💎 Granting UPGRADER role...
+
+💸 Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0x187cE27d0ed0661521b86CDc9ef60466A4519FD1
+
+💎 Deploying and initializing protocol handler facets...
+
+Sending 1 ether to the admin
+Granting roles to upgrader
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: hardhat
+📅 Thu Jan 30 2025 08:25:50 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0xE92A1F3f25246Fb38be056DE659b18fDe9D7CC28
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0xc1EB40763165b3543C30725dBC14433c4c671FCA
+✅ DiamondLoupeFacet deployed to: 0x4eAe795e9d4F0a5f33B952B2750c9a64BB6D3453
+✅ DiamondCutFacet deployed to: 0xe8637906721051D860af222E6021826887d9e358
+✅ ERC165Facet deployed to: 0x469eF8b9F583920318Ce3dd095A0402A4b061bb0
+✅ ProtocolDiamond deployed to: 0x0ab0Fec353C6653F2eD05b5E5ceb4fB27c7d7902
+
+💎 Granting UPGRADER role...
+
+💸 Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0x187cE27d0ed0661521b86CDc9ef60466A4519FD1
+
+💎 Deploying and initializing protocol handler facets...
+
+Sending 1 ether to the admin
+Granting roles to upgrader
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: hardhat
+📅 Thu Jan 30 2025 08:36:38 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0xE92A1F3f25246Fb38be056DE659b18fDe9D7CC28
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+create3 false
+txCount 0
+signers
+[
+  HardhatEthersSigner {
+    _gasLimit: 30000000,
+    address: '0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8',
+    provider: HardhatEthersProvider {
+      _hardhatProvider: [BackwardsCompatibilityProviderAdapter],
+      _networkName: 'hardhat',
+      _blockListeners: [],
+      _transactionHashListeners: Map(0) {},
+      _eventListeners: []
+    }
+  }
+]
+✅ AccessController deployed to: 0xc1EB40763165b3543C30725dBC14433c4c671FCA
+✅ DiamondLoupeFacet deployed to: 0x4eAe795e9d4F0a5f33B952B2750c9a64BB6D3453
+✅ DiamondCutFacet deployed to: 0xe8637906721051D860af222E6021826887d9e358
+✅ ERC165Facet deployed to: 0x469eF8b9F583920318Ce3dd095A0402A4b061bb0
+✅ ProtocolDiamond deployed to: 0x0ab0Fec353C6653F2eD05b5E5ceb4fB27c7d7902
+
+💎 Granting UPGRADER role...
+
+💸 Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0x187cE27d0ed0661521b86CDc9ef60466A4519FD1
+
+💎 Deploying and initializing protocol handler facets...
+
+Sending 1 ether to the admin
+
+Sending 1 ether to the admin
+Granting roles to upgrader
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: hardhat
+📅 Thu Jan 30 2025 08:46:06 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0xE92A1F3f25246Fb38be056DE659b18fDe9D7CC28
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0x9C867632dFE6b70D83DfE7865cF8510C168AFd40
+✅ DiamondLoupeFacet deployed to: 0xba596Ee5C051FAf6B263d457835e65a26661382c
+✅ DiamondCutFacet deployed to: 0x3Ce6A434DaD2AcE6C8DbEC6Dc007d6A8Fad068e9
+✅ ERC165Facet deployed to: 0xb5E1d2c4CC71D44a601EFc94Fe68C9202Ce6B294
+✅ ProtocolDiamond deployed to: 0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5
+
+💎 Granting UPGRADER role...
+
+Sending 1 ether to the admin
+Granting roles to upgrader
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: hardhat
+📅 Thu Jan 30 2025 08:49:00 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0xE92A1F3f25246Fb38be056DE659b18fDe9D7CC28
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0x9C867632dFE6b70D83DfE7865cF8510C168AFd40
+✅ DiamondLoupeFacet deployed to: 0xba596Ee5C051FAf6B263d457835e65a26661382c
+✅ DiamondCutFacet deployed to: 0x3Ce6A434DaD2AcE6C8DbEC6Dc007d6A8Fad068e9
+✅ ERC165Facet deployed to: 0xb5E1d2c4CC71D44a601EFc94Fe68C9202Ce6B294
+✅ ProtocolDiamond deployed to: 0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5
+
+💎 Granting UPGRADER role...
+
+💸 Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0xc1EB40763165b3543C30725dBC14433c4c671FCA
+
+💎 Deploying and initializing protocol handler facets...
+
+Sending 1 ether to the admin
+Granting roles to upgrader
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: hardhat
+📅 Thu Jan 30 2025 08:52:12 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0xE92A1F3f25246Fb38be056DE659b18fDe9D7CC28
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0x9C867632dFE6b70D83DfE7865cF8510C168AFd40
+✅ DiamondLoupeFacet deployed to: 0xba596Ee5C051FAf6B263d457835e65a26661382c
+✅ DiamondCutFacet deployed to: 0x3Ce6A434DaD2AcE6C8DbEC6Dc007d6A8Fad068e9
+✅ ERC165Facet deployed to: 0xb5E1d2c4CC71D44a601EFc94Fe68C9202Ce6B294
+✅ ProtocolDiamond deployed to: 0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5
+
+💎 Granting UPGRADER role...
+
+💸 Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0xd8C3B2232B3d597156148f757Bb2bd665843aABd
+
+💎 Deploying and initializing protocol handler facets...
+✅ AccountHandlerFacet deployed to: 0xc1EB40763165b3543C30725dBC14433c4c671FCA
+✅ SellerHandlerFacet deployed to: 0x4eAe795e9d4F0a5f33B952B2750c9a64BB6D3453
+✅ BuyerHandlerFacet deployed to: 0xe8637906721051D860af222E6021826887d9e358
+✅ DisputeResolverHandlerFacet deployed to: 0x469eF8b9F583920318Ce3dd095A0402A4b061bb0
+✅ AgentHandlerFacet deployed to: 0x0ab0Fec353C6653F2eD05b5E5ceb4fB27c7d7902
+✅ BundleHandlerFacet deployed to: 0xf7EEBa6c7a4eC07735b4AcaC8f8AF608f9Ecb8Cf
+✅ DisputeHandlerFacet deployed to: 0x187cE27d0ed0661521b86CDc9ef60466A4519FD1
+✅ FundsHandlerFacet deployed to: 0xFFcd4c407B60B0d4351945484F9354d2C9E34EA1
+✅ GroupHandlerFacet deployed to: 0xFDD51a6DB1cE50d1C33b98782035f3cB1E7E1f14
+✅ OfferHandlerFacet deployed to: 0x9c28d54C4b7F3EAc94AaCf8418D0f72cf8b36d8F
+✅ OrchestrationHandlerFacet1 deployed to: 0x05675d70664A12cB66c9C3549e7264A1e35515AE
+✅ OrchestrationHandlerFacet2 deployed to: 0x661A3e65CD3247c5EAb7f398e0617072C4Cdf19B
+✅ TwinHandlerFacet deployed to: 0x8d014fC7AeC2cC8c578da00260A7ba024678774E
+✅ PauseHandlerFacet deployed to: 0x08bD56383cFAeE8098e9CFa2278474E52395C822
+✅ ProtocolInitializationHandlerFacet deployed to: 0xbE500D976DF53526699ab9d3aDF631dC4a1B6381
+✅ SequentialCommitHandlerFacet deployed to: 0x8D5778887049148c1A88Ba31786837f03D8e358B
+✅ PriceDiscoveryHandlerFacet deployed to: 0xb1aE60d574173aa6A26CD15655Af6dC5Ae88f834
+✅ ConfigHandlerFacet deployed to: 0x5997A458973D8f9d07437Fb0aFAb788Ae4237a18
+✅ ExchangeHandlerFacet deployed to: 0x5eAF197764890e1dFBCB45CeD17ebe9A9BB8D18A
+✅ MetaTransactionsHandlerFacet deployed to: 0x904983c284EbC7c8e7bcDff6831C80B786dA62d2
+
+⧉ Deploying Protocol Client implementation/proxy pairs...
+✅ BosonVoucher Logic deployed to: 0xCF3167A8b4b7a33Fd5783fc721751c556B303CEf
+✅ BosonVoucher Beacon deployed to: 0x65714585eC5A371a441297b1f3458d308e375da4
+
+🌐️Configuring and granting roles...
+
+
+Sending 1 ether to the admin
+
+Sending 1 ether to the admin
+
+Sending 1 ether to the admin
+
+Sending 1 ether to the admin
+Granting roles to upgrader
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: hardhat
+📅 Fri Jan 31 2025 11:10:05 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0x2a91A0148EE62fA638bE38C7eE05c29a3e568dD8
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0xc1EB40763165b3543C30725dBC14433c4c671FCA
+✅ DiamondLoupeFacet deployed to: 0x4eAe795e9d4F0a5f33B952B2750c9a64BB6D3453
+✅ DiamondCutFacet deployed to: 0xe8637906721051D860af222E6021826887d9e358
+✅ ERC165Facet deployed to: 0x469eF8b9F583920318Ce3dd095A0402A4b061bb0
+✅ ProtocolDiamond deployed to: 0x0ab0Fec353C6653F2eD05b5E5ceb4fB27c7d7902
+
+💎 Granting UPGRADER role...
+
+💸 Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0x187cE27d0ed0661521b86CDc9ef60466A4519FD1
+
+💎 Deploying and initializing protocol handler facets...
+✅ AccountHandlerFacet deployed to: 0xFFcd4c407B60B0d4351945484F9354d2C9E34EA1
+✅ SellerHandlerFacet deployed to: 0xFDD51a6DB1cE50d1C33b98782035f3cB1E7E1f14
+✅ BuyerHandlerFacet deployed to: 0x9c28d54C4b7F3EAc94AaCf8418D0f72cf8b36d8F
+✅ DisputeResolverHandlerFacet deployed to: 0x05675d70664A12cB66c9C3549e7264A1e35515AE
+✅ AgentHandlerFacet deployed to: 0x661A3e65CD3247c5EAb7f398e0617072C4Cdf19B
+✅ BundleHandlerFacet deployed to: 0x8d014fC7AeC2cC8c578da00260A7ba024678774E
+✅ DisputeHandlerFacet deployed to: 0x08bD56383cFAeE8098e9CFa2278474E52395C822
+✅ FundsHandlerFacet deployed to: 0xbE500D976DF53526699ab9d3aDF631dC4a1B6381
+✅ GroupHandlerFacet deployed to: 0x8D5778887049148c1A88Ba31786837f03D8e358B
+✅ OfferHandlerFacet deployed to: 0xb1aE60d574173aa6A26CD15655Af6dC5Ae88f834
+✅ OrchestrationHandlerFacet1 deployed to: 0x5997A458973D8f9d07437Fb0aFAb788Ae4237a18
+✅ OrchestrationHandlerFacet2 deployed to: 0x5eAF197764890e1dFBCB45CeD17ebe9A9BB8D18A
+✅ TwinHandlerFacet deployed to: 0x904983c284EbC7c8e7bcDff6831C80B786dA62d2
+✅ PauseHandlerFacet deployed to: 0xCF3167A8b4b7a33Fd5783fc721751c556B303CEf
+✅ ProtocolInitializationHandlerFacet deployed to: 0x65714585eC5A371a441297b1f3458d308e375da4
+✅ SequentialCommitHandlerFacet deployed to: 0x46b10a88872c47c8749574900571e168A7B4E2d6
+✅ PriceDiscoveryHandlerFacet deployed to: 0x5d3bE51d529b6e82C9f3436C5Dce76c75dCbe7bf
+✅ ConfigHandlerFacet deployed to: 0x2e8a01f35ff76d666aB04A1C11a2Da87947f582e
+✅ ExchangeHandlerFacet deployed to: 0x9a8dA0306645C7b5C9C0B75C36D8b072C0642b34
+✅ MetaTransactionsHandlerFacet deployed to: 0x846F41DBb3660149d0Ff2F42817740133AaB3ac2
+
+⧉ Deploying Protocol Client implementation/proxy pairs...
+✅ BosonVoucher Logic deployed to: 0xD5FDC575Cb1242D9A7C0a466eFd5A87a1E8e3CDF
+✅ BosonVoucher Beacon deployed to: 0x8c25447AE830993eCeFAB50Bfe825D85DB69bcFC
+
+🌐️Configuring and granting roles...
+✅ ConfigHandlerFacet updated with remaining post-initialization config.
+✅ Granted roles to appropriate contract and addresses.
+✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/31337-hardhat-prod-dry-run.json
+Ether spent:  0.000373658694712426
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: hardhat
+📅 Fri Jan 31 2025 11:12:21 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0xE92A1F3f25246Fb38be056DE659b18fDe9D7CC28
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0x9C867632dFE6b70D83DfE7865cF8510C168AFd40
+✅ DiamondLoupeFacet deployed to: 0xba596Ee5C051FAf6B263d457835e65a26661382c
+✅ DiamondCutFacet deployed to: 0x3Ce6A434DaD2AcE6C8DbEC6Dc007d6A8Fad068e9
+✅ ERC165Facet deployed to: 0xb5E1d2c4CC71D44a601EFc94Fe68C9202Ce6B294
+✅ ProtocolDiamond deployed to: 0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5
+
+💎 Granting UPGRADER role...
+
+💸 Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0xd8C3B2232B3d597156148f757Bb2bd665843aABd
+
+💎 Deploying and initializing protocol handler facets...
+✅ AccountHandlerFacet deployed to: 0x4ba93F34b174ed520eB8Ac472C35DEfE524dbB06
+✅ SellerHandlerFacet deployed to: 0xE282Ff84bd704504057eAF78Ac34E4a991b69d83
+✅ BuyerHandlerFacet deployed to: 0x4aA238eF21737E138C4f7D4D722F55680ccB30c9
+✅ DisputeResolverHandlerFacet deployed to: 0xabd67624662f05B4fb5084f8edcC2F2A422670bf
+✅ AgentHandlerFacet deployed to: 0xeD2E929E36484E767E39d9b4F1c190cC179Ed586
+✅ BundleHandlerFacet deployed to: 0xe8A57dd8784E6f0CE4C1B51CEf52d04b7C1F1C04
+✅ DisputeHandlerFacet deployed to: 0x8A7F0260Ed956f8a51193672F26d9B9a31347359
+✅ FundsHandlerFacet deployed to: 0x8FA52A7d571146657157bA1e2d15F55796c0D49C
+✅ GroupHandlerFacet deployed to: 0x588665499eCC0cc9b6924275359F1D279A242610
+✅ OfferHandlerFacet deployed to: 0x6252236D213A80A67C85a48ec48D38245C8362fF
+✅ OrchestrationHandlerFacet1 deployed to: 0x52075179452377DA8264e3525f71c9099257fA90
+✅ OrchestrationHandlerFacet2 deployed to: 0x85a52d353027e28739F57A212324Ccd05EF83008
+✅ TwinHandlerFacet deployed to: 0x5FD6b187E800bAfA53bDEE18619A8E828A6c1011
+✅ PauseHandlerFacet deployed to: 0x794DF5A4D6276C06035f68C3D906AfB9E00583e3
+✅ ProtocolInitializationHandlerFacet deployed to: 0xA0D1872bFa6031A94AD2339A81bF9c99719ec397
+✅ SequentialCommitHandlerFacet deployed to: 0xe45A5828c39d14Fb854526426c70547C9dF1Ae61
+✅ PriceDiscoveryHandlerFacet deployed to: 0x5F7D1A252eA613fB5B4BDF45a68D4baD9AD51C5b
+✅ ConfigHandlerFacet deployed to: 0xD624D257fF6E435FDf9A05bA21ab270FDb7e471c
+✅ ExchangeHandlerFacet deployed to: 0x208e1180211959C9cAF9305Ff725aa5625484f69
+✅ MetaTransactionsHandlerFacet deployed to: 0x25eD04C326a89b67c66Fa8AAfC8827770a9cf72c
+
+⧉ Deploying Protocol Client implementation/proxy pairs...
+✅ BosonVoucher Logic deployed to: 0x4fA60c62147c3732baA7E9AbBa8D7017DD6FCe66
+✅ BosonVoucher Beacon deployed to: 0xab9c0f0EBa44F9E1B383AA5dEE83E06316640b50
+
+🌐️Configuring and granting roles...
+✅ ConfigHandlerFacet updated with remaining post-initialization config.
+✅ Granted roles to appropriate contract and addresses.
+✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/31337-hardhat-prod-dry-run.json
+Ether spent:  0.00049606697795229
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: base
+📅 Fri Jan 31 2025 11:16:16 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0xE92A1F3f25246Fb38be056DE659b18fDe9D7CC28
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: base
+📅 Fri Jan 31 2025 11:21:42 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0xE92A1F3f25246Fb38be056DE659b18fDe9D7CC28
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: base
+📅 Fri Jan 31 2025 11:38:40 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0xE92A1F3f25246Fb38be056DE659b18fDe9D7CC28
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0x9C867632dFE6b70D83DfE7865cF8510C168AFd40
+✅ DiamondLoupeFacet deployed to: 0xba596Ee5C051FAf6B263d457835e65a26661382c
+✅ DiamondCutFacet deployed to: 0x3Ce6A434DaD2AcE6C8DbEC6Dc007d6A8Fad068e9
+✅ ERC165Facet deployed to: 0xb5E1d2c4CC71D44a601EFc94Fe68C9202Ce6B294
+✅ ProtocolDiamond deployed to: 0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5
+
+💎 Granting UPGRADER role...
+
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: base
+📅 Fri Jan 31 2025 11:50:26 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0xE92A1F3f25246Fb38be056DE659b18fDe9D7CC28
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0x9C867632dFE6b70D83DfE7865cF8510C168AFd40
+✅ DiamondLoupeFacet deployed to: 0xba596Ee5C051FAf6B263d457835e65a26661382c
+✅ DiamondCutFacet deployed to: 0x3Ce6A434DaD2AcE6C8DbEC6Dc007d6A8Fad068e9
+✅ ERC165Facet deployed to: 0xb5E1d2c4CC71D44a601EFc94Fe68C9202Ce6B294
+✅ ProtocolDiamond deployed to: 0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5
+
+💎 Granting UPGRADER role...
+
+💸 Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0xd8C3B2232B3d597156148f757Bb2bd665843aABd
+
+💎 Deploying and initializing protocol handler facets...
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: base
+📅 Fri Jan 31 2025 12:05:54 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0xE92A1F3f25246Fb38be056DE659b18fDe9D7CC28
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0x9C867632dFE6b70D83DfE7865cF8510C168AFd40
+✅ DiamondLoupeFacet deployed to: 0xba596Ee5C051FAf6B263d457835e65a26661382c
+✅ DiamondCutFacet deployed to: 0x3Ce6A434DaD2AcE6C8DbEC6Dc007d6A8Fad068e9
+✅ ERC165Facet deployed to: 0xb5E1d2c4CC71D44a601EFc94Fe68C9202Ce6B294
+✅ ProtocolDiamond deployed to: 0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5
+
+💎 Granting UPGRADER role...
+
+💸 Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0xd8C3B2232B3d597156148f757Bb2bd665843aABd
+
+💎 Deploying and initializing protocol handler facets...
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: base
+📅 Fri Jan 31 2025 12:09:36 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0xE92A1F3f25246Fb38be056DE659b18fDe9D7CC28
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0x9C867632dFE6b70D83DfE7865cF8510C168AFd40
+✅ DiamondLoupeFacet deployed to: 0xba596Ee5C051FAf6B263d457835e65a26661382c
+✅ DiamondCutFacet deployed to: 0x3Ce6A434DaD2AcE6C8DbEC6Dc007d6A8Fad068e9
+✅ ERC165Facet deployed to: 0xb5E1d2c4CC71D44a601EFc94Fe68C9202Ce6B294
+✅ ProtocolDiamond deployed to: 0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5
+
+💎 Granting UPGRADER role...
+
+💸 Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0xd8C3B2232B3d597156148f757Bb2bd665843aABd
+
+💎 Deploying and initializing protocol handler facets...
+
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: base
+📅 Fri Jan 31 2025 12:30:13 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0xE92A1F3f25246Fb38be056DE659b18fDe9D7CC28
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0x9C867632dFE6b70D83DfE7865cF8510C168AFd40
+✅ DiamondLoupeFacet deployed to: 0xba596Ee5C051FAf6B263d457835e65a26661382c
+✅ DiamondCutFacet deployed to: 0x3Ce6A434DaD2AcE6C8DbEC6Dc007d6A8Fad068e9
+✅ ERC165Facet deployed to: 0xb5E1d2c4CC71D44a601EFc94Fe68C9202Ce6B294
+✅ ProtocolDiamond deployed to: 0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5
+
+💎 Granting UPGRADER role...
+
+💸 Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0xd8C3B2232B3d597156148f757Bb2bd665843aABd
+
+💎 Deploying and initializing protocol handler facets...
+
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: base
+📅 Fri Jan 31 2025 12:31:47 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0xE92A1F3f25246Fb38be056DE659b18fDe9D7CC28
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0x9C867632dFE6b70D83DfE7865cF8510C168AFd40
+✅ DiamondLoupeFacet deployed to: 0xba596Ee5C051FAf6B263d457835e65a26661382c
+✅ DiamondCutFacet deployed to: 0x3Ce6A434DaD2AcE6C8DbEC6Dc007d6A8Fad068e9
+✅ ERC165Facet deployed to: 0xb5E1d2c4CC71D44a601EFc94Fe68C9202Ce6B294
+✅ ProtocolDiamond deployed to: 0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5
+
+💎 Granting UPGRADER role...
+
+💸 Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0xd8C3B2232B3d597156148f757Bb2bd665843aABd
+
+💎 Deploying and initializing protocol handler facets...
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: base
+📅 Fri Jan 31 2025 13:00:29 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0xE92A1F3f25246Fb38be056DE659b18fDe9D7CC28
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0x9C867632dFE6b70D83DfE7865cF8510C168AFd40
+✅ DiamondLoupeFacet deployed to: 0xba596Ee5C051FAf6B263d457835e65a26661382c
+✅ DiamondCutFacet deployed to: 0x3Ce6A434DaD2AcE6C8DbEC6Dc007d6A8Fad068e9
+✅ ERC165Facet deployed to: 0xb5E1d2c4CC71D44a601EFc94Fe68C9202Ce6B294
+✅ ProtocolDiamond deployed to: 0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5
+
+💎 Granting UPGRADER role...
+
+💸 Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0xd8C3B2232B3d597156148f757Bb2bd665843aABd
+
+💎 Deploying and initializing protocol handler facets...
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: base
+📅 Fri Jan 31 2025 13:09:53 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0xE92A1F3f25246Fb38be056DE659b18fDe9D7CC28
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0x9C867632dFE6b70D83DfE7865cF8510C168AFd40
+✅ DiamondLoupeFacet deployed to: 0xba596Ee5C051FAf6B263d457835e65a26661382c
+✅ DiamondCutFacet deployed to: 0x3Ce6A434DaD2AcE6C8DbEC6Dc007d6A8Fad068e9
+✅ ERC165Facet deployed to: 0xb5E1d2c4CC71D44a601EFc94Fe68C9202Ce6B294
+✅ ProtocolDiamond deployed to: 0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5
+
+💎 Granting UPGRADER role...
+
+💸 Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0xd8C3B2232B3d597156148f757Bb2bd665843aABd
+
+💎 Deploying and initializing protocol handler facets...
+
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: base
+📅 Fri Jan 31 2025 13:19:30 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0xE92A1F3f25246Fb38be056DE659b18fDe9D7CC28
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0x9C867632dFE6b70D83DfE7865cF8510C168AFd40
+✅ DiamondLoupeFacet deployed to: 0xba596Ee5C051FAf6B263d457835e65a26661382c
+✅ DiamondCutFacet deployed to: 0x3Ce6A434DaD2AcE6C8DbEC6Dc007d6A8Fad068e9
+✅ ERC165Facet deployed to: 0xb5E1d2c4CC71D44a601EFc94Fe68C9202Ce6B294
+✅ ProtocolDiamond deployed to: 0x59A4C19b55193D5a2EAD0065c54af4d516E18Cb5
+
+💎 Granting UPGRADER role...
+
+💸 Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0xd8C3B2232B3d597156148f757Bb2bd665843aABd
+
+💎 Deploying and initializing protocol handler facets...
+✅ AccountHandlerFacet deployed to: 0xF5FB35763fb5AE8B48AA8bfaF382BE385A5c9428
+✅ SellerHandlerFacet deployed to: 0x57A12A9F2a81B2b13c20F9F465eA6814F76c7168
+✅ BuyerHandlerFacet deployed to: 0xE8Bc45247443A9E48FeF9e1818adA880Ed1EaF15
+✅ DisputeResolverHandlerFacet deployed to: 0x3361a42D8EC6Bb8C8d9a7e04963Ee3dfed88a061
+✅ AgentHandlerFacet deployed to: 0x883Cf419acCE40fb0e1ff7b454c5C1DF850b77ed
+✅ BundleHandlerFacet deployed to: 0x7996f42A5dFA129842c0683bB094060F3854a7A2
+✅ DisputeHandlerFacet deployed to: 0xaf28beb8763bAA4cfF2BB654e64d42DDb6367d2B
+✅ FundsHandlerFacet deployed to: 0x4fDE0348a22D020c20c045f2b96f18810AD3FD6A
+✅ GroupHandlerFacet deployed to: 0x78B1fE438a878cDbbD58C0Fb8a1c2269abBa51b2
+✅ OfferHandlerFacet deployed to: 0xd774A83437e496dF96830Ac70b3A930e40fCA1cb
+✅ OrchestrationHandlerFacet1 deployed to: 0x5714cc08088c3A6FeA4d48a46e3F12Ab22c133Dc
+✅ OrchestrationHandlerFacet2 deployed to: 0x68e7095D4cE0C52186525d1955fA5444200b21ac
+✅ TwinHandlerFacet deployed to: 0x41B606EfB557BDefAB4f226600e3b351c4F89735
+✅ PauseHandlerFacet deployed to: 0xf430F3b379C937e178Da8bce2234e31C50eFa137
+✅ ProtocolInitializationHandlerFacet deployed to: 0x544B8D956c1d835a6B8C4ab30Bf618EedD079CDF
+✅ SequentialCommitHandlerFacet deployed to: 0xF764eb310c7251d7FFF42a880ceB8c36471D5120
+✅ PriceDiscoveryHandlerFacet deployed to: 0x78C5cdC277D5a3F94cB3478e565C2109d94CC3b2
+✅ ConfigHandlerFacet deployed to: 0xDa496545476d2A892CD24f0c61d6e6A5B918cF98
+✅ ExchangeHandlerFacet deployed to: 0x3F4Bd18C859D4D6E28038C755748eB1729B0322F
+✅ MetaTransactionsHandlerFacet deployed to: 0x27E4d00C85a819d162fF4F44bEEc76f8F06eAcDb
+
+⧉ Deploying Protocol Client implementation/proxy pairs...
+✅ BosonVoucher Logic deployed to: 0x81F489b6C1414d7610aa621deBDC344c5043A09A
+✅ BosonVoucher Beacon deployed to: 0xA9783c9bb512Da54bE945875503f425520B82a50
+
+🌐️Configuring and granting roles...
+✅ ConfigHandlerFacet updated with remaining post-initialization config.
+✅ Granted roles to appropriate contract and addresses.
+✅ Contracts written to /home/klemen/boson/boson-protocol-contracts/scripts/util/../../addresses/8453-base-prod.json
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: hardhat
+📅 Mon Feb 03 2025 14:21:09 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0xE92A1F3f25246Fb38be056DE659b18fDe9D7CC28
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: hardhat
+📅 Mon Feb 03 2025 14:31:19 GMT+0100 (Srednjeevropski standardni čas)
+🔱 Deployer account:  0xE92A1F3f25246Fb38be056DE659b18fDe9D7CC28
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0xCf802Cd8e7C26E232519Bf6206Ae2812A39E2a7d
+✅ DiamondLoupeFacet deployed to: 0xbA149682AfC9ba58BeF5F88e69315040A73BF199
+✅ DiamondCutFacet deployed to: 0xB0D95C0CeB3a4AB7908E985B254Bbdf7174643A8
+✅ ERC165Facet deployed to: 0xCEc9bC0b41E35931E43859248FdE49e792E616ae
+✅ ProtocolDiamond deployed to: 0xdd799d5B23EB4e6A1229807d2C29f02a62134Ce4
+
+💎 Granting UPGRADER role...
+
+💸 Deploying Boson Price Discovery Client...
+✅ BosonPriceDiscoveryClient deployed to: 0xa136931a2EFEf1a9dC7762115296cBE172632fB4
+
+💎 Deploying and initializing protocol handler facets...

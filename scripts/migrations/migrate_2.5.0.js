@@ -4,7 +4,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { getContractAt, getSigners } = ethers;
 const network = hre.network.name;
-const version = "2.5.0";
+const version = "2.5.0-rc.2";
 const confirmations = hre.network.name === "hardhat" ? 1 : environments.confirmations;
 const { ACCOUNTS } = require("../../test/upgrade/utils/accounts.js");
 const Role = require("../domain/Role");
