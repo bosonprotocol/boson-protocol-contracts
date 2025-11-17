@@ -95,7 +95,7 @@
     },
     {
       "name": "BosonVoucher Logic",
-      "address": "0x81F489b6C1414d7610aa621deBDC344c5043A09A",
+      "address": "0x7dbec998089fcdbb74f5a1c4630ef9df8c413943",
       "args": [
         "0x000000000000000000000000000000000000dead"
       ],
