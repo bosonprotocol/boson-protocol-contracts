@@ -94,14 +94,6 @@
       "interfaceId": "0x7b53dece"
     },
     {
-      "name": "BosonVoucher Logic",
-      "address": "0x0bfF7B7A04C1eB19DeA63f0FF4D884914edB61E8",
-      "args": [
-        "0x000000000000000000000000000000000000dead"
-      ],
-      "interfaceId": ""
-    },
-    {
       "name": "BosonVoucher Beacon",
       "address": "0x29C9361920785F4B2175Ba61c177cEdC6A99542A",
       "args": [
@@ -231,6 +223,14 @@
       "address": "0x1C0E7A3a62c58B978EA7c69387435410d67216bF",
       "args": [],
       "interfaceId": "0x0d8e6e2c"
+    },
+    {
+      "name": "BosonVoucher Logic",
+      "address": "0x98B1F88acAe0E3cf143bF9Db4CA92c48EdC43540",
+      "args": [
+        "0x000000000000000000000000000000000000dead"
+      ],
+      "interfaceId": ""
     }
   ]
 }
