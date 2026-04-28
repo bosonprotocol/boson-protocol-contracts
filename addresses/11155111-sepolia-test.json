@@ -231,6 +231,14 @@
       "address": "0x922fA95eb54eEcB31f10EE5fA2175E37Bdb568E6",
       "args": [],
       "interfaceId": "0x0d8e6e2c"
+    },
+    {
+      "name": "BosonAuthorizedTransferForwarder",
+      "address": "0xa3Cf2a3BcD8Ed5d87Dd3c97B4c758EFc8866A327",
+      "args": [
+        "0x7de418a7ce94debd057c34ebac232e7027634ade"
+      ],
+      "interfaceId": ""
     }
   ]
 }

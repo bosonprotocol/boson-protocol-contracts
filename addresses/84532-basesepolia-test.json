@@ -231,6 +231,14 @@
         "0x000000000000000000000000000000000000dead"
       ],
       "interfaceId": ""
+    },
+    {
+      "name": "BosonAuthorizedTransferForwarder",
+      "address": "0x96ff22821c9AA63987FE95380110bFABd7A95F8c",
+      "args": [
+        "0x7de418a7ce94debd057c34ebac232e7027634ade"
+      ],
+      "interfaceId": ""
     }
   ]
 }
