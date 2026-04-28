@@ -5,7 +5,7 @@ pragma solidity 0.8.22;
  * @title IERC3009
  *
  * @notice Minimal subset of EIP-3009 (Transfer With Authorization) used by
- *         BosonERC3009Forwarder. Only `receiveWithAuthorization` is required:
+ *         BosonAuthorizedTransferForwarder. Only `receiveWithAuthorization` is required:
  *         the EIP-3009 spec mandates `msg.sender == to` for that variant, which
  *         prevents an observer from replaying the signed authorization.
  *

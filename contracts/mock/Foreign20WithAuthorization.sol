@@ -9,7 +9,7 @@ import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  * @title Foreign20WithAuthorization
  *
  * @notice Test-only ERC-20 mock that adds EIP-3009 (Transfer With Authorization)
- *         on top of Foreign20. Used to exercise BosonERC3009Forwarder.
+ *         on top of Foreign20. Used to exercise BosonAuthorizedTransferForwarder.
  *
  * @dev Uses a dedicated EIP-712 domain ("Foreign20WithAuthorization", "1") so
  *      it does not collide with the parent Foreign20's MockNativeMetaTransaction
