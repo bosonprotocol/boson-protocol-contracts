@@ -38,6 +38,16 @@ task("verify-suite", "Verify contracts on the block explorer")
   });
 
 task(
+  "deploy-authorized-transfer-forwarder",
+  "Deploy BosonAuthorizedTransferForwarder, bound to the ProtocolDiamond from the env's address file"
+)
+  .addParam("env", "The deployment environment (e.g. prod, staging, test)")
+  .setAction(async ({ env }) => {
+    const { deployAuthorizedTransferForwarder } = await lazyImport("./scripts/deploy-authorized-transfer-forwarder.js");
+    await deployAuthorizedTransferForwarder(env);
+  });
+
+task(
   "deploy-suite",
   "Deploy suite deploys protocol diamond, all facets, client and beacon, and initializes protocol diamond"
 )
