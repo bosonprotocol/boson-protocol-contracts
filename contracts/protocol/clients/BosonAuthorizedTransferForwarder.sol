@@ -312,8 +312,10 @@ contract BosonAuthorizedTransferForwarder is ReentrancyGuard, EIP712 {
             }
         }
 
-        if (IERC20(token).allowance(address(this), protocol) != 0) {
-            IERC20(token).forceApprove(protocol, 0);
-        }
+        // Defensive: zero out any residual allowance unconditionally. The
+        // protocol normally pulls exactly `value`, so the allowance is already
+        // 0 and this is a no-op SSTORE. Always-running keeps the path simple
+        // and trivially auditable.
+        IERC20(token).forceApprove(protocol, 0);
     }
 }
