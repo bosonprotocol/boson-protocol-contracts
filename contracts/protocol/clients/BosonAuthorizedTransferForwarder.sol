@@ -207,7 +207,8 @@ contract BosonAuthorizedTransferForwarder is ReentrancyGuard, EIP712 {
 
     function _verifyActionSignature(bytes32 structHash, address from, Signature calldata sig) private view {
         bytes32 digest = _hashTypedDataV4(structHash);
-        if (ECDSA.recover(digest, sig.v, sig.r, sig.s) != from) revert InvalidActionSignature();
+        (address recovered, ECDSA.RecoverError err) = ECDSA.tryRecover(digest, sig.v, sig.r, sig.s);
+        if (err != ECDSA.RecoverError.NoError || recovered != from) revert InvalidActionSignature();
     }
 
     function _pullWithAuthorization(
