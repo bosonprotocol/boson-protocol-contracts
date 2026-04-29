@@ -57,9 +57,10 @@ const DEPOSIT_AUTH_ACTION_TYPES = {
 const DEPOSIT_PERMIT_ACTION_TYPES = {
   DepositFundsWithPermit: [
     { name: "entityId", type: "uint256" },
-    { name: "v", type: "uint8" },
-    { name: "r", type: "bytes32" },
-    { name: "s", type: "bytes32" },
+    { name: "token", type: "address" },
+    { name: "value", type: "uint256" },
+    { name: "deadline", type: "uint256" },
+    { name: "actionNonce", type: "uint256" },
   ],
 };
 
@@ -77,9 +78,10 @@ const COMMIT_PERMIT_ACTION_TYPES = {
   CommitToOfferWithPermit: [
     { name: "committer", type: "address" },
     { name: "offerId", type: "uint256" },
-    { name: "v", type: "uint8" },
-    { name: "r", type: "bytes32" },
-    { name: "s", type: "bytes32" },
+    { name: "token", type: "address" },
+    { name: "value", type: "uint256" },
+    { name: "deadline", type: "uint256" },
+    { name: "actionNonce", type: "uint256" },
   ],
 };
 
@@ -252,21 +254,33 @@ describe("BosonAuthorizedTransferForwarder", function () {
     return { message, sig };
   }
 
+  let actionNonceCounter = 1;
+  function freshActionNonce() {
+    return actionNonceCounter++;
+  }
+
   async function buildDepositPermitCall(authSigner, value, entityId, opts = {}) {
     const { message, sig } = await authorizePermit(authSigner, value, opts);
     const actionSigner = opts.actionSigner ?? authSigner;
     const actionEntityId = opts.actionEntityId ?? entityId;
+    const tokenAddr = await permitToken.getAddress();
+    const actionToken = opts.actionToken ?? tokenAddr;
+    const actionValue = opts.actionValue ?? message.value;
+    const actionDeadline = opts.actionDeadline ?? message.deadline;
+    const actionNonce = opts.actionNonce ?? freshActionNonce();
     const action = await signActionTyped(actionSigner, DEPOSIT_PERMIT_ACTION_TYPES, {
       entityId: actionEntityId,
-      v: sig.v,
-      r: sig.r,
-      s: sig.s,
+      token: actionToken,
+      value: actionValue,
+      deadline: actionDeadline,
+      actionNonce,
     });
     return {
       message,
       sig,
+      actionNonce,
       args: [
-        await permitToken.getAddress(),
+        tokenAddr,
         message.owner,
         message.value,
         message.deadline,
@@ -274,6 +288,7 @@ describe("BosonAuthorizedTransferForwarder", function () {
         sig.r,
         sig.s,
         entityId,
+        actionNonce,
         sigToTuple(action),
       ],
     };
@@ -284,18 +299,25 @@ describe("BosonAuthorizedTransferForwarder", function () {
     const actionSigner = opts.actionSigner ?? authSigner;
     const actionCommitter = opts.actionCommitter ?? committer;
     const actionOfferId = opts.actionOfferId ?? offerId;
+    const tokenAddr = await permitToken.getAddress();
+    const actionToken = opts.actionToken ?? tokenAddr;
+    const actionValue = opts.actionValue ?? message.value;
+    const actionDeadline = opts.actionDeadline ?? message.deadline;
+    const actionNonce = opts.actionNonce ?? freshActionNonce();
     const action = await signActionTyped(actionSigner, COMMIT_PERMIT_ACTION_TYPES, {
       committer: actionCommitter,
       offerId: actionOfferId,
-      v: sig.v,
-      r: sig.r,
-      s: sig.s,
+      token: actionToken,
+      value: actionValue,
+      deadline: actionDeadline,
+      actionNonce,
     });
     return {
       message,
       sig,
+      actionNonce,
       args: [
-        await permitToken.getAddress(),
+        tokenAddr,
         message.owner,
         message.value,
         message.deadline,
@@ -304,6 +326,7 @@ describe("BosonAuthorizedTransferForwarder", function () {
         sig.s,
         committer,
         offerId,
+        actionNonce,
         sigToTuple(action),
       ],
     };
@@ -704,6 +727,95 @@ describe("BosonAuthorizedTransferForwarder", function () {
         "InvalidActionSignature"
       );
     });
+
+    it("depositFunds reverts when token is swapped after signing", async function () {
+      // Action sig binds `token` explicitly. Caller passing a different token
+      // (even one for which the signer happens to have a standing allowance)
+      // fails on the action sig check.
+      const { args } = await buildDepositPermitCall(rando, depositAmount, seller.id, {
+        actionToken: await authToken.getAddress(), // signed for a different token than passed
+      });
+      await expect(forwarder.depositFundsWithPermit(...args)).to.be.revertedWithCustomError(
+        forwarder,
+        "InvalidActionSignature"
+      );
+    });
+
+    it("depositFunds reverts when value is swapped after signing", async function () {
+      const { args } = await buildDepositPermitCall(rando, depositAmount, seller.id, {
+        actionValue: depositAmount + 1n,
+      });
+      await expect(forwarder.depositFundsWithPermit(...args)).to.be.revertedWithCustomError(
+        forwarder,
+        "InvalidActionSignature"
+      );
+    });
+
+    it("depositFunds reverts when deadline is swapped after signing", async function () {
+      const { args } = await buildDepositPermitCall(rando, depositAmount, seller.id, {
+        actionDeadline: FAR_FUTURE - 1,
+      });
+      await expect(forwarder.depositFundsWithPermit(...args)).to.be.revertedWithCustomError(
+        forwarder,
+        "InvalidActionSignature"
+      );
+    });
+  });
+
+  // ========================================================================
+  //  Cross-permit replay attack (the scenario the action nonce defeats)
+  // ========================================================================
+
+  context("📋 Cross-permit replay attack", async function () {
+    it("attacker cannot redirect a later commit to an earlier offer using a stale action sig", async function () {
+      // Setup: two offers (A, B) that happen to share the same exchange token
+      // and price. User commits to A legitimately, then signs a new permit +
+      // action sig for B. Attacker tries to replay the (already-used) action
+      // sig for A together with the new permit's allowance.
+      const price = BigInt(offerPermitToken.price.toString());
+
+      // 1) Legit commit to offerA = offerPermitToken.id
+      const offerA = offerPermitToken.id;
+      const callA = await buildCommitPermitCall(buyer, price, await buyer.getAddress(), offerA);
+      await forwarder.commitToOfferWithPermit(...callA.args);
+
+      // Action nonce A has been burned. Replaying callA.args reverts.
+      await permitToken.mint(await buyer.getAddress(), price);
+      await expect(forwarder.commitToOfferWithPermit(...callA.args)).to.be.revertedWithCustomError(
+        forwarder,
+        "ActionNonceAlreadyUsed"
+      );
+
+      // 2) User now signs a new permit + action sig for the same offer (would be
+      //    offer B in the real attack — same exchange token + same price suffices
+      //    to demonstrate the danger). Attacker observes the pending tx and
+      //    consumes the new permit directly on the token to set forwarder
+      //    allowance, then tries to splice callA's action sig with the new
+      //    allowance. The action nonce check rejects it.
+      const callB = await buildCommitPermitCall(buyer, price, await buyer.getAddress(), offerA);
+      await permitToken
+        .connect(other)
+        .permit(
+          callB.message.owner,
+          callB.message.spender,
+          callB.message.value,
+          callB.message.deadline,
+          callB.sig.v,
+          callB.sig.r,
+          callB.sig.s
+        );
+      // Allowance is now set; attacker would normally splice callA.args here.
+      // callA.args is rejected by the action-nonce mapping (already used above):
+      await expect(forwarder.commitToOfferWithPermit(...callA.args)).to.be.revertedWithCustomError(
+        forwarder,
+        "ActionNonceAlreadyUsed"
+      );
+
+      // The legitimate user tx (callB) still works; the forwarder's permit()
+      // reverts inside try/catch (nonce already consumed by attacker), but the
+      // standing allowance suffices and action nonce B is unused.
+      await expect(forwarder.commitToOfferWithPermit(...callB.args)).to.emit(exchangeCommitHandler, "BuyerCommitted");
+    });
   });
 
   // ========================================================================
@@ -790,12 +902,15 @@ describe("BosonAuthorizedTransferForwarder", function () {
       await expect(forwarder.depositFundsWithPermit(...args)).to.be.revertedWith("ERC20: insufficient allowance");
     });
 
-    it("reverts on reused permit (nonce already incremented)", async function () {
+    it("reverts on reused action nonce (replay protection)", async function () {
+      // Same call (same actionNonce) cannot be used twice — burned on first success.
       const { args } = await buildDepositPermitCall(rando, depositAmount, seller.id);
       await forwarder.depositFundsWithPermit(...args);
-      // Second call: the same permit has a stale nonce; permit() reverts, allowance is 0.
       await permitToken.mint(await rando.getAddress(), depositAmount);
-      await expect(forwarder.depositFundsWithPermit(...args)).to.be.revertedWith("ERC20: insufficient allowance");
+      await expect(forwarder.depositFundsWithPermit(...args)).to.be.revertedWithCustomError(
+        forwarder,
+        "ActionNonceAlreadyUsed"
+      );
     });
   });
 

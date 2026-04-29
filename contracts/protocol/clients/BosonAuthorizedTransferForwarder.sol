@@ -28,18 +28,38 @@ import { IBosonExchangeCommitHandler } from "../../interfaces/handlers/IBosonExc
  *             forwarder), which is then consumed via `transferFrom`.
  *
  * Both flavours additionally require an **action signature**: an EIP-712
- * signature by the token owner over the protocol-call parameters (entityId or
- * committer+offerId), bound to the inner authorization signature. Without this,
- * an observer could front-run the tx and re-route the funds (swap entityId to
- * credit a different account, or swap committer/offerId to mint the voucher
- * elsewhere). The action sig is verified before any token movement, so a bad
- * sig costs the attacker only base gas.
+ * signature by the token owner over the protocol-call parameters, bound to
+ * the inner authorization. Without this, an observer could front-run the tx
+ * and re-route the funds (swap entityId to credit a different account, or
+ * swap committer/offerId to mint the voucher elsewhere). The action sig is
+ * verified before any token movement, so a bad sig costs the attacker only
+ * base gas.
  *
- * The action typehashes embed the inner authorization's `(v, r, s)`, which
- * implicitly commit to the full inner message (token domain + flow-specific
- * fields). Replay protection comes for free from the inner authorization's
- * single-use semantics: ERC-3009's nonce is one-shot bytes32; EIP-2612's
- * nonce is a per-account counter.
+ * Binding strategies differ between the two flavours because their security
+ * properties differ:
+ *
+ * - **ERC-3009**: action typehash embeds the inner sig's `(v, r, s)`. The
+ *   inner sig itself commits to the full ERC-3009 message (token domain,
+ *   value, nonce, validAfter, validBefore), so binding to `(v, r, s)` is
+ *   sufficient. There is no `try/catch` around `receiveWithAuthorization`,
+ *   so a mismatched token, value, or window causes the whole tx to revert.
+ *   Replay protection comes for free from ERC-3009's one-shot bytes32 nonce.
+ *
+ * - **EIP-2612 permit**: the `permit()` call is wrapped in `try/catch` for
+ *   front-runner DoS resilience (a mempool observer can otherwise consume
+ *   the permit nonce ahead of the user's tx). That fallback to standing
+ *   allowance, however, means the inner `(v, r, s)` is not a sufficient
+ *   binding on its own — an attacker could replay an old action signature
+ *   against a new permit's allowance and redirect the user's funds to an
+ *   already-signed-for offer or entity. The action typehash therefore binds
+ *   the protocol-call parameters explicitly: `(entityId | committer+offerId,
+ *   token, value, deadline, actionNonce)`. The `actionNonce` is one-shot per
+ *   signer (tracked in `usedActionNonces`); explicit `(token, value, deadline)`
+ *   bind the user's intent independently of which permit ends up being
+ *   consumed at execution time.
+ *
+ * Cross-chain replay is prevented on both signatures via chainId-bound
+ * EIP-712 domains.
  *
  * Per-call flow (both flavours):
  *   1. Verify the action signature recovers to `from`.
@@ -85,18 +105,28 @@ contract BosonAuthorizedTransferForwarder is ReentrancyGuard, EIP712 {
     bytes32 private constant DEPOSIT_FUNDS_WITH_AUTHORIZATION_TYPEHASH =
         keccak256("DepositFundsWithAuthorization(uint256 entityId,uint8 v,bytes32 r,bytes32 s)");
     bytes32 private constant DEPOSIT_FUNDS_WITH_PERMIT_TYPEHASH =
-        keccak256("DepositFundsWithPermit(uint256 entityId,uint8 v,bytes32 r,bytes32 s)");
+        keccak256(
+            "DepositFundsWithPermit(uint256 entityId,address token,uint256 value,uint256 deadline,uint256 actionNonce)"
+        );
     bytes32 private constant COMMIT_TO_OFFER_WITH_AUTHORIZATION_TYPEHASH =
         keccak256("CommitToOfferWithAuthorization(address committer,uint256 offerId,uint8 v,bytes32 r,bytes32 s)");
     bytes32 private constant COMMIT_TO_OFFER_WITH_PERMIT_TYPEHASH =
-        keccak256("CommitToOfferWithPermit(address committer,uint256 offerId,uint8 v,bytes32 r,bytes32 s)");
+        keccak256(
+            "CommitToOfferWithPermit(address committer,uint256 offerId,address token,uint256 value,uint256 deadline,uint256 actionNonce)"
+        );
 
     error InvalidProtocolAddress();
     error InvalidTokenAddress();
     error ZeroValue();
     error InvalidActionSignature();
+    error ActionNonceAlreadyUsed();
 
     address public immutable protocol;
+
+    /// @notice Tracks consumed action nonces per signer for the EIP-2612 permit
+    ///         flow. Each (signer, nonce) pair is one-shot — same pattern as
+    ///         the protocol's MetaTransactionsHandler `usedNonce` map.
+    mapping(address => mapping(uint256 => bool)) public usedActionNonces;
 
     constructor(address _protocol) EIP712("BosonAuthorizedTransferForwarder", "1") {
         if (_protocol == address(0)) revert InvalidProtocolAddress();
@@ -161,6 +191,13 @@ contract BosonAuthorizedTransferForwarder is ReentrancyGuard, EIP712 {
     /**
      * @notice Pulls `value` tokens from `from` via EIP-2612 permit and credits
      *         them to `entityId` in the Boson protocol.
+     *
+     * @param actionNonce  One-shot nonce chosen by the signer. Marked used in
+     *                     `usedActionNonces` on success; reverts if already
+     *                     used. Required because permit's `try/catch` allows
+     *                     fallback to standing allowance, so the action sig
+     *                     must independently bind every meaningful parameter
+     *                     and prevent replay.
      */
     function depositFundsWithPermit(
         address token,
@@ -171,9 +208,15 @@ contract BosonAuthorizedTransferForwarder is ReentrancyGuard, EIP712 {
         bytes32 r,
         bytes32 s,
         uint256 entityId,
+        uint256 actionNonce,
         Signature calldata actionSig
     ) external nonReentrant {
-        bytes32 structHash = keccak256(abi.encode(DEPOSIT_FUNDS_WITH_PERMIT_TYPEHASH, entityId, v, r, s));
+        if (token == address(0)) revert InvalidTokenAddress();
+        if (value == 0) revert ZeroValue();
+        _consumeActionNonce(from, actionNonce);
+        bytes32 structHash = keccak256(
+            abi.encode(DEPOSIT_FUNDS_WITH_PERMIT_TYPEHASH, entityId, token, value, deadline, actionNonce)
+        );
         _verifyActionSignature(structHash, from, actionSig);
 
         _pullWithPermit(token, from, value, deadline, v, r, s);
@@ -183,6 +226,9 @@ contract BosonAuthorizedTransferForwarder is ReentrancyGuard, EIP712 {
     /**
      * @notice Pulls `value` tokens from `from` via EIP-2612 permit and commits
      *         to offer `offerId` on behalf of `committer`.
+     *
+     * @param actionNonce  One-shot nonce chosen by the signer. See
+     *                     `depositFundsWithPermit` for rationale.
      */
     function commitToOfferWithPermit(
         address token,
@@ -194,9 +240,15 @@ contract BosonAuthorizedTransferForwarder is ReentrancyGuard, EIP712 {
         bytes32 s,
         address payable committer,
         uint256 offerId,
+        uint256 actionNonce,
         Signature calldata actionSig
     ) external nonReentrant {
-        bytes32 structHash = keccak256(abi.encode(COMMIT_TO_OFFER_WITH_PERMIT_TYPEHASH, committer, offerId, v, r, s));
+        if (token == address(0)) revert InvalidTokenAddress();
+        if (value == 0) revert ZeroValue();
+        _consumeActionNonce(from, actionNonce);
+        bytes32 structHash = keccak256(
+            abi.encode(COMMIT_TO_OFFER_WITH_PERMIT_TYPEHASH, committer, offerId, token, value, deadline, actionNonce)
+        );
         _verifyActionSignature(structHash, from, actionSig);
 
         _pullWithPermit(token, from, value, deadline, v, r, s);
@@ -209,6 +261,11 @@ contract BosonAuthorizedTransferForwarder is ReentrancyGuard, EIP712 {
         bytes32 digest = _hashTypedDataV4(structHash);
         (address recovered, ECDSA.RecoverError err) = ECDSA.tryRecover(digest, sig.v, sig.r, sig.s);
         if (err != ECDSA.RecoverError.NoError || recovered != from) revert InvalidActionSignature();
+    }
+
+    function _consumeActionNonce(address from, uint256 nonce) private {
+        if (usedActionNonces[from][nonce]) revert ActionNonceAlreadyUsed();
+        usedActionNonces[from][nonce] = true;
     }
 
     function _pullWithAuthorization(
