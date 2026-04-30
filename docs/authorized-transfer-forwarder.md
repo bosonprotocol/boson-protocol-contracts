@@ -333,10 +333,6 @@ sequenceDiagram
     Voucher-->>TF: ✓
     TF-->>Forwarder: (true, …)
 
-    Forwarder->>Voucher: ownerOf(tokenId)
-    Voucher-->>Forwarder: buyer
-    Forwarder->>Forwarder: require(owner == buyer)<br/>(VoucherNotReceivedByBuyer otherwise)
-
     Forwarder->>Diamond: executeMetaTransaction(<br/>buyer, "redeemVoucher(uint256)",<br/>encode(redeemVoucher, exchangeId), nonce, redeemSignature)
     Diamond->>Diamond: verify redeem signature (recovers to buyer)<br/>mark nonce used
     Diamond->>Diamond: redeemVoucher(exchangeId)<br/>checkBuyer ✓<br/>burnVoucher → twins → buyer<br/>(VoucherRedeemed event)
@@ -352,8 +348,9 @@ sequenceDiagram
 4. ERC-3009 `receiveWithAuthorization` pulls the buyer's `value` to the forwarder. Atomic — any field mismatch reverts.
 5. `forceApprove(diamond, value)` → `depositFunds(sellerId, token, value)` → `forceApprove(diamond, 0)`. Seller's pool now contains `sellerDeposit + price`.
 6. Relay seller's signed `ForwardRequest` to the trusted forwarder. The trusted forwarder verifies the signature and calls `BosonVoucher.transferFrom(seller, buyer, tokenId)` with the seller appended via ERC-2771. The first transfer of a preminted voucher fires `onPremintedVoucherTransferred` → commits the buyer and encumbers the funds.
-7. Defensive `ownerOf(tokenId) == buyer` post-condition (`VoucherNotReceivedByBuyer` if violated).
-8. Relay buyer's signed redeem meta-tx via the protocol's `MetaTransactionsHandler`. `_msgSender()` resolves to the buyer; `checkBuyer` passes; voucher is burned; any twin NFTs are transferred to the buyer; `VoucherRedeemed` is emitted.
+7. Relay buyer's signed redeem meta-tx via the protocol's `MetaTransactionsHandler`. `_msgSender()` resolves to the buyer; `checkBuyer` passes; voucher is burned; any twin NFTs are transferred to the buyer; `VoucherRedeemed` is emitted.
+
+The forwarder does **not** perform a defensive `ownerOf(tokenId) == buyer` check between steps 6 and 7. It would be redundant: a misbehaving trusted forwarder that returns success without transferring leaves no `Committed` exchange (so step 7's `getValidExchange` reverts), and a seller who signs a transfer to a wrong recipient causes step 7's `checkBuyer` to revert with `NotVoucherHolder` (`exchange.buyerId` mismatches `params.buyer`'s buyer id). Skipping the post-condition also leaves room for legitimate smart-account flows that rely on `safeTransferFrom`'s `onERC721Received` hook to forward the voucher onward — the redeem still succeeds whenever `exchange.buyerId` ends up matching `params.buyer`.
 
 ### Why this is safe
 
@@ -367,9 +364,10 @@ sequenceDiagram
   calldata. Any tampering — or any attempt to relay an old request
   whose nonce has been consumed — is rejected by the trusted forwarder.
 - **The trusted forwarder is not blindly trusted.** A pathological
-  forwarder that returns `(true, …)` without actually transferring is
-  caught by the `ownerOf(tokenId) == buyer` post-condition
-  (`VoucherNotReceivedByBuyer`).
+  forwarder that returns `(true, …)` without actually transferring
+  leaves no committed exchange, so the redeem step's
+  `getValidExchange(exchangeId, Committed)` reverts and the whole tx
+  is rolled back.
 - **Funds atomicity.** If anything in steps 4–8 reverts, the whole tx
   reverts — the buyer's tokens, the voucher, and the redeem are all
   rolled back together. The forwarder never holds a partial state.
@@ -403,7 +401,6 @@ sequenceDiagram
 | `ActionNonceAlreadyUsed` | permit / preminted-redeem flow: `actionNonce` already consumed for this signer |
 | `InvalidVoucherAddress` | `voucher == address(0)` (preminted-redeem flow) |
 | `InvalidTrustedForwarderAddress` | `trustedForwarder == address(0)` (preminted-redeem flow) |
-| `VoucherNotReceivedByBuyer` | post-condition: trusted forwarder returned success but `ownerOf(tokenId) != buyer` |
 
 Reverts from the protocol diamond, the token, and the trusted
 forwarder are bubbled verbatim — for example

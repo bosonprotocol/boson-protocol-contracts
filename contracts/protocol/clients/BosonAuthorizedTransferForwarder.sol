@@ -3,7 +3,6 @@ pragma solidity 0.8.22;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
-import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import { EIP712 } from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
@@ -155,7 +154,6 @@ contract BosonAuthorizedTransferForwarder is ReentrancyGuard, EIP712 {
     error ActionNonceAlreadyUsed();
     error InvalidVoucherAddress();
     error InvalidTrustedForwarderAddress();
-    error VoucherNotReceivedByBuyer();
 
     address public immutable protocol;
 
@@ -371,13 +369,15 @@ contract BosonAuthorizedTransferForwarder is ReentrancyGuard, EIP712 {
             }
         }
 
-        // Defensive post-condition: confirm the voucher actually landed at
-        // the buyer. Catches a misbehaving trusted forwarder that returns
-        // success without transferring, or a seller signing a transfer to
-        // someone other than the buyer.
-        if (IERC721(params.voucher).ownerOf(params.tokenId) != params.buyer) {
-            revert VoucherNotReceivedByBuyer();
-        }
+        // No defensive ownerOf post-condition: the redeem step below is the
+        // source of truth. If the trusted forwarder lied or the seller routed
+        // the voucher elsewhere, either the exchange isn't in `Committed`
+        // state (so `getValidExchange` reverts) or `exchange.buyerId` doesn't
+        // match `params.buyer` (so `checkBuyer` reverts `NotVoucherHolder`).
+        // Skipping the redundant check also leaves room for legitimate
+        // smart-account flows that forward the voucher onward via
+        // `onERC721Received` — the redeem can still succeed when
+        // `exchange.buyerId` ends up matching `params.buyer`.
 
         // Buyer's redeem meta-tx, executed via the protocol's meta-tx handler.
         // exchangeId is the lower 128 bits of the voucher tokenId.

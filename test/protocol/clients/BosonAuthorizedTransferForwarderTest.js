@@ -1254,13 +1254,17 @@ describe("BosonAuthorizedTransferForwarder", function () {
       await expect(callRedeemPreminted(parts)).to.be.revertedWithCustomError(forwarder, "InvalidActionSignature");
     });
 
-    it("VoucherNotReceivedByBuyer when seller signs a transfer to a different recipient", async function () {
+    it("redeem step rejects a wrong-recipient transfer (NotVoucherHolder)", async function () {
       // Seller's ForwardRequest sends the voucher to `other`, not the buyer.
-      // Action sig is built normally for the real buyer; the trusted forwarder
-      // accepts the seller's signed request (it's well-formed) and the voucher
-      // ends up at `other`. The defensive ownerOf check catches it.
+      // The first-transfer hook commits `other` as `exchange.buyerId`; the
+      // redeem meta-tx (signed by `params.buyer`) then fails the protocol's
+      // `checkBuyer` because the recovered _msgSender doesn't match the
+      // exchange's buyer id.
       const parts = await buildRedeemPremintedCall({ transferToAddress: await other.getAddress() });
-      await expect(callRedeemPreminted(parts)).to.be.revertedWithCustomError(forwarder, "VoucherNotReceivedByBuyer");
+      await expect(callRedeemPreminted(parts)).to.be.revertedWithCustomError(
+        bosonErrors,
+        RevertReasons.NOT_VOUCHER_HOLDER
+      );
     });
 
     it("trusted-forwarder rejects a tampered ForwardRequest", async function () {
