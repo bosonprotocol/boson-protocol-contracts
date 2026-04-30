@@ -3,6 +3,7 @@ pragma solidity 0.8.22;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
+import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import { EIP712 } from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
@@ -11,6 +12,7 @@ import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { IERC3009 } from "../../interfaces/IERC3009.sol";
 import { IBosonFundsHandler } from "../../interfaces/handlers/IBosonFundsHandler.sol";
 import { IBosonExchangeCommitHandler } from "../../interfaces/handlers/IBosonExchangeCommitHandler.sol";
+import { IBosonMetaTransactionsHandler } from "../../interfaces/handlers/IBosonMetaTransactionsHandler.sol";
 
 /**
  * @title BosonAuthorizedTransferForwarder
@@ -102,6 +104,30 @@ contract BosonAuthorizedTransferForwarder is ReentrancyGuard, EIP712 {
         bytes32 s;
     }
 
+    /// @notice Bundled parameters for `redeemPremintedOfferWithAuthorization`.
+    /// Bundled to avoid stack-too-deep — the entry point also takes the
+    /// action signature, the trusted-forwarder relay calldata, and the
+    /// buyer's redeem-meta-tx signature as separate args.
+    struct RedeemPremintedParams {
+        // ERC-3009 (buyer's payment)
+        address token;
+        address buyer;
+        uint256 value;
+        uint256 validAfter;
+        uint256 validBefore;
+        bytes32 erc3009Nonce;
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+        // Voucher / exchange routing
+        address voucher;
+        uint256 tokenId;
+        uint256 sellerId;
+        // Replay protection / meta-tx coordination
+        uint256 actionNonce;
+        uint256 redeemNonce;
+    }
+
     bytes32 private constant DEPOSIT_FUNDS_WITH_AUTHORIZATION_TYPEHASH =
         keccak256("DepositFundsWithAuthorization(uint256 entityId,uint8 v,bytes32 r,bytes32 s)");
     bytes32 private constant DEPOSIT_FUNDS_WITH_PERMIT_TYPEHASH =
@@ -114,12 +140,22 @@ contract BosonAuthorizedTransferForwarder is ReentrancyGuard, EIP712 {
         keccak256(
             "CommitToOfferWithPermit(address committer,uint256 offerId,address token,uint256 value,uint256 deadline,uint256 actionNonce)"
         );
+    bytes32 private constant REDEEM_PREMINTED_OFFER_WITH_AUTHORIZATION_TYPEHASH =
+        keccak256(
+            "RedeemPremintedOfferWithAuthorization(address buyer,address voucher,uint256 tokenId,uint256 sellerId,uint256 actionNonce,uint8 v,bytes32 r,bytes32 s)"
+        );
+
+    string private constant REDEEM_VOUCHER_FUNCTION_NAME = "redeemVoucher(uint256)";
+    bytes4 private constant REDEEM_VOUCHER_SELECTOR = bytes4(keccak256(bytes(REDEEM_VOUCHER_FUNCTION_NAME)));
 
     error InvalidProtocolAddress();
     error InvalidTokenAddress();
     error ZeroValue();
     error InvalidActionSignature();
     error ActionNonceAlreadyUsed();
+    error InvalidVoucherAddress();
+    error InvalidTrustedForwarderAddress();
+    error VoucherNotReceivedByBuyer();
 
     address public immutable protocol;
 
@@ -255,6 +291,108 @@ contract BosonAuthorizedTransferForwarder is ReentrancyGuard, EIP712 {
         _approveAndCall(token, value, abi.encodeCall(IBosonExchangeCommitHandler.commitToOffer, (committer, offerId)));
     }
 
+    // ---------- ERC-3009 + voucher transfer + redeem (single tx) ----------
+
+    /**
+     * @notice Single-tx "buy + redeem" for a preminted static-price offer.
+     *
+     * Stitches together four signatures, all signed off-chain:
+     *
+     *   - buyer's ERC-3009 `receiveWithAuthorization` for the offer price
+     *     (`params.{token, value, validAfter, validBefore, erc3009Nonce, v, r, s}`)
+     *   - buyer's forwarder action sig binding the protocol-call params and
+     *     the inner ERC-3009 sig's `(v, r, s)` (`actionSig` over the new
+     *     `RedeemPremintedOfferWithAuthorization` typehash, replay-protected
+     *     by `params.actionNonce` in `usedActionNonces[buyer][...]`)
+     *   - seller's ERC-2771 ForwardRequest (signed under
+     *     `trustedForwarder`'s domain) authorising
+     *     `BosonVoucher.transferFrom(seller, buyer, tokenId)`
+     *     (`trustedForwarderCalldata`, opaque to this contract)
+     *   - buyer's protocol redeem meta-tx signature
+     *     (`redeemSignature`, consumed by the protocol's
+     *     `MetaTransactionsHandler.executeMetaTransaction`)
+     *
+     * Preconditions on the seller side:
+     *   - Offer is created with a reserved range and vouchers preminted to
+     *     the seller's assistant.
+     *   - Seller has deposited the per-voucher seller-deposit into the
+     *     protocol. The forwarder covers the price portion at runtime by
+     *     pulling the buyer's tokens via ERC-3009 and depositing them to
+     *     `params.sellerId`'s pool just before the voucher transfer.
+     *   - `BosonVoucher` was deployed with `trustedForwarder` as its
+     *     ERC-2771 forwarder.
+     *
+     * Net effect: voucher is transferred and committed to the buyer, the
+     * exchange transitions to Redeemed in the same tx, and any twin NFTs
+     * land directly in the buyer's wallet.
+     */
+    function redeemPremintedOfferWithAuthorization(
+        RedeemPremintedParams calldata params,
+        Signature calldata actionSig,
+        address trustedForwarder,
+        bytes calldata trustedForwarderCalldata,
+        bytes calldata redeemSignature
+    ) external nonReentrant {
+        if (params.token == address(0)) revert InvalidTokenAddress();
+        if (params.value == 0) revert ZeroValue();
+        if (params.voucher == address(0)) revert InvalidVoucherAddress();
+        if (trustedForwarder == address(0)) revert InvalidTrustedForwarderAddress();
+
+        _consumeActionNonce(params.buyer, params.actionNonce);
+        _verifyActionSignature(_redeemPremintedStructHash(params), params.buyer, actionSig);
+
+        // Pull buyer's tokens via ERC-3009 (atomic; reverts on any mismatch).
+        _pullForRedeemPreminted(params);
+
+        // Deposit the price portion to the seller's pool. After this the
+        // seller's pool has at least sellerDeposit + price, so the
+        // commit-on-transfer below can encumber successfully.
+        _approveAndCall(
+            params.token,
+            params.value,
+            abi.encodeCall(IBosonFundsHandler.depositFunds, (params.sellerId, params.token, params.value))
+        );
+
+        // Relay seller's voucher transfer through the trusted forwarder.
+        // The trusted forwarder verifies the seller's ForwardRequest signature,
+        // then calls BosonVoucher.transferFrom(seller, buyer, tokenId) with
+        // the seller appended to the calldata (ERC-2771). The first transfer
+        // of a preminted voucher fires onPremintedVoucherTransferred which
+        // commits `buyer` as the exchange's buyerId and encumbers
+        // sellerDeposit + price from the seller's pool.
+        (bool ok, bytes memory ret) = trustedForwarder.call(trustedForwarderCalldata);
+        if (!ok) {
+            // Bubble the trusted forwarder's revert verbatim. Empty returndata
+            // becomes a 0-byte silent revert — acceptable for a misbehaving
+            // forwarder; the canonical paths (OZ MinimalForwarder etc.) always
+            // surface a reason.
+            assembly {
+                revert(add(ret, 32), mload(ret))
+            }
+        }
+
+        // Defensive post-condition: confirm the voucher actually landed at
+        // the buyer. Catches a misbehaving trusted forwarder that returns
+        // success without transferring, or a seller signing a transfer to
+        // someone other than the buyer.
+        if (IERC721(params.voucher).ownerOf(params.tokenId) != params.buyer) {
+            revert VoucherNotReceivedByBuyer();
+        }
+
+        // Buyer's redeem meta-tx, executed via the protocol's meta-tx handler.
+        // exchangeId is the lower 128 bits of the voucher tokenId.
+        uint256 exchangeId = params.tokenId & type(uint128).max;
+        bytes memory redeemFunctionSignature = abi.encodeWithSelector(REDEEM_VOUCHER_SELECTOR, exchangeId);
+
+        IBosonMetaTransactionsHandler(protocol).executeMetaTransaction(
+            params.buyer,
+            REDEEM_VOUCHER_FUNCTION_NAME,
+            redeemFunctionSignature,
+            params.redeemNonce,
+            redeemSignature
+        );
+    }
+
     // ---------- internals ----------
 
     function _verifyActionSignature(bytes32 structHash, address from, Signature calldata sig) private view {
@@ -266,6 +404,44 @@ contract BosonAuthorizedTransferForwarder is ReentrancyGuard, EIP712 {
     function _consumeActionNonce(address from, uint256 nonce) private {
         if (usedActionNonces[from][nonce]) revert ActionNonceAlreadyUsed();
         usedActionNonces[from][nonce] = true;
+    }
+
+    function _pullForRedeemPreminted(RedeemPremintedParams calldata params) private {
+        // Wrapped in a helper so the calldata struct fields don't all live
+        // on the stack of the main entry point at once (avoids
+        // stack-too-deep without enabling viaIR).
+        IERC3009(params.token).receiveWithAuthorization(
+            params.buyer,
+            address(this),
+            params.value,
+            params.validAfter,
+            params.validBefore,
+            params.erc3009Nonce,
+            params.v,
+            params.r,
+            params.s
+        );
+    }
+
+    function _redeemPremintedStructHash(RedeemPremintedParams calldata params) private pure returns (bytes32) {
+        // Two-step encode to dodge stack-too-deep without viaIR. The output is
+        // bit-identical to a single `abi.encode(typehash, ... 8 fields ...)`
+        // because every argument is a static-size type — `bytes.concat` just
+        // splices the two encodings together.
+        return
+            keccak256(
+                bytes.concat(
+                    abi.encode(
+                        REDEEM_PREMINTED_OFFER_WITH_AUTHORIZATION_TYPEHASH,
+                        params.buyer,
+                        params.voucher,
+                        params.tokenId,
+                        params.sellerId,
+                        params.actionNonce
+                    ),
+                    abi.encode(params.v, params.r, params.s)
+                )
+            );
     }
 
     function _pullWithAuthorization(

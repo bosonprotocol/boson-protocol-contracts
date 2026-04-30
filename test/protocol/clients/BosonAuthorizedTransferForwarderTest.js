@@ -9,7 +9,10 @@ const {
   revertToSnapshot,
   setNextBlockTimestamp,
   calculateBosonProxyAddress,
+  calculateCloneAddress,
+  deriveTokenId,
   generateOfferId,
+  prepareDataSignature,
 } = require("../../util/utils.js");
 const {
   mockSeller,
@@ -96,9 +99,10 @@ function sigToTuple(sig) {
 describe("BosonAuthorizedTransferForwarder", function () {
   let admin, treasury, rando, buyer, adminDR, treasuryDR, other, other2;
   let assistant, assistantDR, clerk, clerkDR;
-  let accountHandler, fundsHandler, exchangeCommitHandler, offerHandler;
+  let accountHandler, fundsHandler, exchangeCommitHandler, exchangeHandler, offerHandler;
   let authToken, permitToken;
   let forwarder;
+  let trustedForwarder;
   let protocolDiamondAddress;
   let seller, buyerEntity, offerAuthToken, offerPermitToken;
   let depositAmount;
@@ -336,18 +340,26 @@ describe("BosonAuthorizedTransferForwarder", function () {
     accountId.next(true);
     generateOfferId.next(true);
 
+    // Deploy a MockForwarder to act as BosonVoucher's trusted ERC-2771 forwarder.
+    // BosonVoucher impl bakes this address in at construction; the
+    // redeem-preminted flow relies on it for routing the seller's voucher transfer.
+    const TrustedForwarderFactory = await getContractFactory("MockForwarder");
+    trustedForwarder = await TrustedForwarderFactory.deploy();
+    await trustedForwarder.waitForDeployment();
+
     const contracts = {
       accountHandler: "IBosonAccountHandler",
       offerHandler: "IBosonOfferHandler",
       exchangeCommitHandler: "IBosonExchangeCommitHandler",
+      exchangeHandler: "IBosonExchangeHandler",
       fundsHandler: "IBosonFundsHandler",
     };
 
     ({
       signers: [, admin, treasury, rando, buyer, , adminDR, treasuryDR, other, other2],
-      contractInstances: { accountHandler, offerHandler, exchangeCommitHandler, fundsHandler },
+      contractInstances: { accountHandler, offerHandler, exchangeCommitHandler, exchangeHandler, fundsHandler },
       diamondAddress: protocolDiamondAddress,
-    } = await setupTestEnvironment(contracts));
+    } = await setupTestEnvironment(contracts, { forwarderAddress: [await trustedForwarder.getAddress()] }));
 
     bosonErrors = await getContractAt("BosonErrors", protocolDiamondAddress);
 
@@ -947,6 +959,327 @@ describe("BosonAuthorizedTransferForwarder", function () {
       await forwarder.commitToOfferWithPermit(...args);
       expect(await permitToken.allowance(await forwarder.getAddress(), protocolDiamondAddress)).to.equal(0n);
       expect(await permitToken.balanceOf(await forwarder.getAddress())).to.equal(0n);
+    });
+  });
+
+  // ==========================================================================
+  //  Single-tx commit + redeem (preminted offers, ERC-3009)
+  // ==========================================================================
+
+  context("📋 redeemPremintedOfferWithAuthorization (preminted commit + redeem)", async function () {
+    let bosonVoucher;
+    let premintedOffer;
+    let premintedTokenId;
+    let premintedExchangeId;
+
+    const REDEEM_PREMINTED_ACTION_TYPES = {
+      RedeemPremintedOfferWithAuthorization: [
+        { name: "buyer", type: "address" },
+        { name: "voucher", type: "address" },
+        { name: "tokenId", type: "uint256" },
+        { name: "sellerId", type: "uint256" },
+        { name: "actionNonce", type: "uint256" },
+        { name: "v", type: "uint8" },
+        { name: "r", type: "bytes32" },
+        { name: "s", type: "bytes32" },
+      ],
+    };
+
+    const FORWARD_REQUEST_TYPES = {
+      ForwardRequest: [
+        { name: "from", type: "address" },
+        { name: "to", type: "address" },
+        { name: "nonce", type: "uint256" },
+        { name: "data", type: "bytes" },
+      ],
+    };
+
+    async function trustedForwarderDomain() {
+      return {
+        name: "MockForwarder",
+        version: "0.0.1",
+        chainId: (await provider.getNetwork()).chainId,
+        verifyingContract: await trustedForwarder.getAddress(),
+      };
+    }
+
+    async function signForwardRequest(signer, request) {
+      return signer.signTypedData(await trustedForwarderDomain(), FORWARD_REQUEST_TYPES, request);
+    }
+
+    async function signRedeemMetaTx(signer, exchangeId, redeemNonce) {
+      const customTransactionType = {
+        MetaTxExchange: [
+          { name: "nonce", type: "uint256" },
+          { name: "from", type: "address" },
+          { name: "contractAddress", type: "address" },
+          { name: "functionName", type: "string" },
+          { name: "exchangeDetails", type: "MetaTxExchangeDetails" },
+        ],
+        MetaTxExchangeDetails: [{ name: "exchangeId", type: "uint256" }],
+      };
+      const message = {
+        nonce: redeemNonce,
+        from: await signer.getAddress(),
+        contractAddress: protocolDiamondAddress,
+        functionName: "redeemVoucher(uint256)",
+        exchangeDetails: { exchangeId: exchangeId.toString() },
+      };
+      return prepareDataSignature(signer, customTransactionType, "MetaTxExchange", message, protocolDiamondAddress);
+    }
+
+    // Build a complete tuple of (params, actionSig, trustedForwarder, fwdCalldata, redeemSignature).
+    async function buildRedeemPremintedCall(opts = {}) {
+      const price = BigInt(premintedOffer.price.toString());
+
+      // Buyer's ERC-3009 receive auth (signs paying `price` to the forwarder)
+      const erc3009Nonce = await freshNonce();
+      const erc3009Message = {
+        from: opts.from ?? (await buyer.getAddress()),
+        to: await forwarder.getAddress(),
+        value: opts.value ?? price,
+        validAfter: opts.validAfter ?? VALID_AFTER,
+        validBefore: opts.validBefore ?? FAR_FUTURE,
+        nonce: erc3009Nonce,
+      };
+      await authToken.mint(erc3009Message.from, erc3009Message.value);
+      const innerSig = await signReceive(opts.erc3009Signer ?? buyer, erc3009Message);
+
+      // Buyer's forwarder action sig
+      const tokenId = opts.tokenId ?? premintedTokenId;
+      const sellerIdForAction = opts.sellerIdForAction ?? seller.id;
+      const voucherForAction = opts.voucherForAction ?? (await bosonVoucher.getAddress());
+      const buyerForAction = opts.buyerForAction ?? (await buyer.getAddress());
+      const actionNonce = opts.actionNonce ?? freshActionNonce();
+      const actionSigner = opts.actionSigner ?? buyer;
+      const actionMsg = {
+        buyer: buyerForAction,
+        voucher: voucherForAction,
+        tokenId,
+        sellerId: sellerIdForAction,
+        actionNonce,
+        v: innerSig.v,
+        r: innerSig.r,
+        s: innerSig.s,
+      };
+      const action = await signActionTyped(actionSigner, REDEEM_PREMINTED_ACTION_TYPES, actionMsg);
+
+      // Seller's ForwardRequest for the voucher transfer
+      const transferData = bosonVoucher.interface.encodeFunctionData("transferFrom", [
+        opts.transferFromAddress ?? (await assistant.getAddress()),
+        opts.transferToAddress ?? (await buyer.getAddress()),
+        opts.transferTokenId ?? tokenId,
+      ]);
+      const fwdNonce = await trustedForwarder.getNonce(await assistant.getAddress());
+      const forwardRequest = {
+        from: await assistant.getAddress(),
+        to: await bosonVoucher.getAddress(),
+        nonce: fwdNonce,
+        data: transferData,
+      };
+      const sellerSignature = await signForwardRequest(opts.sellerSigner ?? assistant, forwardRequest);
+      const fwdCalldata = trustedForwarder.interface.encodeFunctionData("execute", [forwardRequest, sellerSignature]);
+
+      // Buyer's protocol redeem meta-tx
+      const redeemNonce = opts.redeemNonce ?? freshActionNonce();
+      const redeemSignature = await signRedeemMetaTx(
+        opts.redeemSigner ?? buyer,
+        opts.redeemExchangeId ?? premintedExchangeId,
+        redeemNonce
+      );
+
+      const params = {
+        token: opts.token ?? (await authToken.getAddress()),
+        buyer: await buyer.getAddress(),
+        value: erc3009Message.value,
+        validAfter: erc3009Message.validAfter,
+        validBefore: erc3009Message.validBefore,
+        erc3009Nonce,
+        v: innerSig.v,
+        r: innerSig.r,
+        s: innerSig.s,
+        voucher: await bosonVoucher.getAddress(),
+        tokenId,
+        sellerId: seller.id,
+        actionNonce,
+        redeemNonce,
+      };
+
+      return {
+        params,
+        actionSig: sigToTuple(action),
+        trustedForwarderAddress: await trustedForwarder.getAddress(),
+        fwdCalldata,
+        redeemSignature,
+      };
+    }
+
+    async function callRedeemPreminted(parts, overrides = {}) {
+      return forwarder.redeemPremintedOfferWithAuthorization(
+        overrides.params ?? parts.params,
+        overrides.actionSig ?? parts.actionSig,
+        overrides.trustedForwarderAddress ?? parts.trustedForwarderAddress,
+        overrides.fwdCalldata ?? parts.fwdCalldata,
+        overrides.redeemSignature ?? parts.redeemSignature
+      );
+    }
+
+    before(async function () {
+      // Compute the per-seller voucher clone address. The protocol diamond
+      // creates the clone via CREATE2 from the precomputed beacon proxy.
+      const beaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
+      const voucherAddress = await calculateCloneAddress(
+        protocolDiamondAddress,
+        beaconProxyAddress,
+        await assistant.getAddress()
+      );
+      bosonVoucher = await getContractAt("BosonVoucher", voucherAddress);
+
+      // Reserve a range and premint vouchers under our existing offerAuthToken.
+      const reserveLength = "5";
+      const start = BigInt(await exchangeHandler.getNextExchangeId());
+      await offerHandler
+        .connect(assistant)
+        .reserveRange(offerAuthToken.id, reserveLength, await assistant.getAddress());
+      await bosonVoucher.connect(assistant).preMint(offerAuthToken.id, reserveLength);
+
+      premintedOffer = offerAuthToken;
+      premintedExchangeId = start;
+      premintedTokenId = deriveTokenId(offerAuthToken.id, start);
+
+      // Top up the seller's pool with sellerDeposit so the commit-on-transfer
+      // can encumber. The buyer's price portion is supplied by the forwarder
+      // at runtime via depositFunds.
+      const totalSellerDeposit = BigInt(offerAuthToken.sellerDeposit) * BigInt(reserveLength);
+      await authToken.mint(await assistant.getAddress(), totalSellerDeposit);
+      await authToken.connect(assistant).approve(protocolDiamondAddress, totalSellerDeposit);
+      await fundsHandler.connect(assistant).depositFunds(seller.id, await authToken.getAddress(), totalSellerDeposit);
+
+      // Refresh the outer-describe snapshot so the per-test revert preserves
+      // our preminted setup. This is the last context in the file, so we don't
+      // disturb earlier ones.
+      snapshotId = await getSnapshot();
+    });
+
+    // Advance time past `voucherRedeemableFrom` (mockOfferDates sets it to
+    // `block.timestamp + oneWeek` at offer creation) so the redeem step can
+    // succeed.
+    beforeEach(async function () {
+      const blk = await provider.getBlock("latest");
+      await setNextBlockTimestamp(blk.timestamp + 8 * 24 * 60 * 60); // +8 days
+    });
+
+    it("commits the buyer + redeems the voucher + emits VoucherRedeemed in one tx", async function () {
+      const parts = await buildRedeemPremintedCall();
+      await expect(callRedeemPreminted(parts))
+        .to.emit(exchangeHandler, "VoucherRedeemed")
+        .withArgs(premintedOffer.id, premintedExchangeId, await buyer.getAddress());
+    });
+
+    it("transfers the voucher to the buyer en route (verified by burn after redeem)", async function () {
+      const parts = await buildRedeemPremintedCall();
+      await callRedeemPreminted(parts);
+      // After redeem the voucher is burned; ownerOf reverts.
+      await expect(bosonVoucher.ownerOf(premintedTokenId)).to.be.revertedWith("ERC721: invalid token ID");
+    });
+
+    it("reverts on zero token", async function () {
+      const parts = await buildRedeemPremintedCall();
+      const params = { ...parts.params, token: ZeroAddress };
+      await expect(callRedeemPreminted(parts, { params })).to.be.revertedWithCustomError(
+        forwarder,
+        "InvalidTokenAddress"
+      );
+    });
+
+    it("reverts on zero value", async function () {
+      const parts = await buildRedeemPremintedCall();
+      const params = { ...parts.params, value: 0 };
+      await expect(callRedeemPreminted(parts, { params })).to.be.revertedWithCustomError(forwarder, "ZeroValue");
+    });
+
+    it("reverts on zero voucher address", async function () {
+      const parts = await buildRedeemPremintedCall();
+      const params = { ...parts.params, voucher: ZeroAddress };
+      await expect(callRedeemPreminted(parts, { params })).to.be.revertedWithCustomError(
+        forwarder,
+        "InvalidVoucherAddress"
+      );
+    });
+
+    it("reverts on zero trusted forwarder address", async function () {
+      const parts = await buildRedeemPremintedCall();
+      await expect(callRedeemPreminted(parts, { trustedForwarderAddress: ZeroAddress })).to.be.revertedWithCustomError(
+        forwarder,
+        "InvalidTrustedForwarderAddress"
+      );
+    });
+
+    it("reverts on reused action nonce", async function () {
+      const parts = await buildRedeemPremintedCall();
+      await callRedeemPreminted(parts);
+      await expect(callRedeemPreminted(parts)).to.be.revertedWithCustomError(forwarder, "ActionNonceAlreadyUsed");
+    });
+
+    it("front-run: swapping voucher in the call reverts InvalidActionSignature", async function () {
+      // Build a call but mutate `params.voucher` after signing the action sig.
+      const parts = await buildRedeemPremintedCall();
+      const params = { ...parts.params, voucher: await rando.getAddress() };
+      await expect(callRedeemPreminted(parts, { params })).to.be.revertedWithCustomError(
+        forwarder,
+        "InvalidActionSignature"
+      );
+    });
+
+    it("front-run: swapping tokenId in the call reverts InvalidActionSignature", async function () {
+      const parts = await buildRedeemPremintedCall();
+      const params = { ...parts.params, tokenId: BigInt(parts.params.tokenId) + 1n };
+      await expect(callRedeemPreminted(parts, { params })).to.be.revertedWithCustomError(
+        forwarder,
+        "InvalidActionSignature"
+      );
+    });
+
+    it("front-run: swapping sellerId in the call reverts InvalidActionSignature", async function () {
+      const parts = await buildRedeemPremintedCall();
+      const params = { ...parts.params, sellerId: BigInt(parts.params.sellerId) + 1n };
+      await expect(callRedeemPreminted(parts, { params })).to.be.revertedWithCustomError(
+        forwarder,
+        "InvalidActionSignature"
+      );
+    });
+
+    it("front-run: action sig signed by wrong key reverts InvalidActionSignature", async function () {
+      const parts = await buildRedeemPremintedCall({ actionSigner: other });
+      await expect(callRedeemPreminted(parts)).to.be.revertedWithCustomError(forwarder, "InvalidActionSignature");
+    });
+
+    it("VoucherNotReceivedByBuyer when seller signs a transfer to a different recipient", async function () {
+      // Seller's ForwardRequest sends the voucher to `other`, not the buyer.
+      // Action sig is built normally for the real buyer; the trusted forwarder
+      // accepts the seller's signed request (it's well-formed) and the voucher
+      // ends up at `other`. The defensive ownerOf check catches it.
+      const parts = await buildRedeemPremintedCall({ transferToAddress: await other.getAddress() });
+      await expect(callRedeemPreminted(parts)).to.be.revertedWithCustomError(forwarder, "VoucherNotReceivedByBuyer");
+    });
+
+    it("trusted-forwarder rejects a tampered ForwardRequest", async function () {
+      // Seller signs a valid ForwardRequest, but we tamper with the calldata
+      // (mutate the nonce) before passing it to the forwarder. The trusted
+      // forwarder verifies the signature and reverts.
+      const parts = await buildRedeemPremintedCall();
+      // Decode the request, bump the nonce, re-encode without re-signing.
+      const decoded = trustedForwarder.interface.decodeFunctionData("execute", parts.fwdCalldata);
+      const tampered = {
+        from: decoded[0].from,
+        to: decoded[0].to,
+        nonce: decoded[0].nonce + 1n,
+        data: decoded[0].data,
+      };
+      const fwdCalldata = trustedForwarder.interface.encodeFunctionData("execute", [tampered, decoded[1]]);
+      await expect(callRedeemPreminted(parts, { fwdCalldata })).to.be.revertedWith(
+        "MockForwarder: signature does not match request"
+      );
     });
   });
 });
