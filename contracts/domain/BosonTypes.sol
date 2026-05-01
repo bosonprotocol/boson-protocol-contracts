@@ -70,6 +70,11 @@ contract BosonTypes {
         ResolveDispute
     }
 
+    enum AuthorizationType {
+        None,
+        ERC3009
+    }
+
     enum AuthTokenType {
         None,
         Custom, // For future use

@@ -29,7 +29,10 @@ function getConfigHandlerInitArgs() {
  * @returns {Object} - array of function hashes
  */
 async function getMetaTransactionsHandlerFacetInitArgs(facets) {
-  const getFunctionHashesClosure = getStateModifyingFunctionsHashes(facets, ["executeMetaTransaction"]);
+  const getFunctionHashesClosure = getStateModifyingFunctionsHashes(facets, [
+    "executeMetaTransaction",
+    "executeMetaTransactionWithAuthorization",
+  ]);
 
   return await getFunctionHashesClosure();
 }
