@@ -7,6 +7,7 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
+import { TransientAuthLib } from "../libs/TransientAuthLib.sol";
 
 /**
  * @title MetaTransactionsHandlerFacet
@@ -298,6 +299,60 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         uint256 _nonce,
         bytes calldata _signature
     ) external payable override metaTransactionsNotPaused returns (bytes memory) {
+        return _executeMetaTx(_userAddress, _functionName, _functionSignature, _nonce, _signature);
+    }
+
+    /**
+     * @notice Same as `executeMetaTransaction`, but with an additional
+     *         authorization payload parked in transient storage for
+     *         consumption by `transferFundsIn`.
+     *
+     * The outer metatransaction signature does NOT cover `_authorizationType`
+     * or `_authorization`. Each ERC-3009 entry in the queue is itself an
+     * EIP-712 payload signed against the token contract — independently
+     * authenticated, so re-signing it here would only force a double-sign.
+     *
+     * @param _userAddress - the sender of the transaction
+     * @param _functionName - the name of the function to be executed
+     * @param _functionSignature - the function signature
+     * @param _nonce - the nonce value of the transaction
+     * @param _signature - meta transaction signature (see `executeMetaTransaction`)
+     * @param _authorizationType - kind of token-side authorization supplied
+     * @param _authorization - opaque authorization payload (see interface for layout)
+     */
+    function executeMetaTransactionWithAuthorization(
+        address _userAddress,
+        string calldata _functionName,
+        bytes calldata _functionSignature,
+        uint256 _nonce,
+        bytes calldata _signature,
+        AuthorizationType _authorizationType,
+        bytes calldata _authorization
+    ) external payable override metaTransactionsNotPaused returns (bytes memory) {
+        if (_authorizationType != AuthorizationType.None) {
+            TransientAuthLib.loadQueue(_authorization);
+        }
+        return _executeMetaTx(_userAddress, _functionName, _functionSignature, _nonce, _signature);
+    }
+
+    /**
+     * @notice Shared body for the metatransaction entry points — validates the
+     *         nonce, hashes the metatx, verifies the signature, and dispatches
+     *         the inner call.
+     *
+     * @param _userAddress - the sender of the transaction
+     * @param _functionName - the name of the function to be executed
+     * @param _functionSignature - the function signature
+     * @param _nonce - the nonce value of the transaction
+     * @param _signature - meta transaction signature
+     */
+    function _executeMetaTx(
+        address _userAddress,
+        string calldata _functionName,
+        bytes calldata _functionSignature,
+        uint256 _nonce,
+        bytes calldata _signature
+    ) internal returns (bytes memory) {
         // Make sure that protocol is not reentered through meta transactions
         // Cannot use modifier `nonReentrant` since it also changes reentrancyStatus to `ENTERED`,
         // but that then breaks meta transaction functionality

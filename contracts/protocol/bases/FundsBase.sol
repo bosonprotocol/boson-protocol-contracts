@@ -5,8 +5,10 @@ import "../../domain/BosonConstants.sol";
 import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
+import { TransientAuthLib } from "../libs/TransientAuthLib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IERC3009 } from "../../interfaces/IERC3009.sol";
 import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { IDRFeeMutualizer } from "../../interfaces/clients/IDRFeeMutualizer.sol";
@@ -470,8 +472,32 @@ abstract contract FundsBase is Context {
         if (_amount > 0) {
             // protocol balance before the transfer
             uint256 protocolTokenBalanceBefore = IERC20(_tokenAddress).balanceOf(address(this));
-            // transfer ERC20 tokens from the caller
-            IERC20(_tokenAddress).safeTransferFrom(_from, address(this), _amount);
+
+            // If a metatx parked an authorization queue, pop the next entry.
+            // Empty entry (or no queue) falls back to the standard allowance path.
+            bytes memory authEntry = TransientAuthLib.hasQueue() ? TransientAuthLib.popNext() : bytes("");
+
+            if (authEntry.length > 0) {
+                (uint256 validAfter, uint256 validBefore, bytes32 authNonce, uint8 v, bytes32 r, bytes32 s) = abi
+                    .decode(authEntry, (uint256, uint256, bytes32, uint8, bytes32, bytes32));
+
+                // receiveWithAuthorization on the token enforces `to == msg.sender`,
+                // i.e. the protocol — so no extra recipient check is needed here.
+                IERC3009(_tokenAddress).receiveWithAuthorization(
+                    _from,
+                    address(this),
+                    _amount,
+                    validAfter,
+                    validBefore,
+                    authNonce,
+                    v,
+                    r,
+                    s
+                );
+            } else {
+                IERC20(_tokenAddress).safeTransferFrom(_from, address(this), _amount);
+            }
+
             // protocol balance after the transfer
             uint256 protocolTokenBalanceAfter = IERC20(_tokenAddress).balanceOf(address(this));
             // make sure that expected amount of tokens was transferred
