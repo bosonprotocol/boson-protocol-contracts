@@ -265,10 +265,10 @@ module.exports = {
       {
         version: "0.8.35",
         settings: {
-          viaIR: false,
+          viaIR: true,
           optimizer: {
             enabled: true,
-            runs: 100,
+            runs: 50,
             details: {
               yul: true,
             },
