@@ -2,11 +2,8 @@
 pragma solidity 0.8.35;
 
 import "../../domain/BosonConstants.sol";
-import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
-import { DisputeBase } from "../bases/DisputeBase.sol";
 import { ExchangeCommitBase } from "../bases/ExchangeCommitBase.sol";
 import { ExchangeRedeemBase } from "../bases/ExchangeRedeemBase.sol";
-import { GroupBase } from "../bases/GroupBase.sol";
 
 /**
  * @title OrchestrationHandlerFacet2
@@ -21,7 +18,7 @@ import { GroupBase } from "../bases/GroupBase.sol";
  * IBosonOrchestrationHandler interface; the split exists only because of the EIP-170 24KB
  * code size limit.
  */
-contract OrchestrationHandlerFacet2 is ExchangeCommitBase, ExchangeRedeemBase, GroupBase {
+contract OrchestrationHandlerFacet2 is ExchangeCommitBase, ExchangeRedeemBase {
     /**
      * @notice Initializes facet.
      */
@@ -98,18 +95,7 @@ contract OrchestrationHandlerFacet2 is ExchangeCommitBase, ExchangeRedeemBase, G
         orchestrationNotPaused
         nonReentrant
     {
-        address payable committer = payable(_msgSender());
-
-        Offer storage offer = getValidOffer(_offerId);
-        if (offer.priceType != PriceType.Static) revert InvalidPriceType();
-
-        (bool exists, uint256 groupId) = getGroupIdByOffer(offer.id);
-        if (exists) {
-            Condition storage condition = fetchCondition(groupId);
-            if (condition.method != EvaluationMethod.None) revert GroupHasCondition();
-        }
-
-        uint256 exchangeId = commitToOfferInternal(committer, offer, 0, false);
+        uint256 exchangeId = commitToStaticOfferShared(payable(_msgSender()), _offerId);
         redeemVoucherInternal(exchangeId, false);
     }
 
@@ -135,23 +121,7 @@ contract OrchestrationHandlerFacet2 is ExchangeCommitBase, ExchangeRedeemBase, G
         orchestrationNotPaused
         nonReentrant
     {
-        address payable committer = payable(_msgSender());
-
-        Offer storage offer = getValidOffer(_offerId);
-        if (offer.priceType != PriceType.Static) revert InvalidPriceType();
-        if (offer.creator == OfferCreator.Buyer) revert OfferCreatorMustBeSeller();
-
-        (bool exists, uint256 groupId) = getGroupIdByOffer(offer.id);
-        if (!exists) revert NoSuchGroup();
-
-        Condition storage condition = fetchCondition(groupId);
-        validateConditionRange(condition, _tokenId);
-        authorizeCommit(committer, condition, groupId, _tokenId, _offerId);
-
-        uint256 exchangeId = commitToOfferInternal(committer, offer, 0, false);
-
-        protocolLookups().exchangeCondition[exchangeId] = condition;
-
+        uint256 exchangeId = commitToConditionalOfferShared(payable(_msgSender()), _offerId, _tokenId, false);
         redeemVoucherInternal(exchangeId, false);
     }
 
@@ -175,64 +145,13 @@ contract OrchestrationHandlerFacet2 is ExchangeCommitBase, ExchangeRedeemBase, G
     ) external payable exchangesNotPaused buyersNotPaused sellersNotPaused orchestrationNotPaused {
         if (_fullOffer.offer.creator != OfferCreator.Seller) revert OfferCreatorMustBeSeller();
 
-        // Verify signature, find/create the offer, and create a group with condition if needed.
-        (bytes32 offerHash, uint256 offerId) = verifyOffer(_fullOffer, _offerCreator, _signature);
+        uint256 offerId = prepareOfferForCommit(_fullOffer, _offerCreator, _signature);
 
-        if (offerId == 0) {
-            offerId = createOfferInternal(
-                _fullOffer.offer,
-                _fullOffer.offerDates,
-                _fullOffer.offerDurations,
-                _fullOffer.drParameters,
-                _fullOffer.agentId,
-                _fullOffer.feeLimit,
-                false
-            );
-            protocolLookups().offerIdByHash[offerHash] = offerId;
-
-            if (_fullOffer.condition.method != BosonTypes.EvaluationMethod.None) {
-                Group memory group;
-                group.sellerId = _fullOffer.offer.sellerId;
-                group.offerIds = new uint256[](1);
-                group.offerIds[0] = offerId;
-
-                createGroupInternal(group, _fullOffer.condition, false);
-            }
-        }
-
-        // Deposit seller's funds if the seller did not pre-fund the seller deposit
-        if (!_fullOffer.useDepositedFunds) {
-            uint256 sellerDeposit = _fullOffer.offer.sellerDeposit;
-            if (sellerDeposit > 0) {
-                transferFundsIn(_fullOffer.offer.exchangeToken, _offerCreator, sellerDeposit);
-                increaseAvailableFunds(_fullOffer.offer.sellerId, _fullOffer.offer.exchangeToken, sellerDeposit);
-                emit IBosonFundsBaseEvents.FundsDeposited(
-                    _fullOffer.offer.sellerId,
-                    _offerCreator,
-                    _fullOffer.offer.exchangeToken,
-                    sellerDeposit
-                );
-            }
-        }
-
-        // Commit (buyer is _msgSender) — including conditional path when applicable
-        Offer storage offer = getValidOffer(offerId);
-        address payable committer = payable(_msgSender());
-
-        uint256 exchangeId;
-        if (_fullOffer.condition.method != BosonTypes.EvaluationMethod.None) {
-            (bool groupExists, uint256 groupId) = getGroupIdByOffer(offerId);
-            if (!groupExists) revert NoSuchGroup();
-
-            Condition storage condition = fetchCondition(groupId);
-            validateConditionRange(condition, _conditionalTokenId);
-            authorizeCommit(committer, condition, groupId, _conditionalTokenId, offerId);
-
-            exchangeId = commitToOfferInternal(committer, offer, 0, false);
-            protocolLookups().exchangeCondition[exchangeId] = condition;
-        } else {
-            exchangeId = commitToOfferInternal(committer, offer, 0, false);
-        }
+        // Buyer is always _msgSender(); for buyer-created offers we already reverted above,
+        // so commitToConditionalOfferShared can run with _allowBuyerCreated=false.
+        uint256 exchangeId = _fullOffer.condition.method != BosonTypes.EvaluationMethod.None
+            ? commitToConditionalOfferShared(payable(_msgSender()), offerId, _conditionalTokenId, false)
+            : commitToStaticOfferShared(payable(_msgSender()), offerId);
 
         redeemVoucherInternal(exchangeId, false);
     }

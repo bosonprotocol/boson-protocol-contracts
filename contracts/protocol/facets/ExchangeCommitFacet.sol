@@ -4,13 +4,11 @@ pragma solidity 0.8.35;
 import "../../domain/BosonConstants.sol";
 import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonExchangeCommitHandler } from "../../interfaces/handlers/IBosonExchangeCommitHandler.sol";
-import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ExchangeCommitBase } from "../bases/ExchangeCommitBase.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
 import { GroupBase } from "../bases/GroupBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
-import { TokenTransferAuthorizationLib } from "../libs/TokenTransferAuthorizationLib.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
 /**
@@ -20,7 +18,7 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
  * This facet contains all functions related to committing to offers and creating new exchanges,
  * including buyer-initiated offers where sellers commit to buyer-created offers.
  */
-contract ExchangeCommitFacet is ExchangeCommitBase, DisputeBase, GroupBase, IBosonExchangeCommitHandler {
+contract ExchangeCommitFacet is ExchangeCommitBase, DisputeBase, IBosonExchangeCommitHandler {
     using Address for address;
     using Address for address payable;
 
@@ -70,20 +68,7 @@ contract ExchangeCommitFacet is ExchangeCommitBase, DisputeBase, GroupBase, IBos
         // Make sure committer address is not zero address
         if (_committer == address(0)) revert InvalidAddress();
 
-        Offer storage offer = getValidOffer(_offerId);
-        if (offer.priceType != PriceType.Static) revert InvalidPriceType();
-
-        // For there to be a condition, there must be a group.
-        (bool exists, uint256 groupId) = getGroupIdByOffer(offer.id);
-        if (exists) {
-            // Get the condition
-            Condition storage condition = fetchCondition(groupId);
-
-            // Make sure group doesn't have a condition. If it does, use commitToConditionalOffer instead.
-            if (condition.method != EvaluationMethod.None) revert GroupHasCondition();
-        }
-
-        commitToOfferInternal(_committer, offer, 0, false);
+        commitToStaticOfferShared(_committer, _offerId);
     }
 
     /**
@@ -171,37 +156,7 @@ contract ExchangeCommitFacet is ExchangeCommitBase, DisputeBase, GroupBase, IBos
         // Make sure committer address is not zero address
         if (_committer == address(0)) revert InvalidAddress();
 
-        Offer storage offer = getValidOffer(_offerId);
-        if (offer.priceType != PriceType.Static) revert InvalidPriceType();
-
-        // For there to be a condition, there must be a group.
-        (bool exists, uint256 groupId) = getGroupIdByOffer(offer.id);
-
-        // Make sure the group exists
-        if (!exists) revert NoSuchGroup();
-
-        // Get the condition
-        Condition storage condition = fetchCondition(groupId);
-
-        // Make sure the tokenId is in range
-        validateConditionRange(condition, _tokenId);
-
-        address buyerAddress;
-        if (offer.creator == BosonTypes.OfferCreator.Buyer) {
-            (, BosonTypes.Buyer storage buyer) = fetchBuyer(offer.buyerId);
-            buyerAddress = buyer.wallet;
-
-            // For buyer-created offers, group sellerId is originally 0, so it needs to be updated
-            protocolEntities().groups[groupId].sellerId = offer.sellerId;
-        } else {
-            buyerAddress = _committer;
-        }
-        authorizeCommit(buyerAddress, condition, groupId, _tokenId, _offerId);
-
-        uint256 exchangeId = commitToOfferInternal(_committer, offer, 0, false);
-
-        // Store the condition to be returned afterward on getReceipt function
-        protocolLookups().exchangeCondition[exchangeId] = condition;
+        commitToConditionalOfferShared(_committer, _offerId, _tokenId, true);
     }
 
     /**
@@ -264,69 +219,7 @@ contract ExchangeCommitFacet is ExchangeCommitBase, DisputeBase, GroupBase, IBos
                 _sellerParams.mutualizerAddress != address(0))
         ) revert SellerParametersNotAllowed();
 
-        // verify signature and potential cancellation
-        (bytes32 offerHash, uint256 offerId) = verifyOffer(_fullOffer, _offerCreator, _signature);
-
-        // create an offer
-        if (offerId == 0) {
-            offerId = createOfferInternal(
-                _fullOffer.offer,
-                _fullOffer.offerDates,
-                _fullOffer.offerDurations,
-                _fullOffer.drParameters,
-                _fullOffer.agentId,
-                _fullOffer.feeLimit,
-                false
-            );
-            protocolLookups().offerIdByHash[offerHash] = offerId;
-
-            if (_fullOffer.condition.method != BosonTypes.EvaluationMethod.None) {
-                // Construct new group
-                // - group id is 0, and it is ignored
-                Group memory group;
-                group.sellerId = _fullOffer.offer.sellerId;
-                group.offerIds = new uint256[](1);
-                group.offerIds[0] = offerId;
-
-                // Create group and update structs values to represent true state
-                createGroupInternal(group, _fullOffer.condition, false);
-            }
-        }
-
-        // Deposit other committer's funds if needed
-        if (!_fullOffer.useDepositedFunds) {
-            uint256 offerCreatorId;
-            uint256 offerCreatorAmount;
-            if (_fullOffer.offer.creator == BosonTypes.OfferCreator.Buyer) {
-                // Buyer-created offer: committer is the seller
-                offerCreatorId = _fullOffer.offer.buyerId;
-                offerCreatorAmount = _fullOffer.offer.price;
-            } else {
-                // Seller-created offer: committer is the buyer
-                offerCreatorId = _fullOffer.offer.sellerId;
-                offerCreatorAmount = _fullOffer.offer.sellerDeposit;
-            }
-
-            // transferFundsIn discards the queue slot internally when
-            // offerCreatorAmount == 0, so the off-chain caller can supply a
-            // queue whose layout is independent of runtime amounts.
-            transferFundsIn(_fullOffer.offer.exchangeToken, _offerCreator, offerCreatorAmount);
-
-            if (offerCreatorAmount > 0) {
-                increaseAvailableFunds(offerCreatorId, _fullOffer.offer.exchangeToken, offerCreatorAmount);
-                emit IBosonFundsBaseEvents.FundsDeposited(
-                    offerCreatorId,
-                    _offerCreator,
-                    _fullOffer.offer.exchangeToken,
-                    offerCreatorAmount
-                );
-            }
-        } else {
-            // useDepositedFunds=true: offer-creator pull is bypassed entirely.
-            // Discard the queue slot reserved for it so the queue layout stays
-            // uniform across this flag.
-            TokenTransferAuthorizationLib.discardNext();
-        }
+        uint256 offerId = prepareOfferForCommit(_fullOffer, _offerCreator, _signature);
 
         if (_fullOffer.condition.method != BosonTypes.EvaluationMethod.None) {
             if (_fullOffer.offer.creator == BosonTypes.OfferCreator.Buyer) {

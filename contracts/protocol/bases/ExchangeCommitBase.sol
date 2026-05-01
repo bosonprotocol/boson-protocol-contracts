@@ -10,8 +10,10 @@ import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { IDRFeeMutualizer } from "../../interfaces/clients/IDRFeeMutualizer.sol";
 import { BuyerBase } from "./BuyerBase.sol";
 import { OfferBase } from "./OfferBase.sol";
+import { GroupBase } from "./GroupBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
+import { TokenTransferAuthorizationLib } from "../libs/TokenTransferAuthorizationLib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
@@ -25,12 +27,193 @@ import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
  *
  * Centralizes:
  *  - {commitToOfferInternal} — encumbers funds, creates the exchange/voucher and issues the NFT.
+ *  - {commitToStaticOfferShared} / {commitToConditionalOfferShared} — wrappers used by both
+ *    public {commitToOffer}/{commitToConditionalOffer} and the orchestration commit-and-redeem
+ *    variants, so the validation+commit logic exists in one place.
+ *  - {prepareOfferForCommit} — verifies the FullOffer signature, creates the offer + group on
+ *    first use, and deposits the offer creator's funds. Reused by {createOfferAndCommit} and
+ *    its commit-and-redeem orchestration counterpart.
  *  - {verifyOffer} — validates an EIP-712 / ERC1271 signature over a FullOffer.
  *  - {authorizeCommit} — token-gating checks for conditional offers.
  *  - {addSellerParametersToBuyerOffer} — applies seller-side parameters to a buyer-created offer.
  *  - DR-fee collection and condition-range validation.
  */
-contract ExchangeCommitBase is BuyerBase, OfferBase, IBosonExchangeEvents {
+contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEvents {
+    /**
+     * @notice Validates a static, non-conditional offer and commits to it.
+     *
+     * Shared body of {commitToOffer} and the orchestration {commitToOfferAndRedeemVoucher}.
+     * The caller is responsible for any additional access control (e.g. verifying the
+     * committer is non-zero) and for setting modifiers like nonReentrant / pause regions.
+     *
+     * Reverts if:
+     * - The offer's price type is not Static
+     * - The offer is associated with a group that has a non-empty condition
+     *   (caller should use the conditional-offer entry point instead)
+     * - Any reason that {commitToOfferInternal} reverts
+     *
+     * @param _committer - the buyer's wallet (or seller assistant for buyer-created offers)
+     * @param _offerId - the id of the offer to commit to
+     * @return exchangeId - the id of the newly created exchange
+     */
+    function commitToStaticOfferShared(
+        address payable _committer,
+        uint256 _offerId
+    ) internal returns (uint256 exchangeId) {
+        Offer storage offer = getValidOffer(_offerId);
+        if (offer.priceType != PriceType.Static) revert InvalidPriceType();
+
+        // For there to be a condition, there must be a group.
+        (bool exists, uint256 groupId) = getGroupIdByOffer(offer.id);
+        if (exists) {
+            Condition storage condition = fetchCondition(groupId);
+            // Conditional offers must use the conditional-offer entry point.
+            if (condition.method != EvaluationMethod.None) revert GroupHasCondition();
+        }
+
+        return commitToOfferInternal(_committer, offer, 0, false);
+    }
+
+    /**
+     * @notice Validates a token-gated (conditional) static offer and commits to it.
+     *
+     * Shared body of {commitToConditionalOffer} and the orchestration
+     * {commitToConditionalOfferAndRedeemVoucher}. Stores the condition snapshot on the
+     * exchange so {getReceipt} can return it.
+     *
+     * Reverts if:
+     * - The offer's price type is not Static
+     * - The offer is buyer-created and `_allowBuyerCreated` is false
+     * - The offer is not associated with a group / has no condition
+     * - The token id is not in the condition's range
+     * - The buyer does not satisfy the condition (or has reached `maxCommits`)
+     * - Any reason that {commitToOfferInternal} reverts
+     *
+     * @param _committer - the committer's wallet (buyer for seller-created offers, seller assistant for buyer-created)
+     * @param _offerId - the id of the offer to commit to
+     * @param _tokenId - the id of the conditional token used to satisfy the condition
+     * @param _allowBuyerCreated - if false, reverts with OfferCreatorMustBeSeller for buyer-created offers
+     * @return exchangeId - the id of the newly created exchange
+     */
+    function commitToConditionalOfferShared(
+        address payable _committer,
+        uint256 _offerId,
+        uint256 _tokenId,
+        bool _allowBuyerCreated
+    ) internal returns (uint256 exchangeId) {
+        Offer storage offer = getValidOffer(_offerId);
+        if (offer.priceType != PriceType.Static) revert InvalidPriceType();
+
+        (bool exists, uint256 groupId) = getGroupIdByOffer(offer.id);
+        if (!exists) revert NoSuchGroup();
+
+        Condition storage condition = fetchCondition(groupId);
+        validateConditionRange(condition, _tokenId);
+
+        address buyerAddress;
+        if (offer.creator == OfferCreator.Buyer) {
+            if (!_allowBuyerCreated) revert OfferCreatorMustBeSeller();
+            (, Buyer storage buyer) = fetchBuyer(offer.buyerId);
+            buyerAddress = buyer.wallet;
+
+            // For buyer-created offers, group sellerId is originally 0, so update it from the offer.
+            protocolEntities().groups[groupId].sellerId = offer.sellerId;
+        } else {
+            buyerAddress = _committer;
+        }
+        authorizeCommit(buyerAddress, condition, groupId, _tokenId, _offerId);
+
+        exchangeId = commitToOfferInternal(_committer, offer, 0, false);
+
+        // Snapshot the condition for getReceipt
+        protocolLookups().exchangeCondition[exchangeId] = condition;
+    }
+
+    /**
+     * @notice Verifies a FullOffer signature, creates the offer (and a group when the offer
+     * carries a non-empty condition) on first use, and deposits the offer creator's funds
+     * if `_fullOffer.useDepositedFunds` is false.
+     *
+     * Shared body of {createOfferAndCommit} and the orchestration {createOfferCommitAndRedeem}.
+     * The commit step itself is left to the caller so each entry point can keep its own
+     * modifier set (e.g. avoiding double nonReentrant guards).
+     *
+     * Reverts if:
+     * - The offer signature is invalid (see {verifyOffer})
+     * - The offer was previously voided
+     * - Any reason that {createOfferInternal} or {createGroupInternal} reverts
+     *
+     * @param _fullOffer - the fully populated struct describing the offer to create or look up
+     * @param _offerCreator - the address that signed the offer (must match the offer's seller or buyer)
+     * @param _signature - signature of the offer creator over the FullOffer hash
+     * @return offerId - the id of the (new or existing) offer ready to be committed to
+     */
+    function prepareOfferForCommit(
+        BosonTypes.FullOffer calldata _fullOffer,
+        address _offerCreator,
+        bytes calldata _signature
+    ) internal returns (uint256 offerId) {
+        bytes32 offerHash;
+        (offerHash, offerId) = verifyOffer(_fullOffer, _offerCreator, _signature);
+
+        if (offerId == 0) {
+            offerId = createOfferInternal(
+                _fullOffer.offer,
+                _fullOffer.offerDates,
+                _fullOffer.offerDurations,
+                _fullOffer.drParameters,
+                _fullOffer.agentId,
+                _fullOffer.feeLimit,
+                false
+            );
+            protocolLookups().offerIdByHash[offerHash] = offerId;
+
+            if (_fullOffer.condition.method != BosonTypes.EvaluationMethod.None) {
+                // Construct new group; group id of 0 is ignored by createGroupInternal.
+                Group memory group;
+                group.sellerId = _fullOffer.offer.sellerId;
+                group.offerIds = new uint256[](1);
+                group.offerIds[0] = offerId;
+
+                createGroupInternal(group, _fullOffer.condition, false);
+            }
+        }
+
+        if (!_fullOffer.useDepositedFunds) {
+            uint256 offerCreatorId;
+            uint256 offerCreatorAmount;
+            if (_fullOffer.offer.creator == OfferCreator.Buyer) {
+                // Buyer-created offer: the offer creator pre-funds the price.
+                offerCreatorId = _fullOffer.offer.buyerId;
+                offerCreatorAmount = _fullOffer.offer.price;
+            } else {
+                // Seller-created offer: the offer creator pre-funds the seller deposit.
+                offerCreatorId = _fullOffer.offer.sellerId;
+                offerCreatorAmount = _fullOffer.offer.sellerDeposit;
+            }
+
+            // transferFundsIn discards the queue slot internally when
+            // offerCreatorAmount == 0, so the off-chain caller can supply a
+            // queue whose layout is independent of runtime amounts.
+            transferFundsIn(_fullOffer.offer.exchangeToken, _offerCreator, offerCreatorAmount);
+
+            if (offerCreatorAmount > 0) {
+                increaseAvailableFunds(offerCreatorId, _fullOffer.offer.exchangeToken, offerCreatorAmount);
+                emit IBosonFundsBaseEvents.FundsDeposited(
+                    offerCreatorId,
+                    _offerCreator,
+                    _fullOffer.offer.exchangeToken,
+                    offerCreatorAmount
+                );
+            }
+        } else {
+            // useDepositedFunds=true: offer-creator pull is bypassed entirely.
+            // Discard the queue slot reserved for it so the queue layout stays
+            // uniform across this flag.
+            TokenTransferAuthorizationLib.discardNext();
+        }
+    }
+
     /**
      * @notice Verifies an offer and its signature.
      *
