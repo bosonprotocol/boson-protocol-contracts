@@ -47,6 +47,23 @@ interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBos
     function commitToOffer(address payable _buyer, uint256 _offerId) external payable;
 
     /**
+     * @notice ERC-3009 sibling of `commitToOffer`. Pulls the committer's incoming amount via
+     * `receiveWithAuthorization` instead of `safeTransferFrom`. The caller (`_msgSender()`) MUST be the
+     * authorizer (signer) of the ERC-3009 authorization. The signed authorization's `to` field must
+     * equal the protocol diamond address. The exchange token MUST be ERC20.
+     *
+     * @param _buyer - the buyer's address
+     * @param _offerId - the id of the offer to commit to
+     * @param _authorization - abi-encoded ERC-3009 authorization payload
+     *        (uint256 validAfter, uint256 validBefore, bytes32 nonce, uint8 v, bytes32 r, bytes32 s)
+     */
+    function commitToOfferWithAuthorization(
+        address payable _buyer,
+        uint256 _offerId,
+        bytes calldata _authorization
+    ) external;
+
+    /**
      * @notice Commits to buyer-created offer with seller-specific parameters.
      *
      * Emits a BuyerInitiatedOfferSetSellerParams event if successful.
@@ -83,6 +100,20 @@ interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBos
     function commitToBuyerOffer(uint256 _offerId, BosonTypes.SellerOfferParams calldata _sellerParams) external payable;
 
     /**
+     * @notice ERC-3009 sibling of `commitToBuyerOffer`. The seller assistant (`_msgSender()`) is both the
+     * authorizer of the ERC-3009 signature and the entity paying the seller deposit.
+     *
+     * @param _offerId - the id of the offer to commit to
+     * @param _sellerParams - the seller-specific parameters
+     * @param _authorization - abi-encoded ERC-3009 authorization payload
+     */
+    function commitToBuyerOfferWithAuthorization(
+        uint256 _offerId,
+        BosonTypes.SellerOfferParams calldata _sellerParams,
+        bytes calldata _authorization
+    ) external;
+
+    /**
      * @notice Commits to an conditional offer (first step of an exchange).
      *
      * Emits a BuyerCommitted event if successful.
@@ -112,6 +143,22 @@ interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBos
      * @param _tokenId - the id of the token to use for the conditional commit
      */
     function commitToConditionalOffer(address payable _buyer, uint256 _offerId, uint256 _tokenId) external payable;
+
+    /**
+     * @notice ERC-3009 sibling of `commitToConditionalOffer`. The caller (`_msgSender()`) is the
+     * authorizer and the payer.
+     *
+     * @param _buyer - the committer's address
+     * @param _offerId - the id of the offer to commit to
+     * @param _tokenId - the id of the token to use for the conditional commit
+     * @param _authorization - abi-encoded ERC-3009 authorization payload
+     */
+    function commitToConditionalOfferWithAuthorization(
+        address payable _buyer,
+        uint256 _offerId,
+        uint256 _tokenId,
+        bytes calldata _authorization
+    ) external;
 
     /**
      * @notice Creates an offer and commits to it immediately.
@@ -165,6 +212,31 @@ interface IBosonExchangeCommitHandler is BosonErrors, IBosonExchangeEvents, IBos
         uint256 _conditionalTokenId,
         BosonTypes.SellerOfferParams calldata _sellerParams
     ) external payable;
+
+    /**
+     * @notice ERC-3009 sibling of `createOfferAndCommit`. Both legs of the funds flow are pulled via
+     * `receiveWithAuthorization`: the offer creator's pre-deposit (signed by `_offerCreator` offline) and
+     * the committer's incoming payment (signed by `_msgSender()`). The exchange token MUST be ERC20.
+     *
+     * @param _fullOffer - the fully populated FullOffer struct
+     * @param _offerCreator - the address of the offer creator
+     * @param _committer - the address of the committer
+     * @param _signature - signature of the offer creator over the FullOffer struct
+     * @param _conditionalTokenId - the token id to use for the conditional commit, if applicable
+     * @param _sellerParams - the seller-specific parameters
+     * @param _creatorAuthorization - abi-encoded ERC-3009 authorization signed by `_offerCreator`
+     * @param _committerAuthorization - abi-encoded ERC-3009 authorization signed by `_msgSender()`
+     */
+    function createOfferAndCommitWithAuthorization(
+        BosonTypes.FullOffer calldata _fullOffer,
+        address _offerCreator,
+        address payable _committer,
+        bytes calldata _signature,
+        uint256 _conditionalTokenId,
+        BosonTypes.SellerOfferParams calldata _sellerParams,
+        bytes calldata _creatorAuthorization,
+        bytes calldata _committerAuthorization
+    ) external;
 
     /**
      * @notice Handle pre-minted voucher transfer

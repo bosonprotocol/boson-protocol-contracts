@@ -53,4 +53,24 @@ interface IBosonSequentialCommitHandler is BosonErrors, IBosonExchangeEvents, IB
         uint256 _exchangeId,
         BosonTypes.PriceDiscovery calldata _priceDiscovery
     ) external payable;
+
+    /**
+     * @notice ERC-3009 sibling of `sequentialCommitToOffer`. Only ask orders are supported (bid orders
+     * pull funds from the voucher holder, not the caller, so the auth payload is meaningless and the
+     * call reverts with `AuthorizationNotApplicable`). The caller (`_msgSender()`) is the new buyer and
+     * the authorizer of the ERC-3009 signature. The exchange token MUST be ERC20.
+     *
+     * Emits a BuyerCommitted event if successful.
+     *
+     * @param _buyer - the buyer's address
+     * @param _exchangeId - the id of the exchange to commit to
+     * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct (must be Ask)
+     * @param _authorization - abi-encoded ERC-3009 authorization payload signed by `_msgSender()`
+     */
+    function sequentialCommitToOfferWithAuthorization(
+        address payable _buyer,
+        uint256 _exchangeId,
+        BosonTypes.PriceDiscovery calldata _priceDiscovery,
+        bytes calldata _authorization
+    ) external;
 }

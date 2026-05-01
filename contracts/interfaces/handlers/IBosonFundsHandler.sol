@@ -36,6 +36,34 @@ interface IBosonFundsHandler is IBosonFundsBaseEvents, BosonErrors {
     function depositFunds(uint256 _entityId, address _tokenAddress, uint256 _amount) external payable;
 
     /**
+     * @notice ERC-3009 sibling of `depositFunds`. Pulls ERC20 tokens from the caller via
+     * `receiveWithAuthorization` instead of `safeTransferFrom`. The caller (`_msgSender()`) MUST be the
+     * authorizer (signer) of the ERC-3009 authorization. The token MUST be ERC20.
+     *
+     * Emits FundsDeposited event if successful.
+     *
+     * Reverts if:
+     * - The funds region of protocol is paused
+     * - Amount to deposit is zero
+     * - Entity id is neither a seller nor a buyer
+     * - Token address is zero (native currency)
+     * - Caller sent any native currency along with the call
+     * - The signed authorization is invalid, expired, replayed, or signed for a different `from`/`value`
+     * - Received ERC20 token amount differs from the expected value
+     *
+     * @param _entityId - id of the entity that will be credited
+     * @param _tokenAddress - contract address of the ERC-3009 token
+     * @param _amount - amount to be credited
+     * @param _authorization - abi-encoded ERC-3009 authorization payload signed by `_msgSender()`
+     */
+    function depositFundsWithAuthorization(
+        uint256 _entityId,
+        address _tokenAddress,
+        uint256 _amount,
+        bytes calldata _authorization
+    ) external;
+
+    /**
      * @notice Withdraws the specified funds. Can be called for seller, buyer or agent.
      *
      * Emits FundsWithdrawn event if successful.

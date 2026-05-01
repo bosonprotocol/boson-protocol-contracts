@@ -94,6 +94,44 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
     }
 
     /**
+     * @notice ERC-3009 sibling of `commitToOffer`. Pulls the committer's incoming amount from the caller
+     * via `receiveWithAuthorization` instead of `safeTransferFrom`. The caller (`_msgSender()`) MUST be
+     * the authorizer (signer) of the ERC-3009 authorization. The signed authorization's `to` field must
+     * equal the protocol diamond address. The exchange token MUST be ERC20.
+     *
+     * For seller-created offers, the buyer pays the offer price; therefore `_msgSender()` is typically
+     * equal to `_committer` and is the authorizer. For buyer-created offers, the seller pays the seller
+     * deposit; `_msgSender()` is the seller and is the authorizer.
+     *
+     * Reverts if:
+     * - Any reason `commitToOffer` would revert
+     * - Offer exchange token is the native currency
+     * - The signed authorization is invalid, expired, replayed, or signed for a different `from`/`value`
+     *
+     * @param _committer - the committer's address (buyer for seller-created offers, seller for buyer-created offers)
+     * @param _offerId - the id of the offer to commit to
+     * @param _authorization - abi-encoded `FundsBase.AuthorizationData`
+     */
+    function commitToOfferWithAuthorization(
+        address payable _committer,
+        uint256 _offerId,
+        bytes calldata _authorization
+    ) public exchangesNotPaused buyersNotPaused sellersNotPaused nonReentrant {
+        if (_committer == address(0)) revert InvalidAddress();
+
+        Offer storage offer = getValidOffer(_offerId);
+        if (offer.priceType != PriceType.Static) revert InvalidPriceType();
+
+        (bool exists, uint256 groupId) = getGroupIdByOffer(offer.id);
+        if (exists) {
+            Condition storage condition = fetchCondition(groupId);
+            if (condition.method != EvaluationMethod.None) revert GroupHasCondition();
+        }
+
+        commitToOfferInternalWithAuthorization(_committer, offer, _authorization);
+    }
+
+    /**
      * @notice Commits to a buyer-created static offer with seller-specific parameters (first step of an exchange).
      *
      * Emits a BuyerInitiatedOfferSetSellerParams event if successful.
@@ -139,6 +177,31 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
         Offer storage offer = addSellerParametersToBuyerOffer(committer, _offerId, _sellerParams);
 
         commitToOfferInternal(payable(committer), offer, 0, false);
+    }
+
+    /**
+     * @notice ERC-3009 sibling of `commitToBuyerOffer`. The seller assistant (`_msgSender()`) is both the
+     * authorizer of the ERC-3009 signature and the entity paying the seller deposit.
+     *
+     * Reverts if:
+     * - Any reason `commitToBuyerOffer` would revert
+     * - Offer exchange token is the native currency
+     * - The signed authorization is invalid, expired, replayed, or signed for a different `from`/`value`
+     *
+     * @param _offerId - the id of the offer to commit to
+     * @param _sellerParams - the seller-specific parameters (collection index, royalty info, mutualizer address)
+     * @param _authorization - abi-encoded `FundsBase.AuthorizationData`
+     */
+    function commitToBuyerOfferWithAuthorization(
+        uint256 _offerId,
+        SellerOfferParams calldata _sellerParams,
+        bytes calldata _authorization
+    ) public exchangesNotPaused buyersNotPaused sellersNotPaused nonReentrant {
+        address committer = _msgSender();
+
+        Offer storage offer = addSellerParametersToBuyerOffer(committer, _offerId, _sellerParams);
+
+        commitToOfferInternalWithAuthorization(payable(committer), offer, _authorization);
     }
 
     /**
@@ -208,6 +271,52 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
         uint256 exchangeId = commitToOfferInternal(_committer, offer, 0, false);
 
         // Store the condition to be returned afterward on getReceipt function
+        protocolLookups().exchangeCondition[exchangeId] = condition;
+    }
+
+    /**
+     * @notice ERC-3009 sibling of `commitToConditionalOffer`. The caller (`_msgSender()`) is the authorizer
+     * and the payer (committer for seller-created offers, seller for buyer-created offers).
+     *
+     * Reverts if:
+     * - Any reason `commitToConditionalOffer` would revert
+     * - Offer exchange token is the native currency
+     * - The signed authorization is invalid, expired, replayed, or signed for a different `from`/`value`
+     *
+     * @param _committer - the committer's address
+     * @param _offerId - the id of the offer to commit to
+     * @param _tokenId - the id of the token to use for the conditional commit
+     * @param _authorization - abi-encoded `FundsBase.AuthorizationData`
+     */
+    function commitToConditionalOfferWithAuthorization(
+        address payable _committer,
+        uint256 _offerId,
+        uint256 _tokenId,
+        bytes calldata _authorization
+    ) public exchangesNotPaused buyersNotPaused nonReentrant {
+        if (_committer == address(0)) revert InvalidAddress();
+
+        Offer storage offer = getValidOffer(_offerId);
+        if (offer.priceType != PriceType.Static) revert InvalidPriceType();
+
+        (bool exists, uint256 groupId) = getGroupIdByOffer(offer.id);
+        if (!exists) revert NoSuchGroup();
+
+        Condition storage condition = fetchCondition(groupId);
+        validateConditionRange(condition, _tokenId);
+
+        address buyerAddress;
+        if (offer.creator == BosonTypes.OfferCreator.Buyer) {
+            (, BosonTypes.Buyer storage buyer) = fetchBuyer(offer.buyerId);
+            buyerAddress = buyer.wallet;
+            protocolEntities().groups[groupId].sellerId = offer.sellerId;
+        } else {
+            buyerAddress = _committer;
+        }
+        authorizeCommit(buyerAddress, condition, groupId, _tokenId, _offerId);
+
+        uint256 exchangeId = commitToOfferInternalWithAuthorization(_committer, offer, _authorization);
+
         protocolLookups().exchangeCondition[exchangeId] = condition;
     }
 
@@ -342,6 +451,135 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
     }
 
     /**
+     * @notice ERC-3009 sibling of `createOfferAndCommit`. Both sides of the funds flow are pulled via
+     * `receiveWithAuthorization`:
+     *  - `_creatorAuthorization` is signed by `_offerCreator` for the creator-side amount (seller deposit
+     *    for seller-created offers, offer price for buyer-created offers). The creator signs offline; the
+     *    committer submits the bundled tx. This is consistent with how `_signature` is also signed offline.
+     *  - `_committerAuthorization` is signed by `_msgSender()` for the committer-side amount (offer price
+     *    for seller-created offers, seller deposit for buyer-created offers).
+     *
+     * Reverts if:
+     * - Any reason `createOfferAndCommit` would revert
+     * - Offer exchange token is the native currency
+     * - Either signed authorization is invalid, expired, replayed, or signed for a different `from`/`value`
+     *
+     * @param _fullOffer - the fully populated FullOffer struct
+     * @param _offerCreator - the address of the offer creator (signer of `_signature` and `_creatorAuthorization`)
+     * @param _committer - the address of the committer
+     * @param _signature - signature of the offer creator over the FullOffer struct
+     * @param _conditionalTokenId - the token id to use for the conditional commit, if applicable
+     * @param _sellerParams - the seller-specific parameters (collection index, royalty info, mutualizer address), if applicable
+     * @param _creatorAuthorization - abi-encoded `FundsBase.AuthorizationData` signed by `_offerCreator`
+     * @param _committerAuthorization - abi-encoded `FundsBase.AuthorizationData` signed by `_msgSender()`
+     */
+    function createOfferAndCommitWithAuthorization(
+        BosonTypes.FullOffer calldata _fullOffer,
+        address _offerCreator,
+        address payable _committer,
+        bytes calldata _signature,
+        uint256 _conditionalTokenId,
+        BosonTypes.SellerOfferParams calldata _sellerParams,
+        bytes calldata _creatorAuthorization,
+        bytes calldata _committerAuthorization
+    ) external exchangesNotPaused buyersNotPaused sellersNotPaused {
+        if (
+            _fullOffer.offer.creator == BosonTypes.OfferCreator.Seller &&
+            (_sellerParams.collectionIndex != 0 ||
+                _sellerParams.royaltyInfo.recipients.length != 0 ||
+                _sellerParams.royaltyInfo.bps.length != 0 ||
+                _sellerParams.mutualizerAddress != address(0))
+        ) revert SellerParametersNotAllowed();
+
+        // exchange token must be ERC20 — ERC-3009 has no meaning for native currency
+        if (_fullOffer.offer.exchangeToken == address(0)) revert NativeNotAllowed();
+
+        uint256 offerId = _createOfferAndDepositCreatorFundsWithAuthorization(
+            _fullOffer,
+            _offerCreator,
+            _signature,
+            _creatorAuthorization
+        );
+
+        if (_fullOffer.condition.method != BosonTypes.EvaluationMethod.None) {
+            if (_fullOffer.offer.creator == BosonTypes.OfferCreator.Buyer) {
+                addSellerParametersToBuyerOffer(_committer, offerId, _sellerParams);
+            }
+            commitToConditionalOfferWithAuthorization(_committer, offerId, _conditionalTokenId, _committerAuthorization);
+        } else {
+            if (_fullOffer.offer.creator == BosonTypes.OfferCreator.Buyer) {
+                commitToBuyerOfferWithAuthorization(offerId, _sellerParams, _committerAuthorization);
+            } else {
+                commitToOfferWithAuthorization(_committer, offerId, _committerAuthorization);
+            }
+        }
+    }
+
+    /**
+     * @notice Helper for `createOfferAndCommitWithAuthorization` — extracted to avoid stack-too-deep.
+     * Verifies the offer signature, creates the offer (and group, if conditional), and deposits the
+     * offer creator's pre-committed funds via ERC-3009.
+     */
+    function _createOfferAndDepositCreatorFundsWithAuthorization(
+        BosonTypes.FullOffer calldata _fullOffer,
+        address _offerCreator,
+        bytes calldata _signature,
+        bytes calldata _creatorAuthorization
+    ) internal returns (uint256 offerId) {
+        bytes32 offerHash;
+        (offerHash, offerId) = verifyOffer(_fullOffer, _offerCreator, _signature);
+
+        if (offerId == 0) {
+            offerId = createOfferInternal(
+                _fullOffer.offer,
+                _fullOffer.offerDates,
+                _fullOffer.offerDurations,
+                _fullOffer.drParameters,
+                _fullOffer.agentId,
+                _fullOffer.feeLimit,
+                false
+            );
+            protocolLookups().offerIdByHash[offerHash] = offerId;
+
+            if (_fullOffer.condition.method != BosonTypes.EvaluationMethod.None) {
+                Group memory group;
+                group.sellerId = _fullOffer.offer.sellerId;
+                group.offerIds = new uint256[](1);
+                group.offerIds[0] = offerId;
+                createGroupInternal(group, _fullOffer.condition, false);
+            }
+        }
+
+        if (!_fullOffer.useDepositedFunds) {
+            uint256 offerCreatorId;
+            uint256 offerCreatorAmount;
+            if (_fullOffer.offer.creator == BosonTypes.OfferCreator.Buyer) {
+                offerCreatorId = _fullOffer.offer.buyerId;
+                offerCreatorAmount = _fullOffer.offer.price;
+            } else {
+                offerCreatorId = _fullOffer.offer.sellerId;
+                offerCreatorAmount = _fullOffer.offer.sellerDeposit;
+            }
+
+            if (offerCreatorAmount > 0) {
+                transferFundsInWithAuthorization(
+                    _fullOffer.offer.exchangeToken,
+                    _offerCreator,
+                    offerCreatorAmount,
+                    _creatorAuthorization
+                );
+                increaseAvailableFunds(offerCreatorId, _fullOffer.offer.exchangeToken, offerCreatorAmount);
+                emit IBosonFundsBaseEvents.FundsDeposited(
+                    offerCreatorId,
+                    _offerCreator,
+                    _fullOffer.offer.exchangeToken,
+                    offerCreatorAmount
+                );
+            }
+        }
+    }
+
+    /**
      * @notice Verifies the offer and its signature.
      *
      * Reverts if:
@@ -462,21 +700,35 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
             encumberFunds(_offerId, buyerId, _offer.price, _isPreminted, _offer.priceType);
         }
 
+        return _finalizeCommitToOffer(_committer, _offer, offerDates, _exchangeId, buyerId, _isPreminted);
+    }
+
+    /**
+     * @notice Shared helper: creates the exchange and voucher records, decrements quantity (non-preminted),
+     * issues voucher (non-preminted), and emits the commit event. Used by both `commitToOfferInternal`
+     * and `commitToOfferInternalWithAuthorization`.
+     */
+    function _finalizeCommitToOffer(
+        address payable _committer,
+        Offer storage _offer,
+        OfferDates storage _offerDates,
+        uint256 _exchangeId,
+        uint256 _buyerId,
+        bool _isPreminted
+    ) internal returns (uint256) {
+        uint256 _offerId = _offer.id;
+
         // Create and store a new exchange
         Exchange storage exchange = protocolEntities().exchanges[_exchangeId];
         exchange.id = _exchangeId;
         exchange.offerId = _offerId;
-        exchange.buyerId = buyerId;
+        exchange.buyerId = _buyerId;
         exchange.state = ExchangeState.Committed;
 
         // Handle DR fee collection
         {
-            // Get dispute resolution terms to get the dispute resolver ID
             DisputeResolutionTerms storage disputeTerms = fetchDisputeResolutionTerms(_offerId);
-
             uint256 drFeeAmount = disputeTerms.feeAmount;
-
-            // Handle DR fee collection if fee exists
             if (drFeeAmount > 0) {
                 handleDRFeeCollection(_exchangeId, _offer, disputeTerms, drFeeAmount);
                 exchange.mutualizerAddress = disputeTerms.mutualizerAddress;
@@ -487,66 +739,90 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
         Voucher storage voucher = protocolEntities().vouchers[_exchangeId];
         voucher.committedDate = block.timestamp;
 
-        // Operate in a block to avoid "stack too deep" error
         {
-            // Determine the time after which the voucher can be redeemed
-            uint256 startDate = (block.timestamp >= offerDates.voucherRedeemableFrom)
+            uint256 startDate = (block.timestamp >= _offerDates.voucherRedeemableFrom)
                 ? block.timestamp
-                : offerDates.voucherRedeemableFrom;
+                : _offerDates.voucherRedeemableFrom;
 
-            // Determine the time after which the voucher can no longer be redeemed
-            voucher.validUntilDate = (offerDates.voucherRedeemableUntil > 0)
-                ? offerDates.voucherRedeemableUntil
+            voucher.validUntilDate = (_offerDates.voucherRedeemableUntil > 0)
+                ? _offerDates.voucherRedeemableUntil
                 : startDate + fetchOfferDurations(_offerId).voucherValid;
         }
 
-        // Operate in a block to avoid "stack too deep" error
         {
-            // Cache protocol lookups for reference
             ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
-            // Map the offerId to the exchangeId as one-to-many
             lookups.exchangeIdsByOffer[_offerId].push(_exchangeId);
 
-            // Shouldn't decrement if offer is preminted or unlimited
             if (!_isPreminted) {
                 if (_offer.quantityAvailable != type(uint256).max) {
-                    // Decrement offer's quantity available
                     _offer.quantityAvailable--;
                 }
 
-                // Issue voucher, unless it already exist (for preminted offers)
                 IBosonVoucher bosonVoucher = IBosonVoucher(
                     getCloneAddress(lookups, _offer.sellerId, _offer.collectionIndex)
                 );
                 uint256 tokenId = _exchangeId | (_offerId << 128);
 
-                // Get buyer wallet address for voucher issuance
                 address payable buyerWallet;
                 if (_offer.creator == OfferCreator.Buyer) {
-                    // For buyer-created offers, get the buyer's wallet from stored buyerId
-                    (, Buyer storage buyer) = fetchBuyer(buyerId);
+                    (, Buyer storage buyer) = fetchBuyer(_buyerId);
                     buyerWallet = buyer.wallet;
                 } else {
-                    // For seller-created offers, committer is the buyer
                     buyerWallet = _committer;
                 }
 
                 bosonVoucher.issueVoucher(tokenId, buyerWallet);
             }
 
-            lookups.voucherCount[buyerId]++;
+            lookups.voucherCount[_buyerId]++;
         }
 
-        // Notify watchers of state change
         if (_offer.creator == OfferCreator.Buyer) {
-            // Buyer-created offer: emit SellerCommitted event
             emit SellerCommitted(_offerId, _offer.sellerId, _exchangeId, exchange, voucher, _msgSender());
         } else {
-            // Seller-created offer: emit BuyerCommitted event
-            emit BuyerCommitted(_offerId, buyerId, _exchangeId, exchange, voucher, _msgSender());
+            emit BuyerCommitted(_offerId, _buyerId, _exchangeId, exchange, voucher, _msgSender());
         }
 
         return _exchangeId;
+    }
+
+    /**
+     * @notice ERC-3009 sibling of `commitToOfferInternal`. Always treats the offer as non-preminted
+     * (preminted offers don't pull buyer funds at commit time, so the auth path doesn't apply). Pulls
+     * the committer's incoming amount via `encumberFundsWithAuthorization`, which uses `_msgSender()`
+     * as the authorization signer.
+     *
+     * @param _committer - the committer's address
+     * @param _offer - storage pointer to the offer
+     * @param _authorization - abi-encoded `FundsBase.AuthorizationData` signed by `_msgSender()`
+     * @return exchangeId - the id of the exchange
+     */
+    function commitToOfferInternalWithAuthorization(
+        address payable _committer,
+        Offer storage _offer,
+        bytes memory _authorization
+    ) internal returns (uint256) {
+        uint256 _offerId = _offer.id;
+        OfferDates storage offerDates = fetchOfferDates(_offerId);
+        if (block.timestamp < offerDates.validFrom) revert OfferNotAvailable();
+        if (block.timestamp > offerDates.validUntil) revert OfferHasExpired();
+
+        // Auth path always treats as non-preminted: quantityAvailable must be > 0 since it gets decremented
+        if (_offer.quantityAvailable == 0) revert OfferSoldOut();
+
+        uint256 _exchangeId = protocolCounters().nextExchangeId++;
+
+        uint256 buyerId;
+
+        if (_offer.creator == OfferCreator.Buyer) {
+            buyerId = _offer.buyerId;
+            encumberFundsWithAuthorization(_offerId, _offer.sellerId, _offer.sellerDeposit, _authorization);
+        } else {
+            buyerId = getValidBuyer(_committer);
+            encumberFundsWithAuthorization(_offerId, buyerId, _offer.price, _authorization);
+        }
+
+        return _finalizeCommitToOffer(_committer, _offer, offerDates, _exchangeId, buyerId, false);
     }
 
     /**

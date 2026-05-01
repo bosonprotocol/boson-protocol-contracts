@@ -7,6 +7,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IERC3009 } from "../../interfaces/IERC3009.sol";
 import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { IDRFeeMutualizer } from "../../interfaces/clients/IDRFeeMutualizer.sol";
@@ -21,6 +22,23 @@ import { IWrappedNative } from "../../interfaces/IWrappedNative.sol";
 abstract contract FundsBase is Context {
     using SafeERC20 for IERC20;
     IWrappedNative internal immutable wNative;
+
+    /**
+     * @notice Decoded payload of an ERC-3009 receiveWithAuthorization signature.
+     *
+     * The `from` and `value` fields are NOT part of this struct: the protocol always
+     * derives them from offer/exchange context and passes them directly to the token,
+     * so the signed authorization must match the protocol-required amount and payer
+     * (otherwise the token's signature recovery fails).
+     */
+    struct AuthorizationData {
+        uint256 validAfter;
+        uint256 validBefore;
+        bytes32 nonce;
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+    }
 
     /**
      * @notice Takes in the offer id and entity id and encumbers the appropriate funds during commitToOffer.
@@ -82,6 +100,51 @@ abstract contract FundsBase is Context {
     }
 
     /**
+     * @notice ERC-3009 sibling of `encumberFunds`. Pulls the committing entity's incoming amount from the
+     * caller using `receiveWithAuthorization`. The auth signer is fixed to `_msgSender()` — the protocol
+     * does not allow the caller and the authorizer to differ on commit.
+     *
+     * Preminted offers do NOT pull buyer funds at commit time, so this variant always behaves as a
+     * non-preminted commit.
+     *
+     * Emits FundsDeposited and FundsEncumbered events on the committer side, and FundsEncumbered on the
+     * counterparty side (decrement of pre-deposited funds).
+     *
+     * @param _offerId - id of the offer with the details
+     * @param _entityId - id of the committing entity
+     * @param _incomingAmount - the amount being paid by the committing entity
+     * @param _authorization - abi-encoded `AuthorizationData`
+     */
+    function encumberFundsWithAuthorization(
+        uint256 _offerId,
+        uint256 _entityId,
+        uint256 _incomingAmount,
+        bytes memory _authorization
+    ) internal {
+        ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
+
+        address sender = _msgSender();
+
+        BosonTypes.Offer storage offer = pe.offers[_offerId];
+        address exchangeToken = offer.exchangeToken;
+
+        validateIncomingPaymentWithAuthorization(exchangeToken, _incomingAmount, sender, _authorization);
+        emit IBosonFundsBaseEvents.FundsDeposited(_entityId, sender, exchangeToken, _incomingAmount);
+        emit IBosonFundsBaseEvents.FundsEncumbered(_entityId, exchangeToken, _incomingAmount, sender);
+
+        if (offer.creator == BosonTypes.OfferCreator.Buyer) {
+            decreaseAvailableFunds(offer.buyerId, exchangeToken, offer.price);
+            emit IBosonFundsBaseEvents.FundsEncumbered(offer.buyerId, exchangeToken, offer.price, sender);
+        } else {
+            uint256 sellerId = offer.sellerId;
+            // _isPreminted is always false in the auth path, so no extra incoming amount is added
+            uint256 sellerFundsEncumbered = offer.sellerDeposit;
+            decreaseAvailableFunds(sellerId, exchangeToken, sellerFundsEncumbered);
+            emit IBosonFundsBaseEvents.FundsEncumbered(sellerId, exchangeToken, sellerFundsEncumbered, sender);
+        }
+    }
+
+    /**
      * @notice Validates that incoming payments matches expectation. If token is a native currency, it makes sure
      * msg.value is correct. If token is ERC20, it transfers the value from the sender to the protocol.
      *
@@ -108,6 +171,33 @@ abstract contract FundsBase is Context {
             // if transfer is in ERC20 token, try to transfer the amount from buyer to the protocol
             transferFundsIn(_exchangeToken, _value);
         }
+    }
+
+    /**
+     * @notice ERC-3009 sibling of `validateIncomingPayment`. The exchange token MUST be ERC20 and
+     * `msg.value` MUST be zero. The signed authorization is consumed against the token contract; the
+     * EIP-712 typed data must have been signed by `_from` for exactly `_value` to the diamond.
+     *
+     * Reverts if:
+     * - Exchange token is the native currency
+     * - Caller sent any native currency along with the call
+     * - The token's `receiveWithAuthorization` reverts (replay, expired, tampered, etc.)
+     * - Received ERC20 token amount differs from the expected value
+     *
+     * @param _exchangeToken - address of the token (must NOT be 0)
+     * @param _value - exact value the protocol expects to receive
+     * @param _from - address of the authorizer (signer of the ERC-3009 authorization)
+     * @param _authorization - abi-encoded `AuthorizationData`
+     */
+    function validateIncomingPaymentWithAuthorization(
+        address _exchangeToken,
+        uint256 _value,
+        address _from,
+        bytes memory _authorization
+    ) internal {
+        if (_exchangeToken == address(0)) revert BosonErrors.NativeNotAllowed();
+        if (msg.value != 0) revert BosonErrors.NativeNotAllowed();
+        transferFundsInWithAuthorization(_exchangeToken, _from, _value, _authorization);
     }
 
     /**
@@ -489,6 +579,49 @@ abstract contract FundsBase is Context {
      */
     function transferFundsIn(address _tokenAddress, uint256 _amount) internal {
         transferFundsIn(_tokenAddress, _msgSender(), _amount);
+    }
+
+    /**
+     * @notice Pulls ERC20 tokens from `_from` into the protocol using ERC-3009 `receiveWithAuthorization`.
+     *
+     * Reverts if:
+     * - The token does not implement `receiveWithAuthorization`
+     * - The signed authorization is invalid, expired, replayed, or signed for a different `from`/`value`
+     * - The actual received amount differs from the expected value
+     *
+     * @param _tokenAddress - address of the ERC-3009 token (must NOT be address(0))
+     * @param _from - address of the authorizer (signer of the authorization)
+     * @param _amount - exact amount the protocol expects to receive
+     * @param _authorization - abi-encoded `AuthorizationData`
+     */
+    function transferFundsInWithAuthorization(
+        address _tokenAddress,
+        address _from,
+        uint256 _amount,
+        bytes memory _authorization
+    ) internal {
+        if (_amount > 0) {
+            AuthorizationData memory auth = abi.decode(_authorization, (AuthorizationData));
+            // protocol balance before the transfer
+            uint256 protocolTokenBalanceBefore = IERC20(_tokenAddress).balanceOf(address(this));
+            // pull tokens via signed authorization; the token enforces msg.sender == address(this)
+            IERC3009(_tokenAddress).receiveWithAuthorization(
+                _from,
+                address(this),
+                _amount,
+                auth.validAfter,
+                auth.validBefore,
+                auth.nonce,
+                auth.v,
+                auth.r,
+                auth.s
+            );
+            // protocol balance after the transfer
+            uint256 protocolTokenBalanceAfter = IERC20(_tokenAddress).balanceOf(address(this));
+            // make sure that expected amount of tokens was transferred (defensive against any token quirks)
+            if (protocolTokenBalanceAfter - protocolTokenBalanceBefore != _amount)
+                revert BosonErrors.InsufficientValueReceived();
+        }
     }
 
     /**

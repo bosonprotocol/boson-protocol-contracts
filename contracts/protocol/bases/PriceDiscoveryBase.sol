@@ -150,6 +150,94 @@ contract PriceDiscoveryBase is ProtocolBase {
     }
 
     /**
+     * @notice ERC-3009 sibling of `fulfilOrder`. Only ask orders are supported — bid orders pull funds
+     * from a different party (the voucher holder, not the caller) so the auth payload is meaningless
+     * and the call reverts with `AuthorizationNotApplicable`. Wrapper orders likewise revert.
+     *
+     * Caller is expected to have already pulled the buyer's funds into the protocol via
+     * `transferFundsInWithAuthorization` BEFORE invoking this function. This decoupling avoids
+     * carrying the authorization bytes through deep call stacks (works around stack-too-deep).
+     *
+     * @return actualPrice - the actual price of the order
+     */
+    function fulfilOrderFundsAlreadyIn(
+        uint256 _tokenId,
+        Offer storage _offer,
+        PriceDiscovery calldata _priceDiscovery,
+        address _seller,
+        address _buyer
+    ) internal priceDiscoveryNotPaused returns (uint256 actualPrice) {
+        if (_priceDiscovery.priceDiscoveryContract == address(0) || _priceDiscovery.priceDiscoveryData.length == 0) {
+            revert InvalidPriceDiscovery();
+        }
+
+        if (_priceDiscovery.side != Side.Ask) revert AuthorizationNotApplicable();
+
+        if (_priceDiscovery.conduit == address(0)) revert InvalidConduitAddress();
+
+        IBosonVoucher bosonVoucher = IBosonVoucher(
+            getCloneAddress(protocolLookups(), _offer.sellerId, _offer.collectionIndex)
+        );
+
+        protocolStatus().incomingVoucherCloneAddress = address(bosonVoucher);
+
+        actualPrice = _fulfilAskOrderFundsAlreadyIn(
+            _tokenId,
+            _offer.id,
+            _offer.exchangeToken,
+            _priceDiscovery,
+            _seller,
+            _buyer,
+            bosonVoucher
+        );
+
+        if (actualPrice < _offer.buyerCancelPenalty) {
+            revert PriceDoesNotCoverPenalty();
+        }
+    }
+
+    /**
+     * @notice Variant of `fulfilAskOrder` that assumes the buyer's funds are already in the protocol's
+     * balance (e.g. pulled via `receiveWithAuthorization` by the caller). Skips the buyer-side
+     * `validateIncomingPayment` step. The seller-side `transferFundsIn` at the end is unchanged.
+     */
+    function _fulfilAskOrderFundsAlreadyIn(
+        uint256 _tokenId,
+        uint256 _offerId,
+        address _exchangeToken,
+        PriceDiscovery calldata _priceDiscovery,
+        address _seller,
+        address _buyer,
+        IBosonVoucher _bosonVoucher
+    ) internal returns (uint256 actualPrice) {
+        // ERC-3009 has no meaning for native currency
+        if (_exchangeToken == address(0)) revert NativeNotAllowed();
+
+        address bosonPriceDiscovery = protocolAddresses().priceDiscovery;
+
+        // Funds are already in protocol balance; just forward to price discovery
+        transferFundsOut(_exchangeToken, payable(bosonPriceDiscovery), _priceDiscovery.price);
+
+        actualPrice = IBosonPriceDiscovery(bosonPriceDiscovery).fulfilAskOrder(
+            _exchangeToken,
+            _priceDiscovery,
+            _bosonVoucher,
+            payable(_msgSender())
+        );
+
+        _tokenId = getAndVerifyTokenId(_tokenId);
+
+        if (_tokenId >> 128 != _offerId) revert TokenIdMismatch();
+
+        if (_bosonVoucher.ownerOf(_tokenId) != bosonPriceDiscovery) revert VoucherNotReceived();
+
+        _bosonVoucher.safeTransferFrom(bosonPriceDiscovery, _buyer, _tokenId);
+
+        // Seller pre-approves protocol; this leg is unchanged
+        transferFundsIn(_exchangeToken, _seller, actualPrice);
+    }
+
+    /**
      * @notice Fulfils a bid order on external contract.
      *
      * Reverts if:

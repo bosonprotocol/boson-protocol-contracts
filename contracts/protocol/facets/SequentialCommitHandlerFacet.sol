@@ -184,4 +184,153 @@ contract SequentialCommitHandlerFacet is IBosonSequentialCommitHandler, PriceDis
         emit BuyerCommitted(offerId, buyerId, exchangeId, exchange, voucher, sender);
         // No need to update exchange detail. Most fields stay as they are, and buyerId was updated at the same time voucher is transferred
     }
+
+    /**
+     * @notice ERC-3009 sibling of `sequentialCommitToOffer`. Only ask orders are supported (bid orders
+     * pull funds from the voucher holder, not the caller, so the auth payload is meaningless and the
+     * call reverts with `AuthorizationNotApplicable`). The caller (`_msgSender()`) is the new buyer and
+     * the authorizer of the ERC-3009 signature. The exchange token MUST be ERC20.
+     *
+     * Emits a BuyerCommitted event if successful.
+     * Transfers voucher to the buyer address.
+     *
+     * @param _buyer - the buyer's address
+     * @param _tokenId - the id of the token to commit to
+     * @param _priceDiscovery - the fully populated BosonTypes.PriceDiscovery struct (must be Ask)
+     * @param _authorization - abi-encoded ERC-3009 authorization payload signed by `_msgSender()`
+     */
+    function sequentialCommitToOfferWithAuthorization(
+        address payable _buyer,
+        uint256 _tokenId,
+        PriceDiscovery calldata _priceDiscovery,
+        bytes memory _authorization
+    ) external exchangesNotPaused buyersNotPaused sequentialCommitNotPaused nonReentrant {
+        if (_buyer == address(0)) revert InvalidAddress();
+
+        uint256 exchangeId = _tokenId & type(uint128).max;
+        (Exchange storage exchange, ) = getValidExchange(exchangeId, ExchangeState.Committed);
+
+        address exchangeToken;
+        {
+            (, Offer storage o) = fetchOffer(exchange.offerId);
+            exchangeToken = o.exchangeToken;
+        }
+
+        // Pull buyer's funds into protocol via signed authorization BEFORE entering price-discovery flow.
+        // This decouples the auth bytes from the deeper call stack and avoids stack-too-deep.
+        // Validation that exchangeToken is ERC20 happens inside validateIncomingPaymentWithAuthorization.
+        validateIncomingPaymentWithAuthorization(
+            exchangeToken,
+            _priceDiscovery.price,
+            _msgSender(),
+            _authorization
+        );
+        // _authorization no longer used past this point — pass control to helper without it in scope
+
+        _continueSequentialCommitFundsAlreadyIn(_buyer, _tokenId, _priceDiscovery, exchangeId);
+    }
+
+    /**
+     * @notice Mirror of `sequentialCommitToOffer`'s body that assumes the buyer's funds were already
+     * pulled into the protocol before this is invoked. Used by `sequentialCommitToOfferWithAuthorization`
+     * to keep the authorization bytes out of the deeper call stack (avoids stack-too-deep). The
+     * exchangeToken is guaranteed to be ERC20 (asserted upstream by `validateIncomingPaymentWithAuthorization`).
+     */
+    function _continueSequentialCommitFundsAlreadyIn(
+        address payable _buyer,
+        uint256 _tokenId,
+        PriceDiscovery calldata _priceDiscovery,
+        uint256 exchangeId
+    ) internal {
+        (Exchange storage exchange, Voucher storage voucher) = getValidExchange(exchangeId, ExchangeState.Committed);
+        if (block.timestamp > voucher.validUntilDate) revert VoucherHasExpired();
+
+        ExchangeCosts memory thisExchangeCost;
+        thisExchangeCost.resellerId = exchange.buyerId;
+
+        address seller;
+        {
+            (, Buyer storage currentBuyer) = fetchBuyer(thisExchangeCost.resellerId);
+            seller = currentBuyer.wallet;
+        }
+
+        uint256 offerId = exchange.offerId;
+        (, Offer storage offer) = fetchOffer(offerId);
+
+        thisExchangeCost.price = fulfilOrderFundsAlreadyIn(_tokenId, offer, _priceDiscovery, seller, _buyer);
+
+        _settleSequentialAfterFulfilWithAuth(exchangeId, offerId, offer, exchange, voucher, seller, thisExchangeCost);
+    }
+
+    /**
+     * @notice Helper for `sequentialCommitToOfferWithAuthorization` — extracted to avoid stack-too-deep.
+     * Computes fees/royalties/escrow, performs immediate payout to seller, clears price discovery
+     * storage, and emits funds-related events. The exchange token is guaranteed to be ERC20 by
+     * `fulfilAskOrderWithAuthorization`, so the wNative withdraw branch is omitted.
+     */
+    function _settleSequentialAfterFulfilWithAuth(
+        uint256 _exchangeId,
+        uint256 _offerId,
+        Offer storage _offer,
+        Exchange storage _exchange,
+        Voucher storage _voucher,
+        address _seller,
+        ExchangeCosts memory _cost
+    ) internal {
+        address exchangeToken = _offer.exchangeToken;
+
+        uint256 additionalEscrowAmount;
+        uint256 immediatePayout;
+        {
+            ExchangeCosts[] storage exchangeCosts = protocolEntities().exchangeCosts[_exchangeId];
+
+            _cost.protocolFeeAmount = _getProtocolFee(exchangeToken, _cost.price);
+
+            {
+                RoyaltyInfo storage royaltyInfo;
+                (royaltyInfo, _cost.royaltyInfoIndex, ) = fetchRoyalties(_offerId, false);
+                _cost.royaltyAmount = (getTotalRoyaltyPercentage(royaltyInfo.bps) * _cost.price) / HUNDRED_PERCENT;
+            }
+
+            if (_cost.protocolFeeAmount + _cost.royaltyAmount > _cost.price) {
+                revert FeeAmountTooHigh();
+            }
+
+            uint256 oldPrice;
+            unchecked {
+                uint256 len = exchangeCosts.length;
+                oldPrice = len == 0 ? _offer.price : exchangeCosts[len - 1].price;
+            }
+
+            unchecked {
+                additionalEscrowAmount =
+                    _cost.price -
+                    Math.min(oldPrice, _cost.price - _cost.royaltyAmount - _cost.protocolFeeAmount);
+            }
+
+            exchangeCosts.push(_cost);
+
+            unchecked {
+                immediatePayout = _cost.price - additionalEscrowAmount;
+            }
+
+            if (immediatePayout > 0) {
+                transferFundsOut(exchangeToken, payable(_seller), immediatePayout);
+            }
+        }
+
+        clearPriceDiscoveryStorage();
+
+        uint256 buyerId = _exchange.buyerId;
+        address sender = _msgSender();
+        if (_cost.price > 0) {
+            emit FundsDeposited(buyerId, sender, exchangeToken, _cost.price);
+            emit FundsEncumbered(buyerId, exchangeToken, _cost.price, sender);
+        }
+        if (immediatePayout > 0) {
+            emit FundsReleased(_exchangeId, _cost.resellerId, exchangeToken, immediatePayout, sender);
+            emit FundsWithdrawn(_cost.resellerId, _seller, exchangeToken, immediatePayout, sender);
+        }
+        emit BuyerCommitted(_offerId, buyerId, _exchangeId, _exchange, _voucher, sender);
+    }
 }

@@ -72,6 +72,49 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
     }
 
     /**
+     * @notice ERC-3009 sibling of `depositFunds`. Pulls ERC20 tokens from the caller via
+     * `receiveWithAuthorization` instead of `safeTransferFrom`. The caller (`_msgSender()`) MUST be the
+     * authorizer (signer) of the ERC-3009 authorization.
+     *
+     * Emits FundsDeposited event if successful.
+     *
+     * Reverts if:
+     * - The funds region of protocol is paused
+     * - Amount to deposit is zero
+     * - Entity id is neither a seller nor a buyer
+     * - Token address is zero (ERC-3009 has no meaning for native currency)
+     * - Caller sent any native currency along with the call
+     * - The signed authorization is invalid, expired, replayed, or signed for a different `from`/`value`
+     * - Received ERC20 token amount differs from the expected value
+     *
+     * @param _entityId - id of the entity that will be credited
+     * @param _tokenAddress - contract address of the ERC-3009 token (must NOT be address(0))
+     * @param _amount - amount to be credited
+     * @param _authorization - abi-encoded `FundsBase.AuthorizationData` signed by `_msgSender()`
+     */
+    function depositFundsWithAuthorization(
+        uint256 _entityId,
+        address _tokenAddress,
+        uint256 _amount,
+        bytes calldata _authorization
+    ) external fundsNotPaused nonReentrant {
+        if (_amount == 0) revert ZeroDepositNotAllowed();
+
+        (bool sellerExists, , ) = fetchSeller(_entityId);
+        (bool buyerExists, ) = fetchBuyer(_entityId);
+        if (!sellerExists && !buyerExists) revert NoSuchEntity();
+
+        if (_tokenAddress == address(0)) revert NativeNotAllowed();
+        // function is non-payable, so msg.value is guaranteed to be zero by the compiler
+
+        transferFundsInWithAuthorization(_tokenAddress, _msgSender(), _amount, _authorization);
+
+        increaseAvailableFunds(_entityId, _tokenAddress, _amount);
+
+        emit FundsDeposited(_entityId, _msgSender(), _tokenAddress, _amount);
+    }
+
+    /**
      * @notice Withdraws the specified funds. Can be called for seller, buyer, agent or royalty recipient.
      *
      * Emits FundsWithdrawn event if successful.

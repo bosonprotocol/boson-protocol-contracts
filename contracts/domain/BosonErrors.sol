@@ -300,6 +300,8 @@ interface BosonErrors {
     error NativeNotAllowed();
     // Trying to deposit zero amount
     error ZeroDepositNotAllowed();
+    // ERC-3009 authorization is not applicable for the requested action (e.g. bid order on sequential commit)
+    error AuthorizationNotApplicable();
 
     // DR Fee related
     // DR fee mutualizer cannot provide coverage for the fee

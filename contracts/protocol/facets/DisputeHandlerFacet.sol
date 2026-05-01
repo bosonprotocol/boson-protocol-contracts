@@ -332,6 +332,28 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     }
 
     /**
+     * @notice ERC-3009 sibling of `escalateDispute`. Pulls the buyer escalation deposit from the caller
+     * via `receiveWithAuthorization`. The caller (`_msgSender()`) MUST be the buyer associated with the
+     * exchange and the authorizer (signer) of the ERC-3009 authorization. The exchange token MUST be ERC20.
+     *
+     * Emits a DisputeEscalated event if successful.
+     *
+     * Reverts if:
+     * - Any reason `escalateDispute` would revert
+     * - Exchange token is the native currency
+     * - The signed authorization is invalid, expired, replayed, or signed for a different `from`/`value`
+     *
+     * @param _exchangeId - the id of the associated exchange
+     * @param _authorization - abi-encoded `FundsBase.AuthorizationData` signed by `_msgSender()`
+     */
+    function escalateDisputeWithAuthorization(
+        uint256 _exchangeId,
+        bytes calldata _authorization
+    ) external nonReentrant {
+        escalateDisputeInternalWithAuthorization(_exchangeId, _authorization);
+    }
+
+    /**
      * @notice Decides a dispute by providing the information about the funds split. Callable by the dispute resolver specified in the offer.
      *
      * Emits a DisputeDecided event if successful.

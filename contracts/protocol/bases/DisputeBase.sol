@@ -127,4 +127,55 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents, IBosonFundsBaseEvents
         }
         emit DisputeEscalated(_exchangeId, disputeResolutionTerms.disputeResolverId, sender);
     }
+
+    /**
+     * @notice ERC-3009 sibling of `escalateDisputeInternal`. The caller (`_msgSender()`) is both the
+     * buyer associated with the exchange (enforced by `checkBuyer`) and the authorizer of the ERC-3009
+     * signature. The exchange token MUST be ERC20.
+     *
+     * Reverts if:
+     * - Any reason `escalateDisputeInternal` would revert
+     * - Exchange token is the native currency
+     * - The signed authorization is invalid, expired, replayed, or signed for a different `from`/`value`
+     *
+     * @param _exchangeId - the id of the associated exchange
+     * @param _authorization - abi-encoded `FundsBase.AuthorizationData` signed by `_msgSender()`
+     */
+    function escalateDisputeInternalWithAuthorization(
+        uint256 _exchangeId,
+        bytes memory _authorization
+    ) internal disputesNotPaused {
+        (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
+
+        uint256 buyerId = exchange.buyerId;
+        checkBuyer(buyerId);
+
+        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
+
+        if (block.timestamp > disputeDates.timeout) revert DisputeHasExpired();
+        if (dispute.state != DisputeState.Resolving) revert InvalidState();
+
+        DisputeResolutionTerms storage disputeResolutionTerms = fetchDisputeResolutionTerms(exchange.offerId);
+        if (disputeResolutionTerms.disputeResolverId == 0) revert EscalationNotAllowed();
+
+        (, Offer storage offer) = fetchOffer(exchange.offerId);
+
+        address exchangeToken = offer.exchangeToken;
+        uint256 buyerEscalationDeposit = disputeResolutionTerms.buyerEscalationDeposit;
+        validateIncomingPaymentWithAuthorization(exchangeToken, buyerEscalationDeposit, _msgSender(), _authorization);
+
+        uint256 escalationResponsePeriod = disputeResolutionTerms.escalationResponsePeriod;
+
+        disputeDates.escalated = block.timestamp;
+        disputeDates.timeout = block.timestamp + escalationResponsePeriod;
+
+        dispute.state = DisputeState.Escalated;
+
+        address sender = _msgSender();
+        if (buyerEscalationDeposit > 0) {
+            emit FundsDeposited(buyerId, sender, exchangeToken, buyerEscalationDeposit);
+            emit FundsEncumbered(buyerId, exchangeToken, buyerEscalationDeposit, sender);
+        }
+        emit DisputeEscalated(_exchangeId, disputeResolutionTerms.disputeResolverId, sender);
+    }
 }
