@@ -8,13 +8,13 @@ import { IBosonGroupEvents } from "../events/IBosonGroupEvents.sol";
 import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
 import { IBosonTwinEvents } from "../events/IBosonTwinEvents.sol";
 import { IBosonBundleEvents } from "../events/IBosonBundleEvents.sol";
+import { IBosonExchangeEvents } from "../events/IBosonExchangeEvents.sol";
+import { IBosonFundsBaseEvents } from "../events/IBosonFundsEvents.sol";
 
 /**
  * @title IBosonOrchestrationHandler
  *
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
- *
- * The ERC-165 identifier for this interface is: 0x08829bb2
  */
 interface IBosonOrchestrationHandler is
     IBosonAccountEvents,
@@ -22,8 +22,53 @@ interface IBosonOrchestrationHandler is
     IBosonOfferEvents,
     IBosonTwinEvents,
     IBosonBundleEvents,
+    IBosonExchangeEvents,
+    IBosonFundsBaseEvents,
     BosonErrors
 {
+    /**
+     * @notice Commits to a seller-created static offer with no condition and immediately redeems the issued voucher in a single transaction.
+     *
+     * The committer (buyer) is always `_msgSender()`. Bundled twins (if any) are transferred to `_msgSender()`.
+     *
+     * Emits a BuyerCommitted and a VoucherRedeemed event if successful.
+     *
+     * @param _offerId - the id of the offer to commit to and immediately redeem
+     */
+    function commitToOfferAndRedeemVoucher(uint256 _offerId) external payable;
+
+    /**
+     * @notice Commits to a seller-created token-gated static offer and immediately redeems the issued voucher in a single transaction.
+     *
+     * The committer (buyer) is always `_msgSender()`. Bundled twins (if any) are transferred to `_msgSender()`.
+     *
+     * Emits BuyerCommitted, ConditionalCommitAuthorized, and VoucherRedeemed events if successful.
+     *
+     * @param _offerId - the id of the offer to commit to and immediately redeem
+     * @param _tokenId - the id of the token to use for the conditional commit
+     */
+    function commitToConditionalOfferAndRedeemVoucher(uint256 _offerId, uint256 _tokenId) external payable;
+
+    /**
+     * @notice Atomically creates a seller-signed offer, commits to it as the buyer, and redeems the issued voucher.
+     *
+     * Restricted to seller-created offers. The caller (buyer) is always `_msgSender()`.
+     * Bundled twins (if any) are transferred to `_msgSender()`.
+     *
+     * Emits OfferCreated (when freshly created), BuyerCommitted, and VoucherRedeemed events if successful.
+     *
+     * @param _fullOffer - the fully populated struct containing offer, offer dates, offer durations, dispute resolution parameters, condition, agent id and fee limit
+     * @param _offerCreator - the address of the offer creator (must be the seller's assistant)
+     * @param _signature - signature of the offer creator
+     * @param _conditionalTokenId - the token id to use for the conditional commit, if applicable
+     */
+    function createOfferCommitAndRedeem(
+        BosonTypes.FullOffer calldata _fullOffer,
+        address _offerCreator,
+        bytes calldata _signature,
+        uint256 _conditionalTokenId
+    ) external payable;
+
     /**
      * @notice Raises a dispute and immediately escalates it.
      *
