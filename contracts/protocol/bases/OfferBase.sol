@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.34;
 
 import { IBosonOfferEvents } from "../../interfaces/events/IBosonOfferEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";

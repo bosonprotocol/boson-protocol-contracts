@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.22;
+pragma solidity 0.8.34;
 
 import { IBosonSequentialCommitHandler } from "../../interfaces/handlers/IBosonSequentialCommitHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";

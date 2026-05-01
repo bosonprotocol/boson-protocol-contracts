@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.34;
 
 import { IAccessControl } from "../interfaces/IAccessControl.sol";
 import { IDiamondCut } from "../interfaces/diamond/IDiamondCut.sol";
