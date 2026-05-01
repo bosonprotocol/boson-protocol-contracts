@@ -8,7 +8,6 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { TransientAuthLib } from "../libs/TransientAuthLib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IERC3009 } from "../../interfaces/IERC3009.sol";
 import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { IDRFeeMutualizer } from "../../interfaces/clients/IDRFeeMutualizer.sol";
@@ -473,28 +472,13 @@ abstract contract FundsBase is Context {
             // protocol balance before the transfer
             uint256 protocolTokenBalanceBefore = IERC20(_tokenAddress).balanceOf(address(this));
 
-            // If a metatx parked an authorization queue, pop the next entry.
-            // Empty entry (or no queue) falls back to the standard allowance path.
-            bytes memory authEntry = TransientAuthLib.hasQueue() ? TransientAuthLib.popNext() : bytes("");
-
-            if (authEntry.length > 0) {
-                (uint256 validAfter, uint256 validBefore, bytes32 authNonce, uint8 v, bytes32 r, bytes32 s) = abi
-                    .decode(authEntry, (uint256, uint256, bytes32, uint8, bytes32, bytes32));
-
-                // receiveWithAuthorization on the token enforces `to == msg.sender`,
-                // i.e. the protocol — so no extra recipient check is needed here.
-                IERC3009(_tokenAddress).receiveWithAuthorization(
-                    _from,
-                    address(this),
-                    _amount,
-                    validAfter,
-                    validBefore,
-                    authNonce,
-                    v,
-                    r,
-                    s
-                );
-            } else {
+            // If a metatx parked a queue and the next entry carries an ERC-3009
+            // authorization, the library pulls funds via receiveWithAuthorization;
+            // otherwise (no queue, exhausted, or fallback marker) we use the
+            // standard allowance path. receiveWithAuthorization enforces
+            // `to == msg.sender` on the token side, i.e. the protocol — so no
+            // extra recipient check is needed here.
+            if (!TransientAuthLib.consumeForTransfer(_tokenAddress, _from, address(this), _amount)) {
                 IERC20(_tokenAddress).safeTransferFrom(_from, address(this), _amount);
             }
 
