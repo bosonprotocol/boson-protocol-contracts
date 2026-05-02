@@ -190,6 +190,11 @@ library TransientAuthLib {
     }
 
     function _entryBase(uint256 _index) private pure returns (bytes32) {
-        return keccak256(abi.encode(ENTRY_NAMESPACE, _index));
+        // ERC-7201-style mask: zero the last byte of every entry's base slot so
+        // two entries' sub-slot ranges (base, base+1, ..., base+N) cannot
+        // structurally overlap. Each entry now owns a guaranteed 256-slot range
+        // — comfortably above the ~7 sub-slots a typical entry uses (1 length
+        // + 6 words for an ERC-3009 payload).
+        return keccak256(abi.encode(ENTRY_NAMESPACE, _index)) & ~bytes32(uint256(0xff));
     }
 }
