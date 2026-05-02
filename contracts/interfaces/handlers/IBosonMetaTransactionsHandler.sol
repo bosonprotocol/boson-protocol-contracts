@@ -2,7 +2,6 @@
 pragma solidity 0.8.34;
 
 import { BosonErrors } from "../../domain/BosonErrors.sol";
-import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IBosonMetaTransactionsEvents } from "../events/IBosonMetaTransactionsEvents.sol";
 
 /**
@@ -49,28 +48,34 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents, BosonEr
 
     /**
      * @notice Same as `executeMetaTransaction`, but additionally accepts an
-     *         authorization payload that funds-pulling functions can consume
-     *         in lieu of an ERC-20 allowance.
+     *         authorization queue that funds-pulling functions can consume in
+     *         lieu of an ERC-20 allowance. Calling this function always loads
+     *         a queue from `_authorization`; if you have nothing to authorize,
+     *         call `executeMetaTransaction` instead.
      *
-     * The protocol parks the payload in transient storage for the duration of
-     * the transaction. When `_authorizationType` is ERC3009, `_authorization`
-     * is interpreted as `abi.encode(bytes[] queue)`, where each entry is either:
-     *   - empty bytes — fall back to safeTransferFrom for that transferFundsIn,
-     *   - or `abi.encode(uint256 validAfter, uint256 validBefore, bytes32 nonce,
-     *                    uint8 v, bytes32 r, bytes32 s)` — used to call
-     *     `receiveWithAuthorization` on the exchange token.
+     * The protocol parks `_authorization` in transient storage for the duration
+     * of the transaction. The payload is `abi.encode(bytes[] queue)` where each
+     * entry is one of:
+     *   - empty bytes (`"0x"`) — fall back to safeTransferFrom for this slot
+     *     (shortcut for `(AuthorizationStrategy.None, "")`).
+     *   - `abi.encode(BosonTypes.AuthorizationStrategy strategy, bytes data)`
+     *     — strategy-specific payload. Today `strategy == ERC3009` is supported,
+     *     with `data = abi.encode(uint256 validAfter, uint256 validBefore,
+     *     bytes32 nonce, uint8 v, bytes32 r, bytes32 s)` used to call
+     *     `receiveWithAuthorization` on the exchange token. Future strategies
+     *     (Permit2, EIP-2612 permit, ...) plug in here.
      *
      * Reverts if:
      * - Same conditions as `executeMetaTransaction`
-     * - Authorization decoding or token-side authorization check fails
+     * - A queue entry uses an unknown `AuthorizationStrategy` tag
+     * - Token-side authorization check fails for any consumed entry
      *
      * @param _userAddress - the sender of the transaction
      * @param _functionName - the name of the function to be executed
      * @param _functionSignature - the function signature
      * @param _nonce - the nonce value of the transaction
      * @param _signature - meta transaction signature (see `executeMetaTransaction`)
-     * @param _authorizationType - kind of token-side authorization supplied
-     * @param _authorization - opaque authorization payload (see above)
+     * @param _authorization - `abi.encode(bytes[] queue)` (see above)
      */
     function executeMetaTransactionWithAuthorization(
         address _userAddress,
@@ -78,7 +83,6 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents, BosonEr
         bytes calldata _functionSignature,
         uint256 _nonce,
         bytes calldata _signature,
-        BosonTypes.AuthorizationType _authorizationType,
         bytes calldata _authorization
     ) external payable returns (bytes memory);
 

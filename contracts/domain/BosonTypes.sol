@@ -70,9 +70,10 @@ contract BosonTypes {
         ResolveDispute
     }
 
-    enum AuthorizationType {
+    enum AuthorizationStrategy {
         None,
         ERC3009
+        // Future: Permit2, EIP2612, ...
     }
 
     enum AuthTokenType {

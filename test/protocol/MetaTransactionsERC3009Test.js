@@ -16,7 +16,7 @@ const { mockSeller, mockVoucherInitValues, mockAuthToken, mockDisputeResolver, a
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { prepareDataSignature, setupTestEnvironment, getSnapshot, revertToSnapshot } = require("../util/utils.js");
 
-const AuthorizationType = {
+const AuthorizationStrategy = {
   None: 0,
   ERC3009: 1,
 };
@@ -56,10 +56,11 @@ async function signReceiveWithAuthorization(signer, token, params) {
 }
 
 function encodeAuthEntry({ validAfter, validBefore, nonce, v, r, s }) {
-  return AbiCoder.defaultAbiCoder().encode(
+  const erc3009Data = AbiCoder.defaultAbiCoder().encode(
     ["uint256", "uint256", "bytes32", "uint8", "bytes32", "bytes32"],
     [validAfter, validBefore, nonce, v, r, s]
   );
+  return AbiCoder.defaultAbiCoder().encode(["uint8", "bytes"], [AuthorizationStrategy.ERC3009, erc3009Data]);
 }
 
 function encodeAuthQueue(entries) {
@@ -185,7 +186,6 @@ describe("ERC3009-backed metatransactions", function () {
           fnSig,
           nonce,
           signature,
-          AuthorizationType.ERC3009,
           queue
         )
     )
@@ -196,7 +196,9 @@ describe("ERC3009-backed metatransactions", function () {
     expect(await token.balanceOf(await assistant.getAddress())).to.equal(0);
   });
 
-  it("falls back to safeTransferFrom when AuthorizationType is None", async function () {
+  it("falls back to safeTransferFrom when called via plain executeMetaTransaction", async function () {
+    // Without the auth-flavored entry point no queue is loaded, so the
+    // standard ERC-20 allowance path runs unchanged.
     const amount = "500";
     await token.mint(await assistant.getAddress(), amount);
     await token.connect(assistant).approve(protocolDiamondAddress, amount);
@@ -206,15 +208,7 @@ describe("ERC3009-backed metatransactions", function () {
 
     await metaTransactionsHandler
       .connect(deployer)
-      .executeMetaTransactionWithAuthorization(
-        await assistant.getAddress(),
-        message.functionName,
-        fnSig,
-        nonce,
-        signature,
-        AuthorizationType.None,
-        "0x"
-      );
+      .executeMetaTransaction(await assistant.getAddress(), message.functionName, fnSig, nonce, signature);
 
     expect(await token.balanceOf(protocolDiamondAddress)).to.equal(amount);
   });
@@ -237,7 +231,6 @@ describe("ERC3009-backed metatransactions", function () {
           fnSig,
           nonce,
           signature,
-          AuthorizationType.ERC3009,
           queue
         )
     ).to.be.reverted;
@@ -263,7 +256,6 @@ describe("ERC3009-backed metatransactions", function () {
           fnSig,
           nonce,
           signature,
-          AuthorizationType.ERC3009,
           queue
         )
     ).to.be.reverted;

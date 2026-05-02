@@ -40,8 +40,8 @@ const {
 } = require("../util/mock");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 
-// AuthorizationType enum mirror
-const AuthorizationType = { None: 0, ERC3009: 1 };
+// Per-entry authorization strategy tag (mirrors BosonTypes.AuthorizationStrategy)
+const AuthorizationStrategy = { None: 0, ERC3009: 1 };
 
 // EIP-712 types for ERC-3009 ReceiveWithAuthorization (matches MockERC3009Token)
 const RECEIVE_WITH_AUTHORIZATION_TYPES = {
@@ -266,10 +266,11 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
       nonce: authNonce,
     };
     const { v, r, s } = await signReceiveWithAuthorization(signer, params);
-    return AbiCoder.defaultAbiCoder().encode(
+    const erc3009Data = AbiCoder.defaultAbiCoder().encode(
       ["uint256", "uint256", "bytes32", "uint8", "bytes32", "bytes32"],
       [validAfter, validBefore, authNonce, v, r, s]
     );
+    return AbiCoder.defaultAbiCoder().encode(["uint8", "bytes"], [AuthorizationStrategy.ERC3009, erc3009Data]);
   }
 
   function encodeAuthQueue(entries) {
@@ -280,11 +281,11 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
    * Drop-in replacement for
    *   `exchangeCommitHandler.connect(sellerSigner).commitToBuyerOffer(offerId, sellerParams)`
    *
-   * Wraps the call in `executeMetaTransactionWithAuthorization`. The seller signs
-   * both the metatx and a single-entry ERC-3009 auth for `amount`. If `amount` is
-   * 0, no auth is needed (`AuthorizationType.None`). For revert tests that want
-   * the safeTransferFrom fallback path, set `forceFallback: true` to insert an
-   * empty queue entry instead of a real auth.
+   * Wraps the call in `executeMetaTransactionWithAuthorization`. The queue
+   * always has one slot for the seller pull. If `amount` is 0 the slot is
+   * filled with `"0x"` and the protocol discards it. For revert tests that
+   * want the safeTransferFrom fallback path, set `forceFallback: true` to
+   * insert an empty marker instead of a real auth.
    */
   async function commitToBuyerOfferWithAuth({
     caller,
@@ -319,14 +320,9 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
       await metaTransactionsHandler.getAddress()
     );
 
-    let authType = AuthorizationType.None;
-    let authPayload = "0x";
-    if (forceFallback) {
-      authType = AuthorizationType.ERC3009;
-      authPayload = encodeAuthQueue(["0x"]);
-    } else if (amount && BigInt(amount) > 0n) {
-      authType = AuthorizationType.ERC3009;
-      authPayload = encodeAuthQueue([await buildAuthEntry(sellerSigner, amount)]);
+    let entry = "0x";
+    if (!forceFallback && amount && BigInt(amount) > 0n) {
+      entry = await buildAuthEntry(sellerSigner, amount);
     }
 
     return metaTransactionsHandler
@@ -337,8 +333,7 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
         fnSig,
         metatxNonce,
         signature,
-        authType,
-        authPayload
+        encodeAuthQueue([entry])
       );
   }
 
