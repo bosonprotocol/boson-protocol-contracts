@@ -1,20 +1,24 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.34;
 
+import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IERC3009 } from "../../interfaces/IERC3009.sol";
 
 /**
  * @title TransientAuthLib
  *
- * @notice Parks a queue of authorization payloads (e.g. ERC-3009 signed
- * authorizations) in transient storage for the duration of a single transaction.
+ * @notice Parks a queue of off-chain authorization payloads in transient
+ * storage for the duration of a single transaction. Each entry self-describes
+ * its strategy via a `BosonTypes.AuthorizationStrategy` tag, so a single queue
+ * can carry mixed strategies (ERC-3009 today, Permit2/EIP-2612 in the future).
  *
  * The metatransaction entry point loads the queue once via `loadQueue`. Each
  * subsequent `transferFundsIn` call consumes the next entry via
- * `consumeForTransfer`, which pops the next entry and (if non-empty) calls
- * `receiveWithAuthorization` on the supplied token. An empty entry signals
- * "no authorization for this transfer — fall back to the default ERC-20
- * allowance path". An exhausted queue returns false.
+ * `consumeForTransfer`, which pops the next entry and dispatches to the
+ * strategy-specific helper. An empty entry (length 0) is a shortcut for
+ * `(AuthorizationStrategy.None, "")` — "no authorization for this slot, fall
+ * back to the default ERC-20 allowance path". An exhausted queue returns false.
  *
  * All slots are written via `TSTORE` and cleared automatically by the EVM at
  * the end of the transaction.
@@ -119,13 +123,13 @@ library TransientAuthLib {
     }
 
     /**
-     * @notice If a queue is loaded, pop the next entry and (when non-empty)
-     *         call `receiveWithAuthorization` on `_token` to pull `_amount`
-     *         from `_from` to `_to`.
+     * @notice If a queue is loaded, pop the next entry and dispatch to the
+     *         strategy-specific helper to pull `_amount` from `_from` to `_to`.
      *
-     * @return consumed true when a non-empty authorization was consumed and
-     *         the token call dispatched; false when the caller should fall
-     *         through to the standard ERC-20 allowance path.
+     * @return consumed true when a non-empty authorization was consumed and a
+     *         token call dispatched; false when the caller should fall through
+     *         to the standard ERC-20 allowance path (queue empty/exhausted, or
+     *         entry tagged `AuthorizationStrategy.None`, or shortcut empty bytes).
      */
     function consumeForTransfer(
         address _token,
@@ -138,13 +142,31 @@ library TransientAuthLib {
         bytes memory entry = popNext();
         if (entry.length == 0) return false;
 
-        (uint256 validAfter, uint256 validBefore, bytes32 nonce, uint8 v, bytes32 r, bytes32 s) = abi.decode(
+        (BosonTypes.AuthorizationStrategy strategy, bytes memory data) = abi.decode(
             entry,
-            (uint256, uint256, bytes32, uint8, bytes32, bytes32)
+            (BosonTypes.AuthorizationStrategy, bytes)
         );
 
+        if (strategy == BosonTypes.AuthorizationStrategy.None) return false;
+        if (strategy == BosonTypes.AuthorizationStrategy.ERC3009) {
+            _consumeERC3009(_token, _from, _to, _amount, data);
+            return true;
+        }
+        revert BosonErrors.UnsupportedAuthorizationStrategy();
+    }
+
+    function _consumeERC3009(
+        address _token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes memory _data
+    ) private {
+        (uint256 validAfter, uint256 validBefore, bytes32 nonce, uint8 v, bytes32 r, bytes32 s) = abi.decode(
+            _data,
+            (uint256, uint256, bytes32, uint8, bytes32, bytes32)
+        );
         IERC3009(_token).receiveWithAuthorization(_from, _to, _amount, validAfter, validBefore, nonce, v, r, s);
-        return true;
     }
 
     function _storeEntry(uint256 _index, bytes memory _entry) private {
