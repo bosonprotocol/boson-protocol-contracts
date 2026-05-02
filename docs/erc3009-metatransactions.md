@@ -8,14 +8,22 @@
 
 ## Introduction
 
-[ERC-3009](https://eips.ethereum.org/EIPS/eip-3009) ("Transfer With Authorization") lets a token holder authorize a single transfer with an off-chain signature. Tokens like USDC implement it. The protocol can pull funds via `receiveWithAuthorization` instead of the usual `safeTransferFrom`, which avoids the need for a prior `approve` transaction.
+The protocol's metatransaction flow lets a relayer submit a user-signed call. When that call needs to pull ERC-20 funds, the standard path is `safeTransferFrom`, which requires a prior on-chain `approve` from the user.
 
-The protocol exposes this capability **only through the metatransaction flow**, via a dedicated entry point `executeMetaTransactionWithAuthorization`. A relayer can submit a single on-chain transaction that:
+The protocol's authorization queue replaces this with **off-chain signed authorizations**: the user signs once off-chain, the relayer hands the signature to the protocol, and the protocol uses one of several strategies to pull the funds without ever needing a prior allowance:
+
+| Strategy | Token requirement | Mechanism |
+| --- | --- | --- |
+| **ERC-3009** | Token implements EIP-3009 (e.g. USDC) | Protocol calls `receiveWithAuthorization` on the token. |
+| **EIP-2612** | Token implements EIP-2612 permit (e.g. DAI, most modern stablecoins) | Protocol calls `permit` on the token to provision allowance, then `safeTransferFrom`. |
+| **Permit2** | Any standard ERC-20 (one-time `approve(PERMIT2, MaxUint)` per token) | Protocol calls Uniswap's universal Permit2 contract, which verifies the signature and pulls funds via `transferFrom`. |
+
+The capability is exposed **only through the metatransaction flow**, via a dedicated entry point `executeMetaTransactionWithAuthorization`. A relayer can submit a single on-chain transaction that:
 
 1. Authorizes a Boson protocol call on the user's behalf (the metatx itself).
-2. Pulls the required ERC-20 funds from the user via `receiveWithAuthorization`.
+2. Pulls the required ERC-20 funds from the user via the per-entry strategy.
 
-The user pays no gas, holds no prior allowance, and signs everything off-chain.
+The user pays no gas, holds no prior allowance (except the one-time setup for Permit2), and signs everything off-chain.
 
 When the call uses the regular `executeMetaTransaction` (or is invoked directly), `transferFundsIn` continues to use `safeTransferFrom`. Behavior outside the metatx-with-authorization entry point is unchanged.
 
@@ -24,11 +32,13 @@ When the call uses the regular `executeMetaTransaction` (or is invoked directly)
 | Concern | Location |
 | --- | --- |
 | New metatx entry point | [`MetaTransactionsHandlerFacet.executeMetaTransactionWithAuthorization`](../contracts/protocol/facets/MetaTransactionsHandlerFacet.sol) |
-| `AuthorizationType` enum | [`BosonTypes.AuthorizationType`](../contracts/domain/BosonTypes.sol) |
-| Authorization queue (transient storage) | [`TransientAuthLib`](../contracts/protocol/libs/TransientAuthLib.sol) |
+| Per-entry strategy enum | [`BosonTypes.AuthorizationStrategy`](../contracts/domain/BosonTypes.sol) |
+| Authorization queue + strategy dispatch | [`TransientAuthLib`](../contracts/protocol/libs/TransientAuthLib.sol) |
 | Strategy switch in fund-pull | [`FundsBase.transferFundsIn`](../contracts/protocol/bases/FundsBase.sol) |
-| Token-side interface | [`IERC3009`](../contracts/interfaces/IERC3009.sol) |
-| Test mock | [`MockERC3009Token`](../contracts/mock/MockERC3009Token.sol) |
+| ERC-3009 token interface | [`IERC3009`](../contracts/interfaces/IERC3009.sol) |
+| EIP-2612 token interface | [`IERC2612`](../contracts/interfaces/IERC2612.sol) |
+| Permit2 contract interface | [`IPermit2`](../contracts/interfaces/IPermit2.sol) |
+| Test mocks | [`MockERC3009Token`](../contracts/mock/MockERC3009Token.sol), [`MockERC2612Token`](../contracts/mock/MockERC2612Token.sol), [`MockPermit2`](../contracts/mock/MockPermit2.sol) |
 
 ## End-to-end flow
 
@@ -79,12 +89,21 @@ The metatx EIP-712 hash **does not cover** `_authorization`. Each per-entry stra
 
 ## Authorization payload format
 
-`_authorization = abi.encode(bytes[] queue)`. Each queue entry is **self-describing** via a per-entry strategy tag, so a single queue can mix strategies (ERC-3009 today, Permit2 / EIP-2612 in the future). An entry is one of:
+`_authorization = abi.encode(bytes[] queue)`. Each queue entry is **self-describing** via a per-entry strategy tag, so a single queue can mix strategies. An entry is one of:
 
 - **Empty bytes (`"0x"`)** — fallback shortcut. The corresponding `transferFundsIn` falls back to `safeTransferFrom` (i.e. the user must have approved the protocol for that specific transfer). Equivalent to `(AuthorizationStrategy.None, "")` but cheaper to encode/store.
-- **`abi.encode(AuthorizationStrategy strategy, bytes data)`** — strategy-specific envelope. Today only `strategy == ERC3009` is implemented, with `data = abi.encode(uint256 validAfter, uint256 validBefore, bytes32 nonce, uint8 v, bytes32 r, bytes32 s)`. An unknown `strategy` tag reverts with `BosonErrors.UnsupportedAuthorizationStrategy`.
+- **`abi.encode(AuthorizationStrategy strategy, bytes data)`** — strategy-specific envelope. An unknown `strategy` tag reverts with `BosonErrors.UnsupportedAuthorizationStrategy`.
 
-For the ERC-3009 strategy, `from`, `to`, and `value` are deliberately **not** in the per-entry payload. They're derived at consumption time from the metatx caller, the protocol address, and the underlying call's `_amount` respectively. This prevents a malicious relayer from substituting an authorization that doesn't match the actual transfer.
+The `data` payload by strategy:
+
+| Strategy | `data` shape | Notes |
+| --- | --- | --- |
+| `None` | any (ignored) | Same as the empty-bytes shortcut. Use the shortcut when possible. |
+| `ERC3009` | `abi.encode(uint256 validAfter, uint256 validBefore, bytes32 nonce, uint8 v, bytes32 r, bytes32 s)` | Maps onto `IERC3009.receiveWithAuthorization(from, to, value, ...)`. The user signs an EIP-712 `ReceiveWithAuthorization` typed message against the token's domain. |
+| `EIP2612` | `abi.encode(uint256 deadline, uint8 v, bytes32 r, bytes32 s)` | Protocol calls `IERC2612.permit(owner, spender, value, deadline, v, r, s)` with `value == _amount` and `spender == protocol`, then follows up with `safeTransferFrom`. The user signs an EIP-712 `Permit` typed message against the token's domain. The token's `nonces(owner)` counter at signing time is implicit in the signature — no need to pass it. |
+| `Permit2` | `abi.encode(uint256 nonce, uint256 deadline, bytes signature)` | Protocol calls `Permit2.permitTransferFrom(...)` at the canonical address `0x000000000022D473030F116dDEE9F6B43aC78BA3`. User must have one-time-approved Permit2 on `_token`. The signature is over a `PermitTransferFrom` EIP-712 message bound to token, amount, spender (= protocol), nonce, deadline. |
+
+For every strategy, `from`, `to`, `token`, and `value` are deliberately **not** in the per-entry payload. They're derived at consumption time from the metatx caller, the protocol address, the offer's exchange token, and the underlying call's `_amount` respectively. This prevents a malicious relayer from substituting an authorization that doesn't match the actual transfer — the off-chain signature is bound to the same parameters the on-chain call will use.
 
 ### Why a queue?
 
@@ -117,7 +136,7 @@ function discardNext() internal;                              // skip sites pop-
 function hasQueue() internal view returns (bool);             // diagnostic
 ```
 
-`consumeForTransfer` pops the entry, decodes the `(strategy, data)` envelope, and dispatches to a strategy-specific private helper (`_consumeERC3009` today). Returns `true` when a strategy was consumed and a token call dispatched (caller skips its fallback path) or `false` when the queue is empty/exhausted, the entry is the fallback shortcut, or `strategy == None` (caller falls through to `safeTransferFrom`). An unknown strategy reverts with `BosonErrors.UnsupportedAuthorizationStrategy`.
+`consumeForTransfer` pops the entry, decodes the `(strategy, data)` envelope, and dispatches to a strategy-specific private helper (`_consumeERC3009`, `_consumeEIP2612`, `_consumePermit2`). Returns `true` when a strategy was consumed and a token call dispatched (caller skips its fallback path) or `false` when the queue is empty/exhausted, the entry is the fallback shortcut, or `strategy == None` (caller falls through to `safeTransferFrom`). An unknown strategy reverts with `BosonErrors.UnsupportedAuthorizationStrategy`.
 
 `discardNext` advances the queue head by one without doing any work. The protocol calls it at every site where a `transferFundsIn` call is bypassed at runtime (zero amount, `useDepositedFunds=true`, etc.). This keeps the queue head in lock-step with the **logical** transfer position — not the actual one — so the off-chain caller can build a queue whose layout depends only on the function being called, not on runtime amounts or flags. `discardNext` is a no-op when the queue is empty or already exhausted.
 
@@ -228,19 +247,24 @@ The leading empty entry is the fallback marker for the seller's pull (which **do
 
 ## Replay safety
 
-- **Outer metatx**: nonce-tracked the same as `executeMetaTransaction`. Re-submission of the same `(userAddress, nonce)` reverts with `NonceUsedAlready`.
-- **Per-entry ERC-3009**: each entry carries a `nonce` enforced by the token contract; once consumed, the token's `authorizationState[from][nonce]` is set, so a replay of the same authorization on-chain reverts on the token side.
-- **Single-use within a tx**: queue entries are popped on consumption — `head` advances. A second `transferFundsIn` in the same metatx cannot reuse a popped entry; it gets the next one (or falls back to `safeTransferFrom` if the queue is exhausted).
+| Strategy | Single-use enforcement |
+| --- | --- |
+| ERC-3009 | Each entry carries a `bytes32 nonce` consumed by the token's `authorizationState[from][nonce]` map. The token reverts on replay. |
+| EIP-2612 | The token's `nonces(owner)` counter auto-increments on each successful `permit`. Replaying the same signature reverts because the recovered owner won't match. |
+| Permit2 | Permit2 maintains a 256-bit-bitmap nonce per owner. The user picks any unused nonce; Permit2 reverts on replay (`InvalidNonce`). |
+
+In addition, the outer metatx is nonce-tracked the same as `executeMetaTransaction` (re-submission of the same `(userAddress, nonce)` reverts with `NonceUsedAlready`), and queue entries are popped on consumption — `head` advances. A second `transferFundsIn` in the same metatx cannot reuse a popped entry; it gets the next one (or falls back to `safeTransferFrom` if the queue is exhausted).
 
 ## Adding a new strategy (recipe)
 
-Once the protocol gains another off-chain pull strategy (Permit2, EIP-2612 permit, etc.), the wiring is small:
+For another off-chain pull strategy in the future:
 
 1. **Add the enum value** to [`BosonTypes.AuthorizationStrategy`](../contracts/domain/BosonTypes.sol). Append at the end so existing tag values stay stable.
-2. **Add a private helper** in [`TransientAuthLib`](../contracts/protocol/libs/TransientAuthLib.sol) (`_consumePermit2`, `_consumeEIP2612`, etc.) that decodes the strategy-specific `data` bytes and performs the pull. For two-step strategies like EIP-2612 (permit + transferFrom), the helper does both steps inline.
+2. **Add a private helper** in [`TransientAuthLib`](../contracts/protocol/libs/TransientAuthLib.sol) (`_consumeXyz`) that decodes the strategy-specific `data` bytes and performs the pull. For two-step strategies (e.g. permit + transferFrom), the helper does both steps inline.
 3. **Add a branch** in `consumeForTransfer` that dispatches on the new tag and calls the helper.
-4. **Update the table** in this doc with one row per affected method, plus add the new strategy to the "Quick reference" shorthand expansion.
-5. **Add tests** that build a queue with the new strategy and exercise the consumed-vs-discarded paths.
+4. **Add an interface** in `contracts/interfaces/` if the strategy talks to an external contract.
+5. **Update the table** in "Authorization payload format" above with the new `data` shape.
+6. **Add tests** that build a queue with the new strategy and exercise both happy and revert paths.
 
 The wrapper format (`abi.encode(strategy, bytes)`) doesn't change — only the strategy-specific `data` payload.
 
@@ -251,11 +275,12 @@ Transient storage opcodes (`TSTORE`/`TLOAD`) require the Cancun EVM and Solidity
 - `pragma solidity 0.8.34;`
 - `evmVersion: "cancun"` (in [`hardhat.config.js`](../hardhat.config.js))
 
-Boson's deployment targets (Ethereum, Polygon, Optimism, Arbitrum, Base) are all post-Dencun and support Cancun.
+Boson's deployment targets (Ethereum, Polygon, Optimism, Arbitrum, Base) are all post-Dencun and support Cancun. They also all have Uniswap's Permit2 deployed at the canonical `0x000000000022D473030F116dDEE9F6B43aC78BA3`. For local Hardhat testing, [`MetaTransactionsPermitStrategiesTest.js`](../test/protocol/MetaTransactionsPermitStrategiesTest.js) injects [`MockPermit2`](../contracts/mock/MockPermit2.sol) at that address via `hardhat_setCode`.
 
 ## Tests
 
-- [`test/protocol/MetaTransactionsERC3009Test.js`](../test/protocol/MetaTransactionsERC3009Test.js) — focused unit tests for the entry point and fallback semantics (5 tests).
+- [`test/protocol/MetaTransactionsERC3009Test.js`](../test/protocol/MetaTransactionsERC3009Test.js) — focused unit tests for the ERC-3009 strategy + fallback semantics (5 tests).
+- [`test/protocol/MetaTransactionsPermitStrategiesTest.js`](../test/protocol/MetaTransactionsPermitStrategiesTest.js) — focused unit tests for the EIP-2612 + Permit2 strategies (6 tests).
 - [`test/protocol/ExchangeHandlerCommitWithAuthorizationTest.js`](../test/protocol/ExchangeHandlerCommitWithAuthorizationTest.js) — `commitToOffer` and `createOfferAndCommit` flows mirroring the originals from `ExchangeHandlerTest.js` (49 tests).
 - [`test/protocol/BuyerInitiatedOfferSellerCommitsWithAuthorizationTest.js`](../test/protocol/BuyerInitiatedOfferSellerCommitsWithAuthorizationTest.js) — seller-side `commitToBuyerOffer` flow mirroring `BuyerInitiatedOfferTest.js` (10 tests).
 
@@ -264,6 +289,7 @@ Run them all together:
 ```sh
 npx hardhat test \
   test/protocol/MetaTransactionsERC3009Test.js \
+  test/protocol/MetaTransactionsPermitStrategiesTest.js \
   test/protocol/ExchangeHandlerCommitWithAuthorizationTest.js \
   test/protocol/BuyerInitiatedOfferSellerCommitsWithAuthorizationTest.js
 ```
