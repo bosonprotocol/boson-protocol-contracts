@@ -316,6 +316,8 @@ interface BosonErrors {
     error FunctionNotAllowlisted();
     // Signer does not match the expected one or ERC1271 signature is not valid
     error SignatureValidationFailed();
+    // Authorization queue entry carries an unknown strategy tag
+    error UnsupportedAuthorizationStrategy();
 
     // Dispute related
     // Dispute cannot be raised since the period to do it has elapsed

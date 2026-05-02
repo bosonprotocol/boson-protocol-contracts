@@ -67,26 +67,24 @@ function executeMetaTransactionWithAuthorization(
     bytes   calldata _functionSignature,
     uint256          _nonce,
     bytes   calldata _signature,
-    AuthorizationType _authorizationType,   // None | ERC3009
     bytes   calldata _authorization         // payload (see below)
 ) external payable returns (bytes memory);
 ```
 
-The first five parameters and their EIP-712 signing rules are identical to `executeMetaTransaction`. Two new parameters control the token-side authorization:
+The first five parameters and their EIP-712 signing rules are identical to `executeMetaTransaction`. The new parameter:
 
-- `_authorizationType` — `None` keeps the legacy behavior (still uses `safeTransferFrom` for any ERC-20 pull). `ERC3009` activates the queue.
-- `_authorization` — opaque bytes interpreted only when `_authorizationType != None`.
+- `_authorization` — `abi.encode(bytes[] queue)`. The queue is **always** loaded when this entry point is called. If you have nothing to authorize, call `executeMetaTransaction` (without the `WithAuthorization` suffix) instead.
 
-The metatx EIP-712 hash **does not cover** these two parameters. Each ERC-3009 entry inside the queue is itself an EIP-712 payload independently authenticated by the token (bound to `from`, `to == protocol`, `value`, `nonce`, validity window). Including it in the metatx hash would force the user to re-sign overlapping data.
+The metatx EIP-712 hash **does not cover** `_authorization`. Each per-entry strategy carries its own off-chain signature bound to the token, `from`, `to == protocol`, `value`, a `nonce`, and a validity window — independently authenticated. Including it in the metatx hash would force the user to re-sign overlapping data.
 
 ## Authorization payload format
 
-When `_authorizationType == ERC3009`, the payload is `abi.encode(bytes[] queue)`. Each queue entry is one of:
+`_authorization = abi.encode(bytes[] queue)`. Each queue entry is **self-describing** via a per-entry strategy tag, so a single queue can mix strategies (ERC-3009 today, Permit2 / EIP-2612 in the future). An entry is one of:
 
-- **Empty bytes (`"0x"`)** — fallback marker. The corresponding `transferFundsIn` falls back to `safeTransferFrom` (i.e. the user must have approved the protocol for that specific transfer).
-- **Encoded ERC-3009 fields** — `abi.encode(uint256 validAfter, uint256 validBefore, bytes32 nonce, uint8 v, bytes32 r, bytes32 s)`.
+- **Empty bytes (`"0x"`)** — fallback shortcut. The corresponding `transferFundsIn` falls back to `safeTransferFrom` (i.e. the user must have approved the protocol for that specific transfer). Equivalent to `(AuthorizationStrategy.None, "")` but cheaper to encode/store.
+- **`abi.encode(AuthorizationStrategy strategy, bytes data)`** — strategy-specific envelope. Today only `strategy == ERC3009` is implemented, with `data = abi.encode(uint256 validAfter, uint256 validBefore, bytes32 nonce, uint8 v, bytes32 r, bytes32 s)`. An unknown `strategy` tag reverts with `BosonErrors.UnsupportedAuthorizationStrategy`.
 
-`from`, `to`, and `value` are deliberately **not** in the per-entry payload. They're derived at consumption time from the metatx caller, the protocol address, and the underlying call's `_amount` respectively. This prevents a malicious relayer from substituting an authorization that doesn't match the actual transfer.
+For the ERC-3009 strategy, `from`, `to`, and `value` are deliberately **not** in the per-entry payload. They're derived at consumption time from the metatx caller, the protocol address, and the underlying call's `_amount` respectively. This prevents a malicious relayer from substituting an authorization that doesn't match the actual transfer.
 
 ### Why a queue?
 
@@ -119,7 +117,7 @@ function discardNext() internal;                              // skip sites pop-
 function hasQueue() internal view returns (bool);             // diagnostic
 ```
 
-`consumeForTransfer` does the queue pop, decodes the entry, and dispatches `IERC3009.receiveWithAuthorization`. Returns `true` when a real authorization was consumed (caller skips its fallback path) or `false` when the queue is empty/exhausted/holding a fallback marker (caller falls through to `safeTransferFrom`).
+`consumeForTransfer` pops the entry, decodes the `(strategy, data)` envelope, and dispatches to a strategy-specific private helper (`_consumeERC3009` today). Returns `true` when a strategy was consumed and a token call dispatched (caller skips its fallback path) or `false` when the queue is empty/exhausted, the entry is the fallback shortcut, or `strategy == None` (caller falls through to `safeTransferFrom`). An unknown strategy reverts with `BosonErrors.UnsupportedAuthorizationStrategy`.
 
 `discardNext` advances the queue head by one without doing any work. The protocol calls it at every site where a `transferFundsIn` call is bypassed at runtime (zero amount, `useDepositedFunds=true`, etc.). This keeps the queue head in lock-step with the **logical** transfer position — not the actual one — so the off-chain caller can build a queue whose layout depends only on the function being called, not on runtime amounts or flags. `discardNext` is a no-op when the queue is empty or already exhausted.
 
@@ -153,7 +151,16 @@ The `else` branch is what makes the queue layout amount-independent: when a call
 
 The queue length depends **only on the metatx-callable function**, not on runtime amounts or flags like `useDepositedFunds`. The protocol calls `discardNext()` at every skip site (zero amount, pre-deposited funds), so a slot reserved for a transfer that ends up not firing is silently popped and discarded. This lets a relayer build queues from a static template per function.
 
-`caller_auth(amount)` denotes an ERC-3009 entry signed by the metatx caller for `amount` of the offer's `exchangeToken`. Slot contents marked `<discarded>` are popped and never read — fill them with `"0x"` (or any value).
+`caller_auth(amount)` denotes an ERC-3009 entry signed by the metatx caller for `amount` of the offer's `exchangeToken`. Each `_auth(amount)` shorthand expands to:
+
+```
+abi.encode(
+  AuthorizationStrategy.ERC3009,
+  abi.encode(uint256 validAfter, uint256 validBefore, bytes32 nonce, uint8 v, bytes32 r, bytes32 s)
+)
+```
+
+Slots whose pull won't fire at runtime (zero amount, `useDepositedFunds=true`) get `"0x"` and are silently popped/discarded.
 
 | Method | Queue |
 | --- | --- |
@@ -176,16 +183,20 @@ Notes:
 
 ```js
 // Off-chain
-const authEntry = abi.encode(
+const erc3009Data = abi.encode(
   ["uint256", "uint256", "bytes32", "uint8", "bytes32", "bytes32"],
   [validAfter, validBefore, authNonce, v, r, s]
+);
+const authEntry = abi.encode(
+  ["uint8", "bytes"],
+  [AuthorizationStrategy.ERC3009, erc3009Data]
 );
 const queue = abi.encode(["bytes[]"], [[authEntry]]);
 
 // On-chain (via relayer)
 metaTransactionsHandler.executeMetaTransactionWithAuthorization(
   user, "depositFunds(uint256,address,uint256)", fnSig, nonce, sig,
-  AuthorizationType.ERC3009, queue
+  queue
 );
 ```
 
@@ -220,6 +231,18 @@ The leading empty entry is the fallback marker for the seller's pull (which **do
 - **Outer metatx**: nonce-tracked the same as `executeMetaTransaction`. Re-submission of the same `(userAddress, nonce)` reverts with `NonceUsedAlready`.
 - **Per-entry ERC-3009**: each entry carries a `nonce` enforced by the token contract; once consumed, the token's `authorizationState[from][nonce]` is set, so a replay of the same authorization on-chain reverts on the token side.
 - **Single-use within a tx**: queue entries are popped on consumption — `head` advances. A second `transferFundsIn` in the same metatx cannot reuse a popped entry; it gets the next one (or falls back to `safeTransferFrom` if the queue is exhausted).
+
+## Adding a new strategy (recipe)
+
+Once the protocol gains another off-chain pull strategy (Permit2, EIP-2612 permit, etc.), the wiring is small:
+
+1. **Add the enum value** to [`BosonTypes.AuthorizationStrategy`](../contracts/domain/BosonTypes.sol). Append at the end so existing tag values stay stable.
+2. **Add a private helper** in [`TransientAuthLib`](../contracts/protocol/libs/TransientAuthLib.sol) (`_consumePermit2`, `_consumeEIP2612`, etc.) that decodes the strategy-specific `data` bytes and performs the pull. For two-step strategies like EIP-2612 (permit + transferFrom), the helper does both steps inline.
+3. **Add a branch** in `consumeForTransfer` that dispatches on the new tag and calls the helper.
+4. **Update the table** in this doc with one row per affected method, plus add the new strategy to the "Quick reference" shorthand expansion.
+5. **Add tests** that build a queue with the new strategy and exercise the consumed-vs-discarded paths.
+
+The wrapper format (`abi.encode(strategy, bytes)`) doesn't change — only the strategy-specific `data` payload.
 
 ## Compiler / EVM requirements
 

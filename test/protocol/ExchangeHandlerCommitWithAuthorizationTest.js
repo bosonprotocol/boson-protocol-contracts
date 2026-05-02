@@ -58,8 +58,8 @@ const {
 const { oneMonth } = require("../util/constants");
 const { FundsList } = require("../../scripts/domain/Funds");
 
-// AuthorizationType enum mirror
-const AuthorizationType = { None: 0, ERC3009: 1 };
+// Per-entry authorization strategy tag (mirrors BosonTypes.AuthorizationStrategy)
+const AuthorizationStrategy = { None: 0, ERC3009: 1 };
 
 // EIP-712 types for ERC-3009 ReceiveWithAuthorization (matches MockERC3009Token)
 const RECEIVE_WITH_AUTHORIZATION_TYPES = {
@@ -297,10 +297,11 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
       nonce: authNonce,
     };
     const { v, r, s } = await signReceiveWithAuthorization(signer, params);
-    return AbiCoder.defaultAbiCoder().encode(
+    const erc3009Data = AbiCoder.defaultAbiCoder().encode(
       ["uint256", "uint256", "bytes32", "uint8", "bytes32", "bytes32"],
       [validAfter, validBefore, authNonce, v, r, s]
     );
+    return AbiCoder.defaultAbiCoder().encode(["uint8", "bytes"], [AuthorizationStrategy.ERC3009, erc3009Data]);
   }
 
   function encodeAuthQueue(entries) {
@@ -309,8 +310,8 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
 
   /**
    * Drop-in replacement for `exchangeCommitHandler.connect(caller).commitToOffer(buyerAddress, offerId)`.
-   * Wraps the call in an `executeMetaTransactionWithAuthorization` whose queue carries a single ERC-3009
-   * authorization signed by `buyerSigner`. If `amount` is 0 (price-zero offers), the queue is skipped.
+   * Wraps the call in `executeMetaTransactionWithAuthorization`. The queue always has one slot — for
+   * price-zero offers the slot is filled with `"0x"` and the protocol discards it.
    */
   async function commitToOfferWithAuth({ caller, buyerSigner, buyerAddress, offerId: targetOfferId, amount }) {
     caller = caller ?? deployer;
@@ -336,12 +337,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
       await metaTransactionsHandler.getAddress()
     );
 
-    let authType = AuthorizationType.None;
-    let authPayload = "0x";
-    if (BigInt(amount) > 0n) {
-      authType = AuthorizationType.ERC3009;
-      authPayload = encodeAuthQueue([await buildAuthEntry(buyerSigner, amount)]);
-    }
+    const entry = BigInt(amount) > 0n ? await buildAuthEntry(buyerSigner, amount) : "0x";
 
     return metaTransactionsHandler
       .connect(caller)
@@ -351,8 +347,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
         fnSig,
         metatxNonce,
         signature,
-        authType,
-        authPayload
+        encodeAuthQueue([entry])
       );
   }
 
@@ -935,9 +930,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
     //   - `offerCreatorAmount > 0`         → real ERC-3009 auth entry
     //   - `forceFallbackOnOfferCreator`    → empty-bytes entry (forces safeTransferFrom)
     //   - amount === 0 or undefined        → empty-bytes filler (will be discarded)
-    // Same shape for the committer side. When all entries are placeholders,
-    // we switch to `AuthorizationType.None` (functionally equivalent and a
-    // hair cheaper).
+    // Same shape for the committer side.
     async function createOfferAndCommitWithAuth({
       caller,
       committerSigner,
@@ -997,7 +990,6 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
         entries.push("0x");
       }
 
-      const allEmpty = entries.every((e) => e === "0x");
       return metaTransactionsHandler
         .connect(caller)
         .executeMetaTransactionWithAuthorization(
@@ -1006,8 +998,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
           fnSig,
           metatxNonce,
           signature,
-          allEmpty ? AuthorizationType.None : AuthorizationType.ERC3009,
-          allEmpty ? "0x" : encodeAuthQueue(entries)
+          encodeAuthQueue(entries)
         );
     }
 
