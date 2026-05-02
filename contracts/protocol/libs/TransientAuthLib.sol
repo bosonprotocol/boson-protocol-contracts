@@ -4,6 +4,10 @@ pragma solidity 0.8.34;
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IERC3009 } from "../../interfaces/IERC3009.sol";
+import { IERC2612 } from "../../interfaces/IERC2612.sol";
+import { IPermit2 } from "../../interfaces/IPermit2.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @title TransientAuthLib
@@ -24,12 +28,18 @@ import { IERC3009 } from "../../interfaces/IERC3009.sol";
  * the end of the transaction.
  */
 library TransientAuthLib {
+    using SafeERC20 for IERC20;
+
     // keccak256("boson.protocol.transient.auth.head")
     bytes32 internal constant HEAD_SLOT = 0xce5770354476e99bdde896641c71da6009bd50f30d3de00fc43d0445231eaf15;
     // keccak256("boson.protocol.transient.auth.len")
     bytes32 internal constant LEN_SLOT = 0x6618e9b8bf7496853ecb88754e3c3561fb7a12c07e953521e0f56d8f7a44c617;
     // keccak256("boson.protocol.transient.auth.entry")
     bytes32 internal constant ENTRY_NAMESPACE = 0xf8bb5ee110f42d7a27e60caaf3960b2d39746521f5b10f112b18781d106645f3;
+
+    // Uniswap's Permit2 contract — same canonical address on every chain
+    // Boson supports (Ethereum, Polygon, Optimism, Arbitrum, Base).
+    address internal constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 
     /**
      * @notice Decode an `abi.encode(bytes[])` payload and store each entry in
@@ -155,6 +165,14 @@ library TransientAuthLib {
             _consumeERC3009(_token, _from, _to, _amount, data);
             return true;
         }
+        if (strategy == BosonTypes.AuthorizationStrategy.EIP2612) {
+            _consumeEIP2612(_token, _from, _to, _amount, data);
+            return true;
+        }
+        if (strategy == BosonTypes.AuthorizationStrategy.Permit2) {
+            _consumePermit2(_token, _from, _to, _amount, data);
+            return true;
+        }
         revert BosonErrors.UnsupportedAuthorizationStrategy();
     }
 
@@ -170,6 +188,49 @@ library TransientAuthLib {
             (uint256, uint256, bytes32, uint8, bytes32, bytes32)
         );
         IERC3009(_token).receiveWithAuthorization(_from, _to, _amount, validAfter, validBefore, nonce, v, r, s);
+    }
+
+    /**
+     * @dev EIP-2612 path: call the token's native `permit` to set a single-use
+     *      allowance, then pull funds via `safeTransferFrom`. The user signs
+     *      the permit with `value == _amount`, so the allowance is consumed
+     *      exactly and no residual remains.
+     */
+    function _consumeEIP2612(
+        address _token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes memory _data
+    ) private {
+        (uint256 deadline, uint8 v, bytes32 r, bytes32 s) = abi.decode(_data, (uint256, uint8, bytes32, bytes32));
+        IERC2612(_token).permit(_from, _to, _amount, deadline, v, r, s);
+        IERC20(_token).safeTransferFrom(_from, _to, _amount);
+    }
+
+    /**
+     * @dev Permit2 path: dispatch a signed `permitTransferFrom` to Uniswap's
+     *      canonical Permit2 contract. The user must have one-time-approved
+     *      Permit2 on `_token`; subsequent pulls are signature-only.
+     */
+    function _consumePermit2(
+        address _token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes memory _data
+    ) private {
+        (uint256 nonce, uint256 deadline, bytes memory signature) = abi.decode(_data, (uint256, uint256, bytes));
+        IPermit2.PermitTransferFrom memory permit = IPermit2.PermitTransferFrom({
+            permitted: IPermit2.TokenPermissions({ token: _token, amount: _amount }),
+            nonce: nonce,
+            deadline: deadline
+        });
+        IPermit2.SignatureTransferDetails memory transferDetails = IPermit2.SignatureTransferDetails({
+            to: _to,
+            requestedAmount: _amount
+        });
+        IPermit2(PERMIT2).permitTransferFrom(permit, transferDetails, _from, signature);
     }
 
     function _storeEntry(uint256 _index, bytes memory _entry) private {

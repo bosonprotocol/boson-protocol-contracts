@@ -72,8 +72,9 @@ contract BosonTypes {
 
     enum AuthorizationStrategy {
         None,
-        ERC3009
-        // Future: Permit2, EIP2612, ...
+        ERC3009,
+        EIP2612,
+        Permit2
     }
 
     enum AuthTokenType {
