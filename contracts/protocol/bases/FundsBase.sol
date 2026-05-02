@@ -487,6 +487,11 @@ abstract contract FundsBase is Context {
             // make sure that expected amount of tokens was transferred
             if (protocolTokenBalanceAfter - protocolTokenBalanceBefore != _amount)
                 revert BosonErrors.InsufficientValueReceived();
+        } else {
+            // Zero-amount pull: no transfer happens, but still advance the queue
+            // head so the off-chain caller can supply a queue whose layout is
+            // independent of runtime amounts. No-op if no queue is loaded.
+            TransientAuthLib.discardNext();
         }
     }
 

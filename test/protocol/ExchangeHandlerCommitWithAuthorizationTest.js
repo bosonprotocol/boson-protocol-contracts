@@ -927,12 +927,17 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
 
     // Wraps `createOfferAndCommit` in `executeMetaTransactionWithAuthorization`.
     //
-    // The queue must mirror the actual `transferFundsIn` call sequence inside the
-    // protocol — entries are appended ONLY for transfers that happen. Pass:
-    //   - `offerCreatorAmount > 0`        → real auth entry for the offer creator
-    //   - `forceFallbackOnOfferCreator`   → empty-bytes entry (forces safeTransferFrom)
-    //   - neither                         → no entry (transferFundsIn is skipped, e.g. price/deposit==0 or useDepositedFunds)
-    // Same shape for the committer side.
+    // The queue layout for `createOfferAndCommit` is **uniformly two slots** —
+    // `[offerCreator, committer]` — regardless of `useDepositedFunds`,
+    // `sellerDeposit`, or `price` values. Slots whose pull will be skipped at
+    // runtime (zero amount or `useDepositedFunds=true`) get a placeholder
+    // entry that the protocol pops and discards. Pass:
+    //   - `offerCreatorAmount > 0`         → real ERC-3009 auth entry
+    //   - `forceFallbackOnOfferCreator`    → empty-bytes entry (forces safeTransferFrom)
+    //   - amount === 0 or undefined        → empty-bytes filler (will be discarded)
+    // Same shape for the committer side. When all entries are placeholders,
+    // we switch to `AuthorizationType.None` (functionally equivalent and a
+    // hair cheaper).
     async function createOfferAndCommitWithAuth({
       caller,
       committerSigner,
@@ -978,21 +983,21 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
         await metaTransactionsHandler.getAddress()
       );
 
-      // Build queue. Order matches the protocol's transferFundsIn sequence:
-      //   offerCreator pull (if !useDepositedFunds && amount>0), then committer pull.
+      // Always emit two slots: [offerCreator, committer]. Slots that will be
+      // skipped get a "0x" filler that the protocol discards.
       const entries = [];
-      if (forceFallbackOnOfferCreator) {
-        entries.push("0x");
-      } else if (offerCreatorAmount && BigInt(offerCreatorAmount) > 0n) {
+      if (!forceFallbackOnOfferCreator && offerCreatorAmount && BigInt(offerCreatorAmount) > 0n) {
         entries.push(await buildAuthEntry(offerCreatorSigner, offerCreatorAmount));
-      }
-      if (forceFallbackOnCommitter) {
+      } else {
         entries.push("0x");
-      } else if (committerAmount && BigInt(committerAmount) > 0n) {
+      }
+      if (!forceFallbackOnCommitter && committerAmount && BigInt(committerAmount) > 0n) {
         entries.push(await buildAuthEntry(committerSigner, committerAmount));
+      } else {
+        entries.push("0x");
       }
 
-      const noQueue = entries.length === 0;
+      const allEmpty = entries.every((e) => e === "0x");
       return metaTransactionsHandler
         .connect(caller)
         .executeMetaTransactionWithAuthorization(
@@ -1001,8 +1006,8 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
           fnSig,
           metatxNonce,
           signature,
-          noQueue ? AuthorizationType.None : AuthorizationType.ERC3009,
-          noQueue ? "0x" : encodeAuthQueue(entries)
+          allEmpty ? AuthorizationType.None : AuthorizationType.ERC3009,
+          allEmpty ? "0x" : encodeAuthQueue(entries)
         );
     }
 

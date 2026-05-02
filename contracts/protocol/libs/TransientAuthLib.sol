@@ -95,6 +95,30 @@ library TransientAuthLib {
     }
 
     /**
+     * @notice Advance the queue head by one without doing any work — used at
+     *         skip sites where a `transferFundsIn` is bypassed (zero amount,
+     *         pre-deposited funds, etc.) so the off-chain caller can supply a
+     *         queue with the same number of slots regardless of which
+     *         transfers actually fire. No-op when no queue is loaded or it is
+     *         already exhausted.
+     */
+    function discardNext() internal {
+        bytes32 headSlot = HEAD_SLOT;
+        bytes32 lenSlot = LEN_SLOT;
+        uint256 head;
+        uint256 len;
+        assembly {
+            head := tload(headSlot)
+            len := tload(lenSlot)
+        }
+        if (head < len) {
+            assembly {
+                tstore(headSlot, add(head, 1))
+            }
+        }
+    }
+
+    /**
      * @notice If a queue is loaded, pop the next entry and (when non-empty)
      *         call `receiveWithAuthorization` on `_token` to pull `_amount`
      *         from `_from` to `_to`.
