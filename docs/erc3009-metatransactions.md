@@ -144,6 +144,29 @@ The post-balance check is preserved on both branches, defending against fee-on-t
 
 ## Worked examples
 
+### Quick reference: queue contents per flow
+
+The order matters — entries are consumed in the same order the protocol calls `transferFundsIn`. `caller_auth(amount)` denotes an ERC-3009 entry signed by the metatx caller for `amount` of the offer's `exchangeToken`. Entries for transfers that won't fire (zero amount, native currency, pre-deposited funds) are **omitted** rather than padded with empty bytes; the queue head only advances when a transfer actually runs.
+
+| Method | Queue |
+| --- | --- |
+| `depositFunds(entityId, token, amount)` | `[caller_auth(amount)]` |
+| `commitToOffer(buyer, offerId)` | `[buyer_auth(offer.price)]` |
+| `commitToConditionalOffer(buyer, offerId, tokenId)` | `[buyer_auth(offer.price)]` |
+| `commitToBuyerOffer(offerId, sellerParams)` | `[seller_auth(offer.sellerDeposit)]` |
+| `createOfferAndCommit(...)` — seller offer, `useDepositedFunds=false` | `[seller_auth(sellerDeposit), buyer_auth(price)]` |
+| `createOfferAndCommit(...)` — seller offer, `useDepositedFunds=true` | `[buyer_auth(price)]` |
+| `createOfferAndCommit(...)` — buyer offer, `useDepositedFunds=false` | `[buyer_auth(price), seller_auth(sellerDeposit)]` |
+| `createOfferAndCommit(...)` — buyer offer, `useDepositedFunds=true` | `[seller_auth(sellerDeposit)]` |
+| `commitToPriceDiscoveryOffer(...)` — ask order | `[buyer_auth(priceDiscovery.price), seller_auth(actualPrice)]` |
+| `escalateDispute(exchangeId)` | `[buyer_auth(buyerEscalationDeposit)]` |
+
+Notes:
+
+- For `createOfferAndCommit` with `sellerDeposit == 0` (seller offer) or `price == 0` (buyer offer), drop the offer-creator entry — it's a zero-amount pull that's skipped by the protocol.
+- A queue entry can be the empty bytes `"0x"` to force the standard-allowance fallback path for that single transfer (mixed-mode flows). See the last worked example below.
+- For native-currency offers (`exchangeToken == address(0)`), `transferFundsIn` is never called for that side — those transfers don't consume queue entries.
+
 ### Single transfer (e.g. `depositFunds`)
 
 ```js
