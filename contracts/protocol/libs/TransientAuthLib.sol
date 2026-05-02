@@ -24,9 +24,12 @@ import { IERC3009 } from "../../interfaces/IERC3009.sol";
  * the end of the transaction.
  */
 library TransientAuthLib {
-    bytes32 internal constant HEAD_SLOT = keccak256("boson.protocol.transient.auth.head");
-    bytes32 internal constant LEN_SLOT = keccak256("boson.protocol.transient.auth.len");
-    bytes32 internal constant ENTRY_NAMESPACE = keccak256("boson.protocol.transient.auth.entry");
+    // keccak256("boson.protocol.transient.auth.head")
+    bytes32 internal constant HEAD_SLOT = 0xce5770354476e99bdde896641c71da6009bd50f30d3de00fc43d0445231eaf15;
+    // keccak256("boson.protocol.transient.auth.len")
+    bytes32 internal constant LEN_SLOT = 0x6618e9b8bf7496853ecb88754e3c3561fb7a12c07e953521e0f56d8f7a44c617;
+    // keccak256("boson.protocol.transient.auth.entry")
+    bytes32 internal constant ENTRY_NAMESPACE = 0xf8bb5ee110f42d7a27e60caaf3960b2d39746521f5b10f112b18781d106645f3;
 
     /**
      * @notice Decode an `abi.encode(bytes[])` payload and store each entry in
