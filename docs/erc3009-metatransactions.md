@@ -115,12 +115,13 @@ function consumeForTransfer(                                  // FundsBase.trans
     address _to,
     uint256 _amount
 ) internal returns (bool consumed);
+function discardNext() internal;                              // skip sites pop-and-discard
 function hasQueue() internal view returns (bool);             // diagnostic
 ```
 
 `consumeForTransfer` does the queue pop, decodes the entry, and dispatches `IERC3009.receiveWithAuthorization`. Returns `true` when a real authorization was consumed (caller skips its fallback path) or `false` when the queue is empty/exhausted/holding a fallback marker (caller falls through to `safeTransferFrom`).
 
-The queue head **does not advance** for transfers where `_amount == 0` (because `transferFundsIn` short-circuits on amount-zero before touching the queue). When constructing the queue off-chain, only include entries for transfers that will actually fire.
+`discardNext` advances the queue head by one without doing any work. The protocol calls it at every site where a `transferFundsIn` call is bypassed at runtime (zero amount, `useDepositedFunds=true`, etc.). This keeps the queue head in lock-step with the **logical** transfer position — not the actual one — so the off-chain caller can build a queue whose layout depends only on the function being called, not on runtime amounts or flags. `discardNext` is a no-op when the queue is empty or already exhausted.
 
 ## Strategy switch in `transferFundsIn`
 
@@ -136,17 +137,23 @@ function transferFundsIn(address _tokenAddress, address _from, uint256 _amount) 
         uint256 protocolTokenBalanceAfter = IERC20(_tokenAddress).balanceOf(address(this));
         if (protocolTokenBalanceAfter - protocolTokenBalanceBefore != _amount)
             revert BosonErrors.InsufficientValueReceived();
+    } else {
+        TransientAuthLib.discardNext();
     }
 }
 ```
 
 The post-balance check is preserved on both branches, defending against fee-on-transfer or non-conforming tokens regardless of which path was taken. ERC-3009's `receiveWithAuthorization` also enforces `to == msg.sender` on the token side (so the recipient is always the protocol), which means no extra recipient check is needed in the protocol.
 
+The `else` branch is what makes the queue layout amount-independent: when a caller wires up the queue assuming all transfers will fire, but a runtime amount turns out to be zero, the slot reserved for that transfer is popped and discarded rather than spilling onto the next pull. `createOfferAndCommit` makes a similar `discardNext()` call when `useDepositedFunds=true`, where the offer-creator pull is skipped before `transferFundsIn` would even be called.
+
 ## Worked examples
 
 ### Quick reference: queue contents per flow
 
-The order matters — entries are consumed in the same order the protocol calls `transferFundsIn`. `caller_auth(amount)` denotes an ERC-3009 entry signed by the metatx caller for `amount` of the offer's `exchangeToken`. Entries for transfers that won't fire (zero amount, native currency, pre-deposited funds) are **omitted** rather than padded with empty bytes; the queue head only advances when a transfer actually runs.
+The queue length depends **only on the metatx-callable function**, not on runtime amounts or flags like `useDepositedFunds`. The protocol calls `discardNext()` at every skip site (zero amount, pre-deposited funds), so a slot reserved for a transfer that ends up not firing is silently popped and discarded. This lets a relayer build queues from a static template per function.
+
+`caller_auth(amount)` denotes an ERC-3009 entry signed by the metatx caller for `amount` of the offer's `exchangeToken`. Slot contents marked `<discarded>` are popped and never read — fill them with `"0x"` (or any value).
 
 | Method | Queue |
 | --- | --- |
@@ -154,18 +161,16 @@ The order matters — entries are consumed in the same order the protocol calls 
 | `commitToOffer(buyer, offerId)` | `[buyer_auth(offer.price)]` |
 | `commitToConditionalOffer(buyer, offerId, tokenId)` | `[buyer_auth(offer.price)]` |
 | `commitToBuyerOffer(offerId, sellerParams)` | `[seller_auth(offer.sellerDeposit)]` |
-| `createOfferAndCommit(...)` — seller offer, `useDepositedFunds=false` | `[seller_auth(sellerDeposit), buyer_auth(price)]` |
-| `createOfferAndCommit(...)` — seller offer, `useDepositedFunds=true` | `[buyer_auth(price)]` |
-| `createOfferAndCommit(...)` — buyer offer, `useDepositedFunds=false` | `[buyer_auth(price), seller_auth(sellerDeposit)]` |
-| `createOfferAndCommit(...)` — buyer offer, `useDepositedFunds=true` | `[seller_auth(sellerDeposit)]` |
+| `createOfferAndCommit(...)` — seller offer | `[seller_auth(sellerDeposit), buyer_auth(price)]` |
+| `createOfferAndCommit(...)` — buyer offer | `[buyer_auth(price), seller_auth(sellerDeposit)]` |
 | `commitToPriceDiscoveryOffer(...)` — ask order | `[buyer_auth(priceDiscovery.price), seller_auth(actualPrice)]` |
 | `escalateDispute(exchangeId)` | `[buyer_auth(buyerEscalationDeposit)]` |
 
 Notes:
 
-- For `createOfferAndCommit` with `sellerDeposit == 0` (seller offer) or `price == 0` (buyer offer), drop the offer-creator entry — it's a zero-amount pull that's skipped by the protocol.
-- A queue entry can be the empty bytes `"0x"` to force the standard-allowance fallback path for that single transfer (mixed-mode flows). See the last worked example below.
-- For native-currency offers (`exchangeToken == address(0)`), `transferFundsIn` is never called for that side — those transfers don't consume queue entries.
+- For any flow above, if a slot's amount is `0` at runtime, or it's the offer-creator slot in `createOfferAndCommit` with `useDepositedFunds=true`, the protocol discards that slot. Fill it with `"0x"` rather than skipping it entirely.
+- A queue entry of `"0x"` for a slot whose pull **will** fire forces the standard-allowance fallback path for that single transfer (the protocol falls through to `safeTransferFrom`). This is how mixed-mode flows are expressed — see the last worked example below.
+- For native-currency offers (`exchangeToken == address(0)`), `transferFundsIn` is never called — pass `AuthorizationType.None` instead of an empty queue.
 
 ### Single transfer (e.g. `depositFunds`)
 
@@ -195,10 +200,10 @@ The protocol pops `seller_auth` for the offer-creator pull, then `buyer_auth` fo
 ### Mixed: offer creator uses pre-deposited funds, committer uses ERC-3009
 
 ```
-queue = [committer_auth_for_price]
+queue = ["0x", committer_auth_for_price]
 ```
 
-When `useDepositedFunds == true`, the offer-creator pull is skipped entirely — no entry is needed for it. The single committer entry is at index 0 and gets popped on the first (and only) `transferFundsIn`.
+When `useDepositedFunds == true`, the offer-creator pull is bypassed and the protocol calls `discardNext()` for the first slot. The committer's slot is consumed on the second `transferFundsIn`. The leading slot stays in the queue (the layout is the same as a "both ERC-3009" call); it's just popped and ignored.
 
 ### Mixed: seller uses standard allowance, buyer uses ERC-3009
 
@@ -206,7 +211,9 @@ When `useDepositedFunds == true`, the offer-creator pull is skipped entirely —
 queue = ["0x", buyer_auth_for_price]
 ```
 
-The leading empty entry is the fallback marker for the seller's pull → `transferFundsIn` falls back to `safeTransferFrom` (seller must have approved beforehand). The buyer's entry is consumed for the second pull.
+The leading empty entry is the fallback marker for the seller's pull (which **does** fire) → `transferFundsIn` falls back to `safeTransferFrom` (seller must have approved beforehand). The buyer's entry is consumed for the second pull.
+
+(Same shape as the previous example, different runtime semantics: the slot is consumed-as-fallback rather than discarded. The queue layout is identical — that's the point of the uniform-queue model.)
 
 ## Replay safety
 
