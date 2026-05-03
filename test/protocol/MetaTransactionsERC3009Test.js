@@ -7,7 +7,7 @@ const { mockSeller, mockVoucherInitValues, mockAuthToken, mockDisputeResolver, a
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { prepareDataSignature, setupTestEnvironment, getSnapshot, revertToSnapshot } = require("../util/utils.js");
 
-const AuthorizationStrategy = {
+const TokenTransferAuthorizationStrategy = {
   None: 0,
   ERC3009: 1,
 };
@@ -51,7 +51,10 @@ function encodeAuthEntry({ validAfter, validBefore, nonce, v, r, s }) {
     ["uint256", "uint256", "bytes32", "uint8", "bytes32", "bytes32"],
     [validAfter, validBefore, nonce, v, r, s]
   );
-  return AbiCoder.defaultAbiCoder().encode(["uint8", "bytes"], [AuthorizationStrategy.ERC3009, erc3009Data]);
+  return AbiCoder.defaultAbiCoder().encode(
+    ["uint8", "bytes"],
+    [TokenTransferAuthorizationStrategy.ERC3009, erc3009Data]
+  );
 }
 
 function encodeAuthQueue(entries) {
@@ -171,7 +174,7 @@ describe("ERC3009-backed metatransactions", function () {
     await expect(
       metaTransactionsHandler
         .connect(deployer)
-        .executeMetaTransactionWithAuthorization(
+        .executeMetaTransactionWithTokenTransferAuthorization(
           await assistant.getAddress(),
           message.functionName,
           fnSig,
@@ -216,7 +219,7 @@ describe("ERC3009-backed metatransactions", function () {
     await expect(
       metaTransactionsHandler
         .connect(deployer)
-        .executeMetaTransactionWithAuthorization(
+        .executeMetaTransactionWithTokenTransferAuthorization(
           await assistant.getAddress(),
           message.functionName,
           fnSig,
@@ -232,7 +235,7 @@ describe("ERC3009-backed metatransactions", function () {
     // semantically equivalent — both mean "use the standard ERC-20 allowance
     // path for this transfer". The shortcut hits the early `entry.length == 0`
     // return inside `popNext`/`consumeForTransfer`; the explicit envelope
-    // hits the dispatcher's tag-check on `AuthorizationStrategy.None`. We
+    // hits the dispatcher's tag-check on `TokenTransferAuthorizationStrategy.None`. We
     // exercise both to keep the dispatcher fully covered.
     const amount = "500";
     await token.mint(await assistant.getAddress(), amount);
@@ -241,14 +244,17 @@ describe("ERC3009-backed metatransactions", function () {
     const nonce = parseInt(randomBytes(8));
     const { fnSig, message, signature } = await buildDepositMetaTx(assistant, amount, nonce);
 
-    // Build an explicit `(AuthorizationStrategy.None, "")` envelope rather
+    // Build an explicit `(TokenTransferAuthorizationStrategy.None, "")` envelope rather
     // than the empty-bytes shortcut.
-    const noneEntry = AbiCoder.defaultAbiCoder().encode(["uint8", "bytes"], [AuthorizationStrategy.None, "0x"]);
+    const noneEntry = AbiCoder.defaultAbiCoder().encode(
+      ["uint8", "bytes"],
+      [TokenTransferAuthorizationStrategy.None, "0x"]
+    );
     const queue = encodeAuthQueue([noneEntry]);
 
     await metaTransactionsHandler
       .connect(deployer)
-      .executeMetaTransactionWithAuthorization(
+      .executeMetaTransactionWithTokenTransferAuthorization(
         await assistant.getAddress(),
         message.functionName,
         fnSig,
@@ -274,7 +280,7 @@ describe("ERC3009-backed metatransactions", function () {
     await expect(
       metaTransactionsHandler
         .connect(deployer)
-        .executeMetaTransactionWithAuthorization(
+        .executeMetaTransactionWithTokenTransferAuthorization(
           await assistant.getAddress(),
           message.functionName,
           fnSig,

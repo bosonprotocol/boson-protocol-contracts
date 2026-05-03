@@ -16,7 +16,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  *
  * In tests, deploy this contract and inject its bytecode at the canonical
  * Permit2 address `0x000000000022D473030F116dDEE9F6B43aC78BA3` via
- * `hardhat_setCode` so `TransientAuthLib.PERMIT2` resolves to it.
+ * `hardhat_setCode` so `TokenTransferAuthorizationLib.PERMIT2` resolves to it.
  */
 contract MockPermit2 {
     string public constant NAME = "Permit2";

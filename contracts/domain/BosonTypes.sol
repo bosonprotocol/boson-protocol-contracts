@@ -70,7 +70,7 @@ contract BosonTypes {
         ResolveDispute
     }
 
-    enum AuthorizationStrategy {
+    enum TokenTransferAuthorizationStrategy {
         None,
         ERC3009,
         EIP2612,

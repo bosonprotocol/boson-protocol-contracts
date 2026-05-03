@@ -31,7 +31,7 @@ function getConfigHandlerInitArgs() {
 async function getMetaTransactionsHandlerFacetInitArgs(facets) {
   const getFunctionHashesClosure = getStateModifyingFunctionsHashes(facets, [
     "executeMetaTransaction",
-    "executeMetaTransactionWithAuthorization",
+    "executeMetaTransactionWithTokenTransferAuthorization",
   ]);
 
   return await getFunctionHashesClosure();

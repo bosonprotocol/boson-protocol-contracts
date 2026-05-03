@@ -6,15 +6,16 @@ const { mockSeller, mockVoucherInitValues, mockAuthToken, mockDisputeResolver, a
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { prepareDataSignature, setupTestEnvironment, getSnapshot, revertToSnapshot } = require("../util/utils.js");
 
-// Mirrors `BosonTypes.AuthorizationStrategy`
-const AuthorizationStrategy = {
+// Mirrors `BosonTypes.TokenTransferAuthorizationStrategy`. Strategy tags carried
+// in each queue entry's envelope.
+const TokenTransferAuthorizationStrategy = {
   None: 0,
   ERC3009: 1,
   EIP2612: 2,
   Permit2: 3,
 };
 
-// Canonical Permit2 address (must match `TransientAuthLib.PERMIT2`)
+// Canonical Permit2 address (must match `TokenTransferAuthorizationLib.PERMIT2`)
 const PERMIT2_ADDRESS = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
 
 const META_TRANSACTION_TYPES = {
@@ -146,7 +147,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
   // ====================================================================
   //  EIP-2612 path
   // ====================================================================
-  context("👉 AuthorizationStrategy.EIP2612", async function () {
+  context("👉 TokenTransferAuthorizationStrategy.EIP2612", async function () {
     let token;
 
     beforeEach(async function () {
@@ -177,7 +178,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
         ["uint256", "uint8", "bytes32", "bytes32"],
         [deadline, split.v, split.r, split.s]
       );
-      return wrapEntry(AuthorizationStrategy.EIP2612, data);
+      return wrapEntry(TokenTransferAuthorizationStrategy.EIP2612, data);
     }
 
     it("pulls funds via permit + transferFrom when queue carries an EIP-2612 entry", async function () {
@@ -193,7 +194,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
       await expect(
         metaTransactionsHandler
           .connect(deployer)
-          .executeMetaTransactionWithAuthorization(
+          .executeMetaTransactionWithTokenTransferAuthorization(
             await assistant.getAddress(),
             message.functionName,
             fnSig,
@@ -223,7 +224,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
       await expect(
         metaTransactionsHandler
           .connect(deployer)
-          .executeMetaTransactionWithAuthorization(
+          .executeMetaTransactionWithTokenTransferAuthorization(
             await assistant.getAddress(),
             message.functionName,
             fnSig,
@@ -247,7 +248,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
       await expect(
         metaTransactionsHandler
           .connect(deployer)
-          .executeMetaTransactionWithAuthorization(
+          .executeMetaTransactionWithTokenTransferAuthorization(
             await assistant.getAddress(),
             message.functionName,
             fnSig,
@@ -299,7 +300,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
         ["uint256", "uint8", "bytes32", "bytes32"],
         [deadline, split.v, split.r, split.s]
       );
-      const entry = wrapEntry(AuthorizationStrategy.EIP2612, data);
+      const entry = wrapEntry(TokenTransferAuthorizationStrategy.EIP2612, data);
       const queue = encodeAuthQueue([entry]);
 
       const metatxNonce = parseInt(randomBytes(8));
@@ -309,7 +310,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
       // permit() call, then safeTransferFrom uses the existing allowance.
       await metaTransactionsHandler
         .connect(deployer)
-        .executeMetaTransactionWithAuthorization(
+        .executeMetaTransactionWithTokenTransferAuthorization(
           await assistant.getAddress(),
           message.functionName,
           fnSig,
@@ -403,7 +404,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
         ["uint256", "uint8", "bytes32", "bytes32"],
         [deadline, smallSplit.v, smallSplit.r, smallSplit.s]
       );
-      const entry = wrapEntry(AuthorizationStrategy.EIP2612, data);
+      const entry = wrapEntry(TokenTransferAuthorizationStrategy.EIP2612, data);
       const queue = encodeAuthQueue([entry]);
 
       const metatxNonce = parseInt(randomBytes(8));
@@ -413,7 +414,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
       await expect(
         metaTransactionsHandler
           .connect(deployer)
-          .executeMetaTransactionWithAuthorization(
+          .executeMetaTransactionWithTokenTransferAuthorization(
             await assistant.getAddress(),
             message.functionName,
             fnSig,
@@ -432,7 +433,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
   // ====================================================================
   //  Permit2 path
   // ====================================================================
-  context("👉 AuthorizationStrategy.Permit2", async function () {
+  context("👉 TokenTransferAuthorizationStrategy.Permit2", async function () {
     let token;
 
     before(async function () {
@@ -478,7 +479,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
       };
       const sig = await signer.signTypedData(domain, PERMIT2_TYPES, message);
       const data = AbiCoder.defaultAbiCoder().encode(["uint256", "uint256", "bytes"], [permitNonce, deadline, sig]);
-      return wrapEntry(AuthorizationStrategy.Permit2, data);
+      return wrapEntry(TokenTransferAuthorizationStrategy.Permit2, data);
     }
 
     it("pulls funds via Permit2.permitTransferFrom when queue carries a Permit2 entry", async function () {
@@ -494,7 +495,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
       await expect(
         metaTransactionsHandler
           .connect(deployer)
-          .executeMetaTransactionWithAuthorization(
+          .executeMetaTransactionWithTokenTransferAuthorization(
             await assistant.getAddress(),
             message.functionName,
             fnSig,
@@ -520,7 +521,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
       let entry = await buildPermit2Entry(assistant, amount, permit2Nonce, MaxUint256);
       await metaTransactionsHandler
         .connect(deployer)
-        .executeMetaTransactionWithAuthorization(
+        .executeMetaTransactionWithTokenTransferAuthorization(
           await assistant.getAddress(),
           metatx.message.functionName,
           metatx.fnSig,
@@ -536,7 +537,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
       await expect(
         metaTransactionsHandler
           .connect(deployer)
-          .executeMetaTransactionWithAuthorization(
+          .executeMetaTransactionWithTokenTransferAuthorization(
             await assistant.getAddress(),
             metatx.message.functionName,
             metatx.fnSig,
@@ -562,7 +563,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
       await expect(
         metaTransactionsHandler
           .connect(deployer)
-          .executeMetaTransactionWithAuthorization(
+          .executeMetaTransactionWithTokenTransferAuthorization(
             await assistant.getAddress(),
             message.functionName,
             fnSig,

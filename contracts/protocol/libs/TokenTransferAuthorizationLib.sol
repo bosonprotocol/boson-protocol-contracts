@@ -9,32 +9,34 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
- * @title TransientAuthLib
+ * @title TokenTransferAuthorizationLib
  *
- * @notice Parks a queue of off-chain authorization payloads in transient
- * storage for the duration of a single transaction. Each entry self-describes
- * its strategy via a `BosonTypes.AuthorizationStrategy` tag, so a single queue
- * can carry mixed strategies (ERC-3009 today, Permit2/EIP-2612 in the future).
+ * @notice Parks a queue of off-chain token-transfer authorization payloads in
+ * transient storage for the duration of a single transaction. Each entry
+ * self-describes its strategy via a `BosonTypes.TokenTransferAuthorizationStrategy`
+ * tag, so a single queue can carry mixed strategies (ERC-3009, EIP-2612,
+ * Permit2 today; more in the future).
  *
  * The metatransaction entry point loads the queue once via `loadQueue`. Each
  * subsequent `transferFundsIn` call consumes the next entry via
  * `consumeForTransfer`, which pops the next entry and dispatches to the
  * strategy-specific helper. An empty entry (length 0) is a shortcut for
- * `(AuthorizationStrategy.None, "")` — "no authorization for this slot, fall
- * back to the default ERC-20 allowance path". An exhausted queue returns false.
+ * `(TokenTransferAuthorizationStrategy.None, "")` — "no authorization for this
+ * slot, fall back to the default ERC-20 allowance path". An exhausted queue
+ * returns false.
  *
  * All slots are written via `TSTORE` and cleared automatically by the EVM at
  * the end of the transaction.
  */
-library TransientAuthLib {
+library TokenTransferAuthorizationLib {
     using SafeERC20 for IERC20;
 
-    // keccak256("boson.protocol.transient.auth.head")
-    bytes32 internal constant HEAD_SLOT = 0xce5770354476e99bdde896641c71da6009bd50f30d3de00fc43d0445231eaf15;
-    // keccak256("boson.protocol.transient.auth.len")
-    bytes32 internal constant LEN_SLOT = 0x6618e9b8bf7496853ecb88754e3c3561fb7a12c07e953521e0f56d8f7a44c617;
-    // keccak256("boson.protocol.transient.auth.entry")
-    bytes32 internal constant ENTRY_NAMESPACE = 0xf8bb5ee110f42d7a27e60caaf3960b2d39746521f5b10f112b18781d106645f3;
+    // keccak256("boson.protocol.transient.token-transfer-auth.head")
+    bytes32 internal constant HEAD_SLOT = 0x916380f3e0c80a8d21602cac978061fe37e5ef454388e248a684de9201fd5a56;
+    // keccak256("boson.protocol.transient.token-transfer-auth.len")
+    bytes32 internal constant LEN_SLOT = 0xd8a1442ec2b04369c5c945f578eb0da0a44dae695873161561fab50980f44a28;
+    // keccak256("boson.protocol.transient.token-transfer-auth.entry")
+    bytes32 internal constant ENTRY_NAMESPACE = 0x30c59bf083c2fcd9491ca1228988932eea38f572d51d07d607baef79d1e81d7a;
 
     // Uniswap's Permit2 contract — same canonical address on every chain
     // Boson supports (Ethereum, Polygon, Optimism, Arbitrum, Base).
@@ -141,7 +143,8 @@ library TransientAuthLib {
      * @return consumed true when a non-empty authorization was consumed and a
      *         token call dispatched; false when the caller should fall through
      *         to the standard ERC-20 allowance path (queue empty/exhausted, or
-     *         entry tagged `AuthorizationStrategy.None`, or shortcut empty bytes).
+     *         entry tagged `TokenTransferAuthorizationStrategy.None`, or shortcut
+     *         empty bytes).
      */
     function consumeForTransfer(
         address _token,
@@ -154,29 +157,29 @@ library TransientAuthLib {
         bytes memory entry = popNext();
         if (entry.length == 0) return false;
 
-        // Decoding as the enum makes Solidity range-check the tag for us:
-        // any value outside `AuthorizationStrategy`'s declared range trips
-        // `Panic(0x21)` inside `abi.decode`. The dispatch below therefore only
-        // needs to handle the four known strategies and can fall through to
-        // `return false` for `None`.
-        (BosonTypes.AuthorizationStrategy strategy, bytes memory data) = abi.decode(
+        // Decoding as the enum makes Solidity range-check the tag for us: any
+        // value outside `TokenTransferAuthorizationStrategy`'s declared range
+        // trips `Panic(0x21)` inside `abi.decode`. The dispatch below therefore
+        // only needs to handle the four known strategies and can fall through
+        // to `return false` for `None`.
+        (BosonTypes.TokenTransferAuthorizationStrategy strategy, bytes memory data) = abi.decode(
             entry,
-            (BosonTypes.AuthorizationStrategy, bytes)
+            (BosonTypes.TokenTransferAuthorizationStrategy, bytes)
         );
 
-        if (strategy == BosonTypes.AuthorizationStrategy.ERC3009) {
+        if (strategy == BosonTypes.TokenTransferAuthorizationStrategy.ERC3009) {
             _consumeERC3009(_token, _from, _to, _amount, data);
             return true;
         }
-        if (strategy == BosonTypes.AuthorizationStrategy.EIP2612) {
+        if (strategy == BosonTypes.TokenTransferAuthorizationStrategy.EIP2612) {
             _consumeEIP2612(_token, _from, _to, _amount, data);
             return true;
         }
-        if (strategy == BosonTypes.AuthorizationStrategy.Permit2) {
+        if (strategy == BosonTypes.TokenTransferAuthorizationStrategy.Permit2) {
             _consumePermit2(_token, _from, _to, _amount, data);
             return true;
         }
-        // strategy == AuthorizationStrategy.None
+        // strategy == TokenTransferAuthorizationStrategy.None
         return false;
     }
 
