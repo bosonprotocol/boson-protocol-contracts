@@ -250,7 +250,7 @@ The leading empty entry is the fallback marker for the seller's pull (which **do
 | Strategy | Single-use enforcement |
 | --- | --- |
 | ERC-3009 | Each entry carries a `bytes32 nonce` consumed by the token's `authorizationState[from][nonce]` map. The token reverts on replay. |
-| EIP-2612 | The token's `nonces(owner)` counter auto-increments on each successful `permit`. Replaying the same signature reverts because the recovered owner won't match. |
+| EIP-2612 | The token's `nonces(owner)` counter auto-increments on each successful `permit`. Replaying the same signature reverts because the recovered owner won't match. The protocol calls `permit` only when the on-chain allowance doesn't already equal `_amount` — this tolerates a benign frontrun where someone replays *this* permit before us (allowance == `_amount`, skip the redundant call) but rejects diversion attempts where a *different* permit signed by the same user has set a non-matching allowance. |
 | Permit2 | Permit2 maintains a 256-bit-bitmap nonce per owner. The user picks any unused nonce; Permit2 reverts on replay (`InvalidNonce`). |
 
 In addition, the outer metatx is nonce-tracked the same as `executeMetaTransaction` (re-submission of the same `(userAddress, nonce)` reverts with `NonceUsedAlready`), and queue entries are popped on consumption — `head` advances. A second `transferFundsIn` in the same metatx cannot reuse a popped entry; it gets the next one (or falls back to `safeTransferFrom` if the queue is exhausted).
