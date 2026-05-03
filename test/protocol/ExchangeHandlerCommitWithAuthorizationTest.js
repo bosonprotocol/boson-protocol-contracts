@@ -186,7 +186,6 @@ const FULL_OFFER_TYPES = {
   ],
 };
 
-
 /**
  *  Test the Boson Exchange Handler `commitToOffer` flow when invoked via
  *  `executeMetaTransactionWithAuthorization` with an ERC-3009 authorization
@@ -717,16 +716,12 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
           .withArgs(0n, await buyer2.getAddress(), tokenId2);
 
         // Royalty for first offer (seller 1: 5%)
-        let [receiver, royaltyAmount] = await bosonVoucherClone
-          .connect(assistant)
-          .royaltyInfo(tokenId1, offer.price);
+        let [receiver, royaltyAmount] = await bosonVoucherClone.connect(assistant).royaltyInfo(tokenId1, offer.price);
         expect(receiver).to.equal(seller1Treasury);
         expect(royaltyAmount.toString()).to.equal(applyPercentage(price, royaltyPercentage1));
 
         // Royalty for second offer (seller 2: 8%)
-        [receiver, royaltyAmount] = await bosonVoucherClone2
-          .connect(assistant)
-          .royaltyInfo(tokenId2, offer2.price);
+        [receiver, royaltyAmount] = await bosonVoucherClone2.connect(assistant).royaltyInfo(tokenId2, offer2.price);
         expect(receiver).to.equal(seller2.treasury);
         expect(royaltyAmount.toString()).to.equal(applyPercentage(offer2.price, voucherInitValues2.royaltyPercentage));
       });
@@ -794,7 +789,9 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
 
       it("Should not decrement seller funds if offer price and sellerDeposit is 0", async function () {
         const tokenAddresses = [ZeroAddress, await foreign20.getAddress()];
-        const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id, tokenAddresses));
+        const sellersFundsBefore = FundsList.fromStruct(
+          await fundsHandler.getAvailableFunds(seller.id, tokenAddresses)
+        );
 
         await configHandler.connect(deployer).setProtocolFeePercentage("0");
         offerFees.protocolFee = "0";
@@ -997,9 +994,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
   context("📋 Exchange Handler Methods — CreateOfferAndCommit", async function () {
     let assistantDR;
     let condition;
-    let disputeResolverId;
     let disputeResolutionTerms;
-    let disputePeriod;
     let message;
     const sellerParams = {
       collectionIndex: 0,
@@ -1009,13 +1004,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
 
     // Build EIP-712 signature for FullOffer (signed by offer creator)
     async function signFullOffer(signer, msg) {
-      return prepareDataSignature(
-        signer,
-        FULL_OFFER_TYPES,
-        "FullOffer",
-        msg,
-        await exchangeCommitHandler.getAddress()
-      );
+      return prepareDataSignature(signer, FULL_OFFER_TYPES, "FullOffer", msg, await exchangeCommitHandler.getAddress());
     }
 
     // Wraps `createOfferAndCommit` in `executeMetaTransactionWithAuthorization`.
@@ -1163,7 +1152,6 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
       offerFees.protocolFee = applyPercentage(offer.price, protocolFeePercentage);
       offer.quantityAvailable = "1";
       offer.exchangeToken = await foreign20.getAddress();
-      disputeResolverId = drParams.disputeResolverId;
       offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], [voucherInitValues.royaltyPercentage])];
       offerDurations.voucherValid = (oneMonth * 12n).toString();
 
@@ -1172,7 +1160,6 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
       price = offer.price;
       voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
       voucherValid = offerDurations.voucherValid;
-      disputePeriod = offerDurations.disputePeriod;
 
       voucher = mockVoucher();
       voucher.redeemedDate = "0";
@@ -2230,7 +2217,6 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
   context("📋 Exchange Handler Methods — Alternate strategies", async function () {
     let assistantDR;
     let condition;
-    let disputeResolutionTerms;
     let message;
     const sellerParams = {
       collectionIndex: 0,
@@ -2297,13 +2283,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
     };
 
     async function signFullOffer(signer, msg) {
-      return prepareDataSignature(
-        signer,
-        FULL_OFFER_TYPES,
-        "FullOffer",
-        msg,
-        await exchangeCommitHandler.getAddress()
-      );
+      return prepareDataSignature(signer, FULL_OFFER_TYPES, "FullOffer", msg, await exchangeCommitHandler.getAddress());
     }
 
     async function createOfferAndCommitWithAuth({
@@ -2436,13 +2416,6 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
         new DisputeResolverFee(await foreign20.getAddress(), "Foreign20", "0"),
         new DisputeResolverFee(await foreign2612.getAddress(), "Foreign2612", "0"),
       ];
-      disputeResolutionTerms = new DisputeResolutionTerms(
-        disputeResolver.id,
-        disputeResolver.escalationResponsePeriod,
-        "0",
-        "0",
-        ZeroAddress
-      );
       await accountHandler.connect(adminDR).createDisputeResolver(disputeResolver, disputeResolverFees, []);
 
       const mo = await mockOffer();
@@ -2516,11 +2489,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
         assert.equal(event.exchangeId.toString(), exchangeId, "Exchange id is incorrect");
         assert.equal(event.offerId.toString(), offerId, "Offer id is incorrect");
         assert.equal(event.buyerId.toString(), buyerId, "Buyer id is incorrect");
-        assert.equal(
-          Voucher.fromStruct(event.voucher).toString(),
-          voucher.toString(),
-          "Voucher struct is incorrect"
-        );
+        assert.equal(Voucher.fromStruct(event.voucher).toString(), voucher.toString(), "Voucher struct is incorrect");
 
         await expect(tx)
           .to.emit(fundsHandler, "FundsEncumbered")
