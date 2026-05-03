@@ -10,8 +10,9 @@ const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const TokenType = require("../../scripts/domain/TokenType");
 const GatingType = require("../../scripts/domain/GatingType");
+const OfferCreator = require("../../scripts/domain/OfferCreator");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const { setupTestEnvironment, getSnapshot, revertToSnapshot } = require("../util/utils.js");
+const { setupTestEnvironment, getSnapshot, revertToSnapshot, prepareDataSignature } = require("../util/utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   mockOffer,
@@ -19,6 +20,7 @@ const {
   mockSeller,
   mockVoucherInitValues,
   mockAuthToken,
+  mockCondition,
   accountId,
 } = require("../util/mock");
 
@@ -326,6 +328,214 @@ describe("IBosonOrchestrationHandler — commit and redeem", function () {
       await expect(
         orchestrationHandler.connect(buyer).commitToConditionalOfferAndRedeemVoucher("1", "42", { value: offer.price })
       ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_GROUP);
+    });
+  });
+
+  context("👉 createOfferCommitAndRedeem()", async function () {
+    // EIP-712 type definition mirrors the verifyOffer payload in ExchangeCommitBase.sol.
+    const eip712TypeDefinition = {
+      FullOffer: [
+        { name: "offer", type: "Offer" },
+        { name: "offerDates", type: "OfferDates" },
+        { name: "offerDurations", type: "OfferDurations" },
+        { name: "drParameters", type: "DRParameters" },
+        { name: "condition", type: "Condition" },
+        { name: "agentId", type: "uint256" },
+        { name: "feeLimit", type: "uint256" },
+        { name: "useDepositedFunds", type: "bool" },
+      ],
+      Condition: [
+        { name: "method", type: "uint8" },
+        { name: "tokenType", type: "uint8" },
+        { name: "tokenAddress", type: "address" },
+        { name: "gating", type: "uint8" },
+        { name: "minTokenId", type: "uint256" },
+        { name: "threshold", type: "uint256" },
+        { name: "maxCommits", type: "uint256" },
+        { name: "maxTokenId", type: "uint256" },
+      ],
+      DRParameters: [
+        { name: "disputeResolverId", type: "uint256" },
+        { name: "mutualizerAddress", type: "address" },
+      ],
+      OfferDurations: [
+        { name: "disputePeriod", type: "uint256" },
+        { name: "voucherValid", type: "uint256" },
+        { name: "resolutionPeriod", type: "uint256" },
+      ],
+      OfferDates: [
+        { name: "validFrom", type: "uint256" },
+        { name: "validUntil", type: "uint256" },
+        { name: "voucherRedeemableFrom", type: "uint256" },
+        { name: "voucherRedeemableUntil", type: "uint256" },
+      ],
+      Offer: [
+        { name: "sellerId", type: "uint256" },
+        { name: "price", type: "uint256" },
+        { name: "sellerDeposit", type: "uint256" },
+        { name: "buyerCancelPenalty", type: "uint256" },
+        { name: "quantityAvailable", type: "uint256" },
+        { name: "exchangeToken", type: "address" },
+        { name: "metadataUri", type: "string" },
+        { name: "metadataHash", type: "string" },
+        { name: "collectionIndex", type: "uint256" },
+        { name: "royaltyInfo", type: "RoyaltyInfo" },
+        { name: "creator", type: "uint8" },
+        { name: "buyerId", type: "uint256" },
+      ],
+      RoyaltyInfo: [
+        { name: "recipients", type: "address[]" },
+        { name: "bps", type: "uint256[]" },
+      ],
+    };
+
+    let newOffer, newOfferDates, newOfferDurations, drParams;
+    let newCondition;
+    let message;
+
+    beforeEach(async function () {
+      // Build a fresh offer separate from the offer #1 created in the outer beforeEach.
+      ({ offer: newOffer, offerDates: newOfferDates, offerDurations: newOfferDurations, drParams } = await mockOffer());
+
+      // id=0 signals "create me", seller-created with zero seller deposit so the
+      // seller pre-funding pull is a no-op (no extra msg.value beyond price needed).
+      newOffer.id = "0";
+      newOffer.sellerId = seller.id;
+      newOffer.sellerDeposit = "0";
+      newOfferDates.voucherRedeemableFrom = "0"; // redeem immediately
+
+      // Point at the DR registered in the outer beforeEach (mockOffer's default id is unrelated).
+      drParams.disputeResolverId = disputeResolverId;
+
+      // Default to a non-conditional offer; conditional-path test overrides below.
+      newCondition = mockCondition({ method: EvaluationMethod.None, threshold: "0", maxCommits: "0" });
+
+      // The signed message uses a single RoyaltyInfo struct; the on-chain call uses the array form.
+      const signedOffer = newOffer.clone();
+      signedOffer.royaltyInfo = signedOffer.royaltyInfo[0];
+
+      message = {
+        offer: signedOffer,
+        offerDates: newOfferDates,
+        offerDurations: newOfferDurations,
+        drParameters: drParams,
+        condition: newCondition,
+        agentId: agentId.toString(),
+        feeLimit: offerFeeLimit.toString(),
+        useDepositedFunds: false,
+      };
+    });
+
+    it("happy path: emits OfferCreated, BuyerCommitted, and VoucherRedeemed; exchange ends in Redeemed", async function () {
+      const signature = await prepareDataSignature(
+        assistant,
+        eip712TypeDefinition,
+        "FullOffer",
+        message,
+        await orchestrationHandler.getAddress()
+      );
+
+      const tx = await orchestrationHandler
+        .connect(buyer)
+        .createOfferCommitAndRedeem(
+          [newOffer, newOfferDates, newOfferDurations, drParams, newCondition, agentId, offerFeeLimit, false],
+          assistant.address,
+          signature,
+          "0",
+          { value: newOffer.price }
+        );
+
+      // New offer is offerId=2 (offer #1 was created in the outer beforeEach), exchangeId=1
+      // (no commits have happened in this test before now).
+      await expect(tx).to.emit(offerHandler, "OfferCreated");
+      await expect(tx).to.emit(exchangeCommitHandler, "BuyerCommitted");
+      await expect(tx)
+        .to.emit(exchangeHandler, "VoucherRedeemed")
+        .withArgs("2", "1", await buyer.getAddress());
+
+      // Unconditional offer should not emit a ConditionalCommitAuthorized event
+      await expect(tx).to.not.emit(exchangeCommitHandler, "ConditionalCommitAuthorized");
+
+      const [exists, state] = await exchangeHandler.getExchangeState("1");
+      assert.isTrue(exists);
+      assert.equal(state, ExchangeState.Redeemed);
+    });
+
+    it("reverts with OfferCreatorMustBeSeller when offer.creator is Buyer", async function () {
+      newOffer.creator = OfferCreator.Buyer;
+      newOffer.buyerId = "1"; // any non-zero id passes initial validation; the orchestration rejects up-front
+      const signedOffer = newOffer.clone();
+      signedOffer.royaltyInfo = signedOffer.royaltyInfo[0];
+      message.offer = signedOffer;
+
+      // The signature path is irrelevant — the orchestration rejects buyer-created offers
+      // before reaching verifyOffer. We still produce one to keep the call shape valid.
+      const signature = await prepareDataSignature(
+        assistant,
+        eip712TypeDefinition,
+        "FullOffer",
+        message,
+        await orchestrationHandler.getAddress()
+      );
+
+      await expect(
+        orchestrationHandler
+          .connect(buyer)
+          .createOfferCommitAndRedeem(
+            [newOffer, newOfferDates, newOfferDurations, drParams, newCondition, agentId, offerFeeLimit, false],
+            assistant.address,
+            signature,
+            "0",
+            { value: newOffer.price }
+          )
+      ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_CREATOR_MUST_BE_SELLER);
+    });
+
+    it("conditional offer: emits ConditionalCommitAuthorized in addition to OfferCreated, BuyerCommitted, and VoucherRedeemed", async function () {
+      // SpecificToken condition: the buyer must own a specific NFT token id.
+      const [foreign721] = await deployMockTokens(["Foreign721"]);
+      const conditionalTokenId = "12";
+      await foreign721.connect(deployer).mint(conditionalTokenId, "1");
+      await foreign721.connect(deployer).transferFrom(deployer.address, buyer.address, conditionalTokenId);
+
+      newCondition = mockCondition({
+        method: EvaluationMethod.SpecificToken,
+        tokenType: TokenType.NonFungibleToken,
+        tokenAddress: await foreign721.getAddress(),
+        gating: GatingType.PerTokenId,
+        minTokenId: conditionalTokenId,
+        threshold: "0",
+        maxCommits: "1",
+        maxTokenId: "22",
+      });
+      message.condition = newCondition;
+
+      const signature = await prepareDataSignature(
+        assistant,
+        eip712TypeDefinition,
+        "FullOffer",
+        message,
+        await orchestrationHandler.getAddress()
+      );
+
+      const tx = await orchestrationHandler
+        .connect(buyer)
+        .createOfferCommitAndRedeem(
+          [newOffer, newOfferDates, newOfferDurations, drParams, newCondition, agentId, offerFeeLimit, false],
+          assistant.address,
+          signature,
+          conditionalTokenId,
+          { value: newOffer.price }
+        );
+
+      await expect(tx).to.emit(offerHandler, "OfferCreated");
+      await expect(tx).to.emit(exchangeCommitHandler, "ConditionalCommitAuthorized");
+      await expect(tx).to.emit(exchangeCommitHandler, "BuyerCommitted");
+      await expect(tx).to.emit(exchangeHandler, "VoucherRedeemed");
+
+      const [exists, state] = await exchangeHandler.getExchangeState("1");
+      assert.isTrue(exists);
+      assert.equal(state, ExchangeState.Redeemed);
     });
   });
 
