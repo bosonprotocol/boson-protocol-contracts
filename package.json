@@ -70,7 +70,7 @@
     "hardhat-contract-sizer": "^2.10.0",
     "hardhat-preprocessor": "^0.1.5",
     "husky": "^9.1.7",
-    "lodash": "^4.17.21",
+    "lodash": "^4.18.1",
     "merkletreejs": "^0.5.2",
     "opensea-js": "^7.1.22",
     "prettier": "^3.6.2",
