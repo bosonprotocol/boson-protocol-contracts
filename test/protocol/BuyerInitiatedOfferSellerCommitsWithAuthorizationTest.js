@@ -38,8 +38,8 @@ const {
 } = require("../util/mock");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 
-// Per-entry authorization strategy tag (mirrors BosonTypes.AuthorizationStrategy)
-const AuthorizationStrategy = { None: 0, ERC3009: 1 };
+// Per-entry authorization strategy tag (mirrors BosonTypes.TokenTransferAuthorizationStrategy)
+const TokenTransferAuthorizationStrategy = { None: 0, ERC3009: 1 };
 
 // EIP-712 types for ERC-3009 ReceiveWithAuthorization (matches MockERC3009Token)
 const RECEIVE_WITH_AUTHORIZATION_TYPES = {
@@ -67,7 +67,7 @@ const META_TRANSACTION_TYPES = {
 /**
  * Test the Buyer-Initiated Exchange feature (BPIP-9), specifically the
  * `commitToOffer() - Seller Commits` (a.k.a. `commitToBuyerOffer`) context,
- * but invoked through `executeMetaTransactionWithAuthorization` with an
+ * but invoked through `executeMetaTransactionWithTokenTransferAuthorization` with an
  * ERC-3009 authorization queue instead of a pre-approved ERC-20 allowance.
  *
  * Mirrors the original `commitToOffer() - Seller Commits` context from
@@ -260,7 +260,10 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
       ["uint256", "uint256", "bytes32", "uint8", "bytes32", "bytes32"],
       [validAfter, validBefore, authNonce, v, r, s]
     );
-    return AbiCoder.defaultAbiCoder().encode(["uint8", "bytes"], [AuthorizationStrategy.ERC3009, erc3009Data]);
+    return AbiCoder.defaultAbiCoder().encode(
+      ["uint8", "bytes"],
+      [TokenTransferAuthorizationStrategy.ERC3009, erc3009Data]
+    );
   }
 
   function encodeAuthQueue(entries) {
@@ -271,7 +274,7 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
    * Drop-in replacement for
    *   `exchangeCommitHandler.connect(sellerSigner).commitToBuyerOffer(offerId, sellerParams)`
    *
-   * Wraps the call in `executeMetaTransactionWithAuthorization`. The queue
+   * Wraps the call in `executeMetaTransactionWithTokenTransferAuthorization`. The queue
    * always has one slot for the seller pull. If `amount` is 0 the slot is
    * filled with `"0x"` and the protocol discards it. For revert tests that
    * want the safeTransferFrom fallback path, set `forceFallback: true` to
@@ -317,7 +320,7 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
 
     return metaTransactionsHandler
       .connect(caller)
-      .executeMetaTransactionWithAuthorization(
+      .executeMetaTransactionWithTokenTransferAuthorization(
         await sellerSigner.getAddress(),
         functionName,
         fnSig,

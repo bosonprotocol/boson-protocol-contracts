@@ -5,7 +5,7 @@ import "../../domain/BosonConstants.sol";
 import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
-import { TransientAuthLib } from "../libs/TransientAuthLib.sol";
+import { TokenTransferAuthorizationLib } from "../libs/TokenTransferAuthorizationLib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
@@ -478,7 +478,7 @@ abstract contract FundsBase is Context {
             // standard allowance path. receiveWithAuthorization enforces
             // `to == msg.sender` on the token side, i.e. the protocol — so no
             // extra recipient check is needed here.
-            if (!TransientAuthLib.consumeForTransfer(_tokenAddress, _from, address(this), _amount)) {
+            if (!TokenTransferAuthorizationLib.consumeForTransfer(_tokenAddress, _from, address(this), _amount)) {
                 IERC20(_tokenAddress).safeTransferFrom(_from, address(this), _amount);
             }
 
@@ -491,7 +491,7 @@ abstract contract FundsBase is Context {
             // Zero-amount pull: no transfer happens, but still advance the queue
             // head so the off-chain caller can supply a queue whose layout is
             // independent of runtime amounts. No-op if no queue is loaded.
-            TransientAuthLib.discardNext();
+            TokenTransferAuthorizationLib.discardNext();
         }
     }
 

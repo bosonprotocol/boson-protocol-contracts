@@ -4,13 +4,13 @@
 
 ### [Intro](../README.md) | [Audits](audits.md) | [Setup](setup.md) | [Tasks](tasks.md) | [Architecture](architecture.md) | [Domain Model](domain.md) | [State Machines](state-machines.md) | [Sequences](sequences.md)
 
-# ERC-3009 authorization in metatransactions
+# Token-transfer authorization in metatransactions
 
 ## Introduction
 
 The protocol's metatransaction flow lets a relayer submit a user-signed call. When that call needs to pull ERC-20 funds, the standard path is `safeTransferFrom`, which requires a prior on-chain `approve` from the user.
 
-The protocol's authorization queue replaces this with **off-chain signed authorizations**: the user signs once off-chain, the relayer hands the signature to the protocol, and the protocol uses one of several strategies to pull the funds without ever needing a prior allowance:
+The protocol's **token-transfer authorization queue** replaces this with **off-chain signed authorizations**: the user signs once off-chain, the relayer hands the signature(s) to the protocol, and the protocol uses one of several strategies to pull the funds without ever needing a prior allowance:
 
 | Strategy | Token requirement | Mechanism |
 | --- | --- | --- |
@@ -18,22 +18,24 @@ The protocol's authorization queue replaces this with **off-chain signed authori
 | **EIP-2612** | Token implements EIP-2612 permit (e.g. DAI, most modern stablecoins) | Protocol calls `permit` on the token to provision allowance, then `safeTransferFrom`. |
 | **Permit2** | Any standard ERC-20 (one-time `approve(PERMIT2, MaxUint)` per token) | Protocol calls Uniswap's universal Permit2 contract, which verifies the signature and pulls funds via `transferFrom`. |
 
-The capability is exposed **only through the metatransaction flow**, via a dedicated entry point `executeMetaTransactionWithAuthorization`. A relayer can submit a single on-chain transaction that:
+A single queue can carry **mixed strategies** — e.g. a buyer's deposit pulled via ERC-3009 and the seller's deposit pulled via Permit2 in the same transaction.
+
+The capability is exposed **only through the metatransaction flow**, via a dedicated entry point `executeMetaTransactionWithTokenTransferAuthorization`. A relayer can submit a single on-chain transaction that:
 
 1. Authorizes a Boson protocol call on the user's behalf (the metatx itself).
 2. Pulls the required ERC-20 funds from the user via the per-entry strategy.
 
 The user pays no gas, holds no prior allowance (except the one-time setup for Permit2), and signs everything off-chain.
 
-When the call uses the regular `executeMetaTransaction` (or is invoked directly), `transferFundsIn` continues to use `safeTransferFrom`. Behavior outside the metatx-with-authorization entry point is unchanged.
+When the call uses the regular `executeMetaTransaction` (or is invoked directly), `transferFundsIn` continues to use `safeTransferFrom`. Behavior outside the token-transfer-authorization entry point is unchanged.
 
 ## Components
 
 | Concern | Location |
 | --- | --- |
-| New metatx entry point | [`MetaTransactionsHandlerFacet.executeMetaTransactionWithAuthorization`](../contracts/protocol/facets/MetaTransactionsHandlerFacet.sol) |
-| Per-entry strategy enum | [`BosonTypes.AuthorizationStrategy`](../contracts/domain/BosonTypes.sol) |
-| Authorization queue + strategy dispatch | [`TransientAuthLib`](../contracts/protocol/libs/TransientAuthLib.sol) |
+| New metatx entry point | [`MetaTransactionsHandlerFacet.executeMetaTransactionWithTokenTransferAuthorization`](../contracts/protocol/facets/MetaTransactionsHandlerFacet.sol) |
+| Per-entry strategy enum | [`BosonTypes.TokenTransferAuthorizationStrategy`](../contracts/domain/BosonTypes.sol) |
+| Authorization queue + strategy dispatch | [`TokenTransferAuthorizationLib`](../contracts/protocol/libs/TokenTransferAuthorizationLib.sol) |
 | Strategy switch in fund-pull | [`FundsBase.transferFundsIn`](../contracts/protocol/bases/FundsBase.sol) |
 | ERC-3009 token interface | [`IERC3009`](../contracts/interfaces/IERC3009.sol) |
 | EIP-2612 token interface | [`IERC2612`](../contracts/interfaces/IERC2612.sol) |
@@ -50,7 +52,9 @@ When the call uses the regular `executeMetaTransaction` (or is invoked directly)
                                                                    │
                                                                    ▼
                                                             executeMetaTx
-                                                            WithAuthorization
+                                                            With
+                                                            TokenTransfer
+                                                            Authorization
                                                                    │
                                                   1. validate + verify metatx
                                                   2. park queue in transient slots
@@ -71,28 +75,28 @@ At transaction end, the EVM clears all transient slots automatically — no left
 ## Entry point
 
 ```solidity
-function executeMetaTransactionWithAuthorization(
+function executeMetaTransactionWithTokenTransferAuthorization(
     address _userAddress,
     string  calldata _functionName,
     bytes   calldata _functionSignature,
     uint256          _nonce,
     bytes   calldata _signature,
-    bytes   calldata _authorization         // payload (see below)
+    bytes   calldata _tokenTransferAuthorization     // payload (see below)
 ) external payable returns (bytes memory);
 ```
 
 The first five parameters and their EIP-712 signing rules are identical to `executeMetaTransaction`. The new parameter:
 
-- `_authorization` — `abi.encode(bytes[] queue)`. The queue is **always** loaded when this entry point is called. If you have nothing to authorize, call `executeMetaTransaction` (without the `WithAuthorization` suffix) instead.
+- `_tokenTransferAuthorization` — `abi.encode(bytes[] queue)`. The queue is **always** loaded when this entry point is called. If you have nothing to authorize, call `executeMetaTransaction` (without the `WithTokenTransferAuthorization` suffix) instead.
 
-The metatx EIP-712 hash **does not cover** `_authorization`. Each per-entry strategy carries its own off-chain signature bound to the token, `from`, `to == protocol`, `value`, a `nonce`, and a validity window — independently authenticated. Including it in the metatx hash would force the user to re-sign overlapping data.
+The metatx EIP-712 hash **does not cover** `_tokenTransferAuthorization`. Each per-entry strategy carries its own off-chain signature bound to the token, `from`, `to == protocol`, `value`, a `nonce`, and a validity window — independently authenticated. Including it in the metatx hash would force the user to re-sign overlapping data.
 
 ## Authorization payload format
 
-`_authorization = abi.encode(bytes[] queue)`. Each queue entry is **self-describing** via a per-entry strategy tag, so a single queue can mix strategies. An entry is one of:
+`_tokenTransferAuthorization = abi.encode(bytes[] queue)`. Each queue entry is **self-describing** via a per-entry strategy tag, so a single queue can mix strategies. An entry is one of:
 
-- **Empty bytes (`"0x"`)** — fallback shortcut. The corresponding `transferFundsIn` falls back to `safeTransferFrom` (i.e. the user must have approved the protocol for that specific transfer). Equivalent to `(AuthorizationStrategy.None, "")` but cheaper to encode/store.
-- **`abi.encode(AuthorizationStrategy strategy, bytes data)`** — strategy-specific envelope. An out-of-range `strategy` tag is rejected by Solidity's enum range check (`Panic(0x21)`) inside `abi.decode`.
+- **Empty bytes (`"0x"`)** — fallback shortcut. The corresponding `transferFundsIn` falls back to `safeTransferFrom` (i.e. the user must have approved the protocol for that specific transfer). Equivalent to `(TokenTransferAuthorizationStrategy.None, "")` but cheaper to encode/store.
+- **`abi.encode(TokenTransferAuthorizationStrategy strategy, bytes data)`** — strategy-specific envelope. An out-of-range `strategy` tag is rejected by Solidity's enum range check (`Panic(0x21)`) inside `abi.decode`.
 
 The `data` payload by strategy:
 
@@ -116,11 +120,11 @@ The queue is consumed in the same order the protocol calls `transferFundsIn`. Fo
 
 ## Queue mechanics (transient storage)
 
-`TransientAuthLib` is a small internal library that stores the queue in transient slots (Cancun's `tstore`/`tload`). The protocol-namespaced slots:
+`TokenTransferAuthorizationLib` is a small internal library that stores the queue in transient slots (Cancun's `tstore`/`tload`). The protocol-namespaced slots:
 
-- `keccak256("boson.protocol.transient.auth.head")` — uint256 head pointer (next entry to consume).
-- `keccak256("boson.protocol.transient.auth.len")` — uint256 total entries pushed.
-- `keccak256(abi.encode("boson.protocol.transient.auth.entry", i))` — base slot for entry `i`. Slot 0 holds the entry's byte length; subsequent slots hold 32-byte words of the bytes payload.
+- `keccak256("boson.protocol.transient.token-transfer-auth.head")` — uint256 head pointer (next entry to consume).
+- `keccak256("boson.protocol.transient.token-transfer-auth.len")` — uint256 total entries pushed.
+- `keccak256(abi.encode("boson.protocol.transient.token-transfer-auth.entry", i))` — base slot for entry `i`. Slot 0 holds the entry's byte length; subsequent slots hold 32-byte words of the bytes payload.
 
 Public surface:
 
@@ -147,7 +151,7 @@ function transferFundsIn(address _tokenAddress, address _from, uint256 _amount) 
     if (_amount > 0) {
         uint256 protocolTokenBalanceBefore = IERC20(_tokenAddress).balanceOf(address(this));
 
-        if (!TransientAuthLib.consumeForTransfer(_tokenAddress, _from, address(this), _amount)) {
+        if (!TokenTransferAuthorizationLib.consumeForTransfer(_tokenAddress, _from, address(this), _amount)) {
             IERC20(_tokenAddress).safeTransferFrom(_from, address(this), _amount);
         }
 
@@ -155,7 +159,7 @@ function transferFundsIn(address _tokenAddress, address _from, uint256 _amount) 
         if (protocolTokenBalanceAfter - protocolTokenBalanceBefore != _amount)
             revert BosonErrors.InsufficientValueReceived();
     } else {
-        TransientAuthLib.discardNext();
+        TokenTransferAuthorizationLib.discardNext();
     }
 }
 ```
@@ -174,7 +178,7 @@ The queue length depends **only on the metatx-callable function**, not on runtim
 
 ```
 abi.encode(
-  AuthorizationStrategy.ERC3009,
+  TokenTransferAuthorizationStrategy.ERC3009,
   abi.encode(uint256 validAfter, uint256 validBefore, bytes32 nonce, uint8 v, bytes32 r, bytes32 s)
 )
 ```
@@ -196,7 +200,7 @@ Notes:
 
 - For any flow above, if a slot's amount is `0` at runtime, or it's the offer-creator slot in `createOfferAndCommit` with `useDepositedFunds=true`, the protocol discards that slot. Fill it with `"0x"` rather than skipping it entirely.
 - A queue entry of `"0x"` for a slot whose pull **will** fire forces the standard-allowance fallback path for that single transfer (the protocol falls through to `safeTransferFrom`). This is how mixed-mode flows are expressed — see the last worked example below.
-- For native-currency offers (`exchangeToken == address(0)`), `transferFundsIn` is never called — pass `AuthorizationType.None` instead of an empty queue.
+- For native-currency offers (`exchangeToken == address(0)`), `transferFundsIn` is never called — call `executeMetaTransaction` (without the token-transfer-authorization suffix) instead.
 
 ### Single transfer (e.g. `depositFunds`)
 
@@ -208,12 +212,12 @@ const erc3009Data = abi.encode(
 );
 const authEntry = abi.encode(
   ["uint8", "bytes"],
-  [AuthorizationStrategy.ERC3009, erc3009Data]
+  [TokenTransferAuthorizationStrategy.ERC3009, erc3009Data]
 );
 const queue = abi.encode(["bytes[]"], [[authEntry]]);
 
 // On-chain (via relayer)
-metaTransactionsHandler.executeMetaTransactionWithAuthorization(
+metaTransactionsHandler.executeMetaTransactionWithTokenTransferAuthorization(
   user, "depositFunds(uint256,address,uint256)", fnSig, nonce, sig,
   queue
 );
@@ -259,8 +263,8 @@ In addition, the outer metatx is nonce-tracked the same as `executeMetaTransacti
 
 For another off-chain pull strategy in the future:
 
-1. **Add the enum value** to [`BosonTypes.AuthorizationStrategy`](../contracts/domain/BosonTypes.sol). Append at the end so existing tag values stay stable.
-2. **Add a private helper** in [`TransientAuthLib`](../contracts/protocol/libs/TransientAuthLib.sol) (`_consumeXyz`) that decodes the strategy-specific `data` bytes and performs the pull. For two-step strategies (e.g. permit + transferFrom), the helper does both steps inline.
+1. **Add the enum value** to [`BosonTypes.TokenTransferAuthorizationStrategy`](../contracts/domain/BosonTypes.sol). Append at the end so existing tag values stay stable.
+2. **Add a private helper** in [`TokenTransferAuthorizationLib`](../contracts/protocol/libs/TokenTransferAuthorizationLib.sol) (`_consumeXyz`) that decodes the strategy-specific `data` bytes and performs the pull. For two-step strategies (e.g. permit + transferFrom), the helper does both steps inline.
 3. **Add a branch** in `consumeForTransfer` that dispatches on the new tag and calls the helper.
 4. **Add an interface** in `contracts/interfaces/` if the strategy talks to an external contract.
 5. **Update the table** in "Authorization payload format" above with the new `data` shape.

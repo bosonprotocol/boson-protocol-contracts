@@ -424,7 +424,7 @@ describe("IBosonMetaTransactionsHandler", function () {
       it("after initialization all state modifying functions should be allowlisted", async function () {
         const stateModifyingFunctionsClosure = getStateModifyingFunctionsHashes(facetNames, [
           "executeMetaTransaction",
-          "executeMetaTransactionWithAuthorization",
+          "executeMetaTransactionWithTokenTransferAuthorization",
         ]);
         const stateModifyingFunctionsHashes = await stateModifyingFunctionsClosure();
 
@@ -479,7 +479,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Get list of state modifying functions
         const stateModifyingFunctions = await getStateModifyingFunctions(facetNames, [
           "executeMetaTransaction",
-          "executeMetaTransactionWithAuthorization",
+          "executeMetaTransactionWithTokenTransferAuthorization",
           "initialize",
         ]);
 

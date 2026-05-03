@@ -58,10 +58,10 @@ const {
 const { oneMonth } = require("../util/constants");
 const { FundsList } = require("../../scripts/domain/Funds");
 
-// Per-entry authorization strategy tag (mirrors BosonTypes.AuthorizationStrategy)
-const AuthorizationStrategy = { None: 0, ERC3009: 1, EIP2612: 2, Permit2: 3 };
+// Per-entry authorization strategy tag (mirrors BosonTypes.TokenTransferAuthorizationStrategy)
+const TokenTransferAuthorizationStrategy = { None: 0, ERC3009: 1, EIP2612: 2, Permit2: 3 };
 
-// Canonical Permit2 address (must match `TransientAuthLib.PERMIT2`)
+// Canonical Permit2 address (must match `TokenTransferAuthorizationLib.PERMIT2`)
 const PERMIT2_ADDRESS = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
 
 // EIP-712 types for ERC-3009 ReceiveWithAuthorization (matches MockERC3009Token)
@@ -188,7 +188,7 @@ const FULL_OFFER_TYPES = {
 
 /**
  *  Test the Boson Exchange Handler `commitToOffer` flow when invoked via
- *  `executeMetaTransactionWithAuthorization` with an ERC-3009 authorization
+ *  `executeMetaTransactionWithTokenTransferAuthorization` with an ERC-3009 authorization
  *  queue, instead of a pre-approved ERC-20 allowance.
  *
  *  Mirrors the original `commitToOffer()` context in `ExchangeHandlerTest.js`,
@@ -332,7 +332,10 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
       ["uint256", "uint256", "bytes32", "uint8", "bytes32", "bytes32"],
       [validAfter, validBefore, authNonce, v, r, s]
     );
-    return AbiCoder.defaultAbiCoder().encode(["uint8", "bytes"], [AuthorizationStrategy.ERC3009, erc3009Data]);
+    return AbiCoder.defaultAbiCoder().encode(
+      ["uint8", "bytes"],
+      [TokenTransferAuthorizationStrategy.ERC3009, erc3009Data]
+    );
   }
 
   // EIP-2612 entry builder: takes the token-with-permit and signs a Permit
@@ -359,7 +362,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
         ["uint256", "uint8", "bytes32", "bytes32"],
         [message.deadline, split.v, split.r, split.s]
       );
-      return AbiCoder.defaultAbiCoder().encode(["uint8", "bytes"], [AuthorizationStrategy.EIP2612, data]);
+      return AbiCoder.defaultAbiCoder().encode(["uint8", "bytes"], [TokenTransferAuthorizationStrategy.EIP2612, data]);
     };
   }
 
@@ -386,7 +389,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
         ["uint256", "uint256", "bytes"],
         [permitNonce, message.deadline, sig]
       );
-      return AbiCoder.defaultAbiCoder().encode(["uint8", "bytes"], [AuthorizationStrategy.Permit2, data]);
+      return AbiCoder.defaultAbiCoder().encode(["uint8", "bytes"], [TokenTransferAuthorizationStrategy.Permit2, data]);
     };
   }
 
@@ -396,7 +399,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
 
   /**
    * Drop-in replacement for `exchangeCommitHandler.connect(caller).commitToOffer(buyerAddress, offerId)`.
-   * Wraps the call in `executeMetaTransactionWithAuthorization`. The queue always has one slot — for
+   * Wraps the call in `executeMetaTransactionWithTokenTransferAuthorization`. The queue always has one slot — for
    * price-zero offers the slot is filled with `"0x"` and the protocol discards it.
    *
    * `entryBuilder` defaults to the ERC-3009 builder. Pass `makeEIP2612Builder(token)` or
@@ -438,7 +441,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
 
     return metaTransactionsHandler
       .connect(caller)
-      .executeMetaTransactionWithAuthorization(
+      .executeMetaTransactionWithTokenTransferAuthorization(
         await buyerSigner.getAddress(),
         COMMIT_TO_OFFER_FN_NAME,
         fnSig,
@@ -1007,7 +1010,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
       return prepareDataSignature(signer, FULL_OFFER_TYPES, "FullOffer", msg, await exchangeCommitHandler.getAddress());
     }
 
-    // Wraps `createOfferAndCommit` in `executeMetaTransactionWithAuthorization`.
+    // Wraps `createOfferAndCommit` in `executeMetaTransactionWithTokenTransferAuthorization`.
     //
     // The queue layout for `createOfferAndCommit` is **uniformly two slots** —
     // `[offerCreator, committer]` — regardless of `useDepositedFunds`,
@@ -1086,7 +1089,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
 
       return metaTransactionsHandler
         .connect(caller)
-        .executeMetaTransactionWithAuthorization(
+        .executeMetaTransactionWithTokenTransferAuthorization(
           await committerSigner.getAddress(),
           functionName,
           fnSig,
@@ -2347,7 +2350,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
 
       return metaTransactionsHandler
         .connect(caller)
-        .executeMetaTransactionWithAuthorization(
+        .executeMetaTransactionWithTokenTransferAuthorization(
           await committerSigner.getAddress(),
           functionName,
           fnSig,

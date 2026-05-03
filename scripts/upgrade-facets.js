@@ -404,7 +404,7 @@ async function main(env, facetConfig, version, functionNamesToSelector) {
   const metaTransactionsHandler = await getContractAt("IBosonMetaTransactionsHandler", protocolAddress);
   const getOldFunctionHashesClosure = getStateModifyingFunctionsHashes(
     Object.values(abis),
-    ["executeMetaTransaction", "executeMetaTransactionWithAuthorization"],
+    ["executeMetaTransaction", "executeMetaTransactionWithTokenTransferAuthorization"],
     [],
     true
   );
@@ -414,7 +414,7 @@ async function main(env, facetConfig, version, functionNamesToSelector) {
   // Allowlist new functions in MetaTransactionsHandlerFacet
   const getNewFunctionHashesClosure = getStateModifyingFunctionsHashes(
     facets.addOrUpgrade,
-    ["executeMetaTransaction", "executeMetaTransactionWithAuthorization", "initV2_4_0External"],
+    ["executeMetaTransaction", "executeMetaTransactionWithTokenTransferAuthorization", "initV2_4_0External"],
     [],
     false
   );
