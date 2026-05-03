@@ -92,7 +92,7 @@ The metatx EIP-712 hash **does not cover** `_authorization`. Each per-entry stra
 `_authorization = abi.encode(bytes[] queue)`. Each queue entry is **self-describing** via a per-entry strategy tag, so a single queue can mix strategies. An entry is one of:
 
 - **Empty bytes (`"0x"`)** — fallback shortcut. The corresponding `transferFundsIn` falls back to `safeTransferFrom` (i.e. the user must have approved the protocol for that specific transfer). Equivalent to `(AuthorizationStrategy.None, "")` but cheaper to encode/store.
-- **`abi.encode(AuthorizationStrategy strategy, bytes data)`** — strategy-specific envelope. An unknown `strategy` tag reverts with `BosonErrors.UnsupportedAuthorizationStrategy`.
+- **`abi.encode(AuthorizationStrategy strategy, bytes data)`** — strategy-specific envelope. An out-of-range `strategy` tag is rejected by Solidity's enum range check (`Panic(0x21)`) inside `abi.decode`.
 
 The `data` payload by strategy:
 
@@ -136,7 +136,7 @@ function discardNext() internal;                              // skip sites pop-
 function hasQueue() internal view returns (bool);             // diagnostic
 ```
 
-`consumeForTransfer` pops the entry, decodes the `(strategy, data)` envelope, and dispatches to a strategy-specific private helper (`_consumeERC3009`, `_consumeEIP2612`, `_consumePermit2`). Returns `true` when a strategy was consumed and a token call dispatched (caller skips its fallback path) or `false` when the queue is empty/exhausted, the entry is the fallback shortcut, or `strategy == None` (caller falls through to `safeTransferFrom`). An unknown strategy reverts with `BosonErrors.UnsupportedAuthorizationStrategy`.
+`consumeForTransfer` pops the entry, decodes the `(strategy, data)` envelope, and dispatches to a strategy-specific private helper (`_consumeERC3009`, `_consumeEIP2612`, `_consumePermit2`). Returns `true` when a strategy was consumed and a token call dispatched (caller skips its fallback path) or `false` when the queue is empty/exhausted, the entry is the fallback shortcut, or `strategy == None` (caller falls through to `safeTransferFrom`). An out-of-range strategy tag is rejected by Solidity's enum-range check inside `abi.decode` (`Panic(0x21)`); adding a new strategy means extending the enum *and* the dispatch in lock-step.
 
 `discardNext` advances the queue head by one without doing any work. The protocol calls it at every site where a `transferFundsIn` call is bypassed at runtime (zero amount, `useDepositedFunds=true`, etc.). This keeps the queue head in lock-step with the **logical** transfer position — not the actual one — so the off-chain caller can build a queue whose layout depends only on the function being called, not on runtime amounts or flags. `discardNext` is a no-op when the queue is empty or already exhausted.
 
