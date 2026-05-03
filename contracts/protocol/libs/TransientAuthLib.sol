@@ -176,13 +176,7 @@ library TransientAuthLib {
         revert BosonErrors.UnsupportedAuthorizationStrategy();
     }
 
-    function _consumeERC3009(
-        address _token,
-        address _from,
-        address _to,
-        uint256 _amount,
-        bytes memory _data
-    ) private {
+    function _consumeERC3009(address _token, address _from, address _to, uint256 _amount, bytes memory _data) private {
         (uint256 validAfter, uint256 validBefore, bytes32 nonce, uint8 v, bytes32 r, bytes32 s) = abi.decode(
             _data,
             (uint256, uint256, bytes32, uint8, bytes32, bytes32)
@@ -196,13 +190,7 @@ library TransientAuthLib {
      *      the permit with `value == _amount`, so the allowance is consumed
      *      exactly and no residual remains.
      */
-    function _consumeEIP2612(
-        address _token,
-        address _from,
-        address _to,
-        uint256 _amount,
-        bytes memory _data
-    ) private {
+    function _consumeEIP2612(address _token, address _from, address _to, uint256 _amount, bytes memory _data) private {
         (uint256 deadline, uint8 v, bytes32 r, bytes32 s) = abi.decode(_data, (uint256, uint8, bytes32, bytes32));
         IERC2612(_token).permit(_from, _to, _amount, deadline, v, r, s);
         IERC20(_token).safeTransferFrom(_from, _to, _amount);
@@ -213,13 +201,7 @@ library TransientAuthLib {
      *      canonical Permit2 contract. The user must have one-time-approved
      *      Permit2 on `_token`; subsequent pulls are signature-only.
      */
-    function _consumePermit2(
-        address _token,
-        address _from,
-        address _to,
-        uint256 _amount,
-        bytes memory _data
-    ) private {
+    function _consumePermit2(address _token, address _from, address _to, uint256 _amount, bytes memory _data) private {
         (uint256 nonce, uint256 deadline, bytes memory signature) = abi.decode(_data, (uint256, uint256, bytes));
         IPermit2.PermitTransferFrom memory permit = IPermit2.PermitTransferFrom({
             permitted: IPermit2.TokenPermissions({ token: _token, amount: _amount }),

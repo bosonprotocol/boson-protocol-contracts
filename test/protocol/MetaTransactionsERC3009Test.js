@@ -1,15 +1,6 @@
 const { ethers } = require("hardhat");
-const {
-  ZeroAddress,
-  getContractAt,
-  getContractFactory,
-  getSigners,
-  randomBytes,
-  zeroPadValue,
-  AbiCoder,
-  MaxUint256,
-  Signature,
-} = ethers;
+const { ZeroAddress, getContractFactory, getSigners, randomBytes, zeroPadValue, AbiCoder, MaxUint256, Signature } =
+  ethers;
 const { expect } = require("chai");
 
 const { mockSeller, mockVoucherInitValues, mockAuthToken, mockDisputeResolver, accountId } = require("../util/mock");

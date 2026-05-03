@@ -16,10 +16,8 @@ const { expect } = require("chai");
 
 const OfferCreator = require("../../scripts/domain/OfferCreator");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
-const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo");
 const {
-  applyPercentage,
   calculateCloneAddress,
   calculateBosonProxyAddress,
   setupTestEnvironment,
@@ -83,14 +81,13 @@ const META_TRANSACTION_TYPES = {
  *     seller-side commit.
  */
 describe("Buyer-Initiated Exchange — Seller Commits with authorization", function () {
-  let pauser, rando, assistant, admin, treasury, adminDR, treasuryDR, buyer1, buyer2, assistant2;
-  let accountHandler, fundsHandler, exchangeHandler, exchangeCommitHandler, offerHandler, pauseHandler;
+  let rando, assistant, admin, treasury, adminDR, treasuryDR, buyer1, buyer2, assistant2;
+  let accountHandler, fundsHandler, exchangeHandler, exchangeCommitHandler, offerHandler;
   let metaTransactionsHandler;
   let seller, seller2;
-  let offer, offerDates, offerDurations, offerFees;
+  let offer, offerDates, offerDurations;
   let buyerCreatedOffer;
   let mockToken;
-  let buyerEscalationDepositPercentage;
   let buyerId, buyerId2, sellerId, sellerId2;
   let disputeResolver;
   let voucherInitValues, emptyAuthToken;
@@ -99,12 +96,10 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
   let nextOfferId;
   let weth;
   let protocolDiamondAddress;
-  let bosonErrors;
   let deployer;
 
   before(async function () {
-    [, pauser, rando, assistant, admin, , treasury, , adminDR, , treasuryDR, buyer1, buyer2, assistant2] =
-      await getSigners();
+    [, , rando, assistant, admin, , treasury, , adminDR, , treasuryDR, buyer1, buyer2, assistant2] = await getSigners();
 
     const wethFactory = await getContractFactory("WETH9");
     weth = await wethFactory.deploy();
@@ -116,7 +111,6 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
       exchangeHandler: "IBosonExchangeHandler",
       exchangeCommitHandler: "IBosonExchangeCommitHandler",
       fundsHandler: "IBosonFundsHandler",
-      pauseHandler: "IBosonPauseHandler",
       metaTransactionsHandler: "IBosonMetaTransactionsHandler",
     };
 
@@ -126,21 +120,17 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
     await mockToken.waitForDeployment();
 
     ({
-      signers: [pauser, admin, treasury, rando, adminDR, treasuryDR, assistant2],
+      signers: [, admin, treasury, rando, adminDR, treasuryDR, assistant2],
       contractInstances: {
         accountHandler,
         offerHandler,
         exchangeHandler,
         exchangeCommitHandler,
         fundsHandler,
-        pauseHandler,
         metaTransactionsHandler,
       },
-      protocolConfig: [, , , , buyerEscalationDepositPercentage],
       diamondAddress: protocolDiamondAddress,
     } = await setupTestEnvironment(contracts, { wethAddress: await weth.getAddress() }));
-
-    bosonErrors = await getContractAt("BosonErrors", protocolDiamondAddress);
 
     [deployer] = await getSigners();
 
@@ -209,7 +199,7 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
 
     nextOfferId = "1";
 
-    ({ offer, offerDates, offerDurations, offerFees } = await mockOffer());
+    ({ offer, offerDates, offerDurations } = await mockOffer());
 
     // Buyer-created offer denominated in the ERC-3009 token
     buyerCreatedOffer = offer.clone();

@@ -1,15 +1,5 @@
 const { ethers, network } = require("hardhat");
-const {
-  ZeroAddress,
-  getContractAt,
-  getContractFactory,
-  getSigners,
-  randomBytes,
-  zeroPadValue,
-  AbiCoder,
-  MaxUint256,
-  Signature,
-} = ethers;
+const { ZeroAddress, getContractFactory, getSigners, randomBytes, AbiCoder, MaxUint256, Signature } = ethers;
 const { expect } = require("chai");
 
 const { mockSeller, mockVoucherInitValues, mockAuthToken, mockDisputeResolver, accountId } = require("../util/mock");
@@ -274,7 +264,6 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
   // ====================================================================
   context("👉 AuthorizationStrategy.Permit2", async function () {
     let token;
-    let permit2;
 
     before(async function () {
       // Inject MockPermit2 bytecode at the canonical Permit2 address.
@@ -284,8 +273,6 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
 
       const code = await ethers.provider.getCode(await deployedMock.getAddress());
       await network.provider.send("hardhat_setCode", [PERMIT2_ADDRESS, code]);
-
-      permit2 = await getContractAt("MockPermit2", PERMIT2_ADDRESS);
 
       // Refresh snapshot to include the injected code.
       snapshotId = await getSnapshot();
@@ -320,10 +307,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
         deadline,
       };
       const sig = await signer.signTypedData(domain, PERMIT2_TYPES, message);
-      const data = AbiCoder.defaultAbiCoder().encode(
-        ["uint256", "uint256", "bytes"],
-        [permitNonce, deadline, sig]
-      );
+      const data = AbiCoder.defaultAbiCoder().encode(["uint256", "uint256", "bytes"], [permitNonce, deadline, sig]);
       return wrapEntry(AuthorizationStrategy.Permit2, data);
     }
 

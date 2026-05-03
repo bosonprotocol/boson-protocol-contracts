@@ -55,10 +55,7 @@ contract MockPermit2 {
     error NonceUsed();
 
     function DOMAIN_SEPARATOR() public view returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(NAME)), block.chainid, address(this))
-            );
+        return keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(NAME)), block.chainid, address(this)));
     }
 
     function permitTransferFrom(
