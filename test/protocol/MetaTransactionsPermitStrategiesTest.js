@@ -257,6 +257,176 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
           )
       ).to.be.reverted;
     });
+
+    it("tolerates a benign frontrun that already consumed the same permit", async function () {
+      // Setup: build the same auth entry the relayer would, but submit the
+      // user's own permit signature directly to the token first. This
+      // mirrors a frontrunner who replays our permit before our metatx
+      // lands. After the frontrun: allowance == amount, nonce advanced.
+      // Our metatx should observe allowance == _amount, skip the redundant
+      // permit, and pull funds via the allowance the frontrunner left.
+      const amount = "1000";
+      await token.mint(await assistant.getAddress(), amount);
+
+      const deadline = MaxUint256;
+      const ownerNonce = await token.nonces(await assistant.getAddress());
+      const { chainId } = await ethers.provider.getNetwork();
+      const domain = {
+        name: await token.name(),
+        version: "1",
+        chainId,
+        verifyingContract: await token.getAddress(),
+      };
+      const permitMessage = {
+        owner: await assistant.getAddress(),
+        spender: protocolDiamondAddress,
+        value: amount,
+        nonce: ownerNonce,
+        deadline,
+      };
+      const sig = await assistant.signTypedData(domain, PERMIT_TYPES, permitMessage);
+      const split = Signature.from(sig);
+
+      // Frontrun: someone (here `rando`) replays the permit on-chain.
+      await token
+        .connect(rando)
+        .permit(await assistant.getAddress(), protocolDiamondAddress, amount, deadline, split.v, split.r, split.s);
+      expect(await token.allowance(await assistant.getAddress(), protocolDiamondAddress)).to.equal(amount);
+      expect(await token.nonces(await assistant.getAddress())).to.equal(BigInt(ownerNonce) + 1n);
+
+      // Build the queue entry pointing at the *same* (now-spent) signature.
+      const data = AbiCoder.defaultAbiCoder().encode(
+        ["uint256", "uint8", "bytes32", "bytes32"],
+        [deadline, split.v, split.r, split.s]
+      );
+      const entry = wrapEntry(AuthorizationStrategy.EIP2612, data);
+      const queue = encodeAuthQueue([entry]);
+
+      const metatxNonce = parseInt(randomBytes(8));
+      const { fnSig, message, signature } = await buildDepositMetaTx(assistant, token, amount, metatxNonce);
+
+      // Metatx still succeeds: the allowance gate skips the redundant
+      // permit() call, then safeTransferFrom uses the existing allowance.
+      await metaTransactionsHandler
+        .connect(deployer)
+        .executeMetaTransactionWithAuthorization(
+          await assistant.getAddress(),
+          message.functionName,
+          fnSig,
+          metatxNonce,
+          signature,
+          queue
+        );
+
+      expect(await token.balanceOf(protocolDiamondAddress)).to.equal(amount);
+      expect(await token.balanceOf(await assistant.getAddress())).to.equal(0);
+    });
+
+    it("rejects a cross-permit allowance-diversion attack", async function () {
+      // Attack scenario: the user has signed two distinct permits.
+      // The smaller-value permit is bound to a queue entry inside a
+      // commitToOffer-style metatx. An attacker pre-submits the *larger*
+      // permit to the token directly, which advances the nonce and leaves
+      // the protocol with an allowance LARGER than the metatx's _amount.
+      // Without the allowance gate, our metatx would silently divert the
+      // user's larger permit to fund the smaller commit. With the gate,
+      // the metatx must revert.
+      const smallAmount = "100";
+      const bigAmount = "1000";
+      await token.mint(await assistant.getAddress(), bigAmount);
+
+      const deadline = MaxUint256;
+      const { chainId } = await ethers.provider.getNetwork();
+      const domain = {
+        name: await token.name(),
+        version: "1",
+        chainId,
+        verifyingContract: await token.getAddress(),
+      };
+
+      // First permit: signed for nonce 0 (smallAmount). Will be embedded in
+      // the metatx queue.
+      const smallNonce = await token.nonces(await assistant.getAddress());
+      const smallSig = await assistant.signTypedData(domain, PERMIT_TYPES, {
+        owner: await assistant.getAddress(),
+        spender: protocolDiamondAddress,
+        value: smallAmount,
+        nonce: smallNonce,
+        deadline,
+      });
+      const smallSplit = Signature.from(smallSig);
+
+      // Second permit: signed for nonce 1 (bigAmount). User signs it
+      // assuming the first permit will be consumed first.
+      const bigSig = await assistant.signTypedData(domain, PERMIT_TYPES, {
+        owner: await assistant.getAddress(),
+        spender: protocolDiamondAddress,
+        value: bigAmount,
+        nonce: BigInt(smallNonce) + 1n,
+        deadline,
+      });
+      const bigSplit = Signature.from(bigSig);
+
+      // Attacker frontruns: submits BOTH permits directly to the token.
+      // First the small one (consumes nonce 0, sets allowance to 100),
+      // then the big one (consumes nonce 1, overwrites allowance to 1000).
+      await token
+        .connect(rando)
+        .permit(
+          await assistant.getAddress(),
+          protocolDiamondAddress,
+          smallAmount,
+          deadline,
+          smallSplit.v,
+          smallSplit.r,
+          smallSplit.s
+        );
+      await token
+        .connect(rando)
+        .permit(
+          await assistant.getAddress(),
+          protocolDiamondAddress,
+          bigAmount,
+          deadline,
+          bigSplit.v,
+          bigSplit.r,
+          bigSplit.s
+        );
+      expect(await token.allowance(await assistant.getAddress(), protocolDiamondAddress)).to.equal(bigAmount);
+
+      // Now the attacker tries to submit the small-permit metatx.
+      // The queue entry carries `smallSig`, but allowance == bigAmount
+      // (not smallAmount), so the protocol routes to permit(), which
+      // reverts (nonce 0 was already consumed by the frontrun). The
+      // whole metatx must revert — no transfer, no commit, no theft.
+      const data = AbiCoder.defaultAbiCoder().encode(
+        ["uint256", "uint8", "bytes32", "bytes32"],
+        [deadline, smallSplit.v, smallSplit.r, smallSplit.s]
+      );
+      const entry = wrapEntry(AuthorizationStrategy.EIP2612, data);
+      const queue = encodeAuthQueue([entry]);
+
+      const metatxNonce = parseInt(randomBytes(8));
+      const { fnSig, message, signature } = await buildDepositMetaTx(assistant, token, smallAmount, metatxNonce);
+
+      const protocolBalanceBefore = await token.balanceOf(protocolDiamondAddress);
+      await expect(
+        metaTransactionsHandler
+          .connect(deployer)
+          .executeMetaTransactionWithAuthorization(
+            await assistant.getAddress(),
+            message.functionName,
+            fnSig,
+            metatxNonce,
+            signature,
+            queue
+          )
+      ).to.be.reverted;
+
+      // Allowance is untouched, no funds moved on the protocol side.
+      expect(await token.allowance(await assistant.getAddress(), protocolDiamondAddress)).to.equal(bigAmount);
+      expect(await token.balanceOf(protocolDiamondAddress)).to.equal(protocolBalanceBefore);
+    });
   });
 
   // ====================================================================

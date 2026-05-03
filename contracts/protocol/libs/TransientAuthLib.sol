@@ -189,10 +189,25 @@ library TransientAuthLib {
      *      allowance, then pull funds via `safeTransferFrom`. The user signs
      *      the permit with `value == _amount`, so the allowance is consumed
      *      exactly and no residual remains.
+     *
+     *      The `permit` call is gated on the current allowance: if a prior
+     *      call (e.g. a benign frontrun replaying the same signature, or a
+     *      pre-existing allowance from `approve`) already left exactly
+     *      `_amount` for us, we skip `permit` and use the allowance directly.
+     *      If the allowance is anything other than `_amount` we route to
+     *      `permit`, which either succeeds (overwriting the allowance to the
+     *      signed value) or reverts. Reverting prevents the cross-permit
+     *      diversion attack: a frontrunner who used a *different* permit
+     *      signed by the same user (e.g. one for a larger value) leaves
+     *      allowance != `_amount`, so we'd re-call `permit`, that call would
+     *      revert because the nonce has been advanced, and the whole metatx
+     *      reverts — funds never move.
      */
     function _consumeEIP2612(address _token, address _from, address _to, uint256 _amount, bytes memory _data) private {
         (uint256 deadline, uint8 v, bytes32 r, bytes32 s) = abi.decode(_data, (uint256, uint8, bytes32, bytes32));
-        IERC2612(_token).permit(_from, _to, _amount, deadline, v, r, s);
+        if (IERC20(_token).allowance(_from, _to) != _amount) {
+            IERC2612(_token).permit(_from, _to, _amount, deadline, v, r, s);
+        }
         IERC20(_token).safeTransferFrom(_from, _to, _amount);
     }
 
