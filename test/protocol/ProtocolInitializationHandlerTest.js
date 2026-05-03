@@ -670,7 +670,12 @@ describe("ProtocolInitializationHandler", async function () {
     });
   });
 
-  describe("initV2_3_0", async function () {
+  // Skipped under coverage: this hook does two full `hre.run("compile", ...)`
+  // cycles inline, which solidity-coverage's instrumentation makes far too
+  // slow to fit in any sensible mocha timeout. The non-coverage CI job
+  // (test (chunk 1)) still exercises this block with a bumped 300s hook
+  // timeout, which is sufficient.
+  describe("[@skip-on-coverage] initV2_3_0", async function () {
     let deployedProtocolInitializationHandlerFacet, deployedProtocolInitializationHandlerFacetAddress;
     let configHandler;
     let facetCut;
