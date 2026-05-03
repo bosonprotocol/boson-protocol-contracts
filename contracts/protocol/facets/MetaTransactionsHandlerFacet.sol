@@ -310,9 +310,8 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         metaTx.from = _userAddress;
         metaTx.contractAddress = address(this);
         metaTx.functionName = _functionName;
-        metaTx.functionSignature = isSpecialFunction(_functionName)
-            ? bytes(_functionSignature[4:])
-            : _functionSignature;
+        metaTx.functionSignature =
+            isSpecialFunction(_functionName) ? bytes(_functionSignature[4:]) : _functionSignature;
 
         EIP712Lib.verify(_userAddress, hashMetaTransaction(metaTx), _signature);
 

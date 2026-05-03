@@ -24,11 +24,12 @@ contract AccountHandlerFacet is ProtocolBase {
         // The IBosonAccountHandler interface is contributed to by multiple facets which don't have their own interfaces.
         // This facet doesn't extend the interface since it doesn't implement all the methods.
         // However, it is logically responsible for registering the interface.
-        bytes4 commonAccountHandlerInterfaceId = type(IBosonAccountHandler).interfaceId ^
-            type(IBosonAgentHandler).interfaceId ^
-            type(IBosonBuyerHandler).interfaceId ^
-            type(IBosonDisputeResolverHandler).interfaceId ^
-            type(IBosonSellerHandler).interfaceId;
+        bytes4 commonAccountHandlerInterfaceId =
+            type(IBosonAccountHandler).interfaceId ^
+                type(IBosonAgentHandler).interfaceId ^
+                type(IBosonBuyerHandler).interfaceId ^
+                type(IBosonDisputeResolverHandler).interfaceId ^
+                type(IBosonSellerHandler).interfaceId;
         DiamondLib.addSupportedInterface(commonAccountHandlerInterfaceId);
     }
 

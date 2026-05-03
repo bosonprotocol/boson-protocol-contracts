@@ -74,8 +74,8 @@ abstract contract FundsBase is Context {
         } else {
             uint256 sellerId = offer.sellerId;
             bool isPriceDiscovery = _priceType == BosonTypes.PriceType.Discovery;
-            uint256 sellerFundsEncumbered = offer.sellerDeposit +
-                (_isPreminted && !isPriceDiscovery ? _incomingAmount : 0);
+            uint256 sellerFundsEncumbered =
+                offer.sellerDeposit + (_isPreminted && !isPriceDiscovery ? _incomingAmount : 0);
             decreaseAvailableFunds(sellerId, exchangeToken, sellerFundsEncumbered);
             emit IBosonFundsBaseEvents.FundsEncumbered(sellerId, exchangeToken, sellerFundsEncumbered, sender);
         }
@@ -162,9 +162,8 @@ abstract contract FundsBase is Context {
                 // DISPUTED
                 // determine if buyerEscalationDeposit was encumbered or not
                 // if dispute was escalated, disputeDates.escalated is populated
-                uint256 buyerEscalationDeposit = isEscalated
-                    ? pe.disputeResolutionTerms[exchange.offerId].buyerEscalationDeposit
-                    : 0;
+                uint256 buyerEscalationDeposit =
+                    isEscalated ? pe.disputeResolutionTerms[exchange.offerId].buyerEscalationDeposit : 0;
 
                 // get the information about the dispute, which must exist
                 BosonTypes.Dispute storage dispute = pe.disputes[_exchangeId];
@@ -384,8 +383,7 @@ abstract contract FundsBase is Context {
             {
                 if (effectivePriceMultiplier > 0) {
                     protocolFee =
-                        protocolFee +
-                        applyPercent(secondaryCommit.protocolFeeAmount, effectivePriceMultiplier);
+                        protocolFee + applyPercent(secondaryCommit.protocolFeeAmount, effectivePriceMultiplier);
                     sellerRoyalties += distributeRoyalties(
                         _exchangeId,
                         _offer,
@@ -395,9 +393,8 @@ abstract contract FundsBase is Context {
                 }
 
                 // secondary price without protocol fee and royalties
-                uint256 reducedSecondaryPrice = secondaryCommit.price -
-                    secondaryCommit.protocolFeeAmount -
-                    secondaryCommit.royaltyAmount;
+                uint256 reducedSecondaryPrice =
+                    secondaryCommit.price - secondaryCommit.protocolFeeAmount - secondaryCommit.royaltyAmount;
 
                 // Calculate amount to be released to the reseller:
                 // + part of the price that they paid (relevant for unhappy paths)

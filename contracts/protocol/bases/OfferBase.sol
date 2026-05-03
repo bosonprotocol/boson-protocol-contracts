@@ -35,17 +35,16 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
     bytes32 private immutable OFFER_DURATIONS_TYPEHASH = keccak256(bytes(OFFER_DURATIONS_TYPE));
     bytes32 private immutable DR_PARAMETERS_TYPEHASH = keccak256(bytes(DR_PARAMETERS_TYPE));
     bytes32 private immutable CONDITION_TYPEHASH = keccak256(bytes(CONDITION_TYPE));
-    bytes32 private immutable FULL_OFFER_TYPEHASH =
-        keccak256(
-            abi.encodePacked(
-                abi.encodePacked(FULL_OFFER_TYPE, CONDITION_TYPE), // nested abi.encodePacked due to stack-too-deep error
-                DR_PARAMETERS_TYPE,
-                OFFER_TYPE,
-                OFFER_DATES_TYPE,
-                OFFER_DURATIONS_TYPE,
-                ROYALTY_INFO_TYPE
-            )
-        );
+    bytes32 private immutable FULL_OFFER_TYPEHASH = keccak256(
+        abi.encodePacked(
+            abi.encodePacked(FULL_OFFER_TYPE, CONDITION_TYPE), // nested abi.encodePacked due to stack-too-deep error
+            DR_PARAMETERS_TYPE,
+            OFFER_TYPE,
+            OFFER_DATES_TYPE,
+            OFFER_DURATIONS_TYPE,
+            ROYALTY_INFO_TYPE
+        )
+    );
 
     /**
      * @notice Creates offer. Can be reused among different facets.
@@ -260,8 +259,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
                         disputeResolutionTerms.escalationResponsePeriod = disputeResolver.escalationResponsePeriod;
                         disputeResolutionTerms.feeAmount = feeAmount;
                         disputeResolutionTerms.buyerEscalationDeposit =
-                            (feeAmount * fees.buyerEscalationDepositPercentage) /
-                            HUNDRED_PERCENT;
+                            (feeAmount * fees.buyerEscalationDepositPercentage) / HUNDRED_PERCENT;
                         disputeResolutionTerms.mutualizerAddress = _drParameters.mutualizerAddress;
 
                         // Validate mutualizer interface if address is not zero (non-zero means external mutualizer)

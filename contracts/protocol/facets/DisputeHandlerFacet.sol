@@ -14,8 +14,9 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
  * @notice Handles disputes associated with exchanges within the protocol.
  */
 contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
-    bytes32 private constant RESOLUTION_TYPEHASH =
-        keccak256(bytes("Resolution(uint256 exchangeId,uint256 buyerPercentBasisPoints)")); // needed for verification during the resolveDispute
+    bytes32 private constant RESOLUTION_TYPEHASH = keccak256(
+        bytes("Resolution(uint256 exchangeId,uint256 buyerPercentBasisPoints)")
+    ); // needed for verification during the resolveDispute
 
     /**
      * @notice

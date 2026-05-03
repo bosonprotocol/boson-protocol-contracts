@@ -13,8 +13,9 @@ contract MockEIP712Base is MockInitializable {
         bytes32 salt;
     }
 
-    bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
-        keccak256(bytes("EIP712Domain(string name,string version,address verifyingContract,bytes32 salt)"));
+    bytes32 internal constant EIP712_DOMAIN_TYPEHASH = keccak256(
+        bytes("EIP712Domain(string name,string version,address verifyingContract,bytes32 salt)")
+    );
     bytes32 internal domainSeperator;
 
     // supposed to be called once while initializing.

@@ -169,8 +169,7 @@ contract SellerHandlerFacet is IBosonSellerHandler, SellerBase {
                     if (royaltyRecipientId != lastRoyaltyRecipientsId) {
                         royaltyRecipients[royaltyRecipientId] = royaltyRecipients[lastRoyaltyRecipientsId];
                         royaltyRecipientIndexBySellerAndRecipient[royaltyRecipients[royaltyRecipientId].wallet] =
-                            royaltyRecipientId +
-                            1;
+                            royaltyRecipientId + 1;
                     }
                     royaltyRecipients.pop();
 
@@ -334,9 +333,8 @@ contract SellerHandlerFacet is IBosonSellerHandler, SellerBase {
                 authToken.tokenId = authTokenPendingUpdate.tokenId;
 
                 // Store seller by auth token reference
-                lookups.sellerIdByAuthToken[authTokenPendingUpdate.tokenType][
-                    authTokenPendingUpdate.tokenId
-                ] = _sellerId;
+                lookups.sellerIdByAuthToken[authTokenPendingUpdate.tokenType][authTokenPendingUpdate.tokenId] =
+                    _sellerId;
 
                 // Remove previous admin address if it exists
                 delete lookups.sellerIdByAdmin[seller.admin];

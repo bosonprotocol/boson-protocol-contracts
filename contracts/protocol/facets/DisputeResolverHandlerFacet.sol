@@ -468,9 +468,8 @@ contract DisputeResolverHandlerFacet is IBosonDisputeResolverHandler, IBosonAcco
             if (lookups.disputeResolverFeeTokenIndex[_disputeResolverId][_feeTokenAddresses[i]] == 0)
                 revert DisputeResolverFeeNotFound();
 
-            uint256 disputeResolverFeeArrayIndex = lookups.disputeResolverFeeTokenIndex[_disputeResolverId][
-                _feeTokenAddresses[i]
-            ] - 1; //Get the index in the DisputeResolverFees array, which is 1 less than the disputeResolverFeeTokenIndex index
+            uint256 disputeResolverFeeArrayIndex =
+                lookups.disputeResolverFeeTokenIndex[_disputeResolverId][_feeTokenAddresses[i]] - 1; //Get the index in the DisputeResolverFees array, which is 1 less than the disputeResolverFeeTokenIndex index
 
             uint256 lastTokenIndex = disputeResolverFees.length - 1;
             if (disputeResolverFeeArrayIndex != lastTokenIndex) {
@@ -479,8 +478,7 @@ contract DisputeResolverHandlerFacet is IBosonDisputeResolverHandler, IBosonAcco
                 DisputeResolverFee memory disputeResolverFeeToMove = disputeResolverFees[lastTokenIndex];
                 disputeResolverFees[disputeResolverFeeArrayIndex] = disputeResolverFeeToMove; // Copy the last DisputeResolverFee struct in the array to this index to fill the gap
                 lookups.disputeResolverFeeTokenIndex[_disputeResolverId][disputeResolverFeeToMove.tokenAddress] =
-                    disputeResolverFeeArrayIndex +
-                    1; // Reset index mapping. Should be index in disputeResolverFees array + 1
+                    disputeResolverFeeArrayIndex + 1; // Reset index mapping. Should be index in disputeResolverFees array + 1
             }
             disputeResolverFees.pop(); // Delete last DisputeResolverFee struct in the array, which was just moved to fill the gap
             delete lookups.disputeResolverFeeTokenIndex[_disputeResolverId][_feeTokenAddresses[i]]; // Delete from index mapping

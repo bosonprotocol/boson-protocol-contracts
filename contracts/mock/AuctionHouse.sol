@@ -239,9 +239,8 @@ contract AuctionHouse is IAuctionHouse, ReentrancyGuard {
             "Auction hasn't completed"
         );
 
-        address currency = auctions[auctionId].auctionCurrency == address(0)
-            ? wethAddress
-            : auctions[auctionId].auctionCurrency;
+        address currency =
+            auctions[auctionId].auctionCurrency == address(0) ? wethAddress : auctions[auctionId].auctionCurrency;
         uint256 curatorFee = 0;
 
         uint256 tokenOwnerProfit = auctions[auctionId].amount;

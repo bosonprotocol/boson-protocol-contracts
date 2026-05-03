@@ -431,9 +431,10 @@ contract MockExchangeHandlerFacet is BuyerBase, DisputeBase {
                 // Shouldn't decrement supply if twin supply is unlimited
                 if (twin.supplyAvailable != type(uint256).max) {
                     // Decrement by 1 if token type is NonFungible otherwise decrement amount (i.e, tokenType is MultiToken or FungibleToken)
-                    twin.supplyAvailable = twin.tokenType == TokenType.NonFungibleToken
-                        ? twin.supplyAvailable - 1
-                        : twin.supplyAvailable - twin.amount;
+                    twin.supplyAvailable =
+                        twin.tokenType == TokenType.NonFungibleToken
+                            ? twin.supplyAvailable - 1
+                            : twin.supplyAvailable - twin.amount;
                 }
 
                 if (tokenType == TokenType.FungibleToken) {

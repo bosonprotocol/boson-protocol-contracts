@@ -490,14 +490,16 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
         // Operate in a block to avoid "stack too deep" error
         {
             // Determine the time after which the voucher can be redeemed
-            uint256 startDate = (block.timestamp >= offerDates.voucherRedeemableFrom)
-                ? block.timestamp
-                : offerDates.voucherRedeemableFrom;
+            uint256 startDate =
+                (block.timestamp >= offerDates.voucherRedeemableFrom)
+                    ? block.timestamp
+                    : offerDates.voucherRedeemableFrom;
 
             // Determine the time after which the voucher can no longer be redeemed
-            voucher.validUntilDate = (offerDates.voucherRedeemableUntil > 0)
-                ? offerDates.voucherRedeemableUntil
-                : startDate + fetchOfferDurations(_offerId).voucherValid;
+            voucher.validUntilDate =
+                (offerDates.voucherRedeemableUntil > 0)
+                    ? offerDates.voucherRedeemableUntil
+                    : startDate + fetchOfferDurations(_offerId).voucherValid;
         }
 
         // Operate in a block to avoid "stack too deep" error
@@ -723,9 +725,10 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
             // Cache protocol lookups for reference
             ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-            mapping(uint256 => uint256) storage conditionalCommits = condition.gating == GatingType.PerTokenId
-                ? lookups.conditionalCommitsByTokenId[_tokenId]
-                : lookups.conditionalCommitsByAddress[_buyer];
+            mapping(uint256 => uint256) storage conditionalCommits =
+                condition.gating == GatingType.PerTokenId
+                    ? lookups.conditionalCommitsByTokenId[_tokenId]
+                    : lookups.conditionalCommitsByAddress[_buyer];
 
             // How many times has been committed to offers in the group?
             commitCount = conditionalCommits[groupId];
@@ -733,9 +736,10 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
 
             if (commitCount >= maxCommits) return (false, commitCount, maxCommits);
 
-            isEligible = condition.method == EvaluationMethod.Threshold
-                ? holdsThreshold(_buyer, condition, _tokenId)
-                : holdsSpecificToken(_buyer, condition, _tokenId);
+            isEligible =
+                condition.method == EvaluationMethod.Threshold
+                    ? holdsThreshold(_buyer, condition, _tokenId)
+                    : holdsSpecificToken(_buyer, condition, _tokenId);
 
             return (isEligible, commitCount, maxCommits);
         }
@@ -784,9 +788,10 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         GatingType gating = _condition.gating;
-        mapping(uint256 => uint256) storage conditionalCommits = gating == GatingType.PerTokenId
-            ? lookups.conditionalCommitsByTokenId[_tokenId]
-            : lookups.conditionalCommitsByAddress[_buyer];
+        mapping(uint256 => uint256) storage conditionalCommits =
+            gating == GatingType.PerTokenId
+                ? lookups.conditionalCommitsByTokenId[_tokenId]
+                : lookups.conditionalCommitsByAddress[_buyer];
 
         // How many times has been committed to offers in the group?
         uint256 commitCount = conditionalCommits[_groupId];
@@ -794,9 +799,10 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
 
         if (commitCount >= maxCommits) revert MaxCommitsReached();
 
-        bool allow = _condition.method == EvaluationMethod.Threshold
-            ? holdsThreshold(_buyer, _condition, _tokenId)
-            : holdsSpecificToken(_buyer, _condition, _tokenId);
+        bool allow =
+            _condition.method == EvaluationMethod.Threshold
+                ? holdsThreshold(_buyer, _condition, _tokenId)
+                : holdsSpecificToken(_buyer, _condition, _tokenId);
 
         if (!allow) revert CannotCommit();
 

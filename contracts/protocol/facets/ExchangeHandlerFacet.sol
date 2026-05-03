@@ -657,9 +657,10 @@ contract ExchangeHandlerFacet is DisputeBase, BuyerBase, IBosonExchangeManagemen
                         twinM.supplyAvailable = twinS.supplyAvailable;
                         if (twinM.supplyAvailable != type(uint256).max) {
                             // Decrement by 1 if token type is NonFungible otherwise decrement amount (i.e, tokenType is MultiToken or FungibleToken)
-                            twinM.supplyAvailable = twinM.tokenType == TokenType.NonFungibleToken
-                                ? twinM.supplyAvailable - 1
-                                : twinM.supplyAvailable - twinM.amount;
+                            twinM.supplyAvailable =
+                                twinM.tokenType == TokenType.NonFungibleToken
+                                    ? twinM.supplyAvailable - 1
+                                    : twinM.supplyAvailable - twinM.amount;
 
                             twinS.supplyAvailable = twinM.supplyAvailable;
                         }
