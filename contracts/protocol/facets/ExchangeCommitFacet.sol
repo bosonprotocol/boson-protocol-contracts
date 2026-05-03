@@ -236,7 +236,6 @@ contract ExchangeCommitFacet is ExchangeCommitBase, DisputeBase, IBosonExchangeC
         }
     }
 
-
     /**
      * @notice Handle pre-minted voucher transfer
      *

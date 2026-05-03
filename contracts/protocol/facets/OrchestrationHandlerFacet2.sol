@@ -86,15 +86,7 @@ contract OrchestrationHandlerFacet2 is ExchangeCommitBase, ExchangeRedeemBase {
      */
     function commitToOfferAndRedeemVoucher(
         uint256 _offerId
-    )
-        external
-        payable
-        exchangesNotPaused
-        buyersNotPaused
-        sellersNotPaused
-        orchestrationNotPaused
-        nonReentrant
-    {
+    ) external payable exchangesNotPaused buyersNotPaused sellersNotPaused orchestrationNotPaused nonReentrant {
         uint256 exchangeId = commitToStaticOfferShared(payable(_msgSender()), _offerId);
         redeemVoucherInternal(exchangeId, false);
     }
@@ -113,14 +105,7 @@ contract OrchestrationHandlerFacet2 is ExchangeCommitBase, ExchangeRedeemBase {
     function commitToConditionalOfferAndRedeemVoucher(
         uint256 _offerId,
         uint256 _tokenId
-    )
-        external
-        payable
-        exchangesNotPaused
-        buyersNotPaused
-        orchestrationNotPaused
-        nonReentrant
-    {
+    ) external payable exchangesNotPaused buyersNotPaused orchestrationNotPaused nonReentrant {
         uint256 exchangeId = commitToConditionalOfferShared(payable(_msgSender()), _offerId, _tokenId, false);
         redeemVoucherInternal(exchangeId, false);
     }

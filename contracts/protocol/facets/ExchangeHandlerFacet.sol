@@ -17,7 +17,6 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
  * completion, and query operations.
  */
 contract ExchangeHandlerFacet is ExchangeRedeemBase, BuyerBase, IBosonExchangeManagementHandler {
-
     uint256 private immutable EXCHANGE_ID_2_2_0; // solhint-disable-line
 
     /**
@@ -283,10 +282,7 @@ contract ExchangeHandlerFacet is ExchangeRedeemBase, BuyerBase, IBosonExchangeMa
      * @param _offerId - the offer id
      * @return the voucher token id
      */
-    function _computeBurnTokenId(
-        uint256 _exchangeId,
-        uint256 _offerId
-    ) internal view override returns (uint256) {
+    function _computeBurnTokenId(uint256 _exchangeId, uint256 _offerId) internal view override returns (uint256) {
         if (_exchangeId >= EXCHANGE_ID_2_2_0) {
             return _exchangeId | (_offerId << 128);
         }

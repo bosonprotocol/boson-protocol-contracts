@@ -11,12 +11,7 @@ const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const TokenType = require("../../scripts/domain/TokenType");
 const GatingType = require("../../scripts/domain/GatingType");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const {
-  setupTestEnvironment,
-  getSnapshot,
-  revertToSnapshot,
-  setNextBlockTimestamp,
-} = require("../util/utils.js");
+const { setupTestEnvironment, getSnapshot, revertToSnapshot } = require("../util/utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   mockOffer,
@@ -39,7 +34,7 @@ const {
  * step can pass its `checkBuyer` equivalent.
  */
 describe("IBosonOrchestrationHandler — commit and redeem", function () {
-  let deployer, pauser, admin, treasury, buyer, rando, adminDR, treasuryDR;
+  let deployer, pauser, admin, treasury, buyer, adminDR, treasuryDR;
   let assistant, assistantDR;
   let accountHandler,
     offerHandler,
@@ -77,7 +72,7 @@ describe("IBosonOrchestrationHandler — commit and redeem", function () {
     };
 
     ({
-      signers: [pauser, admin, treasury, buyer, rando, adminDR, treasuryDR],
+      signers: [pauser, admin, treasury, buyer, , adminDR, treasuryDR],
       contractInstances: {
         accountHandler,
         groupHandler,
@@ -144,17 +139,19 @@ describe("IBosonOrchestrationHandler — commit and redeem", function () {
     offerFeeLimit = MaxUint256;
 
     // Create seller + offer in one go
-    await orchestrationHandler.connect(assistant).createSellerAndOffer(
-      seller,
-      offer,
-      offerDates,
-      offerDurations,
-      { disputeResolverId, mutualizerAddress: ZeroAddress },
-      emptyAuthToken,
-      voucherInitValues,
-      agentId,
-      offerFeeLimit
-    );
+    await orchestrationHandler
+      .connect(assistant)
+      .createSellerAndOffer(
+        seller,
+        offer,
+        offerDates,
+        offerDurations,
+        { disputeResolverId, mutualizerAddress: ZeroAddress },
+        emptyAuthToken,
+        voucherInitValues,
+        agentId,
+        offerFeeLimit
+      );
 
     // Deposit seller funds: sellerDeposit + DR fee per exchange
     const fundsToDeposit = (BigInt(offer.sellerDeposit) + BigInt(DRFeeNative)) * BigInt(offer.quantityAvailable);
@@ -172,7 +169,9 @@ describe("IBosonOrchestrationHandler — commit and redeem", function () {
         .commitToOfferAndRedeemVoucher(offerId, { value: offer.price });
 
       await expect(tx).to.emit(exchangeCommitHandler, "BuyerCommitted");
-      await expect(tx).to.emit(exchangeHandler, "VoucherRedeemed").withArgs(offerId, "1", await buyer.getAddress());
+      await expect(tx)
+        .to.emit(exchangeHandler, "VoucherRedeemed")
+        .withArgs(offerId, "1", await buyer.getAddress());
 
       const [exists, state] = await exchangeHandler.getExchangeState("1");
       assert.isTrue(exists);
@@ -182,14 +181,16 @@ describe("IBosonOrchestrationHandler — commit and redeem", function () {
     it("reverts when the offer is conditional (use commitToConditionalOfferAndRedeemVoucher instead)", async function () {
       // Create a second offer that is part of a conditional group
       offer.id = "0";
-      await offerHandler.connect(assistant).createOffer(
-        offer,
-        offerDates,
-        offerDurations,
-        { disputeResolverId, mutualizerAddress: ZeroAddress },
-        agentId,
-        offerFeeLimit
-      );
+      await offerHandler
+        .connect(assistant)
+        .createOffer(
+          offer,
+          offerDates,
+          offerDurations,
+          { disputeResolverId, mutualizerAddress: ZeroAddress },
+          agentId,
+          offerFeeLimit
+        );
       const conditionalOfferId = "2";
 
       // Simple threshold condition over an ERC20 token (bosonToken) — buyer has 0, so commit would fail anyway,
@@ -208,9 +209,7 @@ describe("IBosonOrchestrationHandler — commit and redeem", function () {
       await groupHandler.connect(assistant).createGroup(group, condition);
 
       await expect(
-        orchestrationHandler
-          .connect(buyer)
-          .commitToOfferAndRedeemVoucher(conditionalOfferId, { value: offer.price })
+        orchestrationHandler.connect(buyer).commitToOfferAndRedeemVoucher(conditionalOfferId, { value: offer.price })
       ).to.revertedWithCustomError(bosonErrors, RevertReasons.GROUP_HAS_CONDITION);
     });
 
@@ -223,9 +222,7 @@ describe("IBosonOrchestrationHandler — commit and redeem", function () {
     it("reverts when the orchestration region is paused", async function () {
       await pauseHandler.connect(pauser).pause([PausableRegion.Orchestration]);
 
-      await expect(
-        orchestrationHandler.connect(buyer).commitToOfferAndRedeemVoucher("1", { value: offer.price })
-      )
+      await expect(orchestrationHandler.connect(buyer).commitToOfferAndRedeemVoucher("1", { value: offer.price }))
         .to.revertedWithCustomError(bosonErrors, RevertReasons.REGION_PAUSED)
         .withArgs(PausableRegion.Orchestration);
     });
@@ -233,27 +230,28 @@ describe("IBosonOrchestrationHandler — commit and redeem", function () {
     it("atomic: when redeem step would revert (voucherRedeemableFrom in future), the whole tx reverts and no commit takes effect", async function () {
       // Re-create the offer with redeemable date in the far future
       const futureRedeemableFrom = (
-        BigInt((await ethers.provider.getBlock("latest")).timestamp) + 60n * 60n * 24n * 365n
+        BigInt((await ethers.provider.getBlock("latest")).timestamp) +
+        60n * 60n * 24n * 365n
       ).toString();
       offer.id = "0";
       offerDates.voucherRedeemableFrom = futureRedeemableFrom;
-      await offerHandler.connect(assistant).createOffer(
-        offer,
-        offerDates,
-        offerDurations,
-        { disputeResolverId, mutualizerAddress: ZeroAddress },
-        agentId,
-        offerFeeLimit
-      );
+      await offerHandler
+        .connect(assistant)
+        .createOffer(
+          offer,
+          offerDates,
+          offerDurations,
+          { disputeResolverId, mutualizerAddress: ZeroAddress },
+          agentId,
+          offerFeeLimit
+        );
 
       const futureOfferId = "2";
 
       const nextExchangeIdBefore = await exchangeHandler.getNextExchangeId();
 
       await expect(
-        orchestrationHandler
-          .connect(buyer)
-          .commitToOfferAndRedeemVoucher(futureOfferId, { value: offer.price })
+        orchestrationHandler.connect(buyer).commitToOfferAndRedeemVoucher(futureOfferId, { value: offer.price })
       ).to.revertedWithCustomError(bosonErrors, RevertReasons.VOUCHER_NOT_REDEEMABLE);
 
       // Counter must not have advanced — the commit was rolled back
@@ -268,14 +266,16 @@ describe("IBosonOrchestrationHandler — commit and redeem", function () {
     beforeEach(async function () {
       // Create a second offer with an ERC721-ownership condition the buyer satisfies.
       offer.id = "0";
-      await offerHandler.connect(assistant).createOffer(
-        offer,
-        offerDates,
-        offerDurations,
-        { disputeResolverId, mutualizerAddress: ZeroAddress },
-        agentId,
-        offerFeeLimit
-      );
+      await offerHandler
+        .connect(assistant)
+        .createOffer(
+          offer,
+          offerDates,
+          offerDurations,
+          { disputeResolverId, mutualizerAddress: ZeroAddress },
+          agentId,
+          offerFeeLimit
+        );
       conditionalOfferId = "2";
 
       const [foreign721] = await deployMockTokens(["Foreign721"]);
@@ -324,9 +324,7 @@ describe("IBosonOrchestrationHandler — commit and redeem", function () {
     it("reverts when the offer has no group (no condition)", async function () {
       // Offer #1 is the seller's first offer with no group attached
       await expect(
-        orchestrationHandler
-          .connect(buyer)
-          .commitToConditionalOfferAndRedeemVoucher("1", "42", { value: offer.price })
+        orchestrationHandler.connect(buyer).commitToConditionalOfferAndRedeemVoucher("1", "42", { value: offer.price })
       ).to.revertedWithCustomError(bosonErrors, RevertReasons.NO_SUCH_GROUP);
     });
   });
@@ -363,9 +361,7 @@ describe("IBosonOrchestrationHandler — commit and redeem", function () {
         twinIds: ["1"],
       });
 
-      const tx = await orchestrationHandler
-        .connect(buyer)
-        .commitToOfferAndRedeemVoucher("1", { value: offer.price });
+      const tx = await orchestrationHandler.connect(buyer).commitToOfferAndRedeemVoucher("1", { value: offer.price });
 
       await expect(tx).to.emit(exchangeHandler, "VoucherRedeemed");
 
