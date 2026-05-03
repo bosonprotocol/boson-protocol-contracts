@@ -1,4 +1,4 @@
-const { ethers } = require("hardhat");
+const { ethers, network } = require("hardhat");
 const {
   getContractAt,
   ZeroAddress,
@@ -11,6 +11,7 @@ const {
   AbiCoder,
   Signature,
   encodeBytes32String,
+  provider,
 } = ethers;
 const { expect } = require("chai");
 
@@ -39,7 +40,10 @@ const {
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 
 // Per-entry authorization strategy tag (mirrors BosonTypes.TokenTransferAuthorizationStrategy)
-const TokenTransferAuthorizationStrategy = { None: 0, ERC3009: 1 };
+const TokenTransferAuthorizationStrategy = { None: 0, ERC3009: 1, EIP2612: 2, Permit2: 3 };
+
+// Canonical Permit2 address (must match `TokenTransferAuthorizationLib.PERMIT2`)
+const PERMIT2_ADDRESS = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
 
 // EIP-712 types for ERC-3009 ReceiveWithAuthorization (matches MockERC3009Token)
 const RECEIVE_WITH_AUTHORIZATION_TYPES = {
@@ -50,6 +54,31 @@ const RECEIVE_WITH_AUTHORIZATION_TYPES = {
     { name: "validAfter", type: "uint256" },
     { name: "validBefore", type: "uint256" },
     { name: "nonce", type: "bytes32" },
+  ],
+};
+
+// EIP-712 types for EIP-2612 Permit (matches OZ ERC20Permit / DAI / USDC-on-newer-chains)
+const EIP2612_PERMIT_TYPES = {
+  Permit: [
+    { name: "owner", type: "address" },
+    { name: "spender", type: "address" },
+    { name: "value", type: "uint256" },
+    { name: "nonce", type: "uint256" },
+    { name: "deadline", type: "uint256" },
+  ],
+};
+
+// EIP-712 types for Permit2 PermitTransferFrom
+const PERMIT2_TRANSFER_FROM_TYPES = {
+  PermitTransferFrom: [
+    { name: "permitted", type: "TokenPermissions" },
+    { name: "spender", type: "address" },
+    { name: "nonce", type: "uint256" },
+    { name: "deadline", type: "uint256" },
+  ],
+  TokenPermissions: [
+    { name: "token", type: "address" },
+    { name: "amount", type: "uint256" },
   ],
 };
 
@@ -67,18 +96,23 @@ const META_TRANSACTION_TYPES = {
 /**
  * Test the Buyer-Initiated Exchange feature (BPIP-9), specifically the
  * `commitToOffer() - Seller Commits` (a.k.a. `commitToBuyerOffer`) context,
- * but invoked through `executeMetaTransactionWithTokenTransferAuthorization` with an
- * ERC-3009 authorization queue instead of a pre-approved ERC-20 allowance.
+ * but invoked through `executeMetaTransactionWithTokenTransferAuthorization`
+ * with a token-transfer-authorization queue instead of a pre-approved ERC-20
+ * allowance.
  *
  * Mirrors the original `commitToOffer() - Seller Commits` context from
- * `BuyerInitiatedOfferTest.js`:
- *   - The exchange token is a MockERC3009Token (kept under the variable name
- *     `mockToken` to minimize diff with the original).
- *   - The seller (assistant) signs both the metatx and a single-entry ERC-3009
- *     authorization for `sellerDeposit`. No `approve` call is made.
- *   - The buyer pre-deposits the price into the protocol via the standard
- *     approve+depositFunds flow, since this context only exercises the
- *     seller-side commit.
+ * `BuyerInitiatedOfferTest.js`, run three times — once per strategy:
+ * ERC-3009, EIP-2612, and Permit2. The shared body lives in
+ * `defineSellerCommitsTests`; each strategy provides its own token, entry
+ * builder, and one-time setup (e.g. Permit2 needs the seller to one-time
+ * `approve(PERMIT2, MaxUint256)` on the token).
+ *
+ * In every strategy: the seller (assistant) signs both the metatx and a
+ * single-entry token-transfer authorization for `sellerDeposit`. No
+ * `approve(protocol, ...)` call is made for the seller side. The buyer
+ * pre-deposits the price into the protocol via the standard
+ * approve+depositFunds flow, since this context only exercises the
+ * seller-side commit.
  */
 describe("Buyer-Initiated Exchange — Seller Commits with authorization", function () {
   let rando, assistant, admin, treasury, adminDR, treasuryDR, buyer1, buyer2, assistant2;
@@ -87,7 +121,8 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
   let seller, seller2;
   let offer, offerDates, offerDurations;
   let buyerCreatedOffer;
-  let mockToken;
+  let mockToken; // MockERC3009Token (used for ERC-3009 + Permit2 strategies)
+  let mockToken2612; // MockERC2612Token (used for EIP-2612 strategy)
   let buyerId, buyerId2, sellerId, sellerId2;
   let disputeResolver;
   let voucherInitValues, emptyAuthToken;
@@ -114,10 +149,25 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
       metaTransactionsHandler: "IBosonMetaTransactionsHandler",
     };
 
-    // Deploy ERC-3009 token; keep variable name `mockToken` to minimize the diff with the original.
+    // Deploy the ERC-3009 token. The Permit2 strategy reuses this token (it's
+    // an ERC-20 underneath); the EIP-2612 strategy uses its own permit-token.
     const Mock3009 = await getContractFactory("MockERC3009Token");
     mockToken = await Mock3009.deploy("Foreign20", "F20");
     await mockToken.waitForDeployment();
+
+    // Deploy the EIP-2612 permit-supporting token used in the EIP-2612 context.
+    const Mock2612 = await getContractFactory("MockERC2612Token");
+    mockToken2612 = await Mock2612.deploy("Foreign2612", "F26");
+    await mockToken2612.waitForDeployment();
+
+    // Inject MockPermit2 at the canonical Permit2 address. The Permit2
+    // sub-context relies on this code being present at PERMIT2_ADDRESS so
+    // `TokenTransferAuthorizationLib._consumePermit2` calls land on it.
+    const MockP2 = await getContractFactory("MockPermit2");
+    const deployedP2 = await MockP2.deploy();
+    await deployedP2.waitForDeployment();
+    const code = await provider.getCode(await deployedP2.getAddress());
+    await network.provider.send("hardhat_setCode", [PERMIT2_ADDRESS, code]);
 
     ({
       signers: [, admin, treasury, rando, adminDR, treasuryDR, assistant2],
@@ -190,9 +240,11 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
     );
     expect(disputeResolver.isValid()).is.true;
 
+    // DR supports both tokens so any strategy can pick the appropriate one.
     const disputeResolverFees = [
       new DisputeResolverFee(ZeroAddress, "Native", "0"),
       new DisputeResolverFee(await mockToken.getAddress(), "Foreign20", "0"),
+      new DisputeResolverFee(await mockToken2612.getAddress(), "Foreign2612", "0"),
     ];
 
     await accountHandler.connect(adminDR).createDisputeResolver(disputeResolver, disputeResolverFees, []);
@@ -201,27 +253,27 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
 
     ({ offer, offerDates, offerDurations } = await mockOffer());
 
-    // Buyer-created offer denominated in the ERC-3009 token
+    // Buyer-created offer scaffold; the strategy-specific context fills in
+    // `exchangeToken` based on which token the strategy uses.
     buyerCreatedOffer = offer.clone();
     buyerCreatedOffer.sellerId = "0";
     buyerCreatedOffer.creator = OfferCreator.Buyer;
     buyerCreatedOffer.buyerId = buyerId;
     buyerCreatedOffer.collectionIndex = "0";
     buyerCreatedOffer.royaltyInfo = [new RoyaltyInfo([], [])];
-    buyerCreatedOffer.exchangeToken = await mockToken.getAddress();
 
     agentId = "0";
     offerFeeLimit = MaxUint256;
 
-    // Top up the seller's wallet so they can sign auths for sellerDeposit.
-    await mockToken.mint(await assistant.getAddress(), parseUnits("100", "ether").toString());
-    await mockToken.mint(await assistant2.getAddress(), parseUnits("100", "ether").toString());
-
-    // Top up buyers and pre-deposit the price into protocol via the standard path.
-    // This context exercises the seller-side commit only; buyer-side allowance
-    // is intentionally kept on the standard `approve` + `depositFunds` flow.
-    await mockToken.mint(await buyer1.getAddress(), parseUnits("100", "ether").toString());
-    await mockToken.mint(await buyer2.getAddress(), parseUnits("100", "ether").toString());
+    // Top up wallets in both tokens so each strategy has the funds it needs
+    // without re-minting per context.
+    const big = parseUnits("100", "ether").toString();
+    for (const tok of [mockToken, mockToken2612]) {
+      await tok.mint(await assistant.getAddress(), big);
+      await tok.mint(await assistant2.getAddress(), big);
+      await tok.mint(await buyer1.getAddress(), big);
+      await tok.mint(await buyer2.getAddress(), big);
+    }
   });
 
   afterEach(async function () {
@@ -230,44 +282,98 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
 
   // Helpers ---------------------------------------------------------------
 
-  async function signReceiveWithAuthorization(signer, params) {
-    const { chainId } = await ethers.provider.getNetwork();
-    const domain = {
-      name: await mockToken.name(),
-      version: "1",
-      chainId,
-      verifyingContract: await mockToken.getAddress(),
-    };
-    const sig = await signer.signTypedData(domain, RECEIVE_WITH_AUTHORIZATION_TYPES, params);
-    const split = Signature.from(sig);
-    return { v: split.v, r: split.r, s: split.s };
-  }
-
-  async function buildAuthEntry(signer, value) {
-    const validAfter = 0;
-    const validBefore = MaxUint256;
-    const authNonce = zeroPadValue("0x" + Buffer.from(randomBytes(32)).toString("hex"), 32);
-    const params = {
-      from: await signer.getAddress(),
-      to: protocolDiamondAddress,
-      value,
-      validAfter,
-      validBefore,
-      nonce: authNonce,
-    };
-    const { v, r, s } = await signReceiveWithAuthorization(signer, params);
-    const erc3009Data = AbiCoder.defaultAbiCoder().encode(
-      ["uint256", "uint256", "bytes32", "uint8", "bytes32", "bytes32"],
-      [validAfter, validBefore, authNonce, v, r, s]
-    );
-    return AbiCoder.defaultAbiCoder().encode(
-      ["uint8", "bytes"],
-      [TokenTransferAuthorizationStrategy.ERC3009, erc3009Data]
-    );
-  }
-
   function encodeAuthQueue(entries) {
     return AbiCoder.defaultAbiCoder().encode(["bytes[]"], [entries]);
+  }
+
+  // ERC-3009 entry builder: signs `ReceiveWithAuthorization` typed message
+  // against the token's domain.
+  function makeERC3009Builder(token) {
+    return async function (signer, value) {
+      const validAfter = 0;
+      const validBefore = MaxUint256;
+      const authNonce = zeroPadValue("0x" + Buffer.from(randomBytes(32)).toString("hex"), 32);
+      const params = {
+        from: await signer.getAddress(),
+        to: protocolDiamondAddress,
+        value,
+        validAfter,
+        validBefore,
+        nonce: authNonce,
+      };
+      const { chainId } = await provider.getNetwork();
+      const domain = {
+        name: await token.name(),
+        version: "1",
+        chainId,
+        verifyingContract: await token.getAddress(),
+      };
+      const sig = await signer.signTypedData(domain, RECEIVE_WITH_AUTHORIZATION_TYPES, params);
+      const split = Signature.from(sig);
+      const erc3009Data = AbiCoder.defaultAbiCoder().encode(
+        ["uint256", "uint256", "bytes32", "uint8", "bytes32", "bytes32"],
+        [validAfter, validBefore, authNonce, split.v, split.r, split.s]
+      );
+      return AbiCoder.defaultAbiCoder().encode(
+        ["uint8", "bytes"],
+        [TokenTransferAuthorizationStrategy.ERC3009, erc3009Data]
+      );
+    };
+  }
+
+  // EIP-2612 entry builder: signs `Permit` typed message bound to value ==
+  // amount, spender == protocol.
+  function makeEIP2612Builder(token) {
+    return async function (signer, amount) {
+      const { chainId } = await provider.getNetwork();
+      const domain = {
+        name: await token.name(),
+        version: "1",
+        chainId,
+        verifyingContract: await token.getAddress(),
+      };
+      const message = {
+        owner: await signer.getAddress(),
+        spender: protocolDiamondAddress,
+        value: amount,
+        nonce: await token.nonces(await signer.getAddress()),
+        deadline: MaxUint256,
+      };
+      const sig = await signer.signTypedData(domain, EIP2612_PERMIT_TYPES, message);
+      const split = Signature.from(sig);
+      const data = AbiCoder.defaultAbiCoder().encode(
+        ["uint256", "uint8", "bytes32", "bytes32"],
+        [message.deadline, split.v, split.r, split.s]
+      );
+      return AbiCoder.defaultAbiCoder().encode(["uint8", "bytes"], [TokenTransferAuthorizationStrategy.EIP2612, data]);
+    };
+  }
+
+  // Permit2 entry builder: signs a `PermitTransferFrom` typed message against
+  // the canonical Permit2 contract; nonce is fresh per call so multiple
+  // entries in the same queue don't clash.
+  function makePermit2Builder(token) {
+    return async function (signer, amount) {
+      const { chainId } = await provider.getNetwork();
+      const domain = {
+        name: "Permit2",
+        chainId,
+        verifyingContract: PERMIT2_ADDRESS,
+      };
+      const permitNonce = BigInt("0x" + Buffer.from(randomBytes(8)).toString("hex"));
+      const message = {
+        permitted: { token: await token.getAddress(), amount },
+        spender: protocolDiamondAddress,
+        nonce: permitNonce,
+        deadline: MaxUint256,
+      };
+      const sig = await signer.signTypedData(domain, PERMIT2_TRANSFER_FROM_TYPES, message);
+      const data = AbiCoder.defaultAbiCoder().encode(
+        ["uint256", "uint256", "bytes"],
+        [permitNonce, message.deadline, sig]
+      );
+      return AbiCoder.defaultAbiCoder().encode(["uint8", "bytes"], [TokenTransferAuthorizationStrategy.Permit2, data]);
+    };
   }
 
   /**
@@ -279,6 +385,9 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
    * filled with `"0x"` and the protocol discards it. For revert tests that
    * want the safeTransferFrom fallback path, set `forceFallback: true` to
    * insert an empty marker instead of a real auth.
+   *
+   * `entryBuilder` is the strategy-specific builder closure (returned by
+   * `makeERC3009Builder` / `makeEIP2612Builder` / `makePermit2Builder`).
    */
   async function commitToBuyerOfferWithAuth({
     caller,
@@ -286,6 +395,7 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
     targetOfferId,
     sellerParams,
     amount,
+    entryBuilder,
     forceFallback = false,
   }) {
     caller = caller ?? deployer;
@@ -315,7 +425,7 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
 
     let entry = "0x";
     if (!forceFallback && amount && BigInt(amount) > 0n) {
-      entry = await buildAuthEntry(sellerSigner, amount);
+      entry = await entryBuilder(sellerSigner, amount);
     }
 
     return metaTransactionsHandler
@@ -331,31 +441,50 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
   }
 
   // -----------------------------------------------------------------------
+  //  Shared test factory
+  // -----------------------------------------------------------------------
 
-  context("🤝 Seller Commitment to Buyer Offers", async function () {
-    let price, sellerDeposit;
+  /**
+   * Registers the full `commitToOffer() with authorization - Seller Commits`
+   * test set under a strategy-specific context. Each strategy provides its
+   * own token (used as the offer's `exchangeToken`), entry builder, and an
+   * optional `oneTimeSetup` callback (e.g. Permit2 needs the seller(s) to
+   * `approve(PERMIT2, MaxUint256)` on the token before the metatx can pull).
+   */
+  function defineSellerCommitsTests({ strategyName, getToken, entryBuilder, oneTimeSetup }) {
+    context(`👉 commitToOffer() with authorization - Seller Commits (${strategyName})`, async function () {
+      let token, builder, price, sellerDeposit;
 
-    beforeEach(async function () {
-      await offerHandler
-        .connect(buyer1)
-        .createOffer(
-          buyerCreatedOffer,
-          offerDates,
-          offerDurations,
-          { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
-          agentId,
-          offerFeeLimit
-        );
+      beforeEach(async function () {
+        token = getToken();
+        builder = entryBuilder(token);
 
-      price = buyerCreatedOffer.price;
-      sellerDeposit = buyerCreatedOffer.sellerDeposit;
+        if (oneTimeSetup) {
+          await oneTimeSetup({ token, sellers: [assistant, assistant2] });
+        }
 
-      // Buyer pre-deposits payment via the standard approve+depositFunds flow.
-      await mockToken.connect(buyer1).approve(protocolDiamondAddress, price);
-      await fundsHandler.connect(buyer1).depositFunds(buyerId, await mockToken.getAddress(), price);
-    });
+        // Point the offer at this strategy's token, then create it.
+        buyerCreatedOffer.exchangeToken = await token.getAddress();
+        await offerHandler
+          .connect(buyer1)
+          .createOffer(
+            buyerCreatedOffer,
+            offerDates,
+            offerDurations,
+            { disputeResolverId: disputeResolver.id, mutualizerAddress: ZeroAddress },
+            agentId,
+            offerFeeLimit
+          );
 
-    context("👉 commitToOffer() with authorization - Seller Commits", async function () {
+        price = buyerCreatedOffer.price;
+        sellerDeposit = buyerCreatedOffer.sellerDeposit;
+
+        // Buyer pre-deposits payment via the standard approve+depositFunds flow.
+        // (This context exercises the seller-side commit only.)
+        await token.connect(buyer1).approve(protocolDiamondAddress, price);
+        await fundsHandler.connect(buyer1).depositFunds(buyerId, await token.getAddress(), price);
+      });
+
       it("should emit SellerCommitted, FundsDeposited, and FundsEncumbered events when seller commits to buyer offer", async function () {
         const expectedExchangeId = "1";
 
@@ -370,6 +499,7 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
           targetOfferId: nextOfferId,
           sellerParams,
           amount: sellerDeposit,
+          entryBuilder: builder,
         });
 
         const receipt = await tx.wait();
@@ -416,6 +546,7 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
           targetOfferId: nextOfferId,
           sellerParams,
           amount: sellerDeposit,
+          entryBuilder: builder,
         });
 
         const [existsExchange, exchange] = await exchangeHandler.getExchange(expectedExchangeId);
@@ -442,6 +573,7 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
           targetOfferId: nextOfferId,
           sellerParams,
           amount: sellerDeposit,
+          entryBuilder: builder,
         });
 
         const [existsOffer, updatedOffer] = await offerHandler.getOffer(nextOfferId);
@@ -475,8 +607,8 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
           );
 
         // 2nd buyer pre-deposits via standard path
-        await mockToken.connect(buyer2).approve(protocolDiamondAddress, price);
-        await fundsHandler.connect(buyer2).depositFunds(buyerId2, await mockToken.getAddress(), price);
+        await token.connect(buyer2).approve(protocolDiamondAddress, price);
+        await fundsHandler.connect(buyer2).depositFunds(buyerId2, await token.getAddress(), price);
 
         const sellerParams = {
           collectionIndex: 0,
@@ -490,6 +622,7 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
             targetOfferId: "1",
             sellerParams,
             amount: sellerDeposit,
+            entryBuilder: builder,
           })
         ).to.emit(exchangeCommitHandler, "SellerCommitted");
 
@@ -499,6 +632,7 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
             targetOfferId: "2",
             sellerParams,
             amount: sellerDeposit,
+            entryBuilder: builder,
           })
         ).to.emit(exchangeCommitHandler, "SellerCommitted");
 
@@ -516,8 +650,12 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
 
       context("💔 Revert Reasons", async function () {
         it("should revert if seller has insufficient deposit funds", async function () {
-          // Auth signs less than the offer's sellerDeposit → token-side recovery
-          // mismatches → InvalidAuthorization (revert).
+          // Auth is signed for less than the offer's sellerDeposit. The
+          // strategy-specific call constructs its own message with the offer's
+          // sellerDeposit as the value, so the on-chain hash differs from the
+          // signed hash → token-side recovery returns the wrong signer →
+          // revert. (For Permit2 specifically, the recovered owner won't
+          // match `from` because `permitted.amount` differs.)
           const insufficientDeposit = parseUnits("0.1", "ether");
 
           const sellerParams = {
@@ -532,6 +670,7 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
               targetOfferId: nextOfferId,
               sellerParams,
               amount: insufficientDeposit,
+              entryBuilder: builder,
             })
           ).to.be.reverted;
         });
@@ -565,6 +704,7 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
               targetOfferId: "2",
               sellerParams,
               amount: sellerDeposit,
+              entryBuilder: builder,
             })
           ).to.be.revertedWithCustomError(exchangeCommitHandler, "InsufficientAvailableFunds");
         });
@@ -582,6 +722,7 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
               targetOfferId: nextOfferId,
               sellerParams,
               amount: sellerDeposit,
+              entryBuilder: builder,
             })
           ).to.be.revertedWithCustomError(exchangeCommitHandler, "NotAssistant");
         });
@@ -599,6 +740,7 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
               targetOfferId: nextOfferId,
               sellerParams,
               amount: sellerDeposit,
+              entryBuilder: builder,
             })
           ).to.be.revertedWithCustomError(exchangeCommitHandler, "NoSuchCollection");
         });
@@ -616,6 +758,7 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
               targetOfferId: nextOfferId,
               sellerParams,
               amount: sellerDeposit,
+              entryBuilder: builder,
             })
           ).to.be.revertedWithCustomError(exchangeCommitHandler, RevertReasons.UNSUPPORTED_MUTUALIZER);
         });
@@ -624,7 +767,7 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
           const sellerParams = {
             collectionIndex: 0,
             royaltyInfo: { recipients: [ZeroAddress], bps: [0] },
-            mutualizerAddress: await mockToken.getAddress(),
+            mutualizerAddress: await token.getAddress(),
           };
 
           await expect(
@@ -633,10 +776,44 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
               targetOfferId: nextOfferId,
               sellerParams,
               amount: sellerDeposit,
+              entryBuilder: builder,
             })
           ).to.be.revertedWithCustomError(exchangeCommitHandler, RevertReasons.UNSUPPORTED_MUTUALIZER);
         });
       });
+    });
+  }
+
+  // -----------------------------------------------------------------------
+
+  context("🤝 Seller Commitment to Buyer Offers", async function () {
+    // ERC-3009: token natively supports `receiveWithAuthorization`, no
+    // pre-approval needed.
+    defineSellerCommitsTests({
+      strategyName: "ERC-3009",
+      getToken: () => mockToken,
+      entryBuilder: makeERC3009Builder,
+    });
+
+    // EIP-2612: token natively supports `permit`, no pre-approval needed.
+    defineSellerCommitsTests({
+      strategyName: "EIP-2612",
+      getToken: () => mockToken2612,
+      entryBuilder: makeEIP2612Builder,
+    });
+
+    // Permit2: any ERC-20 works, but each potential signer must one-time
+    // `approve(PERMIT2, MaxUint256)` on the token. Reuse the ERC-3009 mock
+    // here since it's a standard ERC-20 underneath.
+    defineSellerCommitsTests({
+      strategyName: "Permit2",
+      getToken: () => mockToken,
+      entryBuilder: makePermit2Builder,
+      oneTimeSetup: async ({ token, sellers }) => {
+        for (const s of sellers) {
+          await token.connect(s).approve(PERMIT2_ADDRESS, MaxUint256);
+        }
+      },
     });
   });
 });
