@@ -265,7 +265,15 @@ module.exports = {
       {
         version: "0.8.35",
         settings: {
-          viaIR: true,
+          // Skip viaIR under solidity-coverage: the legacy pipeline compiles
+          // far faster, which matters for tests like initV2_3_0 that run two
+          // `hre.run("compile", ...)` cycles inline. The coverage network
+          // already runs with `allowUnlimitedContractSize: true`, so the
+          // bytecode-size pressure that needed viaIR in production isn't a
+          // factor here. Production builds (and the non-coverage CI test job)
+          // keep viaIR on. Triggered by `SOLIDITY_COVERAGE=true`, which the
+          // `coverage` npm script sets.
+          viaIR: !process.env.SOLIDITY_COVERAGE,
           optimizer: {
             enabled: true,
             runs: 50,

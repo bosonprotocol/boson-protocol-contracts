@@ -2,7 +2,6 @@
 pragma solidity 0.8.34;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
-import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IERC3009 } from "../../interfaces/IERC3009.sol";
 import { IERC2612 } from "../../interfaces/IERC2612.sol";
 import { IPermit2 } from "../../interfaces/IPermit2.sol";
@@ -155,12 +154,16 @@ library TransientAuthLib {
         bytes memory entry = popNext();
         if (entry.length == 0) return false;
 
+        // Decoding as the enum makes Solidity range-check the tag for us:
+        // any value outside `AuthorizationStrategy`'s declared range trips
+        // `Panic(0x21)` inside `abi.decode`. The dispatch below therefore only
+        // needs to handle the four known strategies and can fall through to
+        // `return false` for `None`.
         (BosonTypes.AuthorizationStrategy strategy, bytes memory data) = abi.decode(
             entry,
             (BosonTypes.AuthorizationStrategy, bytes)
         );
 
-        if (strategy == BosonTypes.AuthorizationStrategy.None) return false;
         if (strategy == BosonTypes.AuthorizationStrategy.ERC3009) {
             _consumeERC3009(_token, _from, _to, _amount, data);
             return true;
@@ -173,7 +176,8 @@ library TransientAuthLib {
             _consumePermit2(_token, _from, _to, _amount, data);
             return true;
         }
-        revert BosonErrors.UnsupportedAuthorizationStrategy();
+        // strategy == AuthorizationStrategy.None
+        return false;
     }
 
     function _consumeERC3009(address _token, address _from, address _to, uint256 _amount, bytes memory _data) private {

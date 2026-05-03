@@ -670,12 +670,7 @@ describe("ProtocolInitializationHandler", async function () {
     });
   });
 
-  // Skipped under coverage: this hook does two full `hre.run("compile", ...)`
-  // cycles inline, which solidity-coverage's instrumentation makes far too
-  // slow to fit in any sensible mocha timeout. The non-coverage CI job
-  // (test (chunk 1)) still exercises this block with a bumped 300s hook
-  // timeout, which is sufficient.
-  describe("[@skip-on-coverage] initV2_3_0", async function () {
+  describe("initV2_3_0", async function () {
     let deployedProtocolInitializationHandlerFacet, deployedProtocolInitializationHandlerFacetAddress;
     let configHandler;
     let facetCut;
@@ -688,7 +683,9 @@ describe("ProtocolInitializationHandler", async function () {
       // First entry runs two full `hre.run("compile", ...)` cycles (one with
       // preprocessing, one without). With the 0.8.34/viaIR profile each
       // compile takes ~70s on CI, so the default 100s mocha timeout isn't
-      // enough — bump it for this hook only. Subsequent runs hit the
+      // enough — bump it for this hook only. Under solidity-coverage we
+      // disable viaIR (see hardhat.config.js) so the compile is fast enough
+      // to fit comfortably here too. Subsequent runs hit the
       // snapshot-revert fast path and don't need the extra headroom.
       this.timeout(300000);
       if (snapshotId) {

@@ -227,6 +227,39 @@ describe("ERC3009-backed metatransactions", function () {
     ).to.be.reverted;
   });
 
+  it("explicit (None, '') queue entry falls back to safeTransferFrom", async function () {
+    // The empty-bytes shortcut and the explicit `(None, "")` envelope are
+    // semantically equivalent — both mean "use the standard ERC-20 allowance
+    // path for this transfer". The shortcut hits the early `entry.length == 0`
+    // return inside `popNext`/`consumeForTransfer`; the explicit envelope
+    // hits the dispatcher's tag-check on `AuthorizationStrategy.None`. We
+    // exercise both to keep the dispatcher fully covered.
+    const amount = "500";
+    await token.mint(await assistant.getAddress(), amount);
+    await token.connect(assistant).approve(protocolDiamondAddress, amount);
+
+    const nonce = parseInt(randomBytes(8));
+    const { fnSig, message, signature } = await buildDepositMetaTx(assistant, amount, nonce);
+
+    // Build an explicit `(AuthorizationStrategy.None, "")` envelope rather
+    // than the empty-bytes shortcut.
+    const noneEntry = AbiCoder.defaultAbiCoder().encode(["uint8", "bytes"], [AuthorizationStrategy.None, "0x"]);
+    const queue = encodeAuthQueue([noneEntry]);
+
+    await metaTransactionsHandler
+      .connect(deployer)
+      .executeMetaTransactionWithAuthorization(
+        await assistant.getAddress(),
+        message.functionName,
+        fnSig,
+        nonce,
+        signature,
+        queue
+      );
+
+    expect(await token.balanceOf(protocolDiamondAddress)).to.equal(amount);
+  });
+
   it("reverts cleanly when the ERC-3009 signature is wrong", async function () {
     const amount = "500";
     await token.mint(await assistant.getAddress(), amount);
