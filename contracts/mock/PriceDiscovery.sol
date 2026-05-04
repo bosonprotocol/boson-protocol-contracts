@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.8.0) (metatx/MockForwarder.sol)
-pragma solidity 0.8.34;
+pragma solidity 0.8.35;
 
 import "../interfaces/IERC20.sol";
 import "../interfaces/IERC721.sol";

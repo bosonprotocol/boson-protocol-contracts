@@ -263,7 +263,7 @@ module.exports = {
         },
       },
       {
-        version: "0.8.34",
+        version: "0.8.35",
         settings: {
           viaIR: false,
           optimizer: {

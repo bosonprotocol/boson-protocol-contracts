@@ -1,7 +1,7 @@
 import "./BosonTypes.sol";
 
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.34;
+pragma solidity 0.8.35;
 
 // Access Control Roles
 bytes32 constant ADMIN = keccak256("ADMIN"); // Role Admin

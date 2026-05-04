@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.34;
+pragma solidity 0.8.35;
 
 import { IDiamondLoupe } from "../../interfaces/diamond/IDiamondLoupe.sol";
 import { DiamondLib } from "../DiamondLib.sol";

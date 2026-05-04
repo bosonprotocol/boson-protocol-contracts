@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.34;
+pragma solidity 0.8.35;
 
 import "../../domain/BosonConstants.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
