@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.34;
+pragma solidity 0.8.35;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IERC3009 } from "../../interfaces/IERC3009.sol";
@@ -39,7 +39,6 @@ library TokenTransferAuthorizationLib {
     bytes32 internal constant ENTRY_NAMESPACE = 0x30c59bf083c2fcd9491ca1228988932eea38f572d51d07d607baef79d1e81d7a;
 
     // Uniswap's Permit2 contract — same canonical address on every chain
-    // Boson supports (Ethereum, Polygon, Optimism, Arbitrum, Base).
     address internal constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 
     /**

@@ -681,7 +681,7 @@ describe("ProtocolInitializationHandler", async function () {
 
     beforeEach(async function () {
       // First entry runs two full `hre.run("compile", ...)` cycles (one with
-      // preprocessing, one without). With the 0.8.34/viaIR profile each
+      // preprocessing, one without). With the 0.8.35/viaIR profile each
       // compile takes ~70s on CI, so the default 100s mocha timeout isn't
       // enough — bump it for this hook only. Under solidity-coverage we
       // disable viaIR (see hardhat.config.js) so the compile is fast enough

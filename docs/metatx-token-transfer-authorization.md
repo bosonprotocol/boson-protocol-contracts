@@ -276,7 +276,7 @@ The wrapper format (`abi.encode(strategy, bytes)`) doesn't change — only the s
 
 Transient storage opcodes (`TSTORE`/`TLOAD`) require the Cancun EVM and Solidity ≥ 0.8.24. The repo is pinned at:
 
-- `pragma solidity 0.8.34;`
+- `pragma solidity 0.8.35;`
 - `evmVersion: "cancun"` (in [`hardhat.config.js`](../hardhat.config.js))
 
 Boson's deployment targets (Ethereum, Polygon, Optimism, Arbitrum, Base) are all post-Dencun and support Cancun. They also all have Uniswap's Permit2 deployed at the canonical `0x000000000022D473030F116dDEE9F6B43aC78BA3`. For local Hardhat testing, [`MetaTransactionsPermitStrategiesTest.js`](../test/protocol/MetaTransactionsPermitStrategiesTest.js) injects [`MockPermit2`](../contracts/mock/MockPermit2.sol) at that address via `hardhat_setCode`.

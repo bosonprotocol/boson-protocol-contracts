@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.34;
+pragma solidity 0.8.35;
 
 /**
  * @dev Subset of Uniswap's Permit2 (`SignatureTransfer`) interface used by the
