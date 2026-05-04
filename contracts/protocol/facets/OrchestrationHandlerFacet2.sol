@@ -88,7 +88,7 @@ contract OrchestrationHandlerFacet2 is ExchangeCommitBase, ExchangeRedeemBase {
         uint256 _offerId
     ) external payable exchangesNotPaused buyersNotPaused sellersNotPaused orchestrationNotPaused nonReentrant {
         uint256 exchangeId = commitToStaticOfferShared(payable(_msgSender()), _offerId);
-        redeemVoucherInternal(exchangeId, false);
+        redeemVoucherInternal(exchangeId);
     }
 
     /**
@@ -107,7 +107,7 @@ contract OrchestrationHandlerFacet2 is ExchangeCommitBase, ExchangeRedeemBase {
         uint256 _tokenId
     ) external payable exchangesNotPaused buyersNotPaused orchestrationNotPaused nonReentrant {
         uint256 exchangeId = commitToConditionalOfferShared(payable(_msgSender()), _offerId, _tokenId, false);
-        redeemVoucherInternal(exchangeId, false);
+        redeemVoucherInternal(exchangeId);
     }
 
     /**
@@ -138,6 +138,6 @@ contract OrchestrationHandlerFacet2 is ExchangeCommitBase, ExchangeRedeemBase {
             ? commitToConditionalOfferShared(payable(_msgSender()), offerId, _conditionalTokenId, false)
             : commitToStaticOfferShared(payable(_msgSender()), offerId);
 
-        redeemVoucherInternal(exchangeId, false);
+        redeemVoucherInternal(exchangeId);
     }
 }

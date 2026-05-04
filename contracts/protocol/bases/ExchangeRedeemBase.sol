@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.34;
+pragma solidity 0.8.35;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonExchangeEvents } from "../../interfaces/events/IBosonExchangeEvents.sol";
@@ -72,17 +72,13 @@ contract ExchangeRedeemBase is DisputeBase, IBosonExchangeEvents, IBosonTwinEven
      * - Current time is after voucher.validUntilDate
      *
      * @param _exchangeId - the id of the exchange
-     * @param _enforceBuyerCheck - if true, requires _msgSender() to be the buyer associated with the exchange.
-     *                             Set to false when the caller has already established that the voucher
-     *                             holder will be the recipient of any bundled twins (e.g. atomic commit-and-redeem).
      */
-    function redeemVoucherInternal(uint256 _exchangeId, bool _enforceBuyerCheck) internal {
+    function redeemVoucherInternal(uint256 _exchangeId) internal {
         // Get the exchange, should be in committed state
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
-        if (_enforceBuyerCheck) {
-            checkBuyer(exchange.buyerId);
-        }
+        // Check buyer even in orchestration flows, to prevent unauthorized redemption of vouchers that could occur if a buyer commits to an offer and then transfers the voucher to another address before redeeming
+        checkBuyer(exchange.buyerId);
 
         uint256 offerId = exchange.offerId;
 
