@@ -51,7 +51,7 @@ async function getV2_2_0DeployConfig() {
     GroupHandlerFacet: { init: [] },
     OfferHandlerFacet: { init: [] },
     OrchestrationHandlerFacet1: { init: [] },
-    OrchestrationHandlerFacet2: { init: [] },
+    OrchestrationHandlerFacet2: { init: [], constructorArgs: [protocolConfig.EXCHANGE_ID_2_2_0[network]] },
     TwinHandlerFacet: { init: [] },
     PauseHandlerFacet: { init: [] },
     ProtocolInitializationHandlerFacet: { init: [] },

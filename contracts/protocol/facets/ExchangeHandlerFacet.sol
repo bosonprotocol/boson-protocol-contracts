@@ -17,8 +17,6 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
  * completion, and query operations.
  */
 contract ExchangeHandlerFacet is ExchangeRedeemBase, BuyerBase, IBosonExchangeManagementHandler {
-    uint256 private immutable EXCHANGE_ID_2_2_0; // solhint-disable-line
-
     /**
      * @notice After v2.2.0, token ids are derived from offerId and exchangeId.
      * EXCHANGE_ID_2_2_0 is the first exchange id to use for 2.2.0.
@@ -270,23 +268,6 @@ contract ExchangeHandlerFacet is ExchangeRedeemBase, BuyerBase, IBosonExchangeMa
      */
     function redeemVoucher(uint256 _exchangeId) external override exchangesNotPaused nonReentrant {
         redeemVoucherInternal(_exchangeId);
-    }
-
-    /**
-     * @notice Computes the voucher token id for burn, supporting pre-2.2.0 vouchers.
-     *
-     * For exchanges created before v2.2.0, the token id is just the exchange id.
-     * For exchanges created in or after v2.2.0, the token id is `exchangeId | (offerId << 128)`.
-     *
-     * @param _exchangeId - the exchange id
-     * @param _offerId - the offer id
-     * @return the voucher token id
-     */
-    function _computeBurnTokenId(uint256 _exchangeId, uint256 _offerId) internal view override returns (uint256) {
-        if (_exchangeId >= EXCHANGE_ID_2_2_0) {
-            return _exchangeId | (_offerId << 128);
-        }
-        return _exchangeId;
     }
 
     /**

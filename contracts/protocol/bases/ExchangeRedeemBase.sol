@@ -20,21 +20,7 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
  */
 contract ExchangeRedeemBase is DisputeBase, IBosonExchangeEvents, IBosonTwinEvents {
     using Address for address;
-
-    /**
-     * @notice Computes the voucher token id for a given exchange when burning.
-     *
-     * Default behavior assumes the post-2.2.0 token-id format (exchangeId | offerId << 128).
-     * ExchangeHandlerFacet overrides this to also support pre-2.2.0 vouchers, where the
-     * token id is just the exchange id.
-     *
-     * @param _exchangeId - the exchange id
-     * @param _offerId - the offer id
-     * @return the voucher token id
-     */
-    function _computeBurnTokenId(uint256 _exchangeId, uint256 _offerId) internal view virtual returns (uint256) {
-        return _exchangeId | (_offerId << 128);
-    }
+    uint256 internal immutable EXCHANGE_ID_2_2_0; // solhint-disable-line
 
     /**
      * @notice Burns the voucher associated with a given exchange.
@@ -55,7 +41,9 @@ contract ExchangeRedeemBase is DisputeBase, IBosonExchangeEvents, IBosonTwinEven
         (, Offer storage offer) = fetchOffer(offerId);
         IBosonVoucher bosonVoucher = IBosonVoucher(getCloneAddress(lookups, offer.sellerId, offer.collectionIndex));
 
-        bosonVoucher.burnVoucher(_computeBurnTokenId(_exchange.id, offerId));
+        uint256 tokenId = _exchange.id;
+        if (tokenId >= EXCHANGE_ID_2_2_0) tokenId |= (offerId << 128);
+        bosonVoucher.burnVoucher(tokenId);
     }
 
     /**

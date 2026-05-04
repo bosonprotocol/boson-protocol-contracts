@@ -20,6 +20,18 @@ import { ExchangeRedeemBase } from "../bases/ExchangeRedeemBase.sol";
  */
 contract OrchestrationHandlerFacet2 is ExchangeCommitBase, ExchangeRedeemBase {
     /**
+     * @notice After v2.2.0, token ids are derived from offerId and exchangeId.
+     * EXCHANGE_ID_2_2_0 is the first exchange id to use for 2.2.0.
+     * Set EXCHANGE_ID_2_2_0 in the constructor.
+     *
+     * @param _firstExchangeId2_2_0 - the first exchange id to use for 2.2.0
+     */
+    //solhint-disable-next-line
+    constructor(uint256 _firstExchangeId2_2_0) {
+        EXCHANGE_ID_2_2_0 = _firstExchangeId2_2_0;
+    }
+
+    /**
      * @notice Initializes facet.
      */
     function initialize() public {
