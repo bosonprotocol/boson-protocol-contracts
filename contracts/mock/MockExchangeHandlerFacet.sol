@@ -560,4 +560,19 @@ contract TestExchangeHandlerFacet is ExchangeHandlerFacet {
         (, Exchange storage exchange) = fetchExchange(_exchangeId);
         finalizeExchange(exchange, _targetState);
     }
+
+    /**
+     * @notice Test-only exposure of the override of {ExchangeRedeemBase._computeBurnTokenId}.
+     *
+     * The legacy branch (exchange id < EXCHANGE_ID_2_2_0) is unreachable via fresh hardhat
+     * deployments where EXCHANGE_ID_2_2_0 == 1, so we expose it here and exercise it by
+     * deploying this facet directly with a higher EXCHANGE_ID_2_2_0.
+     *
+     * @param _exchangeId - the id of the exchange whose voucher would be burned
+     * @param _offerId - the offer id of that exchange
+     * @return the voucher token id that would be passed to BosonVoucher.burnVoucher
+     */
+    function exposeComputeBurnTokenId(uint256 _exchangeId, uint256 _offerId) external view returns (uint256) {
+        return _computeBurnTokenId(_exchangeId, _offerId);
+    }
 }

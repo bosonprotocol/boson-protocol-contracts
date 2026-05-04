@@ -9993,5 +9993,40 @@ describe("IBosonExchangeHandler", function () {
         });
       });
     });
+
+    // _computeBurnTokenId is the ExchangeHandlerFacet-specific override of the base
+    // helper that decides which voucher token-id format to burn:
+    //   - exchangeId >= EXCHANGE_ID_2_2_0 → exchangeId | (offerId << 128)  [post-2.2.0]
+    //   - exchangeId <  EXCHANGE_ID_2_2_0 → exchangeId                     [legacy]
+    //
+    // Hardhat deployments use EXCHANGE_ID_2_2_0 = 1, so every exchange in the regular
+    // test fixture uses the post-2.2.0 format and the legacy return is unreachable.
+    // We deploy a standalone TestExchangeHandlerFacet with a higher EXCHANGE_ID_2_2_0
+    // so we can exercise both branches by direct call.
+    context("👉 _computeBurnTokenId()", async function () {
+      let standaloneFacet;
+      const firstExchangeId = 5n;
+
+      beforeEach(async function () {
+        const TestExchangeHandlerFacet = await ethers.getContractFactory("TestExchangeHandlerFacet");
+        standaloneFacet = await TestExchangeHandlerFacet.deploy(firstExchangeId, ZeroAddress);
+        await standaloneFacet.waitForDeployment();
+      });
+
+      it("legacy path: exchangeId < EXCHANGE_ID_2_2_0 returns the bare exchangeId", async function () {
+        const exchangeId = firstExchangeId - 1n; // 4 < 5 → legacy
+        const offerId = 7n;
+        const result = await standaloneFacet.exposeComputeBurnTokenId(exchangeId, offerId);
+        assert.equal(result, exchangeId);
+      });
+
+      it("post-2.2.0 path: exchangeId >= EXCHANGE_ID_2_2_0 ORs offerId in upper 128 bits", async function () {
+        const exchangeId = firstExchangeId; // 5 >= 5 → post-2.2.0
+        const offerId = 7n;
+        const expected = exchangeId | (offerId << 128n);
+        const result = await standaloneFacet.exposeComputeBurnTokenId(exchangeId, offerId);
+        assert.equal(result, expected);
+      });
+    });
   });
 });
