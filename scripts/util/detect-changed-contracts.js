@@ -34,7 +34,7 @@ async function detectChangedContract(referenceCommit, targetCommit = "HEAD") {
       transform: (line) => {
         if (line.match(/^\s*pragma /i)) {
           //
-          line = line.replace(/solidity\s+0\.8\.21/i, "solidity 0.8.34");
+          line = line.replace(/solidity\s+0\.8\.2[12]/i, "solidity 0.8.35");
         }
         return line;
       },

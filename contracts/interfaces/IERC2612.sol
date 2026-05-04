@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.34;
+pragma solidity 0.8.35;
 
 /**
  * @dev Subset of the EIP-2612 ("Permit") interface used by the protocol's
