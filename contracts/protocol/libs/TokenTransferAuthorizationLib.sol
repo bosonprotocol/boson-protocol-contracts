@@ -112,6 +112,33 @@ library TokenTransferAuthorizationLib {
     }
 
     /**
+     * @notice Resets the queue's bookkeeping so a subsequent call in the same
+     *         transaction sees no loaded queue. The metatransaction entry
+     *         point that loaded the queue must call this at the end of its
+     *         successful path; otherwise leftover entries (e.g. when the
+     *         inner call consumed fewer entries than the queue carried) would
+     *         persist in transient storage and be popped by an unrelated
+     *         protocol call later in the same transaction.
+     *
+     * @dev Zeroing `LEN_SLOT` is sufficient: every read path is gated on
+     *      `len > 0` (`hasQueue`) or `head < len` (`popNext` / `discardNext`),
+     *      so a zero length makes the queue effectively absent. We also reset
+     *      `HEAD_SLOT` for a clean slate — costs one extra `tstore` and keeps
+     *      a follow-up `loadQueue` call in this same tx from inheriting a
+     *      stale head pointer. Per-entry word slots are not cleared; they are
+     *      unreachable while `len == 0` and a future `loadQueue` overwrites
+     *      them as needed.
+     */
+    function clearQueue() internal {
+        bytes32 lenSlot = LEN_SLOT;
+        bytes32 headSlot = HEAD_SLOT;
+        assembly {
+            tstore(lenSlot, 0)
+            tstore(headSlot, 0)
+        }
+    }
+
+    /**
      * @notice Advance the queue head by one without doing any work — used at
      *         skip sites where a `transferFundsIn` is bypassed (zero amount,
      *         pre-deposited funds, etc.) so the off-chain caller can supply a
