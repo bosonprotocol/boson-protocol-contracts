@@ -76,6 +76,8 @@ const { toHexString } = require("../../scripts/util/utils.js");
 const { getStorageAt } = require("@nomicfoundation/hardhat-network-helpers");
 const { FacetCutAction } = require("../../scripts/util/diamond-utils.js");
 const { encodeBytes32String } = require("ethers");
+const TX_GAS_LIMIT = 16777216;
+const BLOCK_GAS_LIMIT_HEX = "0x1000000";
 
 /**
  *  Test the Boson Exchange Handler interface
@@ -3245,19 +3247,21 @@ describe("IBosonExchangeHandler", function () {
           });
 
           it("Too many twins", async function () {
-            await provider.send("evm_setBlockGasLimit", ["0x1000000"]); // 16,777,216. Need to set this limit, otherwise the coverage test will fail
+            await provider.send("evm_setBlockGasLimit", [BLOCK_GAS_LIMIT_HEX]); // 16,777,216. Need to set this limit, otherwise the coverage test will fail
 
             const twinCount = 188;
 
             // Approve the protocol diamond to transfer seller's tokens
-            await foreign20.connect(assistant).approve(protocolDiamondAddress, twinCount * 10, { gasLimit: 16777216 });
+            await foreign20
+              .connect(assistant)
+              .approve(protocolDiamondAddress, twinCount * 10, { gasLimit: TX_GAS_LIMIT });
 
             twin20 = mockTwin(await foreign20.getAddress());
             twin20.amount = "1";
             twin20.supplyAvailable = "1";
 
             for (let i = 0; i < twinCount; i++) {
-              await twinHandler.connect(assistant).createTwin(twin20.toStruct(), { gasLimit: 16777216 });
+              await twinHandler.connect(assistant).createTwin(twin20.toStruct(), { gasLimit: TX_GAS_LIMIT });
             }
 
             // Create a new offer and bundle
@@ -3267,21 +3271,21 @@ describe("IBosonExchangeHandler", function () {
             await offerHandler
               .connect(assistant)
               .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
-                gasLimit: 16777216,
+                gasLimit: TX_GAS_LIMIT,
               });
             bundle = new Bundle("2", seller.id, [`${++offerId}`], twinIds);
-            await bundleHandler.connect(assistant).createBundle(bundle.toStruct(), { gasLimit: 16777216 });
+            await bundleHandler.connect(assistant).createBundle(bundle.toStruct(), { gasLimit: TX_GAS_LIMIT });
 
             // Commit to offer
             const buyerAddress = await buyer.getAddress();
             await exchangeCommitHandler
               .connect(buyer)
-              .commitToOffer(buyerAddress, offerId, { value: price, gasLimit: 16777216 });
+              .commitToOffer(buyerAddress, offerId, { value: price, gasLimit: TX_GAS_LIMIT });
 
             exchange.id = Number(exchange.id) + 1;
 
             // Redeem the voucher
-            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 16777216 });
+            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: TX_GAS_LIMIT });
 
             // Dispute should be raised and twin transfer should be skipped
             await expect(tx)
@@ -4010,20 +4014,22 @@ describe("IBosonExchangeHandler", function () {
           });
 
           it("Too many twins", async function () {
-            await provider.send("evm_setBlockGasLimit", ["0x1000000"]); // 16,777,216. Need to set this limit, otherwise the coverage test will fail
+            await provider.send("evm_setBlockGasLimit", [BLOCK_GAS_LIMIT_HEX]); // 16,777,216. Need to set this limit, otherwise the coverage test will fail
 
             const twinCount = 188;
             const startTokenId = 100;
 
             // Approve the protocol diamond to transfer seller's tokens
-            await foreign721.connect(assistant).setApprovalForAll(protocolDiamondAddress, true, { gasLimit: 16777216 });
+            await foreign721
+              .connect(assistant)
+              .setApprovalForAll(protocolDiamondAddress, true, { gasLimit: TX_GAS_LIMIT });
             twin721 = mockTwin(await foreign721.getAddress(), TokenType.NonFungibleToken);
             twin721.amount = "0";
             twin721.supplyAvailable = "1";
 
             for (let i = startTokenId; i < startTokenId + twinCount; i++) {
               twin721.tokenId = i;
-              await twinHandler.connect(assistant).createTwin(twin721.toStruct(), { gasLimit: 16777216 });
+              await twinHandler.connect(assistant).createTwin(twin721.toStruct(), { gasLimit: TX_GAS_LIMIT });
             }
 
             // Create a new offer and bundle
@@ -4033,21 +4039,21 @@ describe("IBosonExchangeHandler", function () {
             await offerHandler
               .connect(assistant)
               .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
-                gasLimit: 16777216,
+                gasLimit: TX_GAS_LIMIT,
               });
             bundle = new Bundle("2", seller.id, [`${++offerId}`], twinIds);
-            await bundleHandler.connect(assistant).createBundle(bundle.toStruct(), { gasLimit: 16777216 });
+            await bundleHandler.connect(assistant).createBundle(bundle.toStruct(), { gasLimit: TX_GAS_LIMIT });
 
             // Commit to offer
             const buyerAddress = await buyer.getAddress();
             await exchangeCommitHandler
               .connect(buyer)
-              .commitToOffer(buyerAddress, offerId, { value: price, gasLimit: 16777216 });
+              .commitToOffer(buyerAddress, offerId, { value: price, gasLimit: TX_GAS_LIMIT });
 
             exchange.id = Number(exchange.id) + 1;
 
             // Redeem the voucher
-            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 16777216 });
+            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: TX_GAS_LIMIT });
 
             // Dispute should be raised and twin transfer should be skipped
             await expect(tx)
@@ -4443,21 +4449,21 @@ describe("IBosonExchangeHandler", function () {
           });
 
           it("Too many twins", async function () {
-            await provider.send("evm_setBlockGasLimit", ["0x1000000"]); // 16,777,216. Need to set this limit, otherwise the coverage test will fail
+            await provider.send("evm_setBlockGasLimit", [BLOCK_GAS_LIMIT_HEX]); // 16,777,216. Need to set this limit, otherwise the coverage test will fail
 
             const twinCount = 188;
 
             // Approve the protocol diamond to transfer seller's tokens
             await foreign1155
               .connect(assistant)
-              .setApprovalForAll(protocolDiamondAddress, true, { gasLimit: 16777216 });
+              .setApprovalForAll(protocolDiamondAddress, true, { gasLimit: TX_GAS_LIMIT });
 
             twin1155 = mockTwin(await foreign1155.getAddress(), TokenType.MultiToken);
             twin1155.amount = "1";
             twin1155.supplyAvailable = "1";
 
             for (let i = 0; i < twinCount; i++) {
-              await twinHandler.connect(assistant).createTwin(twin1155.toStruct(), { gasLimit: 16777216 });
+              await twinHandler.connect(assistant).createTwin(twin1155.toStruct(), { gasLimit: TX_GAS_LIMIT });
             }
 
             // Create a new offer and bundle
@@ -4467,21 +4473,21 @@ describe("IBosonExchangeHandler", function () {
             await offerHandler
               .connect(assistant)
               .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
-                gasLimit: 16777216,
+                gasLimit: TX_GAS_LIMIT,
               });
             bundle = new Bundle("2", seller.id, [`${++offerId}`], twinIds);
-            await bundleHandler.connect(assistant).createBundle(bundle.toStruct(), { gasLimit: 16777216 });
+            await bundleHandler.connect(assistant).createBundle(bundle.toStruct(), { gasLimit: TX_GAS_LIMIT });
 
             // Commit to offer
             const buyerAddress = await buyer.getAddress();
             await exchangeCommitHandler
               .connect(buyer)
-              .commitToOffer(buyerAddress, offerId, { value: price, gasLimit: 16777216 });
+              .commitToOffer(buyerAddress, offerId, { value: price, gasLimit: TX_GAS_LIMIT });
 
             exchange.id = Number(exchange.id) + 1;
 
             // Redeem the voucher
-            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 16777216 });
+            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: TX_GAS_LIMIT });
 
             // Dispute should be raised and twin transfer should be skipped
             await expect(tx)
@@ -5103,39 +5109,43 @@ describe("IBosonExchangeHandler", function () {
           });
 
           it("Too many twins", async function () {
-            await provider.send("evm_setBlockGasLimit", ["0x1000000"]); // 16,777,216. Need to set this limit, otherwise the coverage test will fail
+            await provider.send("evm_setBlockGasLimit", [BLOCK_GAS_LIMIT_HEX]); // 16,777,216. Need to set this limit, otherwise the coverage test will fail
 
             const twinCount = 189;
 
             // ERC20 twins
-            await foreign20.connect(assistant).approve(protocolDiamondAddress, twinCount * 10, { gasLimit: 16777216 });
+            await foreign20
+              .connect(assistant)
+              .approve(protocolDiamondAddress, twinCount * 10, { gasLimit: TX_GAS_LIMIT });
             twin20 = mockTwin(await foreign20.getAddress());
             twin20.amount = "1";
             twin20.supplyAvailable = "1";
             for (let i = 0; i < twinCount / 3; i++) {
-              await twinHandler.connect(assistant).createTwin(twin20.toStruct(), { gasLimit: 16777216 });
+              await twinHandler.connect(assistant).createTwin(twin20.toStruct(), { gasLimit: TX_GAS_LIMIT });
             }
 
             // ERC721 twins
             const startTokenId = 100;
-            await foreign721.connect(assistant).setApprovalForAll(protocolDiamondAddress, true, { gasLimit: 16777216 });
+            await foreign721
+              .connect(assistant)
+              .setApprovalForAll(protocolDiamondAddress, true, { gasLimit: TX_GAS_LIMIT });
             twin721 = mockTwin(await foreign721.getAddress(), TokenType.NonFungibleToken);
             twin721.amount = "0";
             twin721.supplyAvailable = "1";
             for (let i = startTokenId; i < startTokenId + twinCount / 3; i++) {
               twin721.tokenId = i;
-              await twinHandler.connect(assistant).createTwin(twin721.toStruct(), { gasLimit: 16777216 });
+              await twinHandler.connect(assistant).createTwin(twin721.toStruct(), { gasLimit: TX_GAS_LIMIT });
             }
 
             // Approve the protocol diamond to transfer seller's tokens
             await foreign1155
               .connect(assistant)
-              .setApprovalForAll(protocolDiamondAddress, true, { gasLimit: 16777216 });
+              .setApprovalForAll(protocolDiamondAddress, true, { gasLimit: TX_GAS_LIMIT });
             twin1155 = mockTwin(await foreign1155.getAddress(), TokenType.MultiToken);
             twin1155.amount = "1";
             twin1155.supplyAvailable = "1";
             for (let i = 0; i < twinCount / 3; i++) {
-              await twinHandler.connect(assistant).createTwin(twin1155.toStruct(), { gasLimit: 16777216 });
+              await twinHandler.connect(assistant).createTwin(twin1155.toStruct(), { gasLimit: TX_GAS_LIMIT });
             }
 
             // Create a new offer and bundle
@@ -5145,21 +5155,21 @@ describe("IBosonExchangeHandler", function () {
             await offerHandler
               .connect(assistant)
               .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit, {
-                gasLimit: 16777216,
+                gasLimit: TX_GAS_LIMIT,
               });
             bundle = new Bundle("2", seller.id, [`${++offerId}`], twinIds);
-            await bundleHandler.connect(assistant).createBundle(bundle.toStruct(), { gasLimit: 16777216 });
+            await bundleHandler.connect(assistant).createBundle(bundle.toStruct(), { gasLimit: TX_GAS_LIMIT });
 
             // Commit to offer
             const buyerAddress = await buyer.getAddress();
             await exchangeCommitHandler
               .connect(buyer)
-              .commitToOffer(buyerAddress, offerId, { value: price, gasLimit: 16777216 });
+              .commitToOffer(buyerAddress, offerId, { value: price, gasLimit: TX_GAS_LIMIT });
 
             exchange.id = Number(exchange.id) + 1;
 
             // Redeem the voucher
-            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: 16777216 });
+            tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, { gasLimit: TX_GAS_LIMIT });
 
             // Dispute should be raised and twin transfer should be skipped
             await expect(tx)

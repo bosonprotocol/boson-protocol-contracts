@@ -2,7 +2,7 @@
 module.exports = {
   compilers: {
     solc: {
-      version: "0.8.34",
+      version: "0.8.35",
     },
   },
 };
