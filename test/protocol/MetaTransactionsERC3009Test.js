@@ -304,4 +304,135 @@ describe("ERC3009-backed metatransactions", function () {
 
     expect(await token.balanceOf(protocolDiamondAddress)).to.equal(amount);
   });
+
+  // ====================================================================
+  //  Transient-storage hygiene
+  // --------------------------------------------------------------------
+  //  Transient storage (TSTORE/TLOAD) is per-transaction, not per-call.
+  //  If `executeMetaTransactionWithTokenTransferAuthorization` returns
+  //  successfully without clearing the queue, leftover entries (from a
+  //  queue that carried more entries than the inner call consumed)
+  //  persist in transient storage and can be popped by an unrelated
+  //  protocol call later in the same transaction. The fix adds a
+  //  `clearQueue` call at the end of the success path. These tests
+  //  exercise the fix via a small batch-caller mock so two protocol
+  //  calls land in one transaction.
+  // ====================================================================
+  context("👉 Queue cleared between sibling protocol calls in same tx", async function () {
+    let batchCaller;
+
+    beforeEach(async function () {
+      const Batch = await getContractFactory("MockBatchCaller");
+      batchCaller = await Batch.deploy();
+      await batchCaller.waitForDeployment();
+    });
+
+    it("leftover queue entry from prior call does not leak into a follow-up plain metatx", async function () {
+      // Scenario:
+      //   - Call A: executeMetaTransactionWithTokenTransferAuthorization
+      //     wrapping `depositFunds($10)` from `assistant`, with a queue of
+      //     two entries: a valid auth for $10 + a "bogus" auth (signed for a
+      //     different amount, $99). Call A's depositFunds triggers exactly
+      //     one transferFundsIn — the first entry is consumed, the second
+      //     stays in transient storage if `clearQueue` isn't called.
+      //   - Call B: plain `executeMetaTransaction` wrapping
+      //     `depositFunds($20)` from `assistant`, with allowance set so the
+      //     fallback `safeTransferFrom` path can succeed.
+      //
+      // Pre-fix: Call B's transferFundsIn pops the leftover bogus auth and
+      // calls receiveWithAuthorization with `value=$20` against a signature
+      // signed for `value=$99` — token-side EIP-712 recovery returns the
+      // wrong signer and reverts.
+      // Post-fix: queue cleared at end of Call A; Call B sees no queue,
+      // falls through to safeTransferFrom, succeeds.
+      const amountA = "10";
+      const amountB = "20";
+      const bogusAmount = "99";
+
+      await token.mint(await assistant.getAddress(), "30");
+      // Allowance for Call B's safeTransferFrom path (post-fix).
+      await token.connect(assistant).approve(protocolDiamondAddress, amountB);
+
+      // Two distinct nonces in the same tx — `parseInt(randomBytes(8))` is
+      // unreliable here (it parses only the leading byte of the array's
+      // toString, so collisions in 0..255 are likely).
+      const nonceA = 1;
+      const nonceB = 2;
+
+      // Build Call A: metatx-with-auth, queue with two entries
+      const callA = await buildDepositMetaTx(assistant, amountA, nonceA);
+      const validEntry = await buildAuthEntry(assistant, amountA);
+      const bogusEntry = await buildAuthEntry(assistant, bogusAmount); // signed for wrong amount → leftover, would revert if consumed
+      const queueA = encodeAuthQueue([validEntry, bogusEntry]);
+
+      const callAData = metaTransactionsHandler.interface.encodeFunctionData(
+        "executeMetaTransactionWithTokenTransferAuthorization",
+        [await assistant.getAddress(), callA.message.functionName, callA.fnSig, nonceA, callA.signature, queueA]
+      );
+
+      // Build Call B: plain metatx
+      const callB = await buildDepositMetaTx(assistant, amountB, nonceB);
+      const callBData = metaTransactionsHandler.interface.encodeFunctionData("executeMetaTransaction", [
+        await assistant.getAddress(),
+        callB.message.functionName,
+        callB.fnSig,
+        nonceB,
+        callB.signature,
+      ]);
+
+      // Run both calls in a single transaction via the batch caller.
+      await batchCaller.batch(protocolDiamondAddress, [callAData, callBData]);
+
+      // Both pulls landed.
+      expect(await token.balanceOf(protocolDiamondAddress)).to.equal("30");
+      expect(await token.balanceOf(await assistant.getAddress())).to.equal("0");
+
+      // Smoking-gun assertion: assistant's allowance was decremented to 0,
+      // proving Call B used safeTransferFrom (not the leftover ERC-3009
+      // entry, which would have left the allowance untouched).
+      expect(await token.allowance(await assistant.getAddress(), protocolDiamondAddress)).to.equal("0");
+
+      // Seller now has $30 of available funds in the protocol.
+      const available = await fundsHandler.getAvailableFunds(seller.id, [await token.getAddress()]);
+      expect(available[0].availableAmount).to.equal("30");
+    });
+
+    it("two metatx-with-auth calls in same tx — second's queue is independent of first's", async function () {
+      // Sanity: two consecutive metatx-with-auth calls each load and
+      // consume their own queue without cross-contamination.
+      const amountA = "10";
+      const amountB = "20";
+
+      await token.mint(await assistant.getAddress(), "30");
+      // No allowance — both calls must use ERC-3009.
+
+      // Use two distinct nonces. (Test 1 above only generates one nonce per
+      // call so collision between unrelated tests is fine; here we need
+      // two within the same tx.)
+      const nonceA = 1;
+      const nonceB = 2;
+
+      const callA = await buildDepositMetaTx(assistant, amountA, nonceA);
+      const queueA = encodeAuthQueue([await buildAuthEntry(assistant, amountA)]);
+      const callAData = metaTransactionsHandler.interface.encodeFunctionData(
+        "executeMetaTransactionWithTokenTransferAuthorization",
+        [await assistant.getAddress(), callA.message.functionName, callA.fnSig, nonceA, callA.signature, queueA]
+      );
+
+      const callB = await buildDepositMetaTx(assistant, amountB, nonceB);
+      const queueB = encodeAuthQueue([await buildAuthEntry(assistant, amountB)]);
+      const callBData = metaTransactionsHandler.interface.encodeFunctionData(
+        "executeMetaTransactionWithTokenTransferAuthorization",
+        [await assistant.getAddress(), callB.message.functionName, callB.fnSig, nonceB, callB.signature, queueB]
+      );
+
+      await batchCaller.batch(protocolDiamondAddress, [callAData, callBData]);
+
+      expect(await token.balanceOf(protocolDiamondAddress)).to.equal("30");
+      expect(await token.balanceOf(await assistant.getAddress())).to.equal("0");
+
+      const available = await fundsHandler.getAvailableFunds(seller.id, [await token.getAddress()]);
+      expect(available[0].availableAmount).to.equal("30");
+    });
+  });
 });
