@@ -472,12 +472,14 @@ abstract contract FundsBase is Context {
             // protocol balance before the transfer
             uint256 protocolTokenBalanceBefore = IERC20(_tokenAddress).balanceOf(address(this));
 
-            // If a metatx parked a queue and the next entry carries an ERC-3009
-            // authorization, the library pulls funds via receiveWithAuthorization;
-            // otherwise (no queue, exhausted, or fallback marker) we use the
-            // standard allowance path. receiveWithAuthorization enforces
-            // `to == msg.sender` on the token side, i.e. the protocol — so no
-            // extra recipient check is needed here.
+            // If a metatx parked a queue, the library may consume the next entry
+            // using a supported authorization strategy (e.g. ERC-3009,
+            // EIP-2612, or Permit2) to pull funds into the protocol. If no
+            // queued authorization is available, it is exhausted, or a fallback
+            // marker is encountered, we use the standard allowance path instead.
+            // Note: only the ERC-3009 receiveWithAuthorization path enforces
+            // `to == msg.sender` on the token side; do not assume equivalent
+            // recipient checks for other authorization strategies.
             if (!TokenTransferAuthorizationLib.consumeForTransfer(_tokenAddress, _from, address(this), _amount)) {
                 IERC20(_tokenAddress).safeTransferFrom(_from, address(this), _amount);
             }
