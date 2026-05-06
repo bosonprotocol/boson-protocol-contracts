@@ -267,7 +267,7 @@ contract ExchangeHandlerFacet is ExchangeRedeemBase, BuyerBase, IBosonExchangeMa
      * @param _exchangeId - the id of the exchange
      */
     function redeemVoucher(uint256 _exchangeId) external override exchangesNotPaused nonReentrant {
-        redeemVoucherInternal(_exchangeId);
+        redeemVoucherInternal(_exchangeId, false);
     }
 
     /**

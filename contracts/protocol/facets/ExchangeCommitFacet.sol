@@ -68,7 +68,7 @@ contract ExchangeCommitFacet is ExchangeCommitBase, DisputeBase, IBosonExchangeC
         // Make sure committer address is not zero address
         if (_committer == address(0)) revert InvalidAddress();
 
-        commitToStaticOfferShared(_committer, _offerId);
+        commitToStaticOfferShared(_committer, _offerId, false);
     }
 
     /**
@@ -116,7 +116,7 @@ contract ExchangeCommitFacet is ExchangeCommitBase, DisputeBase, IBosonExchangeC
 
         Offer storage offer = addSellerParametersToBuyerOffer(committer, _offerId, _sellerParams);
 
-        commitToOfferInternal(payable(committer), offer, 0, false);
+        commitToOfferInternal(payable(committer), offer, 0, false, false);
     }
 
     /**
@@ -156,7 +156,7 @@ contract ExchangeCommitFacet is ExchangeCommitBase, DisputeBase, IBosonExchangeC
         // Make sure committer address is not zero address
         if (_committer == address(0)) revert InvalidAddress();
 
-        commitToConditionalOfferShared(_committer, _offerId, _tokenId, true);
+        commitToConditionalOfferShared(_committer, _offerId, _tokenId, true, false);
     }
 
     /**
@@ -332,7 +332,7 @@ contract ExchangeCommitFacet is ExchangeCommitBase, DisputeBase, IBosonExchangeC
                     }
                     // No need to setup reentrancy guard, since this line is reached only if `commitToPriceDiscoveryOffer` was called first
                     // and reentrancy guard was setup there already.
-                    commitToOfferInternal(_to, offer, exchangeId, true);
+                    commitToOfferInternal(_to, offer, exchangeId, true, false);
                     committed = true;
                 }
 
@@ -362,7 +362,7 @@ contract ExchangeCommitFacet is ExchangeCommitBase, DisputeBase, IBosonExchangeC
             if (ps.reentrancyStatus == ENTERED) revert BosonErrors.ReentrancyGuard();
             ps.reentrancyStatus = ENTERED; // avoid reentrancy
 
-            commitToOfferInternal(_to, offer, exchangeId, true);
+            commitToOfferInternal(_to, offer, exchangeId, true, false);
 
             ps.reentrancyStatus = NOT_ENTERED;
             committed = true;

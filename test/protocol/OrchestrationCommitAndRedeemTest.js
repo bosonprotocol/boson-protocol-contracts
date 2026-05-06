@@ -12,7 +12,14 @@ const TokenType = require("../../scripts/domain/TokenType");
 const GatingType = require("../../scripts/domain/GatingType");
 const OfferCreator = require("../../scripts/domain/OfferCreator");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const { setupTestEnvironment, getSnapshot, revertToSnapshot, prepareDataSignature } = require("../util/utils.js");
+const {
+  setupTestEnvironment,
+  getSnapshot,
+  revertToSnapshot,
+  prepareDataSignature,
+  calculateCloneAddress,
+  calculateBosonProxyAddress,
+} = require("../util/utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   mockOffer,
@@ -46,9 +53,11 @@ describe("IBosonOrchestrationHandler — commit and redeem", function () {
     fundsHandler,
     orchestrationHandler,
     pauseHandler;
+  let configHandler;
   let bosonToken;
   let bosonErrors;
   let protocolDiamondAddress;
+  let beaconProxyAddress;
   let snapshotId;
 
   let seller, disputeResolver, disputeResolverId;
@@ -71,6 +80,7 @@ describe("IBosonOrchestrationHandler — commit and redeem", function () {
       fundsHandler: "IBosonFundsHandler",
       orchestrationHandler: "IBosonOrchestrationHandler",
       pauseHandler: "IBosonPauseHandler",
+      configHandler: "IBosonConfigHandler",
     };
 
     ({
@@ -84,9 +94,12 @@ describe("IBosonOrchestrationHandler — commit and redeem", function () {
         fundsHandler,
         orchestrationHandler,
         pauseHandler,
+        configHandler,
       },
       diamondAddress: protocolDiamondAddress,
     } = await setupTestEnvironment(contracts, { bosonTokenAddress: await bosonToken.getAddress() }));
+
+    beaconProxyAddress = await calculateBosonProxyAddress(await configHandler.getAddress());
 
     bosonErrors = await getContractAt("BosonErrors", protocolDiamondAddress);
 
@@ -577,6 +590,89 @@ describe("IBosonOrchestrationHandler — commit and redeem", function () {
 
       // Buyer should now own the twin token
       assert.equal(await foreign721.ownerOf("1000"), buyer.address);
+    });
+  });
+
+  context("👉 voucher NFT lifecycle is skipped", async function () {
+    // The orchestration would mint the voucher to the buyer and burn it again
+    // in the same transaction, so {commitToOfferInternal} and
+    // {ExchangeRedeemBase.redeemVoucherInternal} skip both the
+    // bosonVoucher.issueVoucher() / burnVoucher() calls and the matching
+    // voucherCount[buyerId] inc/dec writes. Verify all of these from the outside.
+    let bosonVoucherClone;
+
+    beforeEach(async function () {
+      const expectedCloneAddress = calculateCloneAddress(
+        await accountHandler.getAddress(),
+        beaconProxyAddress,
+        admin.address
+      );
+      bosonVoucherClone = await getContractAt("IBosonVoucher", expectedCloneAddress);
+    });
+
+    it("commitToOfferAndRedeemVoucher does NOT emit any ERC721 Transfer events", async function () {
+      const tx = await orchestrationHandler.connect(buyer).commitToOfferAndRedeemVoucher("1", { value: offer.price });
+
+      await expect(tx).to.not.emit(bosonVoucherClone, "Transfer");
+      // Token id was never minted — ownerOf reverts.
+      const tokenId = (1n << 128n) | 1n; // offerId=1, exchangeId=1
+      await expect(bosonVoucherClone.ownerOf(tokenId)).to.be.reverted;
+    });
+
+    it("commitToConditionalOfferAndRedeemVoucher does NOT emit any ERC721 Transfer events", async function () {
+      // Set up a conditional offer (#2) with a SpecificToken condition the buyer satisfies.
+      offer.id = "0";
+      await offerHandler
+        .connect(assistant)
+        .createOffer(
+          offer,
+          offerDates,
+          offerDurations,
+          { disputeResolverId, mutualizerAddress: ZeroAddress },
+          agentId,
+          offerFeeLimit
+        );
+      const conditionalOfferId = "2";
+
+      const [foreign721] = await deployMockTokens(["Foreign721"]);
+      await foreign721.connect(deployer).mint("42", "1");
+      await foreign721.connect(deployer).transferFrom(deployer.address, buyer.address, "42");
+
+      const condition = new Condition(
+        EvaluationMethod.SpecificToken,
+        TokenType.NonFungibleToken,
+        await foreign721.getAddress(),
+        GatingType.PerTokenId,
+        "42",
+        "0",
+        "1",
+        "42"
+      );
+      const group = new Group("1", seller.id, [conditionalOfferId]);
+      await groupHandler.connect(assistant).createGroup(group, condition);
+
+      const tx = await orchestrationHandler
+        .connect(buyer)
+        .commitToConditionalOfferAndRedeemVoucher(conditionalOfferId, "42", { value: offer.price });
+
+      await expect(tx).to.not.emit(bosonVoucherClone, "Transfer");
+      const tokenId = (BigInt(conditionalOfferId) << 128n) | 1n;
+      await expect(bosonVoucherClone.ownerOf(tokenId)).to.be.reverted;
+    });
+
+    it("voucherCount stays consistent — the buyer can update their wallet right after the orchestration", async function () {
+      // If voucherCount[buyerId] were left non-zero, updateBuyer would revert with
+      // WalletOwnsVouchers. The orchestration skips both the inc and the dec, so the
+      // counter is back to 0 afterwards and updateBuyer should succeed.
+      await orchestrationHandler.connect(buyer).commitToOfferAndRedeemVoucher("1", { value: offer.price });
+
+      // Read the buyer id from the exchange we just redeemed.
+      const [, exchangeStruct] = await exchangeHandler.getExchange("1");
+      const buyerId = exchangeStruct.buyerId;
+      const newWallet = pauser; // any unused signer
+      const updated = { id: buyerId, wallet: await newWallet.getAddress(), active: true };
+
+      await expect(accountHandler.connect(buyer).updateBuyer(updated)).to.not.be.reverted;
     });
   });
 });

@@ -55,13 +55,16 @@ contract ExchangeRedeemBase is DisputeBase, IBosonExchangeEvents, IBosonTwinEven
      * Reverts if:
      * - Exchange does not exist
      * - Exchange is not in Committed state
-     * - When _enforceBuyerCheck is true and the caller does not own the voucher
+     * - The caller does not own the voucher
      * - Current time is prior to offer.voucherRedeemableFromDate
      * - Current time is after voucher.validUntilDate
      *
      * @param _exchangeId - the id of the exchange
+     * @param _skipVoucher - when true, skip the bosonVoucher.burnVoucher() call and the
+     *                       voucherCount[buyerId]-- write. Used by atomic commit-and-redeem
+     *                       orchestration paths that also skipped the matching mint.
      */
-    function redeemVoucherInternal(uint256 _exchangeId) internal {
+    function redeemVoucherInternal(uint256 _exchangeId, bool _skipVoucher) internal {
         // Get the exchange, should be in committed state
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -83,8 +86,9 @@ contract ExchangeRedeemBase is DisputeBase, IBosonExchangeEvents, IBosonTwinEven
         // Set the exchange state to Redeemed
         exchange.state = ExchangeState.Redeemed;
 
-        // Burn the voucher
-        burnVoucher(exchange);
+        // Burn the voucher unless the matching mint was skipped on the commit side
+        // (atomic commit-and-redeem orchestration).
+        if (!_skipVoucher) burnVoucher(exchange);
 
         // Transfer any bundled twins to buyer
         transferTwins(exchange, voucher);

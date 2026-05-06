@@ -99,8 +99,8 @@ contract OrchestrationHandlerFacet2 is ExchangeCommitBase, ExchangeRedeemBase {
     function commitToOfferAndRedeemVoucher(
         uint256 _offerId
     ) external payable exchangesNotPaused buyersNotPaused sellersNotPaused orchestrationNotPaused nonReentrant {
-        uint256 exchangeId = commitToStaticOfferShared(payable(_msgSender()), _offerId);
-        redeemVoucherInternal(exchangeId);
+        uint256 exchangeId = commitToStaticOfferShared(payable(_msgSender()), _offerId, true);
+        redeemVoucherInternal(exchangeId, true);
     }
 
     /**
@@ -118,8 +118,8 @@ contract OrchestrationHandlerFacet2 is ExchangeCommitBase, ExchangeRedeemBase {
         uint256 _offerId,
         uint256 _tokenId
     ) external payable exchangesNotPaused buyersNotPaused orchestrationNotPaused nonReentrant {
-        uint256 exchangeId = commitToConditionalOfferShared(payable(_msgSender()), _offerId, _tokenId, false);
-        redeemVoucherInternal(exchangeId);
+        uint256 exchangeId = commitToConditionalOfferShared(payable(_msgSender()), _offerId, _tokenId, false, true);
+        redeemVoucherInternal(exchangeId, true);
     }
 
     /**
@@ -147,9 +147,9 @@ contract OrchestrationHandlerFacet2 is ExchangeCommitBase, ExchangeRedeemBase {
         // Buyer is always _msgSender(); for buyer-created offers we already reverted above,
         // so commitToConditionalOfferShared can run with _allowBuyerCreated=false.
         uint256 exchangeId = _fullOffer.condition.method != BosonTypes.EvaluationMethod.None
-            ? commitToConditionalOfferShared(payable(_msgSender()), offerId, _conditionalTokenId, false)
-            : commitToStaticOfferShared(payable(_msgSender()), offerId);
+            ? commitToConditionalOfferShared(payable(_msgSender()), offerId, _conditionalTokenId, false, true)
+            : commitToStaticOfferShared(payable(_msgSender()), offerId, true);
 
-        redeemVoucherInternal(exchangeId);
+        redeemVoucherInternal(exchangeId, true);
     }
 }

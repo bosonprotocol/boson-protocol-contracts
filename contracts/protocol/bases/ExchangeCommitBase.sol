@@ -54,11 +54,14 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
      *
      * @param _committer - the buyer's wallet (or seller assistant for buyer-created offers)
      * @param _offerId - the id of the offer to commit to
+     * @param _skipVoucher - skip the voucher NFT mint and voucherCount increment. Pass true
+     *                       only from atomic commit-and-redeem orchestration paths.
      * @return exchangeId - the id of the newly created exchange
      */
     function commitToStaticOfferShared(
         address payable _committer,
-        uint256 _offerId
+        uint256 _offerId,
+        bool _skipVoucher
     ) internal returns (uint256 exchangeId) {
         Offer storage offer = getValidOffer(_offerId);
         if (offer.priceType != PriceType.Static) revert InvalidPriceType();
@@ -71,7 +74,7 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
             if (condition.method != EvaluationMethod.None) revert GroupHasCondition();
         }
 
-        return commitToOfferInternal(_committer, offer, 0, false);
+        return commitToOfferInternal(_committer, offer, 0, false, _skipVoucher);
     }
 
     /**
@@ -93,13 +96,16 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
      * @param _offerId - the id of the offer to commit to
      * @param _tokenId - the id of the conditional token used to satisfy the condition
      * @param _allowBuyerCreated - if false, reverts with OfferCreatorMustBeSeller for buyer-created offers
+     * @param _skipVoucher - skip the voucher NFT mint and voucherCount increment. Pass true
+     *                       only from atomic commit-and-redeem orchestration paths.
      * @return exchangeId - the id of the newly created exchange
      */
     function commitToConditionalOfferShared(
         address payable _committer,
         uint256 _offerId,
         uint256 _tokenId,
-        bool _allowBuyerCreated
+        bool _allowBuyerCreated,
+        bool _skipVoucher
     ) internal returns (uint256 exchangeId) {
         Offer storage offer = getValidOffer(_offerId);
         if (offer.priceType != PriceType.Static) revert InvalidPriceType();
@@ -123,7 +129,7 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
         }
         authorizeCommit(buyerAddress, condition, groupId, _tokenId, _offerId);
 
-        exchangeId = commitToOfferInternal(_committer, offer, 0, false);
+        exchangeId = commitToOfferInternal(_committer, offer, 0, false, _skipVoucher);
 
         // Snapshot the condition for getReceipt
         protocolLookups().exchangeCondition[exchangeId] = condition;
@@ -261,13 +267,17 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
      * @param _offer - storage pointer to the offer
      * @param _exchangeId - the id of the exchange (only meaningful for preminted)
      * @param _isPreminted - whether the offer is preminted
+     * @param _skipVoucher - when true, skip both the bosonVoucher.issueVoucher() call and the
+     *                       voucherCount[buyerId]++ write. Used by atomic commit-and-redeem
+     *                       orchestration paths that immediately burn the voucher again.
      * @return exchangeId - the id of the exchange
      */
     function commitToOfferInternal(
         address payable _committer,
         Offer storage _offer,
         uint256 _exchangeId,
-        bool _isPreminted
+        bool _isPreminted,
+        bool _skipVoucher
     ) internal returns (uint256) {
         uint256 _offerId = _offer.id;
         OfferDates storage offerDates = fetchOfferDates(_offerId);
@@ -326,28 +336,38 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
             ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
             lookups.exchangeIdsByOffer[_offerId].push(_exchangeId);
 
-            if (!_isPreminted) {
+            // Orchestration commit-and-redeem flows skip the voucher NFT entirely:
+            // it would be minted to the buyer and burned in the same transaction,
+            // so two external calls + four storage writes that net to zero are
+            // pure waste. The corresponding burn-side skip is in
+            // {ExchangeRedeemBase.burnVoucher}. The skip-voucher flag is only
+            // ever set on non-preminted commits, so the preminted branch below
+            // always runs the increment unconditionally.
+            if (_isPreminted) {
+                lookups.voucherCount[buyerId]++;
+            } else {
                 if (_offer.quantityAvailable != type(uint256).max) {
                     _offer.quantityAvailable--;
                 }
 
-                IBosonVoucher bosonVoucher = IBosonVoucher(
-                    getCloneAddress(lookups, _offer.sellerId, _offer.collectionIndex)
-                );
-                uint256 tokenId = _exchangeId | (_offerId << 128);
+                if (!_skipVoucher) {
+                    IBosonVoucher bosonVoucher = IBosonVoucher(
+                        getCloneAddress(lookups, _offer.sellerId, _offer.collectionIndex)
+                    );
+                    uint256 tokenId = _exchangeId | (_offerId << 128);
 
-                address payable buyerWallet;
-                if (_offer.creator == OfferCreator.Buyer) {
-                    (, Buyer storage buyer) = fetchBuyer(buyerId);
-                    buyerWallet = buyer.wallet;
-                } else {
-                    buyerWallet = _committer;
+                    address payable buyerWallet;
+                    if (_offer.creator == OfferCreator.Buyer) {
+                        (, Buyer storage buyer) = fetchBuyer(buyerId);
+                        buyerWallet = buyer.wallet;
+                    } else {
+                        buyerWallet = _committer;
+                    }
+
+                    bosonVoucher.issueVoucher(tokenId, buyerWallet);
+                    lookups.voucherCount[buyerId]++;
                 }
-
-                bosonVoucher.issueVoucher(tokenId, buyerWallet);
             }
-
-            lookups.voucherCount[buyerId]++;
         }
 
         if (_offer.creator == OfferCreator.Buyer) {
