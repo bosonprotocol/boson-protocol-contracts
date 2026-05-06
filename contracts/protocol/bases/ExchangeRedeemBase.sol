@@ -55,21 +55,30 @@ contract ExchangeRedeemBase is DisputeBase, IBosonExchangeEvents, IBosonTwinEven
      * Reverts if:
      * - Exchange does not exist
      * - Exchange is not in Committed state
-     * - The caller does not own the voucher
+     * - When `_skipVoucher` is false: the caller does not own the voucher
      * - Current time is prior to offer.voucherRedeemableFromDate
      * - Current time is after voucher.validUntilDate
      *
      * @param _exchangeId - the id of the exchange
      * @param _skipVoucher - when true, skip the bosonVoucher.burnVoucher() call and the
-     *                       voucherCount[buyerId]-- write. Used by atomic commit-and-redeem
-     *                       orchestration paths that also skipped the matching mint.
+     *                       voucherCount[buyerId]-- write, AND skip the buyer-ownership
+     *                       check. The flag is only set by atomic commit-and-redeem
+     *                       orchestration paths, where `commitToOfferInternal` was just
+     *                       called with `_committer = _msgSender()` in the same
+     *                       transaction. Because the matching voucher mint was skipped,
+     *                       no NFT exists for anyone to transfer, so the buyer recorded
+     *                       on the exchange is provably still the caller — no need to
+     *                       re-check.
      */
     function redeemVoucherInternal(uint256 _exchangeId, bool _skipVoucher) internal {
         // Get the exchange, should be in committed state
         (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
-        // Check buyer even in orchestration flows, to prevent unauthorized redemption of vouchers that could occur if a buyer commits to an offer and then transfers the voucher to another address before redeeming
-        checkBuyer(exchange.buyerId);
+        // Standalone redeemVoucher path: enforce that the caller owns the voucher.
+        // Skipped on the orchestration commit-and-redeem path because the voucher was
+        // never minted (see _skipVoucher in the natspec above), so it cannot have been
+        // transferred — exchange.buyerId is guaranteed to correspond to _msgSender().
+        if (!_skipVoucher) checkBuyer(exchange.buyerId);
 
         uint256 offerId = exchange.offerId;
 
