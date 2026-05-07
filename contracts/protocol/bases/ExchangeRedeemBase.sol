@@ -14,9 +14,9 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
  * @title ExchangeRedeemBase
  *
  * @notice Shared logic for redeeming vouchers, burning the underlying voucher NFT,
- * and transferring bundled twins. Reused by both ExchangeHandlerFacet (for the standalone
- * redeemVoucher entry point and finalizeExchange) and ExchangeCommitFacet (for atomic
- * commit-and-redeem orchestration methods).
+ * and transferring bundled twins. Reused by ExchangeHandlerFacet (for the standalone
+ * redeemVoucher entry point and finalizeExchange) and OrchestrationHandlerFacet2 (for
+ * atomic commit-and-redeem orchestration methods).
  */
 contract ExchangeRedeemBase is DisputeBase, IBosonExchangeEvents, IBosonTwinEvents {
     using Address for address;

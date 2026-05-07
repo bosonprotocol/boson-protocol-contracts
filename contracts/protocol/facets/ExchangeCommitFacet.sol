@@ -7,7 +7,6 @@ import { IBosonExchangeCommitHandler } from "../../interfaces/handlers/IBosonExc
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ExchangeCommitBase } from "../bases/ExchangeCommitBase.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
-import { GroupBase } from "../bases/GroupBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
