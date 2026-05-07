@@ -15,6 +15,7 @@ import { OfferBase } from "../bases/OfferBase.sol";
 import { GroupBase } from "../bases/GroupBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
+import { TokenTransferAuthorizationLib } from "../libs/TokenTransferAuthorizationLib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
@@ -314,8 +315,12 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
                 offerCreatorAmount = _fullOffer.offer.sellerDeposit;
             }
 
+            // transferFundsIn discards the queue slot internally when
+            // offerCreatorAmount == 0, so the off-chain caller can supply a
+            // queue whose layout is independent of runtime amounts.
+            transferFundsIn(_fullOffer.offer.exchangeToken, _offerCreator, offerCreatorAmount);
+
             if (offerCreatorAmount > 0) {
-                transferFundsIn(_fullOffer.offer.exchangeToken, _offerCreator, offerCreatorAmount);
                 increaseAvailableFunds(offerCreatorId, _fullOffer.offer.exchangeToken, offerCreatorAmount);
                 emit IBosonFundsBaseEvents.FundsDeposited(
                     offerCreatorId,
@@ -324,6 +329,11 @@ contract ExchangeCommitFacet is DisputeBase, BuyerBase, OfferBase, GroupBase, IB
                     offerCreatorAmount
                 );
             }
+        } else {
+            // useDepositedFunds=true: offer-creator pull is bypassed entirely.
+            // Discard the queue slot reserved for it so the queue layout stays
+            // uniform across this flag.
+            TokenTransferAuthorizationLib.discardNext();
         }
 
         if (_fullOffer.condition.method != BosonTypes.EvaluationMethod.None) {

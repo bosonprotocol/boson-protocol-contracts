@@ -31,7 +31,7 @@
     "tidy:contracts": "solhint --fix contracts/**/*.sol && prettier --write contracts/**",
     "tidy:scripts": "eslint --fix test/** scripts/** '*.js' && prettier --write test/** scripts/** '*.js'",
     "size": "npx hardhat size-contracts",
-    "coverage": "npx hardhat clean && npx hardhat coverage --testfiles '{test/access/*.js,test/protocol/*.js,test/protocol/clients/*.js}'",
+    "coverage": "SOLIDITY_COVERAGE=true npx hardhat clean && SOLIDITY_COVERAGE=true npx hardhat coverage --testfiles '{test/access/*.js,test/protocol/*.js,test/protocol/clients/*.js}'",
     "deploy-suite": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-suite --network ${NETWORK:-hardhat} --env ${ENV:-''} >> logs/${NETWORK:-hardhat}-${ENV:-''}.deploy.contracts.txt",
     "verify-suite": "npx hardhat verify-suite --network $NETWORK --env ${ENV:-''} >> logs/$NETWORK-${ENV:-''}.verify.contracts.txt",
     "deploy-mocks": "npx hardhat clean && npx hardhat compile && npx hardhat deploy-mock-nft-auth --network ${NETWORK:-hardhat}",

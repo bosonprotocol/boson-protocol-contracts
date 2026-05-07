@@ -680,6 +680,14 @@ describe("ProtocolInitializationHandler", async function () {
     let protocolDiamondAddress;
 
     beforeEach(async function () {
+      // First entry runs two full `hre.run("compile", ...)` cycles (one with
+      // preprocessing, one without). With the 0.8.35/viaIR profile each
+      // compile takes ~70s on CI, so the default 100s mocha timeout isn't
+      // enough — bump it for this hook only. Under solidity-coverage we
+      // disable viaIR (see hardhat.config.js) so the compile is fast enough
+      // to fit comfortably here too. Subsequent runs hit the
+      // snapshot-revert fast path and don't need the extra headroom.
+      this.timeout(300000);
       if (snapshotId) {
         await revertToSnapshot(snapshotId);
         snapshotId = await getSnapshot();

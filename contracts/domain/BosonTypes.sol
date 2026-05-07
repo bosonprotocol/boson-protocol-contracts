@@ -70,6 +70,13 @@ contract BosonTypes {
         ResolveDispute
     }
 
+    enum TokenTransferAuthorizationStrategy {
+        None,
+        ERC3009,
+        EIP2612,
+        Permit2
+    }
+
     enum AuthTokenType {
         None,
         Custom, // For future use

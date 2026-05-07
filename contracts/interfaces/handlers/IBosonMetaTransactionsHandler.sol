@@ -9,7 +9,7 @@ import { IBosonMetaTransactionsEvents } from "../events/IBosonMetaTransactionsEv
  *
  * @notice Manages incoming meta-transactions in the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x10ee6731
+ * The ERC-165 identifier for this interface is: 0xa195a148
  */
 interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents, BosonErrors {
     /**
@@ -46,6 +46,47 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents, BosonEr
         bytes calldata _functionSignature,
         uint256 _nonce,
         bytes calldata _signature
+    ) external payable returns (bytes memory);
+
+    /**
+     * @notice Same as `executeMetaTransaction`, but additionally accepts a
+     *         token-transfer authorization queue that funds-pulling functions
+     *         can consume in lieu of an ERC-20 allowance. Calling this function
+     *         always loads a queue from `_tokenTransferAuthorization`; if you
+     *         have nothing to authorize, call `executeMetaTransaction` instead.
+     *
+     * The protocol parks `_tokenTransferAuthorization` in transient storage for
+     * the duration of the transaction. The payload is `abi.encode(bytes[] queue)`
+     * where each entry is one of:
+     *   - empty bytes (`"0x"`) — fall back to safeTransferFrom for this slot
+     *     (shortcut for `(TokenTransferAuthorizationStrategy.None, "")`).
+     *   - `abi.encode(BosonTypes.TokenTransferAuthorizationStrategy strategy, bytes data)`
+     *     — strategy-specific payload. Today `ERC3009`, `EIP2612`, and `Permit2`
+     *     are supported; `data` is the strategy-specific payload (e.g. for
+     *     ERC-3009: `abi.encode(uint256 validAfter, uint256 validBefore,
+     *     bytes32 nonce, uint8 v, bytes32 r, bytes32 s)`). Future strategies
+     *     plug in here.
+     *
+     * Reverts if:
+     * - Same conditions as `executeMetaTransaction`
+     * - A queue entry uses a tag outside `TokenTransferAuthorizationStrategy`
+     *   (`Panic(0x21)` from Solidity's enum range check inside `abi.decode`)
+     * - Token-side authorization check fails for any consumed entry
+     *
+     * @param _userAddress - the sender of the transaction
+     * @param _functionName - the name of the function to be executed
+     * @param _functionSignature - the function signature
+     * @param _nonce - the nonce value of the transaction
+     * @param _signature - meta transaction signature (see `executeMetaTransaction`)
+     * @param _tokenTransferAuthorization - `abi.encode(bytes[] queue)` (see above)
+     */
+    function executeMetaTransactionWithTokenTransferAuthorization(
+        address _userAddress,
+        string memory _functionName,
+        bytes calldata _functionSignature,
+        uint256 _nonce,
+        bytes calldata _signature,
+        bytes calldata _tokenTransferAuthorization
     ) external payable returns (bytes memory);
 
     /**

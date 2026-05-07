@@ -5,6 +5,7 @@ import "../../domain/BosonConstants.sol";
 import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
+import { TokenTransferAuthorizationLib } from "../libs/TokenTransferAuthorizationLib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
@@ -470,13 +471,29 @@ abstract contract FundsBase is Context {
         if (_amount > 0) {
             // protocol balance before the transfer
             uint256 protocolTokenBalanceBefore = IERC20(_tokenAddress).balanceOf(address(this));
-            // transfer ERC20 tokens from the caller
-            IERC20(_tokenAddress).safeTransferFrom(_from, address(this), _amount);
+
+            // If a metatx parked a queue, the library may consume the next entry
+            // using a supported authorization strategy (e.g. ERC-3009,
+            // EIP-2612, or Permit2) to pull funds into the protocol. If no
+            // queued authorization is available, it is exhausted, or a fallback
+            // marker is encountered, we use the standard allowance path instead.
+            // Note: only the ERC-3009 receiveWithAuthorization path enforces
+            // `to == msg.sender` on the token side; do not assume equivalent
+            // recipient checks for other authorization strategies.
+            if (!TokenTransferAuthorizationLib.consumeForTransfer(_tokenAddress, _from, address(this), _amount)) {
+                IERC20(_tokenAddress).safeTransferFrom(_from, address(this), _amount);
+            }
+
             // protocol balance after the transfer
             uint256 protocolTokenBalanceAfter = IERC20(_tokenAddress).balanceOf(address(this));
             // make sure that expected amount of tokens was transferred
             if (protocolTokenBalanceAfter - protocolTokenBalanceBefore != _amount)
                 revert BosonErrors.InsufficientValueReceived();
+        } else {
+            // Zero-amount pull: no transfer happens, but still advance the queue
+            // head so the off-chain caller can supply a queue whose layout is
+            // independent of runtime amounts. No-op if no queue is loaded.
+            TokenTransferAuthorizationLib.discardNext();
         }
     }
 

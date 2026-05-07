@@ -7,6 +7,7 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
+import { TokenTransferAuthorizationLib } from "../libs/TokenTransferAuthorizationLib.sol";
 
 /**
  * @title MetaTransactionsHandlerFacet
@@ -298,6 +299,70 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         uint256 _nonce,
         bytes calldata _signature
     ) external payable override metaTransactionsNotPaused returns (bytes memory) {
+        return _executeMetaTx(_userAddress, _functionName, _functionSignature, _nonce, _signature);
+    }
+
+    /**
+     * @notice Same as `executeMetaTransaction`, but with a token-transfer
+     *         authorization queue parked in transient storage for consumption
+     *         by `transferFundsIn`. Calling this function always loads a queue
+     *         from `_tokenTransferAuthorization`; if you have nothing to
+     *         authorize, call the regular `executeMetaTransaction` instead.
+     *
+     * The outer metatransaction signature does NOT cover
+     * `_tokenTransferAuthorization`. Each per-entry strategy (e.g. ERC-3009)
+     * carries its own off-chain signature bound to the token, `from`, `to`
+     * (== protocol), `value`, a nonce, and a validity window — independently
+     * authenticated. Including it in the metatx hash would force the user to
+     * double-sign overlapping data.
+     *
+     * @param _userAddress - the sender of the transaction
+     * @param _functionName - the name of the function to be executed
+     * @param _functionSignature - the function signature
+     * @param _nonce - the nonce value of the transaction
+     * @param _signature - meta transaction signature (see `executeMetaTransaction`)
+     * @param _tokenTransferAuthorization - `abi.encode(bytes[] queue)` where each
+     *                                       entry is either `"0x"` (fall back to
+     *                                       safeTransferFrom) or
+     *                                       `abi.encode(TokenTransferAuthorizationStrategy strategy, bytes data)`
+     */
+    function executeMetaTransactionWithTokenTransferAuthorization(
+        address _userAddress,
+        string calldata _functionName,
+        bytes calldata _functionSignature,
+        uint256 _nonce,
+        bytes calldata _signature,
+        bytes calldata _tokenTransferAuthorization
+    ) external payable override metaTransactionsNotPaused returns (bytes memory) {
+        TokenTransferAuthorizationLib.loadQueue(_tokenTransferAuthorization);
+        bytes memory result = _executeMetaTx(_userAddress, _functionName, _functionSignature, _nonce, _signature);
+        // Always clear the queue on the success path so leftover entries (e.g.
+        // when the inner call consumed fewer entries than the queue carried)
+        // don't leak into a later protocol call in the same transaction. On
+        // revert, EIP-1153 already rolls transient writes back, so no clear
+        // is needed there.
+        TokenTransferAuthorizationLib.clearQueue();
+        return result;
+    }
+
+    /**
+     * @notice Shared body for the metatransaction entry points — validates the
+     *         nonce, hashes the metatx, verifies the signature, and dispatches
+     *         the inner call.
+     *
+     * @param _userAddress - the sender of the transaction
+     * @param _functionName - the name of the function to be executed
+     * @param _functionSignature - the function signature
+     * @param _nonce - the nonce value of the transaction
+     * @param _signature - meta transaction signature
+     */
+    function _executeMetaTx(
+        address _userAddress,
+        string calldata _functionName,
+        bytes calldata _functionSignature,
+        uint256 _nonce,
+        bytes calldata _signature
+    ) internal returns (bytes memory) {
         // Make sure that protocol is not reentered through meta transactions
         // Cannot use modifier `nonReentrant` since it also changes reentrancyStatus to `ENTERED`,
         // but that then breaks meta transaction functionality
