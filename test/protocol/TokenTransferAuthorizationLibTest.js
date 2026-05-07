@@ -34,10 +34,10 @@ describe("TokenTransferAuthorizationLib", function () {
       );
       const queue = encodeAuthQueue([noneEntry]);
 
-      const [drained, extraPopWasEmpty] = await consumer.probePopWhenExhausted.staticCall(queue);
-      expect(drained.length).to.equal(1);
-      expect(drained[0]).to.equal(noneEntry);
-      expect(extraPopWasEmpty).to.equal(true);
+      // Send a real transaction (not staticCall) — TSTORE inside loadQueue is
+      // forbidden in a STATICCALL context per EIP-1153, so the consumer reports
+      // results via an event.
+      await expect(consumer.probePopWhenExhausted(queue)).to.emit(consumer, "Probed").withArgs([noneEntry], true);
     });
   });
 });

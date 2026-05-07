@@ -11,6 +11,7 @@ const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const TokenType = require("../../scripts/domain/TokenType");
 const GatingType = require("../../scripts/domain/GatingType");
 const OfferCreator = require("../../scripts/domain/OfferCreator");
+const { RoyaltyInfo } = require("../../scripts/domain/RoyaltyInfo");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const {
   setupTestEnvironment,
@@ -232,6 +233,43 @@ describe("IBosonOrchestrationHandler — commit and redeem", function () {
       await expect(
         orchestrationHandler.connect(buyer).commitToOfferAndRedeemVoucher("1", { value: 0 })
       ).to.revertedWithCustomError(bosonErrors, RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+    });
+
+    it("reverts with OfferCreatorMustBeSeller when the offer is buyer-created", async function () {
+      // Without this guard, a malicious caller could route a buyer-created offer
+      // through commitToOfferAndRedeemVoucher: the orchestration skips both the
+      // voucher mint and the buyer-ownership check on redeem, so the seller's
+      // pre-deposited funds would be encumbered, the (skipped) voucher's twins
+      // would land at _msgSender(), and the actual buyer would be left with
+      // nothing. The check inside commitToStaticOfferShared blocks this.
+
+      // Register the buyer so they can author a buyer-created offer.
+      await accountHandler.connect(buyer).createBuyer({ id: "0", wallet: await buyer.getAddress(), active: true });
+      const buyerAccountId = "3"; // DR=1, seller=2, buyer=3
+
+      const buyerOffer = offer.clone();
+      buyerOffer.id = "0";
+      buyerOffer.sellerId = "0";
+      buyerOffer.creator = OfferCreator.Buyer;
+      buyerOffer.buyerId = buyerAccountId;
+      buyerOffer.collectionIndex = "0";
+      buyerOffer.royaltyInfo = [new RoyaltyInfo([], [])];
+
+      await offerHandler
+        .connect(buyer)
+        .createOffer(
+          buyerOffer,
+          offerDates,
+          offerDurations,
+          { disputeResolverId, mutualizerAddress: ZeroAddress },
+          agentId,
+          offerFeeLimit
+        );
+      const buyerOfferId = "2";
+
+      await expect(
+        orchestrationHandler.connect(buyer).commitToOfferAndRedeemVoucher(buyerOfferId, { value: buyerOffer.price })
+      ).to.revertedWithCustomError(bosonErrors, RevertReasons.OFFER_CREATOR_MUST_BE_SELLER);
     });
 
     it("reverts when the orchestration region is paused", async function () {

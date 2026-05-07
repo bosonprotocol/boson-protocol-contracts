@@ -66,6 +66,14 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
         Offer storage offer = getValidOffer(_offerId);
         if (offer.priceType != PriceType.Static) revert InvalidPriceType();
 
+        // Atomic commit-and-redeem orchestration paths skip the voucher mint+burn
+        // and the buyer-ownership check on redeem. That is only safe when
+        // `_committer == _msgSender()` is the on-chain buyer of the new exchange,
+        // which holds for seller-created offers (buyerId = getValidBuyer(_committer))
+        // but NOT for buyer-created ones (buyerId = offer.buyerId, possibly a third
+        // party — letting any caller siphon the seller's deposit + bundled twins).
+        if (_skipVoucher && offer.creator != OfferCreator.Seller) revert OfferCreatorMustBeSeller();
+
         // For there to be a condition, there must be a group.
         (bool exists, uint256 groupId) = getGroupIdByOffer(offer.id);
         if (exists) {

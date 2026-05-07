@@ -139,7 +139,7 @@ contract OrchestrationHandlerFacet2 is ExchangeCommitBase, ExchangeRedeemBase {
         address _offerCreator,
         bytes calldata _signature,
         uint256 _conditionalTokenId
-    ) external payable exchangesNotPaused buyersNotPaused sellersNotPaused orchestrationNotPaused {
+    ) external payable exchangesNotPaused buyersNotPaused sellersNotPaused orchestrationNotPaused nonReentrant {
         if (_fullOffer.offer.creator != OfferCreator.Seller) revert OfferCreatorMustBeSeller();
 
         uint256 offerId = prepareOfferForCommit(_fullOffer, _offerCreator, _signature);
