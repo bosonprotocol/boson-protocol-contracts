@@ -158,6 +158,8 @@ interface BosonErrors {
     error SellerParametersNotAllowed();
     // Invalid offer creator value specified
     error InvalidOfferCreator();
+    // Orchestrated commit-and-redeem requires the offer to be seller-created
+    error OfferCreatorMustBeSeller();
     // Voucher must have either a fixed expiry or a fixed redeemable period, not both
     error AmbiguousVoucherExpiry();
     // Redemption period starts after it ends or it ends before offer itself expires

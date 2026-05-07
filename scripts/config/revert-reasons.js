@@ -66,6 +66,8 @@ exports.RevertReasons = {
   MAX_COMMITS_REACHED: "MaxCommitsReached",
   GROUP_HAS_NO_CONDITION: "GroupHasNoCondition",
   GROUP_HAS_CONDITION: "GroupHasCondition",
+  OFFER_CREATOR_MUST_BE_SELLER: "OfferCreatorMustBeSeller",
+  INVALID_PRICE_TYPE: "InvalidPriceType",
   TOKEN_ID_NOT_IN_CONDITION_RANGE: "TokenIdNotInConditionRange",
   INVALID_TOKEN_ID: "InvalidTokenId",
 
