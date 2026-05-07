@@ -28,13 +28,13 @@ async function detectChangedContract(referenceCommit, targetCommit = "HEAD") {
     compiler.settings["metadata"] = { bytecodeHash: "none", appendCBOR: false };
   }
 
-  // Protocol versions < 2.3.0 use solidity 0.8.9. To make bytecode comparison clean, we need to replace the pragma
+  // Protocol replace older version that use different pragmas
   hre.config.preprocess = {
     eachLine: () => ({
       transform: (line) => {
         if (line.match(/^\s*pragma /i)) {
           //
-          line = line.replace(/solidity\s+0\.8\.21/i, "solidity 0.8.22");
+          line = line.replace(/solidity\s+0\.8\.2[12]/i, "solidity 0.8.35");
         }
         return line;
       },

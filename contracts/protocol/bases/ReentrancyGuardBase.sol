@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
+pragma solidity 0.8.35;
+
 import "../../domain/BosonConstants.sol";
 import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
-
-pragma solidity 0.8.22;
 
 /**
  * @notice Contract module that helps prevent reentrant calls to a function.
