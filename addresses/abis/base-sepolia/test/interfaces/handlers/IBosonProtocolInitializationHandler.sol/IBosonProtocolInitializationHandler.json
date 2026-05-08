@@ -645,6 +645,11 @@
     },
     {
       "inputs": [],
+      "name": "OfferCreatorMustBeSeller",
+      "type": "error"
+    },
+    {
+      "inputs": [],
       "name": "OfferExpiredOrVoided",
       "type": "error"
     },
@@ -1164,6 +1169,25 @@
         }
       ],
       "name": "MinResolutionPeriodChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "mutualizerGasStipend",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "MutualizerGasStipendChanged",
       "type": "event"
     },
     {
