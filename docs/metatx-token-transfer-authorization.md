@@ -191,16 +191,20 @@ Slots whose pull won't fire at runtime (zero amount, `useDepositedFunds=true`) g
 | `commitToOffer(buyer, offerId)` | `[buyer_auth(offer.price)]` |
 | `commitToConditionalOffer(buyer, offerId, tokenId)` | `[buyer_auth(offer.price)]` |
 | `commitToBuyerOffer(offerId, sellerParams)` | `[seller_auth(offer.sellerDeposit)]` |
+| `commitToOfferAndRedeemVoucher(offerId)` | `[buyer_auth(offer.price)]` |
+| `commitToConditionalOfferAndRedeemVoucher(offerId, tokenId)` | `[buyer_auth(offer.price)]` |
 | `createOfferAndCommit(...)` — seller offer | `[seller_auth(sellerDeposit), buyer_auth(price)]` |
 | `createOfferAndCommit(...)` — buyer offer | `[buyer_auth(price), seller_auth(sellerDeposit)]` |
+| `createOfferCommitAndRedeem(...)` — seller offer only | `[seller_auth(sellerDeposit), buyer_auth(price)]` |
 | `commitToPriceDiscoveryOffer(...)` — ask order | `[buyer_auth(priceDiscovery.price), seller_auth(actualPrice)]` |
 | `escalateDispute(exchangeId)` | `[buyer_auth(buyerEscalationDeposit)]` |
 
 Notes:
 
-- For any flow above, if a slot's amount is `0` at runtime, or it's the offer-creator slot in `createOfferAndCommit` with `useDepositedFunds=true`, the protocol discards that slot. Fill it with `"0x"` rather than skipping it entirely.
+- For any flow above, if a slot's amount is `0` at runtime, or it's the offer-creator slot in `createOfferAndCommit` / `createOfferCommitAndRedeem` with `useDepositedFunds=true`, the protocol discards that slot. Fill it with `"0x"` rather than skipping it entirely.
 - A queue entry of `"0x"` for a slot whose pull **will** fire forces the standard-allowance fallback path for that single transfer (the protocol falls through to `safeTransferFrom`). This is how mixed-mode flows are expressed — see the last worked example below.
 - For native-currency offers (`exchangeToken == address(0)`), `transferFundsIn` is never called — call `executeMetaTransaction` (without the token-transfer-authorization suffix) instead.
+- The commit-and-redeem orchestration variants (`commitToOfferAndRedeemVoucher`, `commitToConditionalOfferAndRedeemVoucher`, `createOfferCommitAndRedeem`) hardcode the buyer to `_msgSender()` — there is no `_committer` parameter, so the metatx caller is always the buyer. `createOfferCommitAndRedeem` only accepts seller-created offers; the buyer-offer queue layout doesn't apply.
 
 ### Single transfer (e.g. `depositFunds`)
 

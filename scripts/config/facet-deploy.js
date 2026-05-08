@@ -100,6 +100,10 @@ async function getFacets(config) {
     init: [],
     constructorArgs: [protocolConfig.WrappedNative[network]],
   };
+  facetArgs["OrchestrationHandlerFacet2"] = {
+    init: [],
+    constructorArgs: [protocolConfig.EXCHANGE_ID_2_2_0[network]],
+  };
 
   // metaTransactionsHandlerFacet initializer arguments.
   const MetaTransactionsHandlerFacetInitArgs = await getMetaTransactionsHandlerFacetInitArgs(
