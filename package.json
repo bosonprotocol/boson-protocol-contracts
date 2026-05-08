@@ -72,7 +72,7 @@
     "husky": "^9.1.7",
     "lodash": "^4.18.1",
     "merkletreejs": "^0.6.0",
-    "opensea-js": "^7.1.22",
+    "opensea-js": "^8.1.1",
     "prettier": "^3.8.3",
     "prettier-plugin-solidity": "^2.0.0",
     "simple-statistics": "^7.8.9",
