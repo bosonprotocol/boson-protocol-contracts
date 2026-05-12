@@ -64,7 +64,7 @@
     "eslint-plugin-no-only-tests": "^3.4.0",
     "ethers": "^6.16.0",
     "ethersv5": "npm:ethers@^5.7.2",
-    "glob": "^11.1.0",
+    "glob": "^13.0.6",
     "globals": "^17.6.0",
     "hardhat": "^2.28.6",
     "hardhat-contract-sizer": "^2.10.1",
