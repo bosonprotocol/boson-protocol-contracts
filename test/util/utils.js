@@ -49,7 +49,7 @@ function getEvent(receipt, factory, eventName) {
       } catch (e) {
         if (e.message.includes("no matching event")) continue;
         console.log("event error: ", e);
-        throw new Error(e);
+        throw new Error(e.message, { cause: e });
       }
     }
   }
@@ -61,7 +61,7 @@ function getEvent(receipt, factory, eventName) {
 
 function eventEmittedWithArgs(receipt, factory, eventName, args) {
   let found = false;
-  let match = false;
+  let match;
 
   const eventFragment = factory.interface.fragments.filter((e) => e.name == eventName);
   const iface = new Interface(eventFragment);
@@ -85,7 +85,7 @@ function eventEmittedWithArgs(receipt, factory, eventName, args) {
       } catch (e) {
         if (e.message.includes("no matching event")) continue;
         console.log("event error: ", e);
-        throw new Error(e);
+        throw new Error(e.message, { cause: e });
       }
     }
   }

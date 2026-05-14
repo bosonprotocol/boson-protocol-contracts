@@ -1195,12 +1195,12 @@ describe("IBosonVoucher", function () {
           // Add five more ranges
           // This tests more getPreMintStatus than ownerOf
           // Might even be put into integration tests
-          let previousOfferId = Number(offerId);
+          const previousOfferId = Number(offerId);
           let previousStartId = Number(start);
           let ranges = [new Range(Number(start), length, amount, "0")];
           length = Number(length);
 
-          offerId = ++previousOfferId;
+          offerId = previousOfferId + 1;
 
           while (offerId <= 6) {
             start = previousStartId + length + 100;

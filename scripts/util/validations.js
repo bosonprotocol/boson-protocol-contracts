@@ -13,7 +13,7 @@ const { MaxUint256 } = ethers;
  * @returns {boolean}
  */
 function bigNumberIsValid(bigNumber, { optional, gt, lte, empty } = {}) {
-  let valid = true;
+  let valid;
 
   if (optional && (bigNumber == undefined || bigNumber == null)) {
     valid = true;
