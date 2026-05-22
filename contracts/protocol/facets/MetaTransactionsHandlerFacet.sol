@@ -321,9 +321,9 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @param _functionSignature - the function signature
      * @param _nonce - the nonce value of the transaction
      * @param _signature - meta transaction signature (see `executeMetaTransaction`)
-     * @param _tokenTransferAuthorization - `abi.encode(bytes[] queue)` where each
-     *                                       entry is either `"0x"` (fall back to
-     *                                       safeTransferFrom) or
+     * @param _tokenTransferAuthorization - queue of per-transfer authorization entries,
+     *                                       where each entry is either `"0x"` (fall back
+     *                                       to safeTransferFrom) or
      *                                       `abi.encode(TokenTransferAuthorizationStrategy strategy, bytes data)`
      */
     function executeMetaTransactionWithTokenTransferAuthorization(
@@ -332,7 +332,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         bytes calldata _functionSignature,
         uint256 _nonce,
         bytes calldata _signature,
-        bytes calldata _tokenTransferAuthorization
+        bytes[] calldata _tokenTransferAuthorization
     ) external payable override metaTransactionsNotPaused returns (bytes memory) {
         TokenTransferAuthorizationLib.loadQueue(_tokenTransferAuthorization);
         bytes memory result = _executeMetaTx(_userAddress, _functionName, _functionSignature, _nonce, _signature);

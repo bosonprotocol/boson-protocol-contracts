@@ -42,30 +42,12 @@ library TokenTransferAuthorizationLib {
     address internal constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 
     /**
-     * @notice Decode an `abi.encode(bytes[])` payload and store each entry in
-     *         transient storage in order.
+     * @notice Store each queue entry directly from calldata into transient storage.
      *
-     * @param _packed - abi.encode(bytes[] queue) payload
+     * @param _queue - the queue of off-chain token-transfer authorization entries
      */
-    function loadQueue(bytes calldata _packed) internal {
-        // Reconstruct a `bytes[] calldata` view over `_packed` so each entry can
-        // be read directly out of calldata, sidestepping the full calldata→memory
-        // copy that `abi.decode(_packed, (bytes[]))` would otherwise perform.
-        //
-        // `_packed` is `abi.encode(bytes[] queue)`, whose layout is:
-        //   [0:32]   = 0x20  (outer tuple offset, always)
-        //   [32:64]  = N     (array length)
-        //   [64:..]  = N head words (offsets) followed by N tail bodies
-        //
-        // For a `bytes[] calldata` slice, Solidity expects `.offset` to point at
-        // the first head word (one slot past the length) and `.length` to be N.
-        bytes[] calldata queue;
-        assembly {
-            queue.offset := add(_packed.offset, 64)
-            queue.length := calldataload(add(_packed.offset, 32))
-        }
-
-        uint256 length = queue.length;
+    function loadQueue(bytes[] calldata _queue) internal {
+        uint256 length = _queue.length;
         bytes32 lenSlot = LEN_SLOT;
         bytes32 headSlot = HEAD_SLOT;
         assembly {
@@ -74,7 +56,7 @@ library TokenTransferAuthorizationLib {
         }
 
         for (uint256 i = 0; i < length; ++i) {
-            _storeEntry(i, queue[i]);
+            _storeEntry(i, _queue[i]);
         }
     }
 
