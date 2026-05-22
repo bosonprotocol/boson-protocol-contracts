@@ -83,12 +83,10 @@ library TokenTransferAuthorizationLib {
 
         entry = new bytes(entryLen);
         uint256 numWords = (entryLen + 31) / 32;
-        for (uint256 w = 0; w < numWords; ++w) {
-            bytes32 slot = bytes32(uint256(base) + 1 + w);
-            bytes32 word;
+        for (uint256 w = 1; w <= numWords; ++w) {
+            bytes32 slot = bytes32(uint256(base) + w);
             assembly {
-                word := tload(slot)
-                mstore(add(entry, mul(32, add(w, 1))), word)
+                mstore(add(entry, mul(32, w)), tload(slot))
             }
         }
     }
@@ -267,11 +265,8 @@ library TokenTransferAuthorizationLib {
         uint256 numWords = (len + 31) / 32;
         for (uint256 w = 0; w < numWords; ++w) {
             bytes32 slot = bytes32(uint256(base) + 1 + w);
-            uint256 wordOffset = entryOffset + w * 32;
-            bytes32 word;
             assembly {
-                word := calldataload(wordOffset)
-                tstore(slot, word)
+                tstore(slot, calldataload(add(entryOffset, mul(w, 32))))
             }
         }
     }
