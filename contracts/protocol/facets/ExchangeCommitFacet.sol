@@ -209,7 +209,7 @@ contract ExchangeCommitFacet is ExchangeCommitBase, DisputeBase, IBosonExchangeC
         bytes calldata _signature,
         uint256 _conditionalTokenId,
         BosonTypes.SellerOfferParams calldata _sellerParams
-    ) external payable override exchangesNotPaused buyersNotPaused sellersNotPaused {
+    ) external payable override exchangesNotPaused buyersNotPaused sellersNotPaused nonReentrant {
         if (
             _fullOffer.offer.creator == BosonTypes.OfferCreator.Seller &&
             (_sellerParams.collectionIndex != 0 ||
