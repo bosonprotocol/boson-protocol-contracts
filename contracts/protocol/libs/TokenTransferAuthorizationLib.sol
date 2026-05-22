@@ -4,6 +4,7 @@ pragma solidity 0.8.35;
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IERC3009 } from "../../interfaces/IERC3009.sol";
 import { IERC2612 } from "../../interfaces/IERC2612.sol";
+import { IDAIPermit } from "../../interfaces/IDAIPermit.sol";
 import { IPermit2 } from "../../interfaces/IPermit2.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -15,7 +16,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
  * transient storage for the duration of a single transaction. Each entry
  * self-describes its strategy via a `BosonTypes.TokenTransferAuthorizationStrategy`
  * tag, so a single queue can carry mixed strategies (ERC-3009, EIP-2612,
- * Permit2 today; more in the future).
+ * Permit2, DAI-style permit today; more in the future).
  *
  * The metatransaction entry point loads the queue once via `loadQueue`. Each
  * subsequent `transferFundsIn` call consumes the next entry via
@@ -205,6 +206,10 @@ library TokenTransferAuthorizationLib {
             _consumePermit2(_token, _from, _to, _amount, data);
             return true;
         }
+        if (strategy == BosonTypes.TokenTransferAuthorizationStrategy.DAIPermit) {
+            _consumeDAIPermit(_token, _from, _to, _amount, data);
+            return true;
+        }
         // strategy == TokenTransferAuthorizationStrategy.None
         return false;
     }
@@ -240,6 +245,50 @@ library TokenTransferAuthorizationLib {
         (uint256 deadline, uint8 v, bytes32 r, bytes32 s) = abi.decode(_data, (uint256, uint8, bytes32, bytes32));
         if (IERC20(_token).allowance(_from, _to) != _amount) {
             IERC2612(_token).permit(_from, _to, _amount, deadline, v, r, s);
+        }
+        IERC20(_token).safeTransferFrom(_from, _to, _amount);
+    }
+
+    /**
+     * @dev DAI-style permit path: call the legacy DAI `permit` (binary
+     *      `allowed=true` ⇒ `MAX_UINT256`) to provision allowance, then pull
+     *      via `safeTransferFrom`. Used for the canonical Maker DAI on
+     *      Ethereum mainnet and Polygon PoS — every other chain's DAI is
+     *      either EIP-2612 (Optimism, Arbitrum) or not Maker-issued.
+     *
+     *      The `permit` call is gated on the current allowance: we skip
+     *      `permit` only when the allowance is already exactly what a
+     *      successful `permit(allowed=true)` would leave behind
+     *      (`type(uint256).max`). Any other state — including a pre-existing
+     *      partial allowance from a prior `approve`, or no allowance at all —
+     *      routes to `permit` so the user's signed nonce is actually consumed.
+     *
+     *      Frontrun analysis: a benign frontrun that replayed *this* same
+     *      signature leaves allowance at `MAX_UINT256` (and bumps the nonce),
+     *      so we skip — correct. A malicious frontrun that consumed a
+     *      *different* permit signed by the same user (e.g. an `allowed=false`
+     *      revocation, leaving allowance at 0 with the nonce advanced) routes
+     *      us through `permit`, which reverts on nonce mismatch and reverts
+     *      the whole metatx (DoS, not theft). A "value-diversion" attack is
+     *      impossible because the DAI permit value is a bool.
+     *
+     *      Note: a successful `permit(allowed=true)` grants the protocol
+     *      `MAX_UINT256` allowance, which is not auto-revoked. Users who
+     *      want a single-shot allowance should sign a Permit2 entry instead.
+     */
+    function _consumeDAIPermit(
+        address _token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes memory _data
+    ) private {
+        (uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) = abi.decode(
+            _data,
+            (uint256, uint256, uint8, bytes32, bytes32)
+        );
+        if (IERC20(_token).allowance(_from, _to) != type(uint256).max) {
+            IDAIPermit(_token).permit(_from, _to, nonce, expiry, true, v, r, s);
         }
         IERC20(_token).safeTransferFrom(_from, _to, _amount);
     }

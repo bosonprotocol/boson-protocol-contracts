@@ -74,7 +74,8 @@ contract BosonTypes {
         None,
         ERC3009,
         EIP2612,
-        Permit2
+        Permit2,
+        DAIPermit
     }
 
     enum AuthTokenType {
