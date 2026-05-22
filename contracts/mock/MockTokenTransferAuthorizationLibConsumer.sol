@@ -40,12 +40,13 @@ contract MockTokenTransferAuthorizationLibConsumer {
         // Drain the queue
         bytes[] memory all = abi.decode(_packed, (bytes[]));
         bytes[] memory drained = new bytes[](all.length);
+        uint256 len = all.length;
         for (uint256 i = 0; i < all.length; ++i) {
-            drained[i] = TokenTransferAuthorizationLib.popNext();
+            drained[i] = TokenTransferAuthorizationLib.popNext(len--);
         }
 
         // One extra pop — this is the exhausted-queue path under test.
-        bytes memory extra = TokenTransferAuthorizationLib.popNext();
+        bytes memory extra = TokenTransferAuthorizationLib.popNext(len);
         emit Probed(drained, extra.length == 0);
     }
 }
