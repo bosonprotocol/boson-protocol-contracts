@@ -48,7 +48,22 @@ library TokenTransferAuthorizationLib {
      * @param _packed - abi.encode(bytes[] queue) payload
      */
     function loadQueue(bytes calldata _packed) internal {
-        bytes[] memory queue = abi.decode(_packed, (bytes[]));
+        // Reconstruct a `bytes[] calldata` view over `_packed` so each entry can
+        // be read directly out of calldata, sidestepping the full calldata→memory
+        // copy that `abi.decode(_packed, (bytes[]))` would otherwise perform.
+        //
+        // `_packed` is `abi.encode(bytes[] queue)`, whose layout is:
+        //   [0:32]   = 0x20  (outer tuple offset, always)
+        //   [32:64]  = N     (array length)
+        //   [64:..]  = N head words (offsets) followed by N tail bodies
+        //
+        // For a `bytes[] calldata` slice, Solidity expects `.offset` to point at
+        // the first head word (one slot past the length) and `.length` to be N.
+        bytes[] calldata queue;
+        assembly {
+            queue.offset := add(_packed.offset, 64)
+            queue.length := calldataload(add(_packed.offset, 32))
+        }
 
         uint256 length = queue.length;
         bytes32 lenSlot = LEN_SLOT;
@@ -259,18 +274,21 @@ library TokenTransferAuthorizationLib {
         IPermit2(PERMIT2).permitTransferFrom(permit, transferDetails, _from, signature);
     }
 
-    function _storeEntry(uint256 _index, bytes memory _entry) private {
+    function _storeEntry(uint256 _index, bytes calldata _entry) private {
         bytes32 base = _entryBase(_index);
         uint256 len = _entry.length;
+        uint256 entryOffset;
         assembly {
+            entryOffset := _entry.offset
             tstore(base, len)
         }
         uint256 numWords = (len + 31) / 32;
         for (uint256 w = 0; w < numWords; ++w) {
             bytes32 slot = bytes32(uint256(base) + 1 + w);
+            uint256 wordOffset = entryOffset + w * 32;
             bytes32 word;
             assembly {
-                word := mload(add(_entry, mul(32, add(w, 1))))
+                word := calldataload(wordOffset)
                 tstore(slot, word)
             }
         }
