@@ -282,10 +282,6 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
 
   // Helpers ---------------------------------------------------------------
 
-  function encodeAuthQueue(entries) {
-    return AbiCoder.defaultAbiCoder().encode(["bytes[]"], [entries]);
-  }
-
   // ERC-3009 entry builder: signs `ReceiveWithAuthorization` typed message
   // against the token's domain.
   function makeERC3009Builder(token) {
@@ -436,7 +432,7 @@ describe("Buyer-Initiated Exchange — Seller Commits with authorization", funct
         fnSig,
         metatxNonce,
         signature,
-        encodeAuthQueue([entry])
+        [entry]
       );
   }
 
