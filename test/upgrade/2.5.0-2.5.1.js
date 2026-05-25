@@ -509,7 +509,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
     });
 
     describe("Metatx Allowlist", function () {
-      it("Should verify new functions are allowlisted", async function () {
+      it("All new state-modifying functions (including new orchestration functions) should be allowlisted", async function () {
         const { addOrUpgrade } = await upgradeConfig.getFacets();
 
         const getFunctionHashesClosure = getStateModifyingFunctionsHashes(
@@ -522,6 +522,23 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
         for (const functionHash of addedFunctionHashes) {
           expect(await protocolContracts.metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](functionHash)).to.be
             .true;
+        }
+      });
+
+      it("executeMetaTransaction and executeMetaTransactionWithTokenTransferAuthorization should not be allowlisted", async function () {
+        // Obtain canonical sighash strings the same way upgrade-facets.js does
+        const getExcludedHashesClosure = getStateModifyingFunctionsHashes(
+          ["MetaTransactionsHandlerFacet"],
+          [],
+          ["executeMetaTransaction"] // substring match — picks up both executeMetaTransaction* variants
+        );
+        const excludedHashes = await getExcludedHashesClosure();
+
+        // Must have found exactly the two entry-point functions
+        expect(excludedHashes.length).to.equal(2);
+
+        for (const hash of excludedHashes) {
+          expect(await protocolContracts.metaTransactionsHandler["isFunctionAllowlisted(bytes32)"](hash)).to.be.false;
         }
       });
     });
