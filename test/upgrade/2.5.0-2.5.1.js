@@ -72,10 +72,6 @@ function encodeAuthEntry({ validAfter, validBefore, nonce, v, r, s }) {
   );
 }
 
-function encodeAuthQueue(entries) {
-  return AbiCoder.defaultAbiCoder().encode(["bytes[]"], [entries]);
-}
-
 /**
  * Upgrade test — After upgrade from 2.5.0 to 2.5.1 everything is still operational (Docker)
  */
@@ -286,7 +282,7 @@ describe("[@skip-on-coverage] After facet upgrade, everything is still operation
           nonce: authNonce,
         });
         const authEntry = encodeAuthEntry({ validAfter, validBefore, nonce: authNonce, v, r, s });
-        const queue = encodeAuthQueue([authEntry]);
+        const queue = [authEntry];
 
         await expect(
           protocolContracts.metaTransactionsHandler
