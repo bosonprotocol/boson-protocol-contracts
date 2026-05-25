@@ -189,16 +189,15 @@ library TokenTransferAuthorizationLib {
             _consumeERC3009(_token, _from, _to, _amount, data);
             return true;
         }
-        if (strategy == BosonTypes.TokenTransferAuthorizationStrategy.EIP2612) {
-            _consumeEIP2612(_token, _from, _to, _amount, data);
-            return true;
-        }
         if (strategy == BosonTypes.TokenTransferAuthorizationStrategy.Permit2) {
             _consumePermit2(_token, _from, _to, _amount, data);
             return true;
         }
-        if (strategy == BosonTypes.TokenTransferAuthorizationStrategy.DAIPermit) {
-            _consumeDAIPermit(_token, _from, _to, _amount, data);
+        if (
+            strategy == BosonTypes.TokenTransferAuthorizationStrategy.EIP2612 ||
+            strategy == BosonTypes.TokenTransferAuthorizationStrategy.DAIPermit
+        ) {
+            _consumePermit(_token, _from, _to, _amount, data, strategy);
             return true;
         }
         // strategy == TokenTransferAuthorizationStrategy.None
@@ -214,72 +213,79 @@ library TokenTransferAuthorizationLib {
     }
 
     /**
-     * @dev EIP-2612 path: call the token's native `permit` to set a single-use
-     *      allowance, then pull funds via `safeTransferFrom`. The user signs
-     *      the permit with `value == _amount`, so the allowance is consumed
-     *      exactly and no residual remains.
+     * @dev Unified permit-then-transfer helper, shared by EIP-2612 and the
+     *      legacy DAI-style permit. Both strategies have the same on-chain
+     *      shape — call the token's `permit` to provision allowance, then pull
+     *      funds via `safeTransferFrom` — so one helper covers both and keeps
+     *      the dispatch table compact (relevant after dropping the optimizer's
+     *      `runs` budget for facet-size reasons).
      *
-     *      The `permit` call is gated on the current allowance: if a prior
-     *      call (e.g. a benign frontrun replaying the same signature, or a
-     *      pre-existing allowance from `approve`) already left exactly
-     *      `_amount` for us, we skip `permit` and use the allowance directly.
-     *      If the allowance is anything other than `_amount` we route to
-     *      `permit`, which either succeeds (overwriting the allowance to the
-     *      signed value) or reverts. Reverting prevents the cross-permit
-     *      diversion attack: a frontrunner who used a *different* permit
-     *      signed by the same user (e.g. one for a larger value) leaves
-     *      allowance != `_amount`, so we'd re-call `permit`, that call would
-     *      revert because the nonce has been advanced, and the whole metatx
-     *      reverts — funds never move.
-     */
-    function _consumeEIP2612(address _token, address _from, address _to, uint256 _amount, bytes memory _data) private {
-        (uint256 deadline, uint8 v, bytes32 r, bytes32 s) = abi.decode(_data, (uint256, uint8, bytes32, bytes32));
-        if (IERC20(_token).allowance(_from, _to) != _amount) {
-            IERC2612(_token).permit(_from, _to, _amount, deadline, v, r, s);
-        }
-        IERC20(_token).safeTransferFrom(_from, _to, _amount);
-    }
-
-    /**
-     * @dev DAI-style permit path: call the legacy DAI `permit` (binary
-     *      `allowed=true` ⇒ `MAX_UINT256`) to provision allowance, then pull
-     *      via `safeTransferFrom`. Used for the canonical Maker DAI on
-     *      Ethereum mainnet and Polygon PoS — every other chain's DAI is
-     *      either EIP-2612 (Optimism, Arbitrum) or not Maker-issued.
+     *      The two paths differ in the permit's value semantics:
      *
-     *      The `permit` call is gated on the current allowance: we skip
-     *      `permit` only when the allowance is already exactly what a
-     *      successful `permit(allowed=true)` would leave behind
-     *      (`type(uint256).max`). Any other state — including a pre-existing
-     *      partial allowance from a prior `approve`, or no allowance at all —
-     *      routes to `permit` so the user's signed nonce is actually consumed.
+     *      - **EIP-2612** — the user signs for `value == _amount`, so a
+     *        successful permit leaves the allowance at exactly `_amount`.
+     *      - **DAI-style** — the user signs a boolean (`allowed=true`), so a
+     *        successful permit leaves the allowance at `type(uint256).max`
+     *        (the DAI contract's binary approval).
      *
-     *      Frontrun analysis: a benign frontrun that replayed *this* same
-     *      signature leaves allowance at `MAX_UINT256` (and bumps the nonce),
-     *      so we skip — correct. A malicious frontrun that consumed a
-     *      *different* permit signed by the same user (e.g. an `allowed=false`
-     *      revocation, leaving allowance at 0 with the nonce advanced) routes
-     *      us through `permit`, which reverts on nonce mismatch and reverts
-     *      the whole metatx (DoS, not theft). A "value-diversion" attack is
-     *      impossible because the DAI permit value is a bool.
+     *      We capture this with `expectedAmount` — the allowance value a
+     *      successful permit would have left behind — and only call `permit`
+     *      when the current allowance differs. This single gate covers both
+     *      replay scenarios:
      *
-     *      Note: a successful `permit(allowed=true)` grants the protocol
-     *      `MAX_UINT256` allowance, which is not auto-revoked. Users who
+     *      - **Benign frontrun** (someone else replayed *our* signature) —
+     *        allowance is already `expectedAmount`, so we skip `permit` and
+     *        transfer directly. The user's nonce was already consumed by the
+     *        frontrunning call.
+     *      - **Pre-existing partial allowance** (the user previously called
+     *        `approve` for some amount, e.g. from an unrelated flow) — the
+     *        allowance does not match `expectedAmount`, so we route through
+     *        `permit` and the user's signed nonce is actually consumed.
+     *
+     *      Malicious frontruns differ slightly by strategy but both result in
+     *      a revert, not theft:
+     *
+     *      - **EIP-2612** — a frontrunner who used a *different* permit
+     *        signed by the same user (e.g. one for a larger value) advances
+     *        `nonces(owner)` and leaves allowance != `_amount`. Our `permit`
+     *        call reverts on nonce mismatch and the whole metatx unwinds. No
+     *        value-diversion is possible because the on-chain call enforces
+     *        the recipient and amount independently of what was signed.
+     *      - **DAI-style** — DAI's nonce is monotonic and supplied in
+     *        calldata; if a different signed permit (e.g. an `allowed=false`
+     *        revocation) advanced it, our `permit` call reverts on
+     *        `InvalidNonce`. A value-diversion attack is impossible because
+     *        the DAI permit value is a bool.
+     *
+     *      Note: a successful DAI `permit(allowed=true)` leaves the protocol
+     *      with `MAX_UINT256` allowance which is not auto-revoked. Users who
      *      want a single-shot allowance should sign a Permit2 entry instead.
      */
-    function _consumeDAIPermit(
+    function _consumePermit(
         address _token,
         address _from,
         address _to,
         uint256 _amount,
-        bytes memory _data
+        bytes memory _data,
+        BosonTypes.TokenTransferAuthorizationStrategy _strategy
     ) private {
-        (uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) = abi.decode(
-            _data,
-            (uint256, uint256, uint8, bytes32, bytes32)
-        );
-        if (IERC20(_token).allowance(_from, _to) != type(uint256).max) {
-            IDAIPermit(_token).permit(_from, _to, nonce, expiry, true, v, r, s);
+        uint256 permitAllowance = _strategy == BosonTypes.TokenTransferAuthorizationStrategy.EIP2612
+            ? _amount
+            : type(uint256).max;
+        if (IERC20(_token).allowance(_from, _to) != permitAllowance) {
+            if (_strategy == BosonTypes.TokenTransferAuthorizationStrategy.EIP2612) {
+                (uint256 deadline, uint8 v, bytes32 r, bytes32 s) = abi.decode(
+                    _data,
+                    (uint256, uint8, bytes32, bytes32)
+                );
+                IERC2612(_token).permit(_from, _to, _amount, deadline, v, r, s);
+            } else {
+                (uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) = abi.decode(
+                    _data,
+                    (uint256, uint256, uint8, bytes32, bytes32)
+                );
+                IDAIPermit(_token).permit(_from, _to, nonce, expiry, true, v, r, s);
+            }
         }
         IERC20(_token).safeTransferFrom(_from, _to, _amount);
     }

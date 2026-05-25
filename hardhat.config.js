@@ -276,7 +276,7 @@ module.exports = {
           viaIR: !process.env.SOLIDITY_COVERAGE,
           optimizer: {
             enabled: true,
-            runs: 50,
+            runs: 10,
             details: {
               yul: true,
             },
