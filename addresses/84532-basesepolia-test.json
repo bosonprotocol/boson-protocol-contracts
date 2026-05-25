@@ -2,7 +2,7 @@
   "chainId": 84532,
   "network": "baseSepolia",
   "env": "test",
-  "protocolVersion": "2.5.1-rc.1",
+  "protocolVersion": "2.5.1-rc.2",
   "contracts": [
     {
       "name": "AccessController",
@@ -172,7 +172,7 @@
     },
     {
       "name": "DisputeHandlerFacet",
-      "address": "0xCA3598359B2845768f7A947210806Ff55bA3f9D0",
+      "address": "0x91A9a64Cb51d632F0072b3F10f7A181dE1EA9ca9",
       "args": [
         "0x4200000000000000000000000000000000000006"
       ],
@@ -180,12 +180,12 @@
     },
     {
       "name": "ExchangeCommitFacet",
-      "address": "0x289e2FcCAfDA30383e0b260f99d8e47F53a69006",
+      "address": "0x4ca86CA67CF086D6e68D1A1E413B2E09212C140B",
       "args": []
     },
     {
       "name": "ExchangeHandlerFacet",
-      "address": "0x5BA35C3CC61e510F8C5C9940224a290A15B835A3",
+      "address": "0xC01E8df7e43B9789a773bD35AF72BCD0414D490c",
       "args": [
         1,
         "0x4200000000000000000000000000000000000006"
@@ -194,25 +194,25 @@
     },
     {
       "name": "FundsHandlerFacet",
-      "address": "0xf648601B615ED57af6331d638d28897752866434",
+      "address": "0x6819a12a401Ba1da0A34B2476396335dee90d774",
       "args": [],
       "interfaceId": "0x2f4a64d7"
     },
     {
       "name": "MetaTransactionsHandlerFacet",
-      "address": "0xc71FC80467c304233A97d38EbE1cF925FbB87998",
+      "address": "0xe22Eaede9c1769671F76BA1c7717746388321D6F",
       "args": [],
-      "interfaceId": "0xa195a148"
+      "interfaceId": "0x7fc783a7"
     },
     {
       "name": "OrchestrationHandlerFacet1",
-      "address": "0xD53BdEb914929b9E81C9739288dba563E392779E",
+      "address": "0xc8eE0F37a2093bA696F371Ef1c0Ef7b16c823396",
       "args": [],
       "interfaceId": "0x8fe29acc"
     },
     {
       "name": "OrchestrationHandlerFacet2",
-      "address": "0xd35F9C4D3B71e2802e9a5b6721Ff89d59E32A6E4",
+      "address": "0x3312e39044e8b887f1550CD58Fcdd11a0C5E6de6",
       "args": [
         1
       ],
@@ -220,7 +220,7 @@
     },
     {
       "name": "PriceDiscoveryHandlerFacet",
-      "address": "0xc227eC6325E3Bed643D76b6cdd1161E97D5B66B9",
+      "address": "0x7d6DE038582a6B26aCd9407A5469470B460492aD",
       "args": [
         "0x4200000000000000000000000000000000000006"
       ],
@@ -228,7 +228,7 @@
     },
     {
       "name": "SequentialCommitHandlerFacet",
-      "address": "0x4053bC632D36bCa112A3f82AB63A2FaaD96d8a6F",
+      "address": "0x429e21B081d62611a9d4C19a0bd1aeEfEc2A6652",
       "args": [
         "0x4200000000000000000000000000000000000006"
       ],
