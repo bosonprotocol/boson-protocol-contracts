@@ -153,14 +153,14 @@ contract ExchangeRedeemBase is DisputeBase, IBosonExchangeEvents, IBosonTwinEven
             // SINGLE_TWIN_RESERVED_GAS = 160000
             // MINIMAL_RESIDUAL_GAS = 230000
             // Next line would overflow if twinCount > (type(uint256).max - MINIMAL_RESIDUAL_GAS)/SINGLE_TWIN_RESERVED_GAS
-            // Oveflow happens for twinCount ~ 7.2x10^71, which is impossible to achieve
+            // Overflow happens for twinCount ~ 7.2x10^71, which is impossible to achieve
             uint256 reservedGas = (twinCount - 1) * SINGLE_TWIN_RESERVED_GAS + MINIMAL_RESIDUAL_GAS;
 
             // If number of twins is too high, skip the transfer and mark the transfer as failed.
-            // Reserved gas is higher than the actual gas needed for succesful twin redeem.
+            // Reserved gas is higher than the actual gas needed for successful twin redeem.
             // There is enough buffer that even if the reserved gas is above gas limit, the redeem will still succeed.
             // This check was added to prevent the DoS attack where the attacker would create a bundle with a huge number of twins.
-            // For a normal operations this still allows for a bundle with more than 180 twins to be redeemed, which should be enough for practical purposes.
+            // For normal operations this still allows for a bundle with more than 180 twins to be redeemed, which should be enough for practical purposes.
             if (reservedGas > block.gaslimit) {
                 transferFailed = true;
 
@@ -253,7 +253,7 @@ contract ExchangeRedeemBase is DisputeBase, IBosonExchangeEvents, IBosonTwinEven
                                     mstore(result, returndataSize)
                                 }
                                 case 1 {
-                                    // If return data is longer than 32 bytes, consider transfer unsuccesful
+                                    // If return data is longer than 32 bytes, consider transfer unsuccessful
                                     success := false
                                 }
                             }
@@ -305,7 +305,7 @@ contract ExchangeRedeemBase is DisputeBase, IBosonExchangeEvents, IBosonTwinEven
                         );
                     }
 
-                    // Reduce minimum gas required for succesful execution
+                    // Reduce minimum gas required for successful execution
                     reservedGas -= SINGLE_TWIN_RESERVED_GAS;
 
                     unchecked {

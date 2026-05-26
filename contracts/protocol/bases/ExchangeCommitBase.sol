@@ -261,7 +261,7 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
 
         offerHash = getOfferHashInternal(_fullOffer);
 
-        // Check if the offer non-listed offer has been voided via `voidOffer`
+        // Check if the non-listed offer has been voided via `voidOffer`
         // Does not apply to already listed offers, with `voided` set to true
         offerId = protocolLookups().offerIdByHash[offerHash];
         if (offerId == 0) {
@@ -304,7 +304,7 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
         bool _skipVoucher
     ) internal returns (uint256) {
         uint256 _offerId = _offer.id;
-        // Make sure offer is available, expired, or sold out
+        // Make sure offer is currently available; sold-out is checked later for non-preminted offers
         OfferDates storage offerDates = fetchOfferDates(_offerId);
         if (block.timestamp < offerDates.validFrom) revert OfferNotAvailable();
         if (block.timestamp > offerDates.validUntil) revert OfferHasExpired();
@@ -396,7 +396,7 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
                 }
 
                 if (!_skipVoucher) {
-                    // Issue voucher, unless it already exist (for preminted offers)
+                    // Issue voucher, unless it already exists (for preminted offers)
                     IBosonVoucher bosonVoucher = IBosonVoucher(
                         getCloneAddress(lookups, _offer.sellerId, _offer.collectionIndex)
                     );
@@ -451,7 +451,7 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
             ? lookups.conditionalCommitsByTokenId[_tokenId]
             : lookups.conditionalCommitsByAddress[_buyer];
 
-        // How many times has been committed to offers in the group?
+        // How many times has this buyer or token committed to offers in the group?
         uint256 commitCount = conditionalCommits[_groupId];
         uint256 maxCommits = _condition.maxCommits;
 
@@ -511,7 +511,7 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
         if (method == EvaluationMethod.None) revert GroupHasNoCondition();
 
         if (method == EvaluationMethod.SpecificToken || isMultitoken) {
-            // In this cases, the token id is specified by the caller must be within the range of the condition
+            // In these cases, the token id is specified by the caller must be within the range of the condition
             uint256 minTokenId = _condition.minTokenId;
             uint256 maxTokenId = _condition.maxTokenId;
             if (maxTokenId == 0) maxTokenId = minTokenId; // legacy conditions have maxTokenId == 0
