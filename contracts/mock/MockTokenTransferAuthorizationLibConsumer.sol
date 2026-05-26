@@ -28,24 +28,24 @@ contract MockTokenTransferAuthorizationLibConsumer {
     event Probed(bytes[] drained, bool extraPopWasEmpty);
 
     /**
-     * @notice Loads `_packed` into transient storage, pops every entry once, then
+     * @notice Loads `_queue` into transient storage, pops every entry once, then
      *         calls {popNext} one extra time and emits {Probed} reporting whether
      *         that final pop returned empty bytes (the exhausted-queue early return).
      *
-     * @param _packed - abi.encode(bytes[] queue) payload
+     * @param _queue - the queue of off-chain token-transfer authorization entries
      */
-    function probePopWhenExhausted(bytes calldata _packed) external {
-        TokenTransferAuthorizationLib.loadQueue(_packed);
+    function probePopWhenExhausted(bytes[] calldata _queue) external {
+        TokenTransferAuthorizationLib.loadQueue(_queue);
 
         // Drain the queue
-        bytes[] memory all = abi.decode(_packed, (bytes[]));
-        bytes[] memory drained = new bytes[](all.length);
-        for (uint256 i = 0; i < all.length; ++i) {
-            drained[i] = TokenTransferAuthorizationLib.popNext();
+        bytes[] memory drained = new bytes[](_queue.length);
+        uint256 len = _queue.length;
+        for (uint256 i = 0; i < _queue.length; ++i) {
+            drained[i] = TokenTransferAuthorizationLib.popNext(len);
         }
 
         // One extra pop — this is the exhausted-queue path under test.
-        bytes memory extra = TokenTransferAuthorizationLib.popNext();
+        bytes memory extra = TokenTransferAuthorizationLib.popNext(len);
         emit Probed(drained, extra.length == 0);
     }
 }

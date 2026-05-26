@@ -42,15 +42,12 @@ library TokenTransferAuthorizationLib {
     address internal constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 
     /**
-     * @notice Decode an `abi.encode(bytes[])` payload and store each entry in
-     *         transient storage in order.
+     * @notice Store each queue entry directly from calldata into transient storage.
      *
-     * @param _packed - abi.encode(bytes[] queue) payload
+     * @param _queue - the queue of off-chain token-transfer authorization entries
      */
-    function loadQueue(bytes calldata _packed) internal {
-        bytes[] memory queue = abi.decode(_packed, (bytes[]));
-
-        uint256 length = queue.length;
+    function loadQueue(bytes[] calldata _queue) internal {
+        uint256 length = _queue.length;
         bytes32 lenSlot = LEN_SLOT;
         bytes32 headSlot = HEAD_SLOT;
         assembly {
@@ -59,7 +56,7 @@ library TokenTransferAuthorizationLib {
         }
 
         for (uint256 i = 0; i < length; ++i) {
-            _storeEntry(i, queue[i]);
+            _storeEntry(i, _queue[i]);
         }
     }
 
@@ -67,14 +64,11 @@ library TokenTransferAuthorizationLib {
      * @notice Pop the next queue entry. Returns empty bytes if the queue is
      *         empty, exhausted, or the popped entry is the fallback marker.
      */
-    function popNext() internal returns (bytes memory entry) {
+    function popNext(uint256 len) internal returns (bytes memory entry) {
         bytes32 headSlot = HEAD_SLOT;
-        bytes32 lenSlot = LEN_SLOT;
         uint256 head;
-        uint256 len;
         assembly {
             head := tload(headSlot)
-            len := tload(lenSlot)
         }
         if (head >= len) return bytes("");
 
@@ -89,26 +83,22 @@ library TokenTransferAuthorizationLib {
 
         entry = new bytes(entryLen);
         uint256 numWords = (entryLen + 31) / 32;
-        for (uint256 w = 0; w < numWords; ++w) {
-            bytes32 slot = bytes32(uint256(base) + 1 + w);
-            bytes32 word;
+        for (uint256 w = 1; w <= numWords; ++w) {
+            bytes32 slot = bytes32(uint256(base) + w);
             assembly {
-                word := tload(slot)
-                mstore(add(entry, mul(32, add(w, 1))), word)
+                mstore(add(entry, mul(32, w)), tload(slot))
             }
         }
     }
 
     /**
-     * @notice Returns true if a queue has been loaded for this transaction.
+     * @notice Returns the length of the queue if it has been loaded for this transaction, 0 otherwise.
      */
-    function hasQueue() internal view returns (bool present) {
+    function queueLen() internal view returns (uint256 len) {
         bytes32 lenSlot = LEN_SLOT;
-        uint256 len;
         assembly {
             len := tload(lenSlot)
         }
-        present = len > 0;
     }
 
     /**
@@ -121,7 +111,7 @@ library TokenTransferAuthorizationLib {
      *         protocol call later in the same transaction.
      *
      * @dev Zeroing `LEN_SLOT` is sufficient: every read path is gated on
-     *      `len > 0` (`hasQueue`) or `head < len` (`popNext` / `discardNext`),
+     *      `len > 0` or `head < len` (`popNext` / `discardNext`),
      *      so a zero length makes the queue effectively absent. We also reset
      *      `HEAD_SLOT` for a clean slate — costs one extra `tstore` and keeps
      *      a follow-up `loadQueue` call in this same tx from inheriting a
@@ -147,13 +137,13 @@ library TokenTransferAuthorizationLib {
      *         already exhausted.
      */
     function discardNext() internal {
+        uint256 len = queueLen();
+        if (len == 0) return;
+
         bytes32 headSlot = HEAD_SLOT;
-        bytes32 lenSlot = LEN_SLOT;
         uint256 head;
-        uint256 len;
         assembly {
             head := tload(headSlot)
-            len := tload(lenSlot)
         }
         if (head < len) {
             assembly {
@@ -178,9 +168,10 @@ library TokenTransferAuthorizationLib {
         address _to,
         uint256 _amount
     ) internal returns (bool consumed) {
-        if (!hasQueue()) return false;
+        uint256 len = queueLen();
+        if (len == 0) return false;
 
-        bytes memory entry = popNext();
+        bytes memory entry = popNext(len);
         if (entry.length == 0) return false;
 
         // Decoding as the enum makes Solidity range-check the tag for us: any
@@ -263,19 +254,19 @@ library TokenTransferAuthorizationLib {
         IPermit2(PERMIT2).permitTransferFrom(permit, transferDetails, _from, signature);
     }
 
-    function _storeEntry(uint256 _index, bytes memory _entry) private {
+    function _storeEntry(uint256 _index, bytes calldata _entry) private {
         bytes32 base = _entryBase(_index);
         uint256 len = _entry.length;
+        uint256 entryOffset;
         assembly {
+            entryOffset := _entry.offset
             tstore(base, len)
         }
         uint256 numWords = (len + 31) / 32;
         for (uint256 w = 0; w < numWords; ++w) {
             bytes32 slot = bytes32(uint256(base) + 1 + w);
-            bytes32 word;
             assembly {
-                word := mload(add(_entry, mul(32, add(w, 1))))
-                tstore(slot, word)
+                tstore(slot, calldataload(add(entryOffset, mul(w, 32))))
             }
         }
     }

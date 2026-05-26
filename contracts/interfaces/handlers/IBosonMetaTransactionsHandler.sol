@@ -9,7 +9,7 @@ import { IBosonMetaTransactionsEvents } from "../events/IBosonMetaTransactionsEv
  *
  * @notice Manages incoming meta-transactions in the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xa195a148
+ * The ERC-165 identifier for this interface is: 0x7fc783a7
  */
 interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents, BosonErrors {
     /**
@@ -78,7 +78,7 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents, BosonEr
      * @param _functionSignature - the function signature
      * @param _nonce - the nonce value of the transaction
      * @param _signature - meta transaction signature (see `executeMetaTransaction`)
-     * @param _tokenTransferAuthorization - `abi.encode(bytes[] queue)` (see above)
+     * @param _tokenTransferAuthorization - the queue of per-transfer authorization entries (see above)
      */
     function executeMetaTransactionWithTokenTransferAuthorization(
         address _userAddress,
@@ -86,7 +86,7 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents, BosonEr
         bytes calldata _functionSignature,
         uint256 _nonce,
         bytes calldata _signature,
-        bytes calldata _tokenTransferAuthorization
+        bytes[] calldata _tokenTransferAuthorization
     ) external payable returns (bytes memory);
 
     /**
