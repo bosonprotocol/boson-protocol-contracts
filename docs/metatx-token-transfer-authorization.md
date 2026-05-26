@@ -293,7 +293,7 @@ Boson's deployment targets (Ethereum, Polygon, Optimism, Arbitrum, Base) are all
 
 - [`test/protocol/MetaTransactionsERC3009Test.js`](../test/protocol/MetaTransactionsERC3009Test.js) — focused unit tests for the ERC-3009 strategy + fallback semantics (5 tests).
 - [`test/protocol/MetaTransactionsPermitStrategiesTest.js`](../test/protocol/MetaTransactionsPermitStrategiesTest.js) — focused unit tests for the EIP-2612 + Permit2 strategies (6 tests).
-- [`test/protocol/MetaTransactionsDAIPermitTest.js`](../test/protocol/MetaTransactionsDAIPermitTest.js) — focused unit tests for the DAI-style permit strategy (6 tests: happy path, `expiry==0` sentinel, wrong signer, expired permit, benign frontrun tolerance, malicious frontrun rejection).
+- [`test/protocol/MetaTransactionsDAIPermitTest.js`](../test/protocol/MetaTransactionsDAIPermitTest.js) — focused unit tests for the DAI-style permit strategy (7 tests: happy path, `expiry==0` sentinel, partial-allowance case, wrong signer, expired permit, benign frontrun tolerance, malicious frontrun rejection).
 - [`test/protocol/ExchangeHandlerCommitWithAuthorizationTest.js`](../test/protocol/ExchangeHandlerCommitWithAuthorizationTest.js) — `commitToOffer` and `createOfferAndCommit` flows mirroring the originals from `ExchangeHandlerTest.js` (49 tests).
 - [`test/protocol/BuyerInitiatedOfferSellerCommitsWithAuthorizationTest.js`](../test/protocol/BuyerInitiatedOfferSellerCommitsWithAuthorizationTest.js) — seller-side `commitToBuyerOffer` flow mirroring `BuyerInitiatedOfferTest.js` (10 tests).
 
