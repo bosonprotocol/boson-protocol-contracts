@@ -346,60 +346,55 @@ describe("DAI-style permit authorization queue", function () {
   });
 
   it("rejects a malicious frontrun that burned the signed nonce on a different sig", async function () {
-    // User signs two DAI permits. Attacker frontruns the second (later-nonce)
-    // permit directly on the token, which advances the nonce past what the
-    // queue entry's signature targets. When the metatx tries to call permit
-    // with the original (now-stale) nonce, the token reverts on the nonce
-    // check — and the metatx unwinds, no funds move.
+    // User signed two DAI permits with the *current* nonce: permit A
+    // (`allowed=true`, queued in the metatx) and permit X (`allowed=false`,
+    // same spender, same nonce) — for example, two signatures intended for
+    // different flows that ended up sharing the holder's nonce slot.
+    // Attacker submits permit X first; it succeeds, advances `nonces[holder]`
+    // to `baseNonce + 1`, and leaves the protocol's allowance at 0. When the
+    // metatx now tries to consume permit A, the token reverts on
+    // `InvalidNonce` (A's signature is bound to the stale `baseNonce`),
+    // unwinding the whole metatx. No funds move.
     const amount = "500";
     await token.mint(await assistant.getAddress(), amount);
 
     const expiry = MaxUint256;
     const baseNonce = await token.nonces(await assistant.getAddress());
 
-    // Permit A — queued in the metatx.
+    // Permit A — queued in the metatx, granting MAX allowance to protocol.
     const a = await buildDAIPermitEntry(assistant, expiry, baseNonce);
-    // Permit B — same signer, next nonce. Attacker burns this one directly.
-    const b = await buildDAIPermitEntry(assistant, expiry, BigInt(baseNonce) + 1n);
 
-    // Attacker reorders: submits permit B FIRST so the nonces no longer
-    // match what permit A's signature was bound to. (DAI's nonce check is
-    // strict equality, so any deviation reverts.)
-    await expect(
-      token
-        .connect(rando)
-        .permit(
-          await assistant.getAddress(),
-          protocolDiamondAddress,
-          BigInt(baseNonce) + 1n,
-          expiry,
-          true,
-          b.split.v,
-          b.split.r,
-          b.split.s
-        )
-    ).to.be.revertedWithCustomError(token, "InvalidNonce");
+    // Permit X — same holder, same nonce, same spender, but `allowed=false`
+    // (a revocation). Sign it directly since the helper hardcodes
+    // `allowed=true`.
+    const { chainId } = await ethers.provider.getNetwork();
+    const domain = {
+      name: await token.name(),
+      version: "1",
+      chainId,
+      verifyingContract: await token.getAddress(),
+    };
+    const xMessage = {
+      holder: await assistant.getAddress(),
+      spender: protocolDiamondAddress,
+      nonce: baseNonce,
+      expiry,
+      allowed: false,
+    };
+    const xSig = Signature.from(await assistant.signTypedData(domain, DAI_PERMIT_TYPES, xMessage));
 
-    // Submit permit A normally so nonce advances to 1.
+    // Attacker submits the different (revocation) permit, advancing the
+    // user's nonce and burning the slot permit A was bound to. Allowance
+    // to the protocol is set to 0 by this permit's own semantics.
     await token
       .connect(rando)
-      .permit(
-        await assistant.getAddress(),
-        protocolDiamondAddress,
-        baseNonce,
-        expiry,
-        true,
-        a.split.v,
-        a.split.r,
-        a.split.s
-      );
-    // Reset allowance to simulate a freshly drained state (so our metatx
-    // can't piggyback on the MAX allowance left by the frontrun and must
-    // route back through permit, where the stale nonce triggers the revert).
-    await token.connect(assistant).approve(protocolDiamondAddress, 0);
+      .permit(await assistant.getAddress(), protocolDiamondAddress, baseNonce, expiry, false, xSig.v, xSig.r, xSig.s);
+    expect(await token.nonces(await assistant.getAddress())).to.equal(BigInt(baseNonce) + 1n);
+    expect(await token.allowance(await assistant.getAddress(), protocolDiamondAddress)).to.equal(0);
 
-    // Now the metatx carries permit A's signature, but on-chain nonce is
-    // already 1 — the call to token.permit() inside the helper reverts.
+    // The metatx carries permit A's signature, but on-chain nonce is now
+    // `baseNonce + 1` — the call to token.permit() inside the helper reverts
+    // on nonce mismatch and the whole metatx unwinds.
     const metatxNonce = parseInt(randomBytes(8));
     const { fnSig, message, signature } = await buildDepositMetaTx(assistant, amount, metatxNonce);
     const queue = encodeAuthQueue([a.entry]);
