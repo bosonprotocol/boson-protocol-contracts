@@ -77,6 +77,7 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
         // For there to be a condition, there must be a group.
         (bool exists, uint256 groupId) = getGroupIdByOffer(offer.id);
         if (exists) {
+            // Get the condition
             Condition storage condition = fetchCondition(groupId);
             // Conditional offers must use the conditional-offer entry point.
             if (condition.method != EvaluationMethod.None) revert GroupHasCondition();
@@ -118,10 +119,16 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
         Offer storage offer = getValidOffer(_offerId);
         if (offer.priceType != PriceType.Static) revert InvalidPriceType();
 
+        // For there to be a condition, there must be a group.
         (bool exists, uint256 groupId) = getGroupIdByOffer(offer.id);
+
+        // Make sure the group exists
         if (!exists) revert NoSuchGroup();
 
+        // Get the condition
         Condition storage condition = fetchCondition(groupId);
+
+        // Make sure the tokenId is in range
         validateConditionRange(condition, _tokenId);
 
         address buyerAddress;
@@ -168,8 +175,10 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
         bytes calldata _signature
     ) internal returns (uint256 offerId) {
         bytes32 offerHash;
+        // verify signature and potential cancellation
         (offerHash, offerId) = verifyOffer(_fullOffer, _offerCreator, _signature);
 
+        // create an offer
         if (offerId == 0) {
             offerId = createOfferInternal(
                 _fullOffer.offer,
@@ -189,10 +198,12 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
                 group.offerIds = new uint256[](1);
                 group.offerIds[0] = offerId;
 
+                // Create group and update structs values to represent true state
                 createGroupInternal(group, _fullOffer.condition, false);
             }
         }
 
+        // Deposit other committer's funds if needed
         if (!_fullOffer.useDepositedFunds) {
             uint256 offerCreatorId;
             uint256 offerCreatorAmount;
@@ -241,6 +252,7 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
         address _offerCreator,
         bytes calldata _signature
     ) internal returns (bytes32 offerHash, uint256 offerId) {
+        // `_fullOffer.offer.voided` is checked in createOfferInternal
         if (
             _fullOffer.offer.id != 0 ||
             _fullOffer.offer.royaltyInfo.length != 1 ||
@@ -249,9 +261,12 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
 
         offerHash = getOfferHashInternal(_fullOffer);
 
+        // Check if the non-listed offer has been voided via `voidOffer`
+        // Does not apply to already listed offers, with `voided` set to true
         offerId = protocolLookups().offerIdByHash[offerHash];
         if (offerId == 0) {
             if (_fullOffer.offer.creator == OfferCreator.Seller) {
+                // Validate caller is seller assistant
                 (, uint256 sellerId) = getSellerIdByAssistant(_offerCreator);
                 if (sellerId != _fullOffer.offer.sellerId) {
                     revert NotAssistant();
@@ -264,6 +279,7 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
             }
             EIP712Lib.verify(_offerCreator, offerHash, _signature);
         } else if (offerId == VOIDED_OFFER_ID) {
+            // Offer is voided
             revert OfferHasBeenVoided();
         }
     }
@@ -288,60 +304,80 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
         bool _skipVoucher
     ) internal returns (uint256) {
         uint256 _offerId = _offer.id;
+        // Make sure offer is currently available; sold-out is checked later for non-preminted offers
         OfferDates storage offerDates = fetchOfferDates(_offerId);
         if (block.timestamp < offerDates.validFrom) revert OfferNotAvailable();
         if (block.timestamp > offerDates.validUntil) revert OfferHasExpired();
 
         if (!_isPreminted) {
+            // For non-preminted offers, quantityAvailable must be greater than zero, since it gets decremented
             if (_offer.quantityAvailable == 0) revert OfferSoldOut();
+
+            // Get next exchange id for non-preminted offers
             _exchangeId = protocolCounters().nextExchangeId++;
         } else {
+            // Exchange must not exist already
             (bool exists, ) = fetchExchange(_exchangeId);
+
             if (exists) revert ExchangeAlreadyExists();
         }
 
         uint256 buyerId;
 
         if (_offer.creator == OfferCreator.Buyer) {
+            // For buyer-created offers, buyer ID is stored in the offer
             buyerId = _offer.buyerId;
+            // Encumber seller deposit (seller is committing)
             encumberFunds(_offerId, _offer.sellerId, _offer.sellerDeposit, _isPreminted, _offer.priceType);
         } else {
             buyerId = getValidBuyer(_committer);
+            // Encumber buyer payment (buyer is committing)
             encumberFunds(_offerId, buyerId, _offer.price, _isPreminted, _offer.priceType);
         }
 
+        // Create and store a new exchange
         Exchange storage exchange = protocolEntities().exchanges[_exchangeId];
         exchange.id = _exchangeId;
         exchange.offerId = _offerId;
         exchange.buyerId = buyerId;
         exchange.state = ExchangeState.Committed;
 
+        // Handle DR fee collection
         {
+            // Get dispute resolution terms to get the dispute resolver ID
             DisputeResolutionTerms storage disputeTerms = fetchDisputeResolutionTerms(_offerId);
 
             uint256 drFeeAmount = disputeTerms.feeAmount;
 
+            // Handle DR fee collection if fee exists
             if (drFeeAmount > 0) {
                 handleDRFeeCollection(_exchangeId, _offer, disputeTerms, drFeeAmount);
                 exchange.mutualizerAddress = disputeTerms.mutualizerAddress;
             }
         }
 
+        // Create and store a new voucher
         Voucher storage voucher = protocolEntities().vouchers[_exchangeId];
         voucher.committedDate = block.timestamp;
 
+        // Operate in a block to avoid "stack too deep" error
         {
+            // Determine the time after which the voucher can be redeemed
             uint256 startDate = (block.timestamp >= offerDates.voucherRedeemableFrom)
                 ? block.timestamp
                 : offerDates.voucherRedeemableFrom;
 
+            // Determine the time after which the voucher can no longer be redeemed
             voucher.validUntilDate = (offerDates.voucherRedeemableUntil > 0)
                 ? offerDates.voucherRedeemableUntil
                 : startDate + fetchOfferDurations(_offerId).voucherValid;
         }
 
+        // Operate in a block to avoid "stack too deep" error
         {
+            // Cache protocol lookups for reference
             ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+            // Map the offerId to the exchangeId as one-to-many
             lookups.exchangeIdsByOffer[_offerId].push(_exchangeId);
 
             // Orchestration commit-and-redeem flows skip the voucher NFT entirely:
@@ -355,20 +391,25 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
                 lookups.voucherCount[buyerId]++;
             } else {
                 if (_offer.quantityAvailable != type(uint256).max) {
+                    // Decrement offer's quantity available
                     _offer.quantityAvailable--;
                 }
 
                 if (!_skipVoucher) {
+                    // Issue voucher, unless it already exists (for preminted offers)
                     IBosonVoucher bosonVoucher = IBosonVoucher(
                         getCloneAddress(lookups, _offer.sellerId, _offer.collectionIndex)
                     );
                     uint256 tokenId = _exchangeId | (_offerId << 128);
 
+                    // Get buyer wallet address for voucher issuance
                     address payable buyerWallet;
                     if (_offer.creator == OfferCreator.Buyer) {
+                        // For buyer-created offers, get the buyer's wallet from stored buyerId
                         (, Buyer storage buyer) = fetchBuyer(buyerId);
                         buyerWallet = buyer.wallet;
                     } else {
+                        // For seller-created offers, committer is the buyer
                         buyerWallet = _committer;
                     }
 
@@ -378,9 +419,12 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
             }
         }
 
+        // Notify watchers of state change
         if (_offer.creator == OfferCreator.Buyer) {
+            // Buyer-created offer: emit SellerCommitted event
             emit SellerCommitted(_offerId, _offer.sellerId, _exchangeId, exchange, voucher, _msgSender());
         } else {
+            // Seller-created offer: emit BuyerCommitted event
             emit BuyerCommitted(_offerId, buyerId, _exchangeId, exchange, voucher, _msgSender());
         }
 
@@ -399,6 +443,7 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
         uint256 _tokenId,
         uint256 _offerId
     ) internal {
+        // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
         GatingType gating = _condition.gating;
@@ -406,6 +451,7 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
             ? lookups.conditionalCommitsByTokenId[_tokenId]
             : lookups.conditionalCommitsByAddress[_buyer];
 
+        // How many times has this buyer or token committed to offers in the group?
         uint256 commitCount = conditionalCommits[_groupId];
         uint256 maxCommits = _condition.maxCommits;
 
@@ -417,6 +463,7 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
 
         if (!allow) revert CannotCommit();
 
+        // Increment number of commits to the group
         conditionalCommits[_groupId] = ++commitCount;
 
         emit ConditionalCommitAuthorized(_offerId, gating, _buyer, _tokenId, commitCount, maxCommits);
@@ -464,6 +511,7 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
         if (method == EvaluationMethod.None) revert GroupHasNoCondition();
 
         if (method == EvaluationMethod.SpecificToken || isMultitoken) {
+            // In these cases, the token id is specified by the caller must be within the range of the condition
             uint256 minTokenId = _condition.minTokenId;
             uint256 maxTokenId = _condition.maxTokenId;
             if (maxTokenId == 0) maxTokenId = minTokenId; // legacy conditions have maxTokenId == 0
@@ -471,6 +519,7 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
             if (_tokenId < minTokenId || _tokenId > maxTokenId) revert TokenIdNotInConditionRange();
         }
 
+        // ERC20 and ERC721 threshold does not require a token id
         if (method == EvaluationMethod.Threshold && !isMultitoken) {
             if (_tokenId != 0) revert InvalidTokenId();
         }
@@ -488,10 +537,13 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
         address mutualizer = _disputeTerms.mutualizerAddress;
         address exchangeToken = _offer.exchangeToken;
         if (mutualizer == address(0)) {
+            // Self-mutualize: take fee from seller's pool
             decreaseAvailableFunds(_offer.sellerId, _offer.exchangeToken, _drFeeAmount);
         } else {
+            // Use mutualizer: request fee
             uint256 balanceBefore = getBalance(exchangeToken);
 
+            // Request DR fee from mutualizer
             bool success = IDRFeeMutualizer(mutualizer).requestDRFee(
                 _offer.sellerId,
                 _drFeeAmount,
@@ -509,6 +561,7 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
             }
         }
 
+        // Emit event for DR fee request
         emit IBosonFundsBaseEvents.DRFeeRequested(
             _exchangeId,
             exchangeToken,

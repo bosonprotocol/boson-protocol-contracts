@@ -438,10 +438,6 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
     };
   }
 
-  function encodeAuthQueue(entries) {
-    return AbiCoder.defaultAbiCoder().encode(["bytes[]"], [entries]);
-  }
-
   /**
    * Drop-in replacement for `exchangeCommitHandler.connect(caller).commitToOffer(buyerAddress, offerId)`.
    * Wraps the call in `executeMetaTransactionWithTokenTransferAuthorization`. The queue always has one slot — for
@@ -492,7 +488,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
         fnSig,
         metatxNonce,
         signature,
-        encodeAuthQueue([entry])
+        [entry]
       );
   }
 
@@ -1140,7 +1136,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
           fnSig,
           metatxNonce,
           signature,
-          encodeAuthQueue(entries)
+          entries
         );
     }
 
@@ -2401,7 +2397,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
           fnSig,
           metatxNonce,
           signature,
-          encodeAuthQueue(entries)
+          entries
         );
     }
 
