@@ -341,14 +341,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         withTokenAuthorization(_tokenTransferAuthorization)
         returns (bytes memory)
     {
-        // TokenTransferAuthorizationLib.loadQueue(_tokenTransferAuthorization);
         bytes memory result = _executeMetaTx(_userAddress, _functionName, _functionSignature, _nonce, _signature);
-        // Always clear the queue on the success path so leftover entries (e.g.
-        // when the inner call consumed fewer entries than the queue carried)
-        // don't leak into a later protocol call in the same transaction. On
-        // revert, EIP-1153 already rolls transient writes back, so no clear
-        // is needed there.
-        // TokenTransferAuthorizationLib.clearQueue();
         return result;
     }
 
