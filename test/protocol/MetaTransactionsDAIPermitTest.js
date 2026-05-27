@@ -38,10 +38,6 @@ const DAI_PERMIT_TYPES = {
   ],
 };
 
-function encodeAuthQueue(entries) {
-  return AbiCoder.defaultAbiCoder().encode(["bytes[]"], [entries]);
-}
-
 function wrapEntry(strategy, data) {
   return AbiCoder.defaultAbiCoder().encode(["uint8", "bytes"], [strategy, data]);
 }
@@ -167,7 +163,7 @@ describe("DAI-style permit authorization queue", function () {
     const metatxNonce = parseInt(randomBytes(8));
     const { fnSig, message, signature } = await buildDepositMetaTx(assistant, amount, metatxNonce);
     const { entry } = await buildDAIPermitEntry(assistant, MaxUint256);
-    const queue = encodeAuthQueue([entry]);
+    const queue = [entry];
 
     await expect(
       metaTransactionsHandler
@@ -196,7 +192,7 @@ describe("DAI-style permit authorization queue", function () {
     const metatxNonce = parseInt(randomBytes(8));
     const { fnSig, message, signature } = await buildDepositMetaTx(assistant, amount, metatxNonce);
     const { entry } = await buildDAIPermitEntry(assistant, "0");
-    const queue = encodeAuthQueue([entry]);
+    const queue = [entry];
 
     await metaTransactionsHandler
       .connect(deployer)
@@ -220,7 +216,7 @@ describe("DAI-style permit authorization queue", function () {
     const { fnSig, message, signature } = await buildDepositMetaTx(assistant, amount, metatxNonce);
     // Signed by `rando` — the recovered holder won't match `_from = assistant`.
     const { entry } = await buildDAIPermitEntry(rando, MaxUint256);
-    const queue = encodeAuthQueue([entry]);
+    const queue = [entry];
 
     await expect(
       metaTransactionsHandler
@@ -244,7 +240,7 @@ describe("DAI-style permit authorization queue", function () {
     const { fnSig, message, signature } = await buildDepositMetaTx(assistant, amount, metatxNonce);
     const expired = "1";
     const { entry } = await buildDAIPermitEntry(assistant, expired);
-    const queue = encodeAuthQueue([entry]);
+    const queue = [entry];
 
     await expect(
       metaTransactionsHandler
@@ -290,7 +286,7 @@ describe("DAI-style permit authorization queue", function () {
 
     const metatxNonce = parseInt(randomBytes(8));
     const { fnSig, message, signature } = await buildDepositMetaTx(assistant, amount, metatxNonce);
-    const queue = encodeAuthQueue([entry]);
+    const queue = [entry];
 
     await metaTransactionsHandler
       .connect(deployer)
@@ -325,7 +321,7 @@ describe("DAI-style permit authorization queue", function () {
 
     const metatxNonce = parseInt(randomBytes(8));
     const { fnSig, message, signature } = await buildDepositMetaTx(assistant, amount, metatxNonce);
-    const queue = encodeAuthQueue([entry]);
+    const queue = [entry];
 
     await metaTransactionsHandler
       .connect(deployer)
@@ -397,7 +393,7 @@ describe("DAI-style permit authorization queue", function () {
     // on nonce mismatch and the whole metatx unwinds.
     const metatxNonce = parseInt(randomBytes(8));
     const { fnSig, message, signature } = await buildDepositMetaTx(assistant, amount, metatxNonce);
-    const queue = encodeAuthQueue([a.entry]);
+    const queue = [a.entry];
 
     const protocolBalanceBefore = await token.balanceOf(protocolDiamondAddress);
     await expect(
