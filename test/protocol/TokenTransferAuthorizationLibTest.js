@@ -13,10 +13,6 @@ describe("TokenTransferAuthorizationLib", function () {
   // Same enum as the Solidity-side `BosonTypes.TokenTransferAuthorizationStrategy`.
   const TokenTransferAuthorizationStrategy = { None: 0 };
 
-  function encodeAuthQueue(entries) {
-    return AbiCoder.defaultAbiCoder().encode(["bytes[]"], [entries]);
-  }
-
   before(async function () {
     const Consumer = await getContractFactory("MockTokenTransferAuthorizationLibConsumer");
     consumer = await Consumer.deploy();
@@ -32,12 +28,12 @@ describe("TokenTransferAuthorizationLib", function () {
         ["uint8", "bytes"],
         [TokenTransferAuthorizationStrategy.None, "0x"]
       );
-      const queue = encodeAuthQueue([noneEntry]);
-
       // Send a real transaction (not staticCall) — TSTORE inside loadQueue is
       // forbidden in a STATICCALL context per EIP-1153, so the consumer reports
       // results via an event.
-      await expect(consumer.probePopWhenExhausted(queue)).to.emit(consumer, "Probed").withArgs([noneEntry], true);
+      await expect(consumer.probePopWhenExhausted([noneEntry]))
+        .to.emit(consumer, "Probed")
+        .withArgs([noneEntry], true);
     });
   });
 });

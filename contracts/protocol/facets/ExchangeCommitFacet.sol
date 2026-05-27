@@ -63,11 +63,8 @@ contract ExchangeCommitFacet is ExchangeCommitBase, DisputeBase, IBosonExchangeC
     function commitToOffer(
         address payable _committer,
         uint256 _offerId
-    ) public payable override exchangesNotPaused buyersNotPaused sellersNotPaused nonReentrant {
-        // Make sure committer address is not zero address
-        if (_committer == address(0)) revert InvalidAddress();
-
-        commitToStaticOfferShared(_committer, _offerId, false);
+    ) external payable override exchangesNotPaused buyersNotPaused sellersNotPaused nonReentrant {
+        commitToOfferUnguarded(_committer, _offerId);
     }
 
     /**
@@ -110,12 +107,8 @@ contract ExchangeCommitFacet is ExchangeCommitBase, DisputeBase, IBosonExchangeC
     function commitToBuyerOffer(
         uint256 _offerId,
         SellerOfferParams calldata _sellerParams
-    ) public payable override exchangesNotPaused buyersNotPaused sellersNotPaused nonReentrant {
-        address committer = _msgSender();
-
-        Offer storage offer = addSellerParametersToBuyerOffer(committer, _offerId, _sellerParams);
-
-        commitToOfferInternal(payable(committer), offer, 0, false, false);
+    ) external payable override exchangesNotPaused buyersNotPaused sellersNotPaused nonReentrant {
+        commitToBuyerOfferUnguarded(_offerId, _sellerParams);
     }
 
     /**
@@ -151,11 +144,8 @@ contract ExchangeCommitFacet is ExchangeCommitBase, DisputeBase, IBosonExchangeC
         address payable _committer,
         uint256 _offerId,
         uint256 _tokenId
-    ) public payable override exchangesNotPaused buyersNotPaused nonReentrant {
-        // Make sure committer address is not zero address
-        if (_committer == address(0)) revert InvalidAddress();
-
-        commitToConditionalOfferShared(_committer, _offerId, _tokenId, true, false);
+    ) external payable override exchangesNotPaused buyersNotPaused nonReentrant {
+        commitToConditionalOfferUnguarded(_committer, _offerId, _tokenId);
     }
 
     /**
@@ -209,7 +199,7 @@ contract ExchangeCommitFacet is ExchangeCommitBase, DisputeBase, IBosonExchangeC
         bytes calldata _signature,
         uint256 _conditionalTokenId,
         BosonTypes.SellerOfferParams calldata _sellerParams
-    ) external payable override exchangesNotPaused buyersNotPaused sellersNotPaused {
+    ) external payable override exchangesNotPaused buyersNotPaused sellersNotPaused nonReentrant {
         if (
             _fullOffer.offer.creator == BosonTypes.OfferCreator.Seller &&
             (_sellerParams.collectionIndex != 0 ||
@@ -225,12 +215,12 @@ contract ExchangeCommitFacet is ExchangeCommitBase, DisputeBase, IBosonExchangeC
                 addSellerParametersToBuyerOffer(_committer, offerId, _sellerParams);
             }
 
-            commitToConditionalOffer(_committer, offerId, _conditionalTokenId);
+            commitToConditionalOfferUnguarded(_committer, offerId, _conditionalTokenId);
         } else {
             if (_fullOffer.offer.creator == BosonTypes.OfferCreator.Buyer) {
-                commitToBuyerOffer(offerId, _sellerParams);
+                commitToBuyerOfferUnguarded(offerId, _sellerParams);
             } else {
-                commitToOffer(_committer, offerId);
+                commitToOfferUnguarded(_committer, offerId);
             }
         }
     }
@@ -427,5 +417,50 @@ contract ExchangeCommitFacet is ExchangeCommitBase, DisputeBase, IBosonExchangeC
         }
 
         return (true, 0, 0);
+    }
+
+    /**
+     * @notice An unguarded version of commitToOffer.
+     *
+     * @param _committer - the seller's or the buyer's address. The caller can commit on behalf of a buyer or a seller.
+     * @param _offerId - the id of the offer to commit to
+     */
+    function commitToOfferUnguarded(address payable _committer, uint256 _offerId) internal {
+        // Make sure committer address is not zero address
+        if (_committer == address(0)) revert InvalidAddress();
+
+        commitToStaticOfferShared(_committer, _offerId, false);
+    }
+
+    /**
+     * @notice An unguarded version of commitToBuyerOffer.
+     *
+     * @param _offerId - the id of the offer to commit to
+     * @param _sellerParams - the seller-specific parameters (collection index, royalty info, mutualizer address)
+     */
+    function commitToBuyerOfferUnguarded(uint256 _offerId, SellerOfferParams calldata _sellerParams) internal {
+        address committer = _msgSender();
+
+        Offer storage offer = addSellerParametersToBuyerOffer(committer, _offerId, _sellerParams);
+
+        commitToOfferInternal(payable(committer), offer, 0, false, false);
+    }
+
+    /**
+     * @notice An unguarded version of commitToConditionalOffer.
+     *
+     * @param _committer - the seller's or the buyer's address. The caller can commit on behalf of a buyer or a seller.
+     * @param _offerId - the id of the offer to commit to
+     * @param _tokenId - the id of the token to use for the conditional commit
+     */
+    function commitToConditionalOfferUnguarded(
+        address payable _committer,
+        uint256 _offerId,
+        uint256 _tokenId
+    ) internal {
+        // Make sure committer address is not zero address
+        if (_committer == address(0)) revert InvalidAddress();
+
+        commitToConditionalOfferShared(_committer, _offerId, _tokenId, true, false);
     }
 }

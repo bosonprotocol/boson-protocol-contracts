@@ -53,10 +53,6 @@ const PERMIT2_TYPES = {
   ],
 };
 
-function encodeAuthQueue(entries) {
-  return AbiCoder.defaultAbiCoder().encode(["bytes[]"], [entries]);
-}
-
 function wrapEntry(strategy, data) {
   return AbiCoder.defaultAbiCoder().encode(["uint8", "bytes"], [strategy, data]);
 }
@@ -189,7 +185,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
       const nonce = parseInt(randomBytes(8));
       const { fnSig, message, signature } = await buildDepositMetaTx(assistant, token, amount, nonce);
       const entry = await buildEIP2612Entry(assistant, amount, MaxUint256);
-      const queue = encodeAuthQueue([entry]);
+      const queue = [entry];
 
       await expect(
         metaTransactionsHandler
@@ -219,7 +215,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
       // Signed by `rando`, but assistant is the metatx caller — permit's
       // recovered owner won't match.
       const entry = await buildEIP2612Entry(rando, amount, MaxUint256);
-      const queue = encodeAuthQueue([entry]);
+      const queue = [entry];
 
       await expect(
         metaTransactionsHandler
@@ -243,7 +239,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
       const { fnSig, message, signature } = await buildDepositMetaTx(assistant, token, amount, nonce);
       const expiredDeadline = "1"; // long past
       const entry = await buildEIP2612Entry(assistant, amount, expiredDeadline);
-      const queue = encodeAuthQueue([entry]);
+      const queue = [entry];
 
       await expect(
         metaTransactionsHandler
@@ -301,7 +297,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
         [deadline, split.v, split.r, split.s]
       );
       const entry = wrapEntry(TokenTransferAuthorizationStrategy.EIP2612, data);
-      const queue = encodeAuthQueue([entry]);
+      const queue = [entry];
 
       const metatxNonce = parseInt(randomBytes(8));
       const { fnSig, message, signature } = await buildDepositMetaTx(assistant, token, amount, metatxNonce);
@@ -405,7 +401,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
         [deadline, smallSplit.v, smallSplit.r, smallSplit.s]
       );
       const entry = wrapEntry(TokenTransferAuthorizationStrategy.EIP2612, data);
-      const queue = encodeAuthQueue([entry]);
+      const queue = [entry];
 
       const metatxNonce = parseInt(randomBytes(8));
       const { fnSig, message, signature } = await buildDepositMetaTx(assistant, token, smallAmount, metatxNonce);
@@ -490,7 +486,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
       const { fnSig, message, signature } = await buildDepositMetaTx(assistant, token, amount, metatxNonce);
       const permit2Nonce = "0";
       const entry = await buildPermit2Entry(assistant, amount, permit2Nonce, MaxUint256);
-      const queue = encodeAuthQueue([entry]);
+      const queue = [entry];
 
       await expect(
         metaTransactionsHandler
@@ -527,7 +523,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
           metatx.fnSig,
           metatxNonce,
           metatx.signature,
-          encodeAuthQueue([entry])
+          [entry]
         );
 
       // Replay attempt (different metatx nonce, same Permit2 nonce).
@@ -543,7 +539,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
             metatx.fnSig,
             metatxNonce,
             metatx.signature,
-            encodeAuthQueue([entry])
+            [entry]
           )
       ).to.be.reverted;
     });
@@ -558,7 +554,7 @@ describe("Permit-strategy authorization queues (EIP-2612 + Permit2)", function (
       // Signed by rando, but the metatx caller is assistant — Permit2 signer
       // recovery won't match.
       const entry = await buildPermit2Entry(rando, amount, permit2Nonce, MaxUint256);
-      const queue = encodeAuthQueue([entry]);
+      const queue = [entry];
 
       await expect(
         metaTransactionsHandler

@@ -57,10 +57,6 @@ function encodeAuthEntry({ validAfter, validBefore, nonce, v, r, s }) {
   );
 }
 
-function encodeAuthQueue(entries) {
-  return AbiCoder.defaultAbiCoder().encode(["bytes[]"], [entries]);
-}
-
 describe("ERC3009-backed metatransactions", function () {
   let deployer, assistant, adminDR, treasuryDR, rando;
   let accountHandler, fundsHandler, metaTransactionsHandler;
@@ -169,7 +165,7 @@ describe("ERC3009-backed metatransactions", function () {
     const nonce = parseInt(randomBytes(8));
     const { fnSig, message, signature } = await buildDepositMetaTx(assistant, amount, nonce);
     const authEntry = await buildAuthEntry(assistant, amount);
-    const queue = encodeAuthQueue([authEntry]);
+    const queue = [authEntry];
 
     await expect(
       metaTransactionsHandler
@@ -214,7 +210,7 @@ describe("ERC3009-backed metatransactions", function () {
 
     const nonce = parseInt(randomBytes(8));
     const { fnSig, message, signature } = await buildDepositMetaTx(assistant, amount, nonce);
-    const queue = encodeAuthQueue(["0x"]);
+    const queue = ["0x"];
 
     await expect(
       metaTransactionsHandler
@@ -250,7 +246,7 @@ describe("ERC3009-backed metatransactions", function () {
       ["uint8", "bytes"],
       [TokenTransferAuthorizationStrategy.None, "0x"]
     );
-    const queue = encodeAuthQueue([noneEntry]);
+    const queue = [noneEntry];
 
     await metaTransactionsHandler
       .connect(deployer)
@@ -275,7 +271,7 @@ describe("ERC3009-backed metatransactions", function () {
 
     // Sign auth as `rando` instead of `assistant` — token-side recovery will mismatch.
     const authEntry = await buildAuthEntry(rando, amount);
-    const queue = encodeAuthQueue([authEntry]);
+    const queue = [authEntry];
 
     await expect(
       metaTransactionsHandler
@@ -363,7 +359,7 @@ describe("ERC3009-backed metatransactions", function () {
       const callA = await buildDepositMetaTx(assistant, amountA, nonceA);
       const validEntry = await buildAuthEntry(assistant, amountA);
       const bogusEntry = await buildAuthEntry(assistant, bogusAmount); // signed for wrong amount → leftover, would revert if consumed
-      const queueA = encodeAuthQueue([validEntry, bogusEntry]);
+      const queueA = [validEntry, bogusEntry];
 
       const callAData = metaTransactionsHandler.interface.encodeFunctionData(
         "executeMetaTransactionWithTokenTransferAuthorization",
@@ -413,14 +409,14 @@ describe("ERC3009-backed metatransactions", function () {
       const nonceB = 2;
 
       const callA = await buildDepositMetaTx(assistant, amountA, nonceA);
-      const queueA = encodeAuthQueue([await buildAuthEntry(assistant, amountA)]);
+      const queueA = [await buildAuthEntry(assistant, amountA)];
       const callAData = metaTransactionsHandler.interface.encodeFunctionData(
         "executeMetaTransactionWithTokenTransferAuthorization",
         [await assistant.getAddress(), callA.message.functionName, callA.fnSig, nonceA, callA.signature, queueA]
       );
 
       const callB = await buildDepositMetaTx(assistant, amountB, nonceB);
-      const queueB = encodeAuthQueue([await buildAuthEntry(assistant, amountB)]);
+      const queueB = [await buildAuthEntry(assistant, amountB)];
       const callBData = metaTransactionsHandler.interface.encodeFunctionData(
         "executeMetaTransactionWithTokenTransferAuthorization",
         [await assistant.getAddress(), callB.message.functionName, callB.fnSig, nonceB, callB.signature, queueB]

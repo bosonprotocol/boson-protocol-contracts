@@ -15,8 +15,9 @@ The protocol's **token-transfer authorization queue** replaces this with **off-c
 | Strategy | Token requirement | Mechanism |
 | --- | --- | --- |
 | **ERC-3009** | Token implements EIP-3009 (e.g. USDC) | Protocol calls `receiveWithAuthorization` on the token. |
-| **EIP-2612** | Token implements EIP-2612 permit (e.g. DAI, most modern stablecoins) | Protocol calls `permit` on the token to provision allowance, then `safeTransferFrom`. |
+| **EIP-2612** | Token implements EIP-2612 permit (e.g. most modern stablecoins, bridged DAI on Optimism / Arbitrum) | Protocol calls `permit` on the token to provision allowance, then `safeTransferFrom`. |
 | **Permit2** | Any standard ERC-20 (one-time `approve(PERMIT2, MaxUint)` per token) | Protocol calls Uniswap's universal Permit2 contract, which verifies the signature and pulls funds via `transferFrom`. |
+| **DAIPermit** | Token implements the legacy DAI-style `permit` (canonical Maker DAI on Ethereum mainnet and Polygon PoS) | Protocol calls DAI's `permit(holder, spender, nonce, expiry, allowed=true, …)` to grant `MAX_UINT256` allowance, then `safeTransferFrom`. |
 
 A single queue can carry **mixed strategies** — e.g. a buyer's deposit pulled via ERC-3009 and the seller's deposit pulled via Permit2 in the same transaction.
 
@@ -40,7 +41,8 @@ When the call uses the regular `executeMetaTransaction` (or is invoked directly)
 | ERC-3009 token interface | [`IERC3009`](../contracts/interfaces/IERC3009.sol) |
 | EIP-2612 token interface | [`IERC2612`](../contracts/interfaces/IERC2612.sol) |
 | Permit2 contract interface | [`IPermit2`](../contracts/interfaces/IPermit2.sol) |
-| Test mocks | [`MockERC3009Token`](../contracts/mock/MockERC3009Token.sol), [`MockERC2612Token`](../contracts/mock/MockERC2612Token.sol), [`MockPermit2`](../contracts/mock/MockPermit2.sol) |
+| DAI-style permit interface | [`IDAIPermit`](../contracts/interfaces/IDAIPermit.sol) |
+| Test mocks | [`MockERC3009Token`](../contracts/mock/MockERC3009Token.sol), [`MockERC2612Token`](../contracts/mock/MockERC2612Token.sol), [`MockPermit2`](../contracts/mock/MockPermit2.sol), [`MockDAIPermitToken`](../contracts/mock/MockDAIPermitToken.sol) |
 
 ## End-to-end flow
 
@@ -106,6 +108,7 @@ The `data` payload by strategy:
 | `ERC3009` | `abi.encode(uint256 validAfter, uint256 validBefore, bytes32 nonce, uint8 v, bytes32 r, bytes32 s)` | Maps onto `IERC3009.receiveWithAuthorization(from, to, value, ...)`. The user signs an EIP-712 `ReceiveWithAuthorization` typed message against the token's domain. |
 | `EIP2612` | `abi.encode(uint256 deadline, uint8 v, bytes32 r, bytes32 s)` | Protocol calls `IERC2612.permit(owner, spender, value, deadline, v, r, s)` with `value == _amount` and `spender == protocol`, then follows up with `safeTransferFrom`. The user signs an EIP-712 `Permit` typed message against the token's domain. The token's `nonces(owner)` counter at signing time is implicit in the signature — no need to pass it. |
 | `Permit2` | `abi.encode(uint256 nonce, uint256 deadline, bytes signature)` | Protocol calls `Permit2.permitTransferFrom(...)` at the canonical address `0x000000000022D473030F116dDEE9F6B43aC78BA3`. User must have one-time-approved Permit2 on `_token`. The signature is over a `PermitTransferFrom` EIP-712 message bound to token, amount, spender (= protocol), nonce, deadline. |
+| `DAIPermit` | `abi.encode(uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s)` | Protocol calls `IDAIPermit.permit(holder, spender, nonce, expiry, allowed=true, v, r, s)` with `holder == _from` and `spender == protocol`, then follows up with `safeTransferFrom`. The user signs an EIP-712 `Permit(address holder,address spender,uint256 nonce,uint256 expiry,bool allowed)` typed message against the token's domain, **always with `allowed = true`**. Unlike EIP-2612, DAI's permit nonce is supplied in calldata and must equal `IDAIPermit(token).nonces(holder)` at execution time. `expiry == 0` is the DAI sentinel for "never expires." The permit grants **`MAX_UINT256` allowance** as a side effect; users wanting single-shot semantics should use `Permit2` instead. The protocol skips the on-chain `permit` call only when the allowance already equals `MAX_UINT256` (the exact post-permit state) — so a benign frontrun replaying the same signature is tolerated, while a pre-existing partial allowance does **not** silently swallow the user's signed permit. |
 
 For every strategy, `from`, `to`, `token`, and `value` are deliberately **not** in the per-entry payload. They're derived at consumption time from the metatx caller, the protocol address, the offer's exchange token, and the underlying call's `_amount` respectively. This prevents a malicious relayer from substituting an authorization that doesn't match the actual transfer — the off-chain signature is bound to the same parameters the on-chain call will use.
 
@@ -140,7 +143,7 @@ function discardNext() internal;                              // skip sites pop-
 function hasQueue() internal view returns (bool);             // diagnostic
 ```
 
-`consumeForTransfer` pops the entry, decodes the `(strategy, data)` envelope, and dispatches to a strategy-specific private helper (`_consumeERC3009`, `_consumeEIP2612`, `_consumePermit2`). Returns `true` when a strategy was consumed and a token call dispatched (caller skips its fallback path) or `false` when the queue is empty/exhausted, the entry is the fallback shortcut, or `strategy == None` (caller falls through to `safeTransferFrom`). An out-of-range strategy tag is rejected by Solidity's enum-range check inside `abi.decode` (`Panic(0x21)`); adding a new strategy means extending the enum *and* the dispatch in lock-step.
+`consumeForTransfer` pops the entry, decodes the `(strategy, data)` envelope, and dispatches to a strategy-specific private helper (`_consumeERC3009`, `_consumePermit2`, or `_consumePermit` — which covers both EIP-2612 and DAI-style permits since they share the same "permit then `safeTransferFrom`" shape). Returns `true` when a strategy was consumed and a token call dispatched (caller skips its fallback path) or `false` when the queue is empty/exhausted, the entry is the fallback shortcut, or `strategy == None` (caller falls through to `safeTransferFrom`). An out-of-range strategy tag is rejected by Solidity's enum-range check inside `abi.decode` (`Panic(0x21)`); adding a new strategy means extending the enum *and* the dispatch in lock-step.
 
 `discardNext` advances the queue head by one without doing any work. The protocol calls it at every site where a `transferFundsIn` call is bypassed at runtime (zero amount, `useDepositedFunds=true`, etc.). This keeps the queue head in lock-step with the **logical** transfer position — not the actual one — so the off-chain caller can build a queue whose layout depends only on the function being called, not on runtime amounts or flags. `discardNext` is a no-op when the queue is empty or already exhausted.
 
@@ -260,6 +263,7 @@ The leading empty entry is the fallback marker for the seller's pull (which **do
 | ERC-3009 | Each entry carries a `bytes32 nonce` consumed by the token's `authorizationState[from][nonce]` map. The token reverts on replay. |
 | EIP-2612 | The token's `nonces(owner)` counter auto-increments on each successful `permit`. Replaying the same signature reverts because the recovered owner won't match. The protocol calls `permit` only when the on-chain allowance doesn't already equal `_amount` — this tolerates a benign frontrun where someone replays *this* permit before us (allowance == `_amount`, skip the redundant call) but rejects diversion attempts where a *different* permit signed by the same user has set a non-matching allowance. |
 | Permit2 | Permit2 maintains a 256-bit-bitmap nonce per owner. The user picks any unused nonce; Permit2 reverts on replay (`InvalidNonce`). |
+| DAIPermit | The token's per-holder `nonces` counter is supplied in calldata and must match `nonces(holder)` at execution time; on success the token increments it. Replay reverts with `InvalidNonce`. The protocol skips the `permit` call only when the existing allowance equals `MAX_UINT256` — the exact post-permit state — tolerating a benign frontrun (allowance is already `MAX_UINT256`, so we transfer directly) while still consuming the user's signed permit when a pre-existing partial allowance is in place. A malicious frontrun that burned the nonce on a *different* signature reverts the on-chain `permit` and the whole metatx. |
 
 In addition, the outer metatx is nonce-tracked the same as `executeMetaTransaction` (re-submission of the same `(userAddress, nonce)` reverts with `NonceUsedAlready`), and queue entries are popped on consumption — `head` advances. A second `transferFundsIn` in the same metatx cannot reuse a popped entry; it gets the next one (or falls back to `safeTransferFrom` if the queue is exhausted).
 
@@ -289,6 +293,7 @@ Boson's deployment targets (Ethereum, Polygon, Optimism, Arbitrum, Base) are all
 
 - [`test/protocol/MetaTransactionsERC3009Test.js`](../test/protocol/MetaTransactionsERC3009Test.js) — focused unit tests for the ERC-3009 strategy + fallback semantics (5 tests).
 - [`test/protocol/MetaTransactionsPermitStrategiesTest.js`](../test/protocol/MetaTransactionsPermitStrategiesTest.js) — focused unit tests for the EIP-2612 + Permit2 strategies (6 tests).
+- [`test/protocol/MetaTransactionsDAIPermitTest.js`](../test/protocol/MetaTransactionsDAIPermitTest.js) — focused unit tests for the DAI-style permit strategy (7 tests: happy path, `expiry==0` sentinel, partial-allowance case, wrong signer, expired permit, benign frontrun tolerance, malicious frontrun rejection).
 - [`test/protocol/ExchangeHandlerCommitWithAuthorizationTest.js`](../test/protocol/ExchangeHandlerCommitWithAuthorizationTest.js) — `commitToOffer` and `createOfferAndCommit` flows mirroring the originals from `ExchangeHandlerTest.js` (49 tests).
 - [`test/protocol/BuyerInitiatedOfferSellerCommitsWithAuthorizationTest.js`](../test/protocol/BuyerInitiatedOfferSellerCommitsWithAuthorizationTest.js) — seller-side `commitToBuyerOffer` flow mirroring `BuyerInitiatedOfferTest.js` (10 tests).
 
@@ -298,6 +303,7 @@ Run them all together:
 npx hardhat test \
   test/protocol/MetaTransactionsERC3009Test.js \
   test/protocol/MetaTransactionsPermitStrategiesTest.js \
+  test/protocol/MetaTransactionsDAIPermitTest.js \
   test/protocol/ExchangeHandlerCommitWithAuthorizationTest.js \
   test/protocol/BuyerInitiatedOfferSellerCommitsWithAuthorizationTest.js
 ```

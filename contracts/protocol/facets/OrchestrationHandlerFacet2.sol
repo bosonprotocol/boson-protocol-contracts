@@ -37,7 +37,7 @@ contract OrchestrationHandlerFacet2 is ExchangeCommitBase, ExchangeRedeemBase {
     function initialize() public {
         // No-op initializer.
         // - kept for consistency with other facets
-        // - exception here because OrchestrationFacet is split into two facets just because of the size limit. Both facets contrubute to 1 interface - IBosonOrchestrationHandler
+        // - exception here because OrchestrationHandlerFacet is split into two facets just because of the size limit. Both facets contribute to 1 interface - IBosonOrchestrationHandler
     }
 
     /**

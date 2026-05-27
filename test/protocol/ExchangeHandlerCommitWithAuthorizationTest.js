@@ -59,7 +59,7 @@ const { oneMonth } = require("../util/constants");
 const { FundsList } = require("../../scripts/domain/Funds");
 
 // Per-entry authorization strategy tag (mirrors BosonTypes.TokenTransferAuthorizationStrategy)
-const TokenTransferAuthorizationStrategy = { None: 0, ERC3009: 1, EIP2612: 2, Permit2: 3 };
+const TokenTransferAuthorizationStrategy = { None: 0, ERC3009: 1, EIP2612: 2, Permit2: 3, DAIPermit: 4 };
 
 // Canonical Permit2 address (must match `TokenTransferAuthorizationLib.PERMIT2`)
 const PERMIT2_ADDRESS = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
@@ -84,6 +84,17 @@ const EIP2612_PERMIT_TYPES = {
     { name: "value", type: "uint256" },
     { name: "nonce", type: "uint256" },
     { name: "deadline", type: "uint256" },
+  ],
+};
+
+// EIP-712 types for DAI-style Permit (matches canonical Maker DAI on mainnet / Polygon PoS)
+const DAI_PERMIT_TYPES = {
+  Permit: [
+    { name: "holder", type: "address" },
+    { name: "spender", type: "address" },
+    { name: "nonce", type: "uint256" },
+    { name: "expiry", type: "uint256" },
+    { name: "allowed", type: "bool" },
   ],
 };
 
@@ -225,6 +236,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
   // sub-contexts that exercise EIP-2612 / Permit2 so the existing ERC-3009
   // tests aren't impacted.
   let foreign2612; // MockERC2612Token used as exchange token in EIP-2612 contexts
+  let foreignDAI; // MockDAIPermitToken used as exchange token in DAI permit contexts
   let expectedCloneAddress;
   let voucherInitValues, royaltyPercentage1, seller1Treasury;
   let emptyAuthToken;
@@ -366,6 +378,39 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
     };
   }
 
+  // DAI-style permit entry builder: signs a DAI Permit typed message that
+  // grants the protocol MAX allowance (`allowed=true`) on `token`.
+  function makeDAIPermitBuilder(token) {
+    return async function (signer) {
+      const { chainId } = await provider.getNetwork();
+      const domain = {
+        name: await token.name(),
+        version: "1",
+        chainId,
+        verifyingContract: await token.getAddress(),
+      };
+      const permitNonce = await token.nonces(await signer.getAddress());
+      const expiry = MaxUint256;
+      const message = {
+        holder: await signer.getAddress(),
+        spender: protocolDiamondAddress,
+        nonce: permitNonce,
+        expiry,
+        allowed: true,
+      };
+      const sig = await signer.signTypedData(domain, DAI_PERMIT_TYPES, message);
+      const split = Signature.from(sig);
+      const data = AbiCoder.defaultAbiCoder().encode(
+        ["uint256", "uint256", "uint8", "bytes32", "bytes32"],
+        [permitNonce, expiry, split.v, split.r, split.s]
+      );
+      return AbiCoder.defaultAbiCoder().encode(
+        ["uint8", "bytes"],
+        [TokenTransferAuthorizationStrategy.DAIPermit, data]
+      );
+    };
+  }
+
   // Permit2 entry builder: signs a PermitTransferFrom typed message against
   // the canonical Permit2 contract; nonce is fresh per call so multiple
   // entries in the same queue don't clash.
@@ -391,10 +436,6 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
       );
       return AbiCoder.defaultAbiCoder().encode(["uint8", "bytes"], [TokenTransferAuthorizationStrategy.Permit2, data]);
     };
-  }
-
-  function encodeAuthQueue(entries) {
-    return AbiCoder.defaultAbiCoder().encode(["bytes[]"], [entries]);
   }
 
   /**
@@ -447,7 +488,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
         fnSig,
         metatxNonce,
         signature,
-        encodeAuthQueue([entry])
+        [entry]
       );
   }
 
@@ -1095,7 +1136,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
           fnSig,
           metatxNonce,
           signature,
-          encodeAuthQueue(entries)
+          entries
         );
     }
 
@@ -2356,7 +2397,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
           fnSig,
           metatxNonce,
           signature,
-          encodeAuthQueue(entries)
+          entries
         );
     }
 
@@ -2365,6 +2406,11 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
       const Mock2612 = await getContractFactory("MockERC2612Token");
       foreign2612 = await Mock2612.deploy("Foreign2612", "F26");
       await foreign2612.waitForDeployment();
+
+      // Deploy the DAI-style permit token used by the DAI permit sub-context
+      const MockDAI = await getContractFactory("MockDAIPermitToken");
+      foreignDAI = await MockDAI.deploy("Dai Stablecoin", "DAI");
+      await foreignDAI.waitForDeployment();
 
       // Inject MockPermit2 at the canonical Permit2 address. Both the Permit2
       // sub-context and the Mixed sub-context rely on this.
@@ -2418,6 +2464,7 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
         new DisputeResolverFee(ZeroAddress, "Native", "0"),
         new DisputeResolverFee(await foreign20.getAddress(), "Foreign20", "0"),
         new DisputeResolverFee(await foreign2612.getAddress(), "Foreign2612", "0"),
+        new DisputeResolverFee(await foreignDAI.getAddress(), "DAI", "0"),
       ];
       await accountHandler.connect(adminDR).createDisputeResolver(disputeResolver, disputeResolverFees, []);
 
@@ -2457,6 +2504,8 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
       await foreign20.mint(await buyer.getAddress(), big);
       await foreign2612.mint(await assistant.getAddress(), big);
       await foreign2612.mint(await buyer.getAddress(), big);
+      await foreignDAI.mint(await assistant.getAddress(), big);
+      await foreignDAI.mint(await buyer.getAddress(), big);
     });
 
     // -------------------------------------------------------------------- EIP-2612
@@ -2606,8 +2655,79 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
       });
     });
 
+    // -------------------------------------------------------------------- DAI permit
+    context("👉 DAIPermit strategy", async function () {
+      it("commitToOffer pulls funds via DAI permit + transferFrom", async function () {
+        offer.exchangeToken = await foreignDAI.getAddress();
+
+        sellerPool = parseUnits("15", "ether").toString();
+        await foreignDAI.mint(await assistant.getAddress(), sellerPool);
+        await foreignDAI.connect(assistant).approve(protocolDiamondAddress, sellerPool);
+
+        await offerHandler
+          .connect(assistant)
+          .createOffer(offer, offerDates, offerDurations, drParams, agentId, offerFeeLimit);
+        await fundsHandler.connect(assistant).depositFunds(seller.id, await foreignDAI.getAddress(), sellerPool);
+
+        const tx = await commitToOfferWithAuth({
+          buyerSigner: buyer,
+          buyerAddress: await buyer.getAddress(),
+          offerId,
+          entryBuilder: makeDAIPermitBuilder(foreignDAI),
+        });
+
+        await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsEncumbered")
+          .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
+
+        // DAI permit advances the per-holder nonce and leaves MAX allowance.
+        expect(await foreignDAI.nonces(await buyer.getAddress())).to.equal(1);
+        expect(await foreignDAI.allowance(await buyer.getAddress(), protocolDiamondAddress)).to.equal(MaxUint256);
+      });
+    });
+
     // -------------------------------------------------------------------- Mixed strategies
     context("👉 Mixed strategies in one queue", async function () {
+      it("createOfferAndCommit — seller via DAI permit, buyer via Permit2", async function () {
+        offer.exchangeToken = await foreignDAI.getAddress();
+        offer.sellerDeposit = parseUnits("0.1", "ether").toString();
+
+        // Buyer one-time-approves Permit2; seller uses DAI permit (no prior approve).
+        await foreignDAI.connect(buyer).approve(PERMIT2_ADDRESS, MaxUint256);
+
+        const modifiedOffer = offer.clone();
+        modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+        message.offer = modifiedOffer;
+
+        const fullOfferSignature = await signFullOffer(assistant, message);
+        const tx = await createOfferAndCommitWithAuth({
+          committerSigner: buyer,
+          offerCreatorSigner: assistant,
+          fullOfferTuple: [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+          offerCreatorAddress: assistant.address,
+          committerAddress: buyer.address,
+          fullOfferSignature,
+          conditionalTokenId: "0",
+          offerCreatorAmount: offer.sellerDeposit,
+          committerAmount: price,
+          offerCreatorEntryBuilder: makeDAIPermitBuilder(foreignDAI),
+          committerEntryBuilder: makePermit2Builder(foreignDAI),
+        });
+
+        await expect(tx).to.emit(exchangeHandler, "BuyerCommitted");
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsDeposited")
+          .withArgs(seller.id, assistant.address, offer.exchangeToken, offer.sellerDeposit);
+        await expect(tx)
+          .to.emit(fundsHandler, "FundsEncumbered")
+          .withArgs(buyerId, offer.exchangeToken, price, buyer.address);
+
+        // Seller's DAI permit nonce advanced; buyer didn't sign a DAI permit.
+        expect(await foreignDAI.nonces(await assistant.getAddress())).to.equal(1);
+        expect(await foreignDAI.nonces(await buyer.getAddress())).to.equal(0);
+      });
+
       it("createOfferAndCommit — seller via ERC-3009, buyer via Permit2", async function () {
         // foreign20 (MockERC3009Token) supports both receiveWithAuthorization
         // (for the seller) and standard transferFrom (used by Permit2 for

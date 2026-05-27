@@ -7,14 +7,14 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
-import { TokenTransferAuthorizationLib } from "../libs/TokenTransferAuthorizationLib.sol";
+import { TokenTransferAuthorizationBase } from "../bases/TokenTransferAuthorizationBase.sol";
 
 /**
  * @title MetaTransactionsHandlerFacet
  *
  * @notice Handles meta-transaction requests.
  */
-contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, ProtocolBase {
+contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, ProtocolBase, TokenTransferAuthorizationBase {
     /**
      * @notice Initializes Facet.
      * This function is callable only once.
@@ -321,9 +321,9 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @param _functionSignature - the function signature
      * @param _nonce - the nonce value of the transaction
      * @param _signature - meta transaction signature (see `executeMetaTransaction`)
-     * @param _tokenTransferAuthorization - `abi.encode(bytes[] queue)` where each
-     *                                       entry is either `"0x"` (fall back to
-     *                                       safeTransferFrom) or
+     * @param _tokenTransferAuthorization - queue of per-transfer authorization entries,
+     *                                       where each entry is either `"0x"` (fall back
+     *                                       to safeTransferFrom) or
      *                                       `abi.encode(TokenTransferAuthorizationStrategy strategy, bytes data)`
      */
     function executeMetaTransactionWithTokenTransferAuthorization(
@@ -332,16 +332,16 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         bytes calldata _functionSignature,
         uint256 _nonce,
         bytes calldata _signature,
-        bytes calldata _tokenTransferAuthorization
-    ) external payable override metaTransactionsNotPaused returns (bytes memory) {
-        TokenTransferAuthorizationLib.loadQueue(_tokenTransferAuthorization);
+        bytes[] calldata _tokenTransferAuthorization
+    )
+        external
+        payable
+        override
+        metaTransactionsNotPaused
+        withTokenAuthorization(_tokenTransferAuthorization)
+        returns (bytes memory)
+    {
         bytes memory result = _executeMetaTx(_userAddress, _functionName, _functionSignature, _nonce, _signature);
-        // Always clear the queue on the success path so leftover entries (e.g.
-        // when the inner call consumed fewer entries than the queue carried)
-        // don't leak into a later protocol call in the same transaction. On
-        // revert, EIP-1153 already rolls transient writes back, so no clear
-        // is needed there.
-        TokenTransferAuthorizationLib.clearQueue();
         return result;
     }
 
