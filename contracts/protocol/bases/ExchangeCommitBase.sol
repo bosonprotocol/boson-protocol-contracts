@@ -271,7 +271,6 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
 
         // Verify the _offerCreator's address matches the offer's creator role and ID
         if (_fullOffer.offer.creator == OfferCreator.Seller) {
-            // Validate caller is seller assistant
             (, uint256 sellerId) = getSellerIdByAssistant(_offerCreator);
             if (sellerId != _fullOffer.offer.sellerId) {
                 revert NotAssistant();
