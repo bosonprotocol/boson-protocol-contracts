@@ -19,10 +19,10 @@ const Condition = require("../../scripts/domain/Condition");
 const { getEvent, getCurrentBlockAndSetTimeForward, prepareDataSignature } = require("../util/utils");
 const { mockOffer, mockVoucherInitValues, mockAuthToken, mockSeller, mockCondition } = require("../util/mock");
 const { getStateModifyingFunctionsHashes } = require("../../scripts/util/diamond-utils");
-const upgradeConfig = require("../../scripts/config/upgrade/2.5.1-rc.2.js");
+const upgradeConfig = require("../../scripts/config/upgrade/2.5.1.js");
 
 const newVersion = "2.5.1"; // passed to migrate task; maps to migrate_2.5.1.js
-const expectedOnChainVersion = "2.5.1-rc.2"; // the string the migration stores on-chain
+const expectedOnChainVersion = "2.5.1"; // the string the migration stores on-chain
 
 // ERC3009 helpers — mirrors MetaTransactionsERC3009Test.js
 const TokenTransferAuthorizationStrategy = { None: 0, ERC3009: 1 };
