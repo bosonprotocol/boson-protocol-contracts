@@ -9168,6 +9168,61 @@ describe("IBosonExchangeHandler", function () {
           ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
         });
 
+        it("Offer creator is not the original assistant address", async function () {
+          offer.exchangeToken = await foreign20.getAddress();
+          offer.sellerDeposit = parseUnits("0.1", "ether").toString();
+          offer.quantityAvailable = "10";
+          offer.price = offer.buyerCancelPenalty = "0";
+
+          // erc20token
+          await foreign20.connect(assistant).mint(assistant.address, offer.sellerDeposit);
+          await foreign20.connect(assistant).approve(protocolDiamondAddress, offer.sellerDeposit);
+
+          const modifiedOffer = offer.clone();
+          modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+
+          // Prepare the message
+          message.offer = modifiedOffer;
+
+          // Collect the signature components
+          let signature = await prepareDataSignature(
+            assistant,
+            eip712TypeDefinition,
+            "FullOffer",
+            message,
+            await exchangeCommitHandler.getAddress()
+          );
+          // Commit to offer, retrieving the event
+          await exchangeCommitHandler
+            .connect(buyer)
+            .createOfferAndCommit(
+              [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+              assistant.address,
+              buyer.address,
+              signature,
+              "0",
+              sellerParams
+            );
+
+          // Some account approves token transfer
+          await foreign20.connect(rando).mint(rando.address, offer.sellerDeposit);
+          await foreign20.connect(rando).approve(protocolDiamondAddress, offer.sellerDeposit);
+
+          // Attempt to create an exchange, expecting revert
+          await expect(
+            exchangeCommitHandler
+              .connect(buyer)
+              .createOfferAndCommit(
+                [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+                rando.address,
+                buyer.address,
+                signature,
+                "0",
+                sellerParams
+              )
+          ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
+        });
+
         it("Buyer provides non-zero seller params", async function () {
           // Collection index != 0
           await expect(

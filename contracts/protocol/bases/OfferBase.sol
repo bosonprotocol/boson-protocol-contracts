@@ -107,7 +107,7 @@ contract OfferBase is ProtocolBase, BuyerBase, IBosonOfferEvents {
         if (_offer.creator == OfferCreator.Seller) {
             if (_offer.buyerId != 0) revert InvalidBuyerOfferFields();
 
-            // Validate caller is seller assistant
+            // Validate the caller is the seller assistant
             if (_authenticate) {
                 (bool isAssistant, uint256 sellerId) = getSellerIdByAssistant(sender);
                 if (!isAssistant) {

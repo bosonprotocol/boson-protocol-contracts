@@ -1682,6 +1682,48 @@ describe("IBosonExchangeHandler — commitToOffer with authorization", function 
             ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
           });
 
+          it("non zero seller deposit and erc20 token", async function () {
+            offer.sellerDeposit = parseUnits("0.1", "ether").toString();
+            offer.quantityAvailable = "10";
+            offer.price = offer.buyerCancelPenalty = "0";
+
+            const modifiedOffer = offer.clone();
+            modifiedOffer.royaltyInfo = modifiedOffer.royaltyInfo[0];
+            message.offer = modifiedOffer;
+
+            const fullOfferSignature = await signFullOffer(assistant, message);
+
+            await createOfferAndCommitWithAuth({
+              committerSigner: buyer,
+              offerCreatorSigner: assistant,
+              fullOfferTuple: [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+              offerCreatorAddress: assistant.address,
+              committerAddress: buyer.address,
+              fullOfferSignature,
+              conditionalTokenId: "0",
+              offerCreatorAmount: offer.sellerDeposit,
+              committerAmount: price,
+            });
+
+            // Some account approves token transfer
+            await foreign20.connect(rando).mint(rando.address, offer.sellerDeposit);
+            await foreign20.connect(rando).approve(protocolDiamondAddress, offer.sellerDeposit);
+
+            await expect(
+              createOfferAndCommitWithAuth({
+                committerSigner: buyer,
+                offerCreatorSigner: assistant,
+                fullOfferTuple: [offer, offerDates, offerDurations, drParams, condition, agentId, offerFeeLimit, false],
+                offerCreatorAddress: rando.address,
+                committerAddress: buyer.address,
+                fullOfferSignature,
+                conditionalTokenId: "0",
+                offerCreatorAmount: offer.sellerDeposit,
+                committerAmount: price,
+              })
+            ).to.revertedWithCustomError(bosonErrors, RevertReasons.NOT_ASSISTANT);
+          });
+
           it("Buyer provides non-zero seller params", async function () {
             const baseArgs = {
               committerSigner: buyer,

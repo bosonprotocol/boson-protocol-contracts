@@ -5,7 +5,6 @@ import "../../domain/BosonConstants.sol";
 import { BosonErrors } from "../../domain/BosonErrors.sol";
 import { IBosonExchangeEvents } from "../../interfaces/events/IBosonExchangeEvents.sol";
 import { IBosonFundsBaseEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
-import { IBosonOfferEvents } from "../../interfaces/events/IBosonOfferEvents.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { IDRFeeMutualizer } from "../../interfaces/clients/IDRFeeMutualizer.sol";
 import { BuyerBase } from "./BuyerBase.sol";
@@ -261,27 +260,29 @@ contract ExchangeCommitBase is BuyerBase, OfferBase, GroupBase, IBosonExchangeEv
 
         offerHash = getOfferHashInternal(_fullOffer);
 
+        offerId = protocolLookups().offerIdByHash[offerHash];
+
         // Check if the non-listed offer has been voided via `voidOffer`
         // Does not apply to already listed offers, with `voided` set to true
-        offerId = protocolLookups().offerIdByHash[offerHash];
-        if (offerId == 0) {
-            if (_fullOffer.offer.creator == OfferCreator.Seller) {
-                // Validate caller is seller assistant
-                (, uint256 sellerId) = getSellerIdByAssistant(_offerCreator);
-                if (sellerId != _fullOffer.offer.sellerId) {
-                    revert NotAssistant();
-                }
-            } else if (_fullOffer.offer.creator == OfferCreator.Buyer) {
-                uint256 buyerId = getValidBuyer(payable(_offerCreator));
-                if (buyerId != _fullOffer.offer.buyerId) {
-                    revert NotBuyerWallet();
-                }
-            }
-            EIP712Lib.verify(_offerCreator, offerHash, _signature);
-        } else if (offerId == VOIDED_OFFER_ID) {
+        if (offerId == VOIDED_OFFER_ID) {
             // Offer is voided
             revert OfferHasBeenVoided();
         }
+
+        // Verify the _offerCreator's address matches the offer's creator role and ID
+        if (_fullOffer.offer.creator == OfferCreator.Seller) {
+            (, uint256 sellerId) = getSellerIdByAssistant(_offerCreator);
+            if (sellerId != _fullOffer.offer.sellerId) {
+                revert NotAssistant();
+            }
+        } else if (_fullOffer.offer.creator == OfferCreator.Buyer) {
+            uint256 buyerId = getValidBuyer(payable(_offerCreator));
+            if (buyerId != _fullOffer.offer.buyerId) {
+                revert NotBuyerWallet();
+            }
+        }
+
+        if (offerId == 0) EIP712Lib.verify(_offerCreator, offerHash, _signature);
     }
 
     /**
