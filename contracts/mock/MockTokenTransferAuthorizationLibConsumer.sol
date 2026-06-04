@@ -41,7 +41,7 @@ contract MockTokenTransferAuthorizationLibConsumer {
         bytes[] memory drained = new bytes[](_queue.length);
         uint256 len = _queue.length;
         for (uint256 i = 0; i < _queue.length; ++i) {
-            drained[i] = TokenTransferAuthorizationLib.popNext(len--);
+            drained[i] = TokenTransferAuthorizationLib.popNext(len);
         }
 
         // One extra pop — this is the exhausted-queue path under test.
