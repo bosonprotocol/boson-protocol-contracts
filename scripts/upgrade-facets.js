@@ -127,7 +127,7 @@ async function main(env, facetConfig, version, functionNamesToSelector) {
   const protocolAddress = contracts.find((c) => c.name === "ProtocolDiamond")?.address;
 
   // Check if admin has UPGRADER role
-  checkRole(contracts, "UPGRADER", adminAddress);
+  await checkRole(contracts, "UPGRADER", adminAddress);
 
   if (!protocolAddress) {
     return addressNotFound("ProtocolDiamond");

@@ -60,7 +60,7 @@ async function migrate(env) {
       }
     }
 
-    checkRole(contracts, "UPGRADER", signer);
+    await checkRole(contracts, "UPGRADER", signer);
 
     const { getFacets } = require(`../config/upgrade/${version}.js`);
     const facetConfig = await getFacets();

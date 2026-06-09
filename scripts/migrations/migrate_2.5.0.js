@@ -70,7 +70,7 @@ async function migrate(env) {
     }
 
     // Check if admin has UPGRADER role
-    checkRole(contracts, "UPGRADER", signer);
+    await checkRole(contracts, "UPGRADER", signer);
 
     // Get the facet configuration
     const { getFacets } = require(`../config/upgrade/${version}.js`);
