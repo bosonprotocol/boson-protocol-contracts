@@ -3,11 +3,17 @@
  *
  * Builds the table of TO targets (state-modifying entry points reachable on
  * the diamond) that the reentrancy matrix test attempts to re-enter, by
- * inspecting every facet under `contracts/protocol/facets/`. For each facet we
- * load its compiled artifact + the corresponding Solidity AST (via Hardhat's
- * `build-info`) and pick every `external`/`public`, state-modifying function
- * EXCEPT those explicitly allowed to be re-entered (see
- * `REENTRY_ALLOWED_NAMES` / `REENTRY_ALLOWED_PATTERNS` below).
+ * inspecting every facet artifact under `contracts/protocol/facets/`. For
+ * each facet we load its compiled artifact ABI and pick every state-modifying
+ * function (stateMutability is `nonpayable` or `payable`) EXCEPT those
+ * explicitly allowed to be re-entered (see `REENTRY_ALLOWED_NAMES` /
+ * `REENTRY_ALLOWED_PATTERNS` below).
+ *
+ * The artifact ABI is the right source of truth here: Solidity emits every
+ * function callable from outside the contract — including those INHERITED
+ * from base contracts — with full stateMutability metadata. The matrix would
+ * silently lose coverage of any inherited external/public state-modifying
+ * function if we walked the facet's own AST nodes instead.
  *
  * Rationale: the matrix is a regression guard. If we only tested functions
  * that already carry `nonReentrant`, the test would silently lose coverage
@@ -53,10 +59,6 @@ const { ZeroAddress, Interface } = require("ethers");
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 const FACETS_ARTIFACT_DIR = path.join(REPO_ROOT, "artifacts", "contracts", "protocol", "facets");
-
-// Memoise build-info loads — every facet typically references the same
-// build-info file and these JSON blobs are large.
-const buildInfoCache = new Map();
 
 /**
  * Function names that are EXPLICITLY allowed to be re-entered, and therefore
@@ -129,20 +131,8 @@ const ATTACKER_DEPENDENT_OVERRIDES = new Map([
   ["createSellerAndPremintedOfferWithConditionAndTwinAndBundle", { sellerArgIndex: 0 }],
 ]);
 
-function loadBuildInfo(facetArtifactDir, facetName) {
-  const dbgPath = path.join(facetArtifactDir, `${facetName}.dbg.json`);
-  const dbg = JSON.parse(fs.readFileSync(dbgPath, "utf8"));
-  const biPath = path.resolve(facetArtifactDir, dbg.buildInfo);
-  if (!buildInfoCache.has(biPath)) {
-    buildInfoCache.set(biPath, JSON.parse(fs.readFileSync(biPath, "utf8")));
-  }
-  return buildInfoCache.get(biPath);
-}
-
 /**
- * Extract the set of function names from a facet's AST that are subject to the
- * reentrancy matrix — i.e., every `external`/`public`, state-modifying function
- * NOT explicitly allowed to re-enter (see `isReentryAllowed`).
+ * Decide whether a facet ABI entry is a reentrancy-matrix target.
  *
  * Note we deliberately do NOT filter on "has the `nonReentrant` modifier" —
  * the matrix is a regression guard whose value comes precisely from catching
@@ -151,27 +141,12 @@ function loadBuildInfo(facetArtifactDir, facetName) {
  * delegation to an inner `nonReentrant` function, or a manual
  * `reentrancyStatus == ENTERED` check), so an unguarded function shows up as
  * a failure rather than silently disappearing from the matrix.
- *
- * @param {object} buildInfo - Hardhat build-info JSON
- * @param {string} sourceKey - source path key inside buildInfo.output.sources
- * @param {string} facetName - the facet's contract name
- * @returns {Set<string>}
  */
-function getMatrixTargetFunctionNames(buildInfo, sourceKey, facetName) {
-  const names = new Set();
-  const sourceNode = buildInfo.output.sources[sourceKey];
-  if (!sourceNode) return names;
-  for (const node of sourceNode.ast.nodes) {
-    if (node.nodeType !== "ContractDefinition" || node.name !== facetName) continue;
-    for (const member of node.nodes) {
-      if (member.nodeType !== "FunctionDefinition" || member.kind !== "function") continue;
-      if (member.visibility !== "external" && member.visibility !== "public") continue;
-      if (member.stateMutability === "view" || member.stateMutability === "pure") continue;
-      if (isReentryAllowed(member.name)) continue;
-      names.add(member.name);
-    }
-  }
-  return names;
+function isMatrixTarget(abiItem) {
+  if (abiItem.type !== "function") return false;
+  if (abiItem.stateMutability === "view" || abiItem.stateMutability === "pure") return false;
+  if (isReentryAllowed(abiItem.name)) return false;
+  return true;
 }
 
 /**
@@ -269,20 +244,16 @@ function buildReentrancyTargets() {
 
   for (const fdir of facetDirs) {
     const facetName = fdir.replace(/\.sol$/, "");
-    const facetArtifactDir = path.join(FACETS_ARTIFACT_DIR, fdir);
-    const artifactPath = path.join(facetArtifactDir, `${facetName}.json`);
+    const artifactPath = path.join(FACETS_ARTIFACT_DIR, fdir, `${facetName}.json`);
     if (!fs.existsSync(artifactPath)) continue;
 
     const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
-    const buildInfo = loadBuildInfo(facetArtifactDir, facetName);
-    const sourceKey = `contracts/protocol/facets/${fdir}`;
-    const targetNames = getMatrixTargetFunctionNames(buildInfo, sourceKey, facetName);
-    if (targetNames.size === 0) continue;
-
     const iface = new Interface(artifact.abi);
-    for (const frag of iface.fragments) {
-      if (frag.type !== "function") continue;
-      if (!targetNames.has(frag.name)) continue;
+
+    for (const abiItem of artifact.abi) {
+      if (!isMatrixTarget(abiItem)) continue;
+      const frag = iface.getFunction(abiItem.name);
+      if (!frag) continue;
       if (seenSelectors.has(frag.selector)) continue;
       seenSelectors.add(frag.selector);
 
