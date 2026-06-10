@@ -9,7 +9,7 @@ Run unit tests and generates chunks of tests with approximately the same executi
 @param {number} chunks - Number of chunks to divide the tests into
 */
 const splitUnitTestsIntoChunks = async (chunks) => {
-  let files = await findFiles("test", ["integration", "util", "upgrade"]);
+  let files = await findFiles("test", ["integration", "util", "upgrade", "reentrancy"]);
 
   files = files.map((f) => {
     const startTime = Date.now();
