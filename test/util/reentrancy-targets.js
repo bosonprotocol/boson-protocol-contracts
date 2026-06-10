@@ -1,201 +1,212 @@
 /**
  * Reentrancy target enumeration helper.
  *
- * Given the protocol diamond's combined ABI, build the table of TO targets
- * (state-modifying entry points carrying `nonReentrant`) that the reentrancy
- * matrix test attempts to re-enter. Each entry is a name + zero-argument
- * calldata blob; the test arms the malicious contract with that calldata and
- * expects the protocol's reentrancy guard to reject the inner call.
+ * Builds the table of TO targets (state-modifying entry points reachable on
+ * the diamond) that the reentrancy matrix test attempts to re-enter, by
+ * inspecting every facet under `contracts/protocol/facets/`. For each facet we
+ * load its compiled artifact + the corresponding Solidity AST (via Hardhat's
+ * `build-info`) and pick every `external`/`public`, state-modifying function
+ * EXCEPT those explicitly allowed to be re-entered (see
+ * `REENTRY_ALLOWED_NAMES` / `REENTRY_ALLOWED_PATTERNS` below).
  *
- * The list below is the curated allowlist of nonReentrant TO functions. It is
- * the JS mirror of the facet inspection captured in the implementation plan.
- * Functions deliberately excluded:
- *   - MetaTransactionsHandlerFacet.executeMetaTransaction* (no nonReentrant by design)
- *   - ExchangeHandlerFacet.onVoucherTransferred (no nonReentrant by design)
- *   - ExchangeHandlerFacet.completeExchangeBatch / DisputeHandlerFacet.expireDisputeBatch
- *       (no nonReentrant; they iterate over single-exchange functions that have it)
+ * Rationale: the matrix is a regression guard. If we only tested functions
+ * that already carry `nonReentrant`, the test would silently lose coverage
+ * the moment a developer drops the modifier. By testing every state-modifying
+ * function and explicitly enumerating the ones meant to allow re-entry, an
+ * accidental loss of protection — modifier removed, new function added without
+ * a guard, internal delegate exposed — fails the test fast.
+ *
+ * Functions reachable on the diamond split into:
+ *   - those carrying `nonReentrant` directly → guard fires from the modifier;
+ *   - those that delegate to another `nonReentrant` function (e.g. orchestration
+ *     `*Preminted*` wrappers, batch variants like `completeExchangeBatch` /
+ *     `expireDisputeBatch`) → guard fires from the inner call;
+ *   - `executeMetaTransaction[WithTokenTransferAuthorization]` → guard fires
+ *     from a manual `reentrancyStatus == ENTERED` check inside `_executeMetaTx`
+ *     (the modifier can't be used because the meta-tx itself needs to set the
+ *     entered status on the inner call).
+ *
+ * All three patterns block re-entry — the matrix asserts that uniformly.
+ *
+ * Some orchestration wrappers (`createSellerAnd*With…`) call
+ * `createSellerInternal` BEFORE delegating to their inner nonReentrant
+ * function. `createSellerInternal` checks `_seller.assistant == _msgSender()`
+ * and `_seller.admin == _msgSender()` before any storage writes, so zero-arg
+ * calldata reverts at the assistant/admin check long before the inner guard
+ * fires — yielding a false-positive "blocked" signal that would NOT detect
+ * a regression where the inner delegate's `nonReentrant` is removed (or the
+ * delegate is replaced with an unguarded call).
+ *
+ * To close that hole, those wrappers are listed in
+ * `ATTACKER_DEPENDENT_OVERRIDES`. The matrix test calls
+ * `rebuildCalldataForAttacker(target, attackerAddress)` at run time to swap
+ * `_seller.assistant`, `_seller.admin`, `_seller.treasury`, and
+ * `_seller.active` to values that pass `createSellerInternal`'s checks for
+ * the specific malicious contract acting as caller in the current FROM block.
+ * `createSellerInternal` then succeeds, the wrapper proceeds to call the
+ * inner `nonReentrant` function, and the guard fires for real.
  */
 
+const fs = require("fs");
+const path = require("path");
 const { ZeroAddress, Interface } = require("ethers");
 
-const HANDLER_INTERFACES = [
-  "IBosonAgentHandler",
-  "IBosonBundleHandler",
-  "IBosonBuyerHandler",
-  "IBosonConfigHandler",
-  "IBosonDisputeHandler",
-  "IBosonDisputeResolverHandler",
-  "IBosonExchangeCommitHandler",
-  "IBosonExchangeHandler",
-  "IBosonExchangeManagementHandler",
-  "IBosonFundsHandler",
-  "IBosonGroupHandler",
-  "IBosonMetaTransactionsHandler",
-  "IBosonOfferHandler",
-  "IBosonOrchestrationHandler",
-  "IBosonPauseHandler",
-  "IBosonPriceDiscoveryHandler",
-  "IBosonSellerHandler",
-  "IBosonSequentialCommitHandler",
-  "IBosonTwinHandler",
-];
+const REPO_ROOT = path.resolve(__dirname, "..", "..");
+const FACETS_ARTIFACT_DIR = path.join(REPO_ROOT, "artifacts", "contracts", "protocol", "facets");
+
+// Memoise build-info loads — every facet typically references the same
+// build-info file and these JSON blobs are large.
+const buildInfoCache = new Map();
 
 /**
- * Build a single ethers Interface that combines every Boson handler ABI.
- * The protocol diamond exposes the union of these interfaces; combining them
- * here lets us encode TO calldata for any facet's function from a single
- * place.
+ * Function names that are EXPLICITLY allowed to be re-entered, and therefore
+ * excluded from the reentrancy matrix.
+ *
+ * The matrix tests every other state-modifying external/public function. Any
+ * function added here must have a deliberate, documented reason for skipping
+ * the protocol-wide reentrancy guard.
+ *
+ * Currently the only intentional exception is the voucher transfer callback
+ * pair — these are invoked by the protocol's own Boson Voucher mid-flow while
+ * the guard is already engaged, so they MUST be allowed to execute under
+ * `ENTERED` status.
  */
-function buildCombinedInterface() {
-  const merged = [];
-  const seen = new Set();
-  for (const name of HANDLER_INTERFACES) {
-    let artifact;
-    try {
-      artifact = require(`../../artifacts/contracts/interfaces/handlers/${name}.sol/${name}.json`);
-    } catch (_e) {
-      // Interface not compiled yet; caller should compile first.
-      continue;
-    }
-    for (const item of artifact.abi) {
-      if (item.type !== "function") continue;
-      const sig = `${item.name}(${(item.inputs || []).map((i) => i.type).join(",")})`;
-      if (seen.has(sig)) continue;
-      seen.add(sig);
-      merged.push(item);
-    }
-  }
-  return new Interface(merged);
+const REENTRY_ALLOWED_NAMES = new Set(["onVoucherTransferred", "onPremintedVoucherTransferred"]);
+
+/**
+ * Function-name patterns that are EXPLICITLY allowed to be re-entered.
+ *
+ * Initializers (`initialize`, `initV2_4_0External`, `initV2_2_0`, ...) are
+ * one-shot bootstrap entry points guarded by `onlyUninitialized` / version
+ * checks rather than `nonReentrant`. They run during deploy/upgrade flows
+ * where no re-entry is possible, and adding the modifier would either be
+ * redundant or interfere with the initialization sequence. We match them by
+ * name so a developer adding a new `initV*` upgrade init doesn't need to
+ * update this file.
+ */
+const REENTRY_ALLOWED_PATTERNS = [/^initialize$/, /^init[A-Z]/];
+
+function isReentryAllowed(name) {
+  if (REENTRY_ALLOWED_NAMES.has(name)) return true;
+  return REENTRY_ALLOWED_PATTERNS.some((re) => re.test(name));
 }
 
-// Canonical list of nonReentrant TO targets, grouped by facet.
-const NON_REENTRANT_FUNCTIONS = [
-  // AgentHandlerFacet
-  "createAgent",
-  "updateAgent",
-  // BundleHandlerFacet
-  "createBundle",
-  // BuyerHandlerFacet
-  "createBuyer",
-  "updateBuyer",
-  // ConfigHandlerFacet (admin-gated)
-  "setTokenAddress",
-  "setTreasuryAddress",
-  "setVoucherBeaconAddress",
-  "setBeaconProxyAddress",
-  "setPriceDiscoveryAddress",
-  "setProtocolFeePercentage",
-  "setProtocolFeeTable",
-  "setProtocolFeeFlatBoson",
-  "setMaxEscalationResponsePeriod",
-  "setMaxTotalOfferFeePercentage",
-  "setMaxRoyaltyPercentage",
-  "setBuyerEscalationDepositPercentage",
-  "setAuthTokenContract",
-  "setMinResolutionPeriod",
-  "setMaxResolutionPeriod",
-  "setMinDisputePeriod",
-  "setAccessControllerAddress",
-  "setMutualizerGasStipend",
-  // DisputeHandlerFacet
-  "raiseDispute",
-  "retractDispute",
-  "extendDisputeTimeout",
-  "expireDispute",
-  "resolveDispute",
-  "escalateDispute",
-  "decideDispute",
-  "refuseEscalatedDispute",
-  "expireEscalatedDispute",
-  // DisputeResolverHandlerFacet
-  "createDisputeResolver",
-  "updateDisputeResolver",
-  "optInToDisputeResolverUpdate",
-  "addFeesToDisputeResolver",
-  "removeFeesFromDisputeResolver",
-  "addSellersToAllowList",
-  "removeSellersFromAllowList",
-  // ExchangeCommitFacet
-  "commitToOffer",
-  "commitToBuyerOffer",
-  "commitToConditionalOffer",
-  // ExchangeHandlerFacet
-  "completeExchange",
-  "revokeVoucher",
-  "cancelVoucher",
-  "expireVoucher",
-  "extendVoucher",
-  "redeemVoucher",
-  // FundsHandlerFacet
-  "depositFunds",
-  "withdrawFunds",
-  "withdrawProtocolFees",
-  // GroupHandlerFacet
-  "createGroup",
-  "addOffersToGroup",
-  "removeOffersFromGroup",
-  "setGroupCondition",
-  // MetaTransactionsHandlerFacet
-  "setAllowlistedFunctions",
-  // OfferHandlerFacet
-  "createOffer",
-  "createOfferBatch",
-  "reserveRange",
-  "voidOffer",
-  "voidOfferBatch",
-  "voidNonListedOffer",
-  "voidNonListedOfferBatch",
-  "extendOffer",
-  "extendOfferBatch",
-  "updateOfferRoyaltyRecipients",
-  "updateOfferRoyaltyRecipientsBatch",
-  "updateOfferMutualizer",
-  // OrchestrationHandlerFacet1
-  "createSellerAndOffer",
-  "createOfferWithCondition",
-  "createOfferAddToGroup",
-  "createOfferAndTwinWithBundle",
-  // OrchestrationHandlerFacet2
-  "raiseAndEscalateDispute",
-  "commitToOfferAndRedeemVoucher",
-  "commitToConditionalOfferAndRedeemVoucher",
-  "createOfferCommitAndRedeem",
-  // PauseHandlerFacet
-  "pause",
-  "unpause",
-  // PriceDiscoveryHandlerFacet
-  "commitToPriceDiscoveryOffer",
-  // SellerHandlerFacet
-  "createSeller",
-  "updateSeller",
-  "optInToSellerUpdate",
-  "createNewCollection",
-  "updateSellerSalt",
-  "addRoyaltyRecipients",
-  "updateRoyaltyRecipients",
-  "removeRoyaltyRecipients",
-  // SequentialCommitHandlerFacet
-  "sequentialCommitToOffer",
-  // TwinHandlerFacet
-  "createTwin",
-  "removeTwin",
-];
+/**
+ * A non-zero placeholder for `_seller.treasury` when rebuilding calldata for
+ * an attacker-dependent target. `createSellerInternal` only checks the
+ * treasury is non-zero, so any harmless address works — using a recognisable
+ * sentinel keeps debugging easy (it shows up clearly in transaction traces).
+ */
+const NONZERO_TREASURY_PLACEHOLDER = "0x000000000000000000000000000000000000bEEF";
+
+/**
+ * Functions whose ARGUMENTS depend on the attacker contract's address, and
+ * therefore can't be encoded once at module-load time. These wrappers call
+ * `createSellerInternal()` before delegating to their inner `nonReentrant`
+ * function — and `createSellerInternal()` enforces
+ * `_seller.assistant == _msgSender()` AND `_seller.admin == _msgSender()`
+ * (when no auth token is supplied) before any storage writes. Zero-valued
+ * seller fields revert at those checks long before the inner guard fires.
+ *
+ * Each entry's value describes which positional argument is the `Seller`
+ * tuple. At test runtime, `rebuildCalldataForAttacker(target, attackerAddr)`
+ * deep-clones the cached args, overrides `_seller.assistant`, `_seller.admin`,
+ * `_seller.treasury`, and `_seller.active` so `createSellerInternal` succeeds
+ * for the specific malicious contract acting as caller, and re-encodes.
+ * The wrapper then proceeds to the inner `nonReentrant` call, which fires
+ * the guard for real.
+ *
+ * If a developer adds a NEW wrapper following this pattern, the matrix test
+ * will fail for it (the zero-arg createSellerInternal revert is not
+ * `ReentrancyGuard()`), forcing them to add an entry here.
+ */
+const ATTACKER_DEPENDENT_OVERRIDES = new Map([
+  ["createSellerAndOfferWithCondition", { sellerArgIndex: 0 }],
+  ["createSellerAndOfferAndTwinWithBundle", { sellerArgIndex: 0 }],
+  ["createSellerAndOfferWithConditionAndTwinAndBundle", { sellerArgIndex: 0 }],
+  ["createSellerAndPremintedOfferWithCondition", { sellerArgIndex: 0 }],
+  ["createSellerAndPremintedOfferAndTwinWithBundle", { sellerArgIndex: 0 }],
+  ["createSellerAndPremintedOfferWithConditionAndTwinAndBundle", { sellerArgIndex: 0 }],
+]);
+
+function loadBuildInfo(facetArtifactDir, facetName) {
+  const dbgPath = path.join(facetArtifactDir, `${facetName}.dbg.json`);
+  const dbg = JSON.parse(fs.readFileSync(dbgPath, "utf8"));
+  const biPath = path.resolve(facetArtifactDir, dbg.buildInfo);
+  if (!buildInfoCache.has(biPath)) {
+    buildInfoCache.set(biPath, JSON.parse(fs.readFileSync(biPath, "utf8")));
+  }
+  return buildInfoCache.get(biPath);
+}
+
+/**
+ * Extract the set of function names from a facet's AST that are subject to the
+ * reentrancy matrix — i.e., every `external`/`public`, state-modifying function
+ * NOT explicitly allowed to re-enter (see `isReentryAllowed`).
+ *
+ * Note we deliberately do NOT filter on "has the `nonReentrant` modifier" —
+ * the matrix is a regression guard whose value comes precisely from catching
+ * a developer who forgets the modifier on a new state-modifying function. The
+ * test asserts re-entry is blocked by SOME mechanism (direct modifier,
+ * delegation to an inner `nonReentrant` function, or a manual
+ * `reentrancyStatus == ENTERED` check), so an unguarded function shows up as
+ * a failure rather than silently disappearing from the matrix.
+ *
+ * @param {object} buildInfo - Hardhat build-info JSON
+ * @param {string} sourceKey - source path key inside buildInfo.output.sources
+ * @param {string} facetName - the facet's contract name
+ * @returns {Set<string>}
+ */
+function getMatrixTargetFunctionNames(buildInfo, sourceKey, facetName) {
+  const names = new Set();
+  const sourceNode = buildInfo.output.sources[sourceKey];
+  if (!sourceNode) return names;
+  for (const node of sourceNode.ast.nodes) {
+    if (node.nodeType !== "ContractDefinition" || node.name !== facetName) continue;
+    for (const member of node.nodes) {
+      if (member.nodeType !== "FunctionDefinition" || member.kind !== "function") continue;
+      if (member.visibility !== "external" && member.visibility !== "public") continue;
+      if (member.stateMutability === "view" || member.stateMutability === "pure") continue;
+      if (isReentryAllowed(member.name)) continue;
+      names.add(member.name);
+    }
+  }
+  return names;
+}
 
 /**
  * Build a zero-value placeholder for any solidity ABI type.
  *
- * The protocol's reentrancy guard fires before any input validation, so we can
- * safely pass all-zero arguments — the guard will revert before any meaningful
+ * The protocol's reentrancy guard fires before any input validation for
+ * functions that carry the `nonReentrant` modifier directly, so we can safely
+ * pass all-zero arguments — the guard will revert before any meaningful
  * decode of the body. The few functions that hit a role check, region pause
  * check, or function-selector allowlist BEFORE the nonReentrant modifier are
- * filtered out at test runtime.
+ * handled at test runtime (the malicious contract is granted the relevant
+ * roles in test setup).
+ *
+ * Dynamic arrays default to a SINGLE zero-element rather than an empty array.
+ * Empty arrays would silently no-op batch entry points like
+ * `completeExchangeBatch` / `expireDisputeBatch` — the loop body would never
+ * execute and the inner `nonReentrant` call would never fire. A single-element
+ * array forces one iteration, which is enough to trigger the inner guard.
+ * This doesn't affect functions that carry `nonReentrant` at entry, since the
+ * guard fires before the array is touched.
  */
 function zeroValueFor(input) {
   const t = input.type;
-  if (t.endsWith("[]")) return [];
+  // For arrays (dynamic or fixed) we must build a placeholder for the element
+  // type. ethers v6 ParamType exposes the element ParamType under
+  // `arrayChildren` and leaves `components` null on the array node itself;
+  // raw ABI JSON instead keeps `arrayChildren` undefined and stashes the
+  // tuple-element fields under `components` directly. Support both.
+  if (t.endsWith("[]")) {
+    const baseInput = input.arrayChildren || { ...input, type: t.slice(0, -2), components: input.components };
+    return [zeroValueFor(baseInput)];
+  }
   const fixedArr = t.match(/^(.+)\[(\d+)\]$/);
   if (fixedArr) {
-    const baseInput = { ...input, type: fixedArr[1], components: input.components };
+    const baseInput = input.arrayChildren || { ...input, type: fixedArr[1], components: input.components };
     const n = parseInt(fixedArr[2], 10);
     return Array.from({ length: n }, () => zeroValueFor(baseInput));
   }
@@ -221,48 +232,189 @@ function zeroValueFor(input) {
 }
 
 /**
- * Build the TO_TARGETS list from the diamond's interface.
+ * Enumerate every reentrancy-matrix TO target across all facets in
+ * `contracts/protocol/facets/`. Each entry:
+ * `{ name, facet, calldata, selector, args, attackerDependent }`.
  *
- * Each entry: { name, calldata, selector }.
+ * The matrix includes every `external`/`public`, state-modifying function on
+ * every facet, MINUS the explicit allow-list in `isReentryAllowed`. That gives
+ * us a regression guard: a new state-modifying function added to any facet is
+ * automatically in scope, and the test fails until re-entry into it is blocked.
  *
- * @param {Interface} diamondInterface - ethers Interface for the protocol diamond
- * @returns {Array<{ name: string, calldata: string, selector: string }>}
+ * Calldata is encoded from the function's own facet ABI, with every argument
+ * filled in via `zeroValueFor`. Duplicates (same selector across multiple
+ * facets) are deduped — keeping the first occurrence.
+ *
+ * `args` is the cached argument array used to build the initial calldata; it
+ * is retained so attacker-dependent targets (those listed in
+ * `ATTACKER_DEPENDENT_OVERRIDES`) can have their seller-struct fields rewritten
+ * at run time via `rebuildCalldataForAttacker`.
+ *
+ * @returns {Array<{ name: string, facet: string, calldata: string, selector: string, args: any[], attackerDependent: boolean, error?: string }>}
  */
-function buildReentrancyTargets(diamondInterface) {
-  const out = [];
-  for (const name of NON_REENTRANT_FUNCTIONS) {
-    const frag = diamondInterface.fragments.find(
-      (f) =>
-        f.type === "function" &&
-        f.name === name &&
-        (f.stateMutability === "nonpayable" || f.stateMutability === "payable")
+function buildReentrancyTargets() {
+  if (!fs.existsSync(FACETS_ARTIFACT_DIR)) {
+    throw new Error(
+      `Facet artifacts not found at ${FACETS_ARTIFACT_DIR}. Run \`npx hardhat compile\` before invoking buildReentrancyTargets.`
     );
-    if (!frag) {
-      out.push({ name, calldata: null, selector: null, missing: true });
-      continue;
-    }
-    const args = frag.inputs.map((input) => zeroValueFor(input));
-    let calldata = null;
-    let error = null;
-    try {
-      calldata = diamondInterface.encodeFunctionData(name, args);
-    } catch (e) {
-      error = e.message;
-    }
-    out.push({
-      name,
-      calldata,
-      selector: frag.selector,
-      error,
-    });
   }
+
+  const facetDirs = fs
+    .readdirSync(FACETS_ARTIFACT_DIR)
+    .filter((d) => d.endsWith(".sol"))
+    .sort();
+
+  const out = [];
+  const seenSelectors = new Set();
+
+  for (const fdir of facetDirs) {
+    const facetName = fdir.replace(/\.sol$/, "");
+    const facetArtifactDir = path.join(FACETS_ARTIFACT_DIR, fdir);
+    const artifactPath = path.join(facetArtifactDir, `${facetName}.json`);
+    if (!fs.existsSync(artifactPath)) continue;
+
+    const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
+    const buildInfo = loadBuildInfo(facetArtifactDir, facetName);
+    const sourceKey = `contracts/protocol/facets/${fdir}`;
+    const targetNames = getMatrixTargetFunctionNames(buildInfo, sourceKey, facetName);
+    if (targetNames.size === 0) continue;
+
+    const iface = new Interface(artifact.abi);
+    for (const frag of iface.fragments) {
+      if (frag.type !== "function") continue;
+      if (!targetNames.has(frag.name)) continue;
+      if (seenSelectors.has(frag.selector)) continue;
+      seenSelectors.add(frag.selector);
+
+      const args = frag.inputs.map((input) => zeroValueFor(input));
+      let calldata = null;
+      let error = null;
+      try {
+        calldata = iface.encodeFunctionData(frag.name, args);
+      } catch (e) {
+        error = e.message;
+      }
+      out.push({
+        name: frag.name,
+        facet: facetName,
+        calldata,
+        selector: frag.selector,
+        error,
+        args,
+        attackerDependent: ATTACKER_DEPENDENT_OVERRIDES.has(frag.name),
+      });
+    }
+  }
+
   return out;
 }
 
+/**
+ * Memoised combined interface used for re-encoding attacker-dependent
+ * targets. The combined interface deduplicates by signature, so any function
+ * present in `ATTACKER_DEPENDENT_OVERRIDES` is guaranteed to encode here.
+ */
+let _combinedIfaceCache = null;
+function _getCombinedInterface() {
+  if (_combinedIfaceCache === null) _combinedIfaceCache = buildCombinedInterface();
+  return _combinedIfaceCache;
+}
+
+/**
+ * Deep-clone an args array produced by `zeroValueFor`. Values are restricted
+ * to plain JS primitives (including bigints), arrays, and objects — no class
+ * instances — so a manual recursive copy is both sufficient and faster than
+ * `structuredClone` (which we avoid here for compatibility).
+ */
+function _deepCloneArgs(val) {
+  if (typeof val !== "object" || val === null) return val;
+  if (Array.isArray(val)) return val.map(_deepCloneArgs);
+  const out = {};
+  for (const k of Object.keys(val)) out[k] = _deepCloneArgs(val[k]);
+  return out;
+}
+
+/**
+ * Rebuild calldata for an attacker-dependent target, using the malicious
+ * contract's actual address for the seller-struct fields that
+ * `createSellerInternal` checks against `_msgSender()`.
+ *
+ * For targets without an override entry, returns the cached calldata
+ * unchanged so callers can use this helper uniformly.
+ *
+ * Treasury is set to a non-zero placeholder (`createSellerInternal` only
+ * checks non-zero). `_seller.active = true` satisfies the `MustBeActive`
+ * check. `_seller.assistant = _seller.admin = attackerAddress` satisfies
+ * `NotAssistant` / `NotAdmin`. With auth-token type left at zero (the default
+ * from `zeroValueFor`), `createSellerInternal` takes the admin-address branch
+ * and proceeds to the inner `nonReentrant` delegate, which fires the guard.
+ *
+ * @param {object} target - one entry from `buildReentrancyTargets()`
+ * @param {string} attackerAddress - the address that will be `_msgSender()`
+ *   when the malicious contract calls back into the diamond
+ * @returns {string} hex calldata
+ */
+function rebuildCalldataForAttacker(target, attackerAddress) {
+  if (!target.attackerDependent) return target.calldata;
+  const overrides = ATTACKER_DEPENDENT_OVERRIDES.get(target.name);
+  if (!overrides) {
+    throw new Error(`No ATTACKER_DEPENDENT_OVERRIDES entry for ${target.name}`);
+  }
+  const args = _deepCloneArgs(target.args);
+  const seller = args[overrides.sellerArgIndex];
+  if (!seller || typeof seller !== "object") {
+    throw new Error(
+      `Expected tuple-struct at arg index ${overrides.sellerArgIndex} of ${target.name}, got ${typeof seller}`
+    );
+  }
+  seller.assistant = attackerAddress;
+  seller.admin = attackerAddress;
+  seller.treasury = NONZERO_TREASURY_PLACEHOLDER;
+  seller.active = true;
+  return _getCombinedInterface().encodeFunctionData(target.name, args);
+}
+
+/**
+ * Build a single ethers Interface combining every facet's ABI. Useful when
+ * encoding a calldata blob for a function whose owning facet isn't directly
+ * available as a typed instance in the test (e.g. orchestration helpers used
+ * from inside another FROM block's setup).
+ */
+function buildCombinedInterface() {
+  if (!fs.existsSync(FACETS_ARTIFACT_DIR)) {
+    throw new Error(
+      `Facet artifacts not found at ${FACETS_ARTIFACT_DIR}. Run \`npx hardhat compile\` before invoking buildCombinedInterface.`
+    );
+  }
+  const merged = [];
+  const seen = new Set();
+  const facetDirs = fs
+    .readdirSync(FACETS_ARTIFACT_DIR)
+    .filter((d) => d.endsWith(".sol"))
+    .sort();
+  for (const fdir of facetDirs) {
+    const facetName = fdir.replace(/\.sol$/, "");
+    const artifactPath = path.join(FACETS_ARTIFACT_DIR, fdir, `${facetName}.json`);
+    if (!fs.existsSync(artifactPath)) continue;
+    const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
+    for (const item of artifact.abi) {
+      if (item.type !== "function") continue;
+      const sig = `${item.name}(${(item.inputs || []).map((i) => i.type).join(",")})`;
+      if (seen.has(sig)) continue;
+      seen.add(sig);
+      merged.push(item);
+    }
+  }
+  return new Interface(merged);
+}
+
 module.exports = {
-  NON_REENTRANT_FUNCTIONS,
-  HANDLER_INTERFACES,
   buildReentrancyTargets,
   buildCombinedInterface,
+  rebuildCalldataForAttacker,
   zeroValueFor,
+  isReentryAllowed,
+  REENTRY_ALLOWED_NAMES,
+  REENTRY_ALLOWED_PATTERNS,
+  ATTACKER_DEPENDENT_OVERRIDES,
 };

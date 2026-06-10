@@ -55,7 +55,11 @@ const {
   mockAuthToken,
   accountId,
 } = require("../util/mock");
-const { buildReentrancyTargets, buildCombinedInterface } = require("../util/reentrancy-targets.js");
+const {
+  buildReentrancyTargets,
+  buildCombinedInterface,
+  rebuildCalldataForAttacker,
+} = require("../util/reentrancy-targets.js");
 
 const REENTRANCY_GUARD_SELECTOR = keccak256(toUtf8Bytes("ReentrancyGuard()")).slice(0, 10);
 
@@ -69,7 +73,6 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
   let accessController;
   let bosonErrors;
   let weth;
-  let combinedInterface;
   let TO_TARGETS;
   let cleanSnapshot;
 
@@ -123,14 +126,14 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
 
     bosonErrors = await getContractAt("BosonErrors", protocolDiamondAddress);
 
-    combinedInterface = buildCombinedInterface();
-    TO_TARGETS = buildReentrancyTargets(combinedInterface);
+    TO_TARGETS = buildReentrancyTargets();
 
-    // Sanity check
+    // Sanity check — every target must have produced calldata.
     expect(
-      TO_TARGETS.find((t) => t.missing),
-      "every TO must resolve in combined ABI"
+      TO_TARGETS.find((t) => t.error),
+      "every TO must produce calldata without error"
     ).to.be.undefined;
+    expect(TO_TARGETS.length, "TO targets must be discovered from facet ASTs").to.be.greaterThan(0);
     expect(REENTRANCY_GUARD_SELECTOR).to.equal("0x8beb9d16");
 
     // Snapshot a clean diamond so each FROM block starts from the same
@@ -211,14 +214,21 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
       snapshotA = await getSnapshot();
     });
 
-    for (const to of buildReentrancyTargetsList()) {
+    for (const to of buildReentrancyTargets()) {
       it(`blocks reentry into ${to.name}`, async function () {
         // The available funds were reset by the snapshot revert; redeposit
         await fundsHandler.connect(rando).depositFunds(sellerId, ZeroAddress, depositAmount, { value: depositAmount });
 
+        // For attacker-address-dependent targets (orchestration wrappers that
+        // run createSellerInternal before reaching the inner nonReentrant
+        // delegate), rebuild calldata with the malicious contract's address
+        // in `_seller.assistant`/`admin` so the seller-creation pre-check
+        // passes and execution reaches the inner guard.
+        const callData = rebuildCalldataForAttacker(to, await malicious.getAddress());
+
         // Arm the malicious treasury: when it receives ETH it will call back
         // into the protocol via the TO function and record what happened.
-        await malicious.arm(protocolDiamondAddress, to.calldata, false);
+        await malicious.arm(protocolDiamondAddress, callData, false);
 
         // Trigger: assistant withdraws to the seller's treasury (= malicious)
         const tx = await fundsHandler.connect(assistant).withdrawFunds(sellerId, [ZeroAddress], [depositAmount]);
@@ -293,12 +303,16 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
       snapshotB = await getSnapshot();
     });
 
-    for (const to of buildReentrancyTargetsList()) {
+    for (const to of buildReentrancyTargets()) {
       it(`blocks reentry into ${to.name}`, async function () {
+        // Rebuild calldata for attacker-dependent orchestration wrappers; for
+        // all other targets this returns the cached zero-arg calldata.
+        const callData = rebuildCalldataForAttacker(to, maliciousAddr);
+
         // Arm: when the protocol calls malicious.transferFrom, the malicious
         // contract will try to call back into the protocol via the TO
         // function.
-        await malicious.arm(protocolDiamondAddress, to.calldata, false);
+        await malicious.arm(protocolDiamondAddress, callData, false);
 
         // Trigger: depositFunds calls IERC20(malicious).safeTransferFrom →
         // malicious.transferFrom → _attack.
@@ -432,11 +446,14 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
     // function lives in the diamond and is callable via the combined interface.
     const orchestrationIface = buildCombinedInterface();
 
-    for (const to of buildReentrancyTargetsList()) {
+    for (const to of buildReentrancyTargets()) {
       it(`blocks reentry into ${to.name}`, async function () {
+        // Rebuild calldata for attacker-dependent orchestration wrappers.
+        const callData = rebuildCalldataForAttacker(to, maliciousAddr);
+
         // Arm: when the protocol delivers the twin to malicious via
         // safeTransferFrom, onERC721Received fires _attack.
-        await malicious.arm(protocolDiamondAddress, to.calldata, false);
+        await malicious.arm(protocolDiamondAddress, callData, false);
 
         // Drive the protocol via the malicious contract so it becomes
         // msg.sender (== buyer wallet). Use orchestration commit+redeem
@@ -556,11 +573,14 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
 
     const orchestrationIface = buildCombinedInterface();
 
-    for (const to of buildReentrancyTargetsList()) {
+    for (const to of buildReentrancyTargets()) {
       it(`blocks reentry into ${to.name}`, async function () {
+        // Rebuild calldata for attacker-dependent orchestration wrappers.
+        const callData = rebuildCalldataForAttacker(to, maliciousAddr);
+
         // Arm: when the protocol delivers the ERC1155 twin to malicious via
         // safeTransferFrom, onERC1155Received fires _attack.
-        await malicious.arm(protocolDiamondAddress, to.calldata, false);
+        await malicious.arm(protocolDiamondAddress, callData, false);
 
         const commitAndRedeemCd = orchestrationIface.encodeFunctionData("commitToOfferAndRedeemVoucher", [offerId]);
         const tx = await malicious.connect(rando).executeProtocolCallValue(commitAndRedeemCd, { value: price });
@@ -712,10 +732,13 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
       snapshotE = await getSnapshot();
     });
 
-    for (const to of buildReentrancyTargetsList()) {
+    for (const to of buildReentrancyTargets()) {
       it(`blocks reentry into ${to.name}`, async function () {
+        // Rebuild calldata for attacker-dependent orchestration wrappers.
+        const callData = rebuildCalldataForAttacker(to, maliciousPdAddr);
+
         // Arm: bubble up the inner revert so it reaches the outer tx
-        await maliciousPD.arm(protocolDiamondAddress, to.calldata, true);
+        await maliciousPD.arm(protocolDiamondAddress, callData, true);
 
         // Native-denominated offers route the buyer's payment as wrapped
         // native (WETH) — buyer deposits and approves WETH, then commits
@@ -907,9 +930,12 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
       snapshotEPrime = await getSnapshot();
     });
 
-    for (const to of buildReentrancyTargetsList()) {
+    for (const to of buildReentrancyTargets()) {
       it(`blocks reentry into ${to.name}`, async function () {
-        await maliciousPD.arm(protocolDiamondAddress, to.calldata, true);
+        // Rebuild calldata for attacker-dependent orchestration wrappers.
+        const callData = rebuildCalldataForAttacker(to, maliciousPdAddr);
+
+        await maliciousPD.arm(protocolDiamondAddress, callData, true);
 
         // Fund and approve the new buyer's WETH payment
         await weth.connect(newBuyer).deposit({ value: resalePrice });
@@ -1022,9 +1048,12 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
       snapshotF = await getSnapshot();
     });
 
-    for (const to of buildReentrancyTargetsList()) {
+    for (const to of buildReentrancyTargets()) {
       it(`blocks reentry into ${to.name}`, async function () {
-        await maliciousMut.arm(protocolDiamondAddress, to.calldata, true);
+        // Rebuild calldata for attacker-dependent orchestration wrappers.
+        const callData = rebuildCalldataForAttacker(to, maliciousMutAddr);
+
+        await maliciousMut.arm(protocolDiamondAddress, callData, true);
 
         const tx = exchangeCommitHandler
           .connect(buyer)
@@ -1035,14 +1064,3 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
     }
   });
 });
-
-/**
- * Wrapper used inside the inner describe block to enumerate TO targets at
- * runtime. We avoid using the outer `TO_TARGETS` variable directly in the
- * `for` loop because mocha resolves describe-level constants synchronously
- * before `before` runs.
- */
-function buildReentrancyTargetsList() {
-  const iface = buildCombinedInterface();
-  return buildReentrancyTargets(iface);
-}
