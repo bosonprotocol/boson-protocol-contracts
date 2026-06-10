@@ -229,6 +229,10 @@ const tagsByVersion = {
     oldVersion: "v2.4.2",
     newVersion: "v2.5.0",
   },
+  "2.5.1": {
+    oldVersion: "v2.5.0",
+    newVersion: "v2.5.1",
+  },
 };
 
 exports.getFacets = getFacets;

@@ -66,7 +66,7 @@ async function main(env, clientConfig, version) {
   }
 
   // Validate that admin has UPGRADER role
-  checkRole(contracts, "UPGRADER", adminAddress);
+  await checkRole(contracts, "UPGRADER", adminAddress);
 
   clientConfig = (clientConfig && JSON.parse(clientConfig)) || require("./config/client-upgrade");
 

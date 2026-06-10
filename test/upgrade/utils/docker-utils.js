@@ -14,8 +14,8 @@ class DockerUtils {
     console.log("🐳 Starting Docker container...");
 
     // Stop existing and start new
-    await execAsync(`docker-compose -f ${this.composeFile} down`).catch(() => {});
-    await execAsync(`docker-compose -f ${this.composeFile} up -d`);
+    await execAsync(`docker compose -f ${this.composeFile} down`).catch(() => {});
+    await execAsync(`docker compose -f ${this.composeFile} up -d`);
 
     // Wait for services to start
     console.log("Waiting for services...");
@@ -35,7 +35,7 @@ class DockerUtils {
   async waitForContracts() {
     while (true) {
       try {
-        await execAsync(`docker-compose -f ${this.composeFile} exec -T boson-protocol-node ls /app/deploy.done`);
+        await execAsync(`docker compose -f ${this.composeFile} exec -T boson-protocol-node ls /app/deploy.done`);
         console.log("✅ Successfully deployed contracts!");
         break;
       } catch (error) {
@@ -51,7 +51,7 @@ class DockerUtils {
     try {
       // Copy the addresses file from Docker container
       const { stdout } = await execAsync(
-        `docker-compose -f ${this.composeFile} exec -T boson-protocol-node cat /app/node_modules/@bosonprotocol/boson-protocol-contracts/addresses/31337-localhost-localhost.json`
+        `docker compose -f ${this.composeFile} exec -T boson-protocol-node cat /app/node_modules/@bosonprotocol/boson-protocol-contracts/addresses/31337-localhost-localhost.json`
       );
 
       if (!stdout || stdout.trim() === "") {
@@ -77,7 +77,7 @@ class DockerUtils {
 
   async stopContainer() {
     console.log("🛑 Stopping Docker container...");
-    await execAsync(`docker-compose -f ${this.composeFile} down`).catch(() => {});
+    await execAsync(`docker compose -f ${this.composeFile} down`).catch(() => {});
     console.log("✅ Docker container stopped");
     this.isRunning = false;
   }

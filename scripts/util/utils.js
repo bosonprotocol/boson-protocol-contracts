@@ -52,6 +52,11 @@ async function getFees() {
   // const { baseFeePerGas } = await provider.getBlock();
   // TEMP: use gasPrice from provider instead of baseFeePerGas
   let { gasPrice } = await provider.getFeeData();
+  while (gasPrice === null) {
+    console.log("Gas price is null, retrying...");
+    await delay(1000);
+    ({ gasPrice } = await provider.getFeeData());
+  }
   gasPrice = (gasPrice * 3n) / 2n;
 
   // Set maxFeePerGas so it's likely to be accepted by the network
