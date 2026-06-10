@@ -156,6 +156,125 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
     return iface.parseLog(matching[matching.length - 1]).args;
   }
 
+  /**
+   * Deploy the named malicious contract and grant it ADMIN / PAUSER /
+   * FEE_COLLECTOR. Every FROM block needs these three roles on the attacker
+   * so that role-gated TO functions (ConfigHandler setters, pause/unpause,
+   * `withdrawProtocolFees`, `setAllowlistedFunctions`) reach the
+   * `nonReentrant` modifier rather than failing early on the role check —
+   * role modifiers run before `nonReentrant` in modifier order.
+   */
+  async function deployMaliciousAndGrantRoles(contractName) {
+    const Factory = await getContractFactory(contractName);
+    const malicious = await Factory.deploy();
+    await malicious.waitForDeployment();
+    const maliciousAddr = await malicious.getAddress();
+    await accessController.grantRole(Role.ADMIN, maliciousAddr);
+    await accessController.grantRole(Role.PAUSER, maliciousAddr);
+    await accessController.grantRole(Role.FEE_COLLECTOR, maliciousAddr);
+    return { malicious, maliciousAddr };
+  }
+
+  /**
+   * Create the "standard" seller used by every FROM block except A (which
+   * needs the malicious contract itself as treasury for the ETH-receive
+   * hook). Passing `treasuryAddr` lets FROM A reuse this helper too.
+   */
+  async function createStandardSeller(treasuryAddr) {
+    const seller = mockSeller(
+      await assistant.getAddress(),
+      await admin.getAddress(),
+      ZeroAddress,
+      treasuryAddr ?? (await treasury.getAddress())
+    );
+    await accountHandler.connect(admin).createSeller(seller, mockAuthToken(), mockVoucherInitValues());
+    return seller;
+  }
+
+  /**
+   * Create the dispute resolver used by FROM blocks C, D, E, E', F. The
+   * native DR-fee amount varies by block (0 in E/E' to keep funds math
+   * trivial; non-zero in C/D/F so the protocol exercises the
+   * mutualizer/seller-pool path).
+   */
+  async function createStandardDisputeResolver(nativeFee = "0") {
+    const disputeResolver = mockDisputeResolver(
+      await assistantDR.getAddress(),
+      await adminDR.getAddress(),
+      ZeroAddress,
+      await treasuryDR.getAddress(),
+      true
+    );
+    const fees = [new DisputeResolverFee(ZeroAddress, "Native", nativeFee)];
+    await accountHandler.connect(adminDR).createDisputeResolver(disputeResolver, fees, []);
+    return disputeResolver;
+  }
+
+  /**
+   * Build and create an offer with the no-fee / native-token defaults shared
+   * by FROM blocks C, D, E, E', F. Returns the created offer.
+   *
+   * Parameters:
+   * - `price` — offer price (bigint or string)
+   * - `priceType` — `PriceType.Static` (default) or `PriceType.Discovery`
+   * - `quantityAvailable` — defaults to `"1"`
+   * - `voucherRedeemableFrom` — set to `"1"` for blocks that commit+redeem
+   *   in one tx and can't fast-forward (C, D)
+   * - `disputeResolverId` — required
+   * - `mutualizerAddress` — defaults to `ZeroAddress`; FROM F passes the
+   *   malicious mutualizer's address here
+   *
+   * Also clears the protocol fee (`setProtocolFeePercentage(0)`) so no BOSON
+   * token mocking is needed.
+   */
+  async function createOfferWithDefaults({
+    price,
+    priceType = PriceType.Static,
+    quantityAvailable = "1",
+    voucherRedeemableFrom,
+    disputeResolverId,
+    mutualizerAddress = ZeroAddress,
+  }) {
+    const mo = await mockOffer();
+    const { offerDates, offerDurations, offerFees, drParams } = mo;
+    const offer = mo.offer;
+    offer.priceType = priceType;
+    offer.price = price.toString();
+    offer.sellerDeposit = "0";
+    offer.buyerCancelPenalty = "0";
+    offer.quantityAvailable = quantityAvailable;
+    offer.exchangeToken = ZeroAddress;
+    offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], ["0"])];
+    if (voucherRedeemableFrom !== undefined) {
+      offerDates.voucherRedeemableFrom = voucherRedeemableFrom;
+    }
+    offerFees.protocolFee = "0";
+    drParams.disputeResolverId = disputeResolverId;
+    drParams.mutualizerAddress = mutualizerAddress;
+
+    await configHandler.connect(deployer).setProtocolFeePercentage("0");
+    await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, drParams, 0, MaxUint256);
+    return offer;
+  }
+
+  /**
+   * Reserve the offer's range to the assistant and pre-mint every voucher
+   * in `offer.quantityAvailable`. Required for price-discovery offers (E /
+   * E'). Returns the Boson voucher clone for follow-up approvals.
+   */
+  async function reserveAndPreMint(offer) {
+    await offerHandler.connect(assistant).reserveRange(offer.id, offer.quantityAvailable, await assistant.getAddress());
+    const beaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
+    const expectedCloneAddress = calculateCloneAddress(
+      protocolDiamondAddress,
+      beaconProxyAddress,
+      await admin.getAddress()
+    );
+    const bosonVoucher = await getContractAt("BosonVoucher", expectedCloneAddress);
+    await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
+    return { bosonVoucher, expectedCloneAddress };
+  }
+
   // ============================================================
   // FROM Category A: ETH receive() via .call{value:}("")
   // ------------------------------------------------------------
@@ -176,29 +295,13 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
       cleanSnapshot = await getSnapshot();
       accountId.next(true);
 
-      const Factory = await getContractFactory("MaliciousReentrant");
-      malicious = await Factory.deploy();
-      await malicious.waitForDeployment();
+      let maliciousAddr;
+      ({ malicious, maliciousAddr } = await deployMaliciousAndGrantRoles("MaliciousReentrant"));
 
-      // Grant ADMIN / PAUSER / FEE_COLLECTOR to the malicious contract so
-      // that role-gated TO functions (ConfigHandler setters, pause/unpause,
-      // withdrawProtocolFees, setAllowlistedFunctions) reach the
-      // nonReentrant modifier instead of failing early on the role check.
-      // Role modifiers run before nonReentrant in modifier order.
-      await accessController.grantRole(Role.ADMIN, await malicious.getAddress());
-      await accessController.grantRole(Role.PAUSER, await malicious.getAddress());
-      await accessController.grantRole(Role.FEE_COLLECTOR, await malicious.getAddress());
-
-      // Create a seller whose treasury is the malicious contract
-      const seller = mockSeller(
-        await assistant.getAddress(),
-        await admin.getAddress(),
-        ZeroAddress, // clerk
-        await malicious.getAddress() // treasury → malicious
-      );
-      const voucherInitValues = mockVoucherInitValues();
-      const emptyAuthToken = mockAuthToken();
-      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+      // Create a seller whose treasury is the malicious contract — this
+      // is what arms the ETH receive() callback when the assistant later
+      // withdraws to the seller's treasury.
+      const seller = await createStandardSeller(maliciousAddr);
       sellerId = seller.id;
 
       // Fund the seller with native currency
@@ -264,30 +367,11 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
       cleanSnapshot = await getSnapshot();
       accountId.next(true);
 
-      const Factory = await getContractFactory("MaliciousReentrant");
-      malicious = await Factory.deploy();
-      await malicious.waitForDeployment();
-      maliciousAddr = await malicious.getAddress();
+      ({ malicious, maliciousAddr } = await deployMaliciousAndGrantRoles("MaliciousReentrant"));
 
-      // Same role grants as FROM A: role checks run before nonReentrant in
-      // modifier order, so we must satisfy them or the TO call short-circuits
-      // before reaching the guard.
-      await accessController.grantRole(Role.ADMIN, maliciousAddr);
-      await accessController.grantRole(Role.PAUSER, maliciousAddr);
-      await accessController.grantRole(Role.FEE_COLLECTOR, maliciousAddr);
-
-      // Create a normal seller (assistant=admin, treasury=rando — *not* the
-      // malicious contract, since we don't want to introduce an ETH callback
-      // here)
-      const seller = mockSeller(
-        await assistant.getAddress(),
-        await admin.getAddress(),
-        ZeroAddress,
-        await treasury.getAddress()
-      );
-      const voucherInitValues = mockVoucherInitValues();
-      const emptyAuthToken = mockAuthToken();
-      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+      // Create a normal seller (treasury = a regular EOA, not malicious,
+      // so we don't accidentally introduce an ETH callback here).
+      const seller = await createStandardSeller();
       sellerId = seller.id;
 
       snapshotB = await getSnapshot();
@@ -349,83 +433,41 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
       cleanSnapshot = await getSnapshot();
       accountId.next(true);
 
-      const Factory = await getContractFactory("MaliciousReentrant");
-      malicious = await Factory.deploy();
-      await malicious.waitForDeployment();
-      maliciousAddr = await malicious.getAddress();
+      ({ malicious, maliciousAddr } = await deployMaliciousAndGrantRoles("MaliciousReentrant"));
 
-      await accessController.grantRole(Role.ADMIN, maliciousAddr);
-      await accessController.grantRole(Role.PAUSER, maliciousAddr);
-      await accessController.grantRole(Role.FEE_COLLECTOR, maliciousAddr);
-
-      // Deploy Foreign721 (used as the twin token)
+      // Deploy Foreign721 (used as the twin token) and mint to assistant
       const Foreign721 = await getContractFactory("Foreign721");
       const foreign721 = await Foreign721.deploy();
       await foreign721.waitForDeployment();
-
-      // Mint twin tokens to assistant and approve protocol
       await foreign721.connect(assistant).mint("1", "10");
       await foreign721.connect(assistant).setApprovalForAll(protocolDiamondAddress, true);
 
-      // Create a seller (normal — not malicious)
-      const seller = mockSeller(
-        await assistant.getAddress(),
-        await admin.getAddress(),
-        ZeroAddress,
-        await treasury.getAddress()
-      );
-      const voucherInitValues = mockVoucherInitValues();
-      const emptyAuthToken = mockAuthToken();
-      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+      const seller = await createStandardSeller();
+      const disputeResolver = await createStandardDisputeResolver(parseEther("0.01").toString());
 
-      // Create a dispute resolver with native fee support
-      const disputeResolver = mockDisputeResolver(
-        await assistantDR.getAddress(),
-        await adminDR.getAddress(),
-        ZeroAddress,
-        await treasuryDR.getAddress(),
-        true
-      );
-      const disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", parseEther("0.01").toString())];
-      await accountHandler.connect(adminDR).createDisputeResolver(disputeResolver, disputeResolverFees, []);
-
-      // Build an offer with voucher immediately redeemable (so the
-      // orchestration commit+redeem doesn't fall foul of voucherRedeemableFrom).
-      const mo = await mockOffer();
-      const { offerDates, offerDurations, offerFees, drParams } = mo;
-      const offer = mo.offer;
-      offer.price = price.toString();
-      offer.sellerDeposit = "0";
-      offer.buyerCancelPenalty = "0";
-      offer.exchangeToken = ZeroAddress;
-      offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], ["0"])];
-      offerDates.voucherRedeemableFrom = "1"; // immediately redeemable
-      // disputePeriod must be ≥ minDisputePeriod (default 1 week); keep mock defaults
-      offerFees.protocolFee = "0"; // simplify fee math
-      drParams.disputeResolverId = disputeResolver.id;
-      drParams.mutualizerAddress = ZeroAddress;
-
-      // Disable protocol fee so we don't need to handle BOSON token mocks
-      await configHandler.connect(deployer).setProtocolFeePercentage("0");
-
-      await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, drParams, 0, MaxUint256);
+      // Offer with voucher immediately redeemable so the orchestration
+      // commit+redeem doesn't fall foul of voucherRedeemableFrom.
+      // disputePeriod stays at mock default (≥ minDisputePeriod = 1 week).
+      const offer = await createOfferWithDefaults({
+        price,
+        voucherRedeemableFrom: "1",
+        disputeResolverId: disputeResolver.id,
+      });
       offerId = offer.id;
 
-      // Create an ERC721 twin
+      // Create an ERC721 twin and bundle it with the offer
       const twin = mockTwin(await foreign721.getAddress(), TokenType.NonFungibleToken);
       twin.amount = "0";
       twin.supplyAvailable = "10";
       twin.tokenId = "1";
       await twinHandler.connect(assistant).createTwin(twin.toStruct());
 
-      // Bundle the twin with the offer
       const bundle = new Bundle("1", seller.id, [offerId], [twin.id]);
       await bundleHandler.connect(assistant).createBundle(bundle.toStruct());
 
       // Deposit seller funds to cover the DR fee (handleDRFeeCollection
       // decreases the seller's available funds by feeAmount at commit time).
-      // Buffer comfortably so multiple test cases can commit from one
-      // snapshot if needed.
+      // Buffer comfortably so multiple test cases can commit from one snapshot.
       const sellerPool = parseEther("5");
       await fundsHandler.connect(assistant).depositFunds(seller.id, ZeroAddress, sellerPool, { value: sellerPool });
 
@@ -485,66 +527,26 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
       cleanSnapshot = await getSnapshot();
       accountId.next(true);
 
-      const Factory = await getContractFactory("MaliciousReentrant");
-      malicious = await Factory.deploy();
-      await malicious.waitForDeployment();
-      maliciousAddr = await malicious.getAddress();
+      ({ malicious, maliciousAddr } = await deployMaliciousAndGrantRoles("MaliciousReentrant"));
 
-      await accessController.grantRole(Role.ADMIN, maliciousAddr);
-      await accessController.grantRole(Role.PAUSER, maliciousAddr);
-      await accessController.grantRole(Role.FEE_COLLECTOR, maliciousAddr);
-
-      // Deploy Foreign1155 (the twin token)
+      // Deploy Foreign1155 (the twin token) and mint to assistant
       const Foreign1155 = await getContractFactory("Foreign1155");
       const foreign1155 = await Foreign1155.deploy();
       await foreign1155.waitForDeployment();
-
-      // Mint twin tokens to assistant and approve protocol
       await foreign1155.connect(assistant).mint("1", "500");
       await foreign1155.connect(assistant).setApprovalForAll(protocolDiamondAddress, true);
 
-      // Create a seller (normal)
-      const seller = mockSeller(
-        await assistant.getAddress(),
-        await admin.getAddress(),
-        ZeroAddress,
-        await treasury.getAddress()
-      );
-      const voucherInitValues = mockVoucherInitValues();
-      const emptyAuthToken = mockAuthToken();
-      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+      const seller = await createStandardSeller();
+      const disputeResolver = await createStandardDisputeResolver(parseEther("0.01").toString());
 
-      // Create a dispute resolver
-      const disputeResolver = mockDisputeResolver(
-        await assistantDR.getAddress(),
-        await adminDR.getAddress(),
-        ZeroAddress,
-        await treasuryDR.getAddress(),
-        true
-      );
-      const disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", parseEther("0.01").toString())];
-      await accountHandler.connect(adminDR).createDisputeResolver(disputeResolver, disputeResolverFees, []);
-
-      // Build the offer
-      const mo = await mockOffer();
-      const { offerDates, offerDurations, offerFees, drParams } = mo;
-      const offer = mo.offer;
-      offer.price = price.toString();
-      offer.sellerDeposit = "0";
-      offer.buyerCancelPenalty = "0";
-      offer.exchangeToken = ZeroAddress;
-      offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], ["0"])];
-      offerDates.voucherRedeemableFrom = "1";
-      offerFees.protocolFee = "0";
-      drParams.disputeResolverId = disputeResolver.id;
-      drParams.mutualizerAddress = ZeroAddress;
-
-      await configHandler.connect(deployer).setProtocolFeePercentage("0");
-
-      await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, drParams, 0, MaxUint256);
+      const offer = await createOfferWithDefaults({
+        price,
+        voucherRedeemableFrom: "1",
+        disputeResolverId: disputeResolver.id,
+      });
       offerId = offer.id;
 
-      // Create an ERC1155 (MultiToken) twin
+      // Create an ERC1155 (MultiToken) twin and bundle it with the offer
       const twin = mockTwin(await foreign1155.getAddress(), TokenType.MultiToken);
       twin.tokenId = "1";
       twin.amount = "1";
@@ -630,16 +632,8 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
       const signers = await getSigners();
       buyer = signers[15];
 
-      // Deploy malicious price-discovery contract
-      const Factory = await getContractFactory("MaliciousPriceDiscovery");
-      maliciousPD = await Factory.deploy();
-      await maliciousPD.waitForDeployment();
-      maliciousPdAddr = await maliciousPD.getAddress();
-
-      // Grant the same roles as other FROM blocks so role-gated TOs reach the guard
-      await accessController.grantRole(Role.ADMIN, maliciousPdAddr);
-      await accessController.grantRole(Role.PAUSER, maliciousPdAddr);
-      await accessController.grantRole(Role.FEE_COLLECTOR, maliciousPdAddr);
+      ({ malicious: maliciousPD, maliciousAddr: maliciousPdAddr } =
+        await deployMaliciousAndGrantRoles("MaliciousPriceDiscovery"));
 
       // Deploy the real BosonPriceDiscovery wrapper that the protocol will
       // call into. The wrapper then forwards to the malicious contract via
@@ -649,60 +643,20 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
       await bpd.waitForDeployment();
       await configHandler.connect(deployer).setPriceDiscoveryAddress(await bpd.getAddress());
 
-      // Create seller
-      const seller = mockSeller(
-        await assistant.getAddress(),
-        await admin.getAddress(),
-        ZeroAddress,
-        await treasury.getAddress()
-      );
-      const voucherInitValues = mockVoucherInitValues();
-      const emptyAuthToken = mockAuthToken();
-      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+      await createStandardSeller();
+      // DR fee = 0 so we don't need a mutualizer for this block.
+      const disputeResolver = await createStandardDisputeResolver();
 
-      // DR with native fee=0 so the offer's DR fee is zero (no mutualizer needed)
-      const disputeResolver = mockDisputeResolver(
-        await assistantDR.getAddress(),
-        await adminDR.getAddress(),
-        ZeroAddress,
-        await treasuryDR.getAddress(),
-        true
-      );
-      const disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", "0")];
-      await accountHandler.connect(adminDR).createDisputeResolver(disputeResolver, disputeResolverFees, []);
-
-      // Build a price-discovery offer
-      const mo = await mockOffer();
-      const { offerDates, offerDurations, offerFees, drParams } = mo;
-      const offer = mo.offer;
-      offer.priceType = PriceType.Discovery;
-      offer.price = "0";
-      offer.sellerDeposit = "0";
-      offer.buyerCancelPenalty = "0";
-      offer.quantityAvailable = "10";
-      offer.exchangeToken = ZeroAddress;
-      offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], ["0"])];
-      offerFees.protocolFee = "0";
-      drParams.disputeResolverId = disputeResolver.id;
-      drParams.mutualizerAddress = ZeroAddress;
-
-      await configHandler.connect(deployer).setProtocolFeePercentage("0");
-
-      await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, drParams, 0, MaxUint256);
+      const offer = await createOfferWithDefaults({
+        price: "0",
+        priceType: PriceType.Discovery,
+        quantityAvailable: "10",
+        disputeResolverId: disputeResolver.id,
+      });
       offerId = offer.id;
 
       // Reserve range and pre-mint vouchers — required for price-discovery offers
-      await offerHandler
-        .connect(assistant)
-        .reserveRange(offer.id, offer.quantityAvailable, await assistant.getAddress());
-      const beaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
-      const expectedCloneAddress = calculateCloneAddress(
-        protocolDiamondAddress,
-        beaconProxyAddress,
-        await admin.getAddress()
-      );
-      const bosonVoucher = await getContractAt("BosonVoucher", expectedCloneAddress);
-      await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
+      await reserveAndPreMint(offer);
 
       // Build the PriceDiscovery struct pointing at the malicious contract.
       // Side.Ask means the protocol calls wrapper.fulfilAskOrder, which then
@@ -785,14 +739,8 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
       const reseller = signers[15];
       newBuyer = signers[16];
 
-      // Deploy malicious + grant roles
-      const MalFactory = await getContractFactory("MaliciousPriceDiscovery");
-      maliciousPD = await MalFactory.deploy();
-      await maliciousPD.waitForDeployment();
-      maliciousPdAddr = await maliciousPD.getAddress();
-      await accessController.grantRole(Role.ADMIN, maliciousPdAddr);
-      await accessController.grantRole(Role.PAUSER, maliciousPdAddr);
-      await accessController.grantRole(Role.FEE_COLLECTOR, maliciousPdAddr);
+      ({ malicious: maliciousPD, maliciousAddr: maliciousPdAddr } =
+        await deployMaliciousAndGrantRoles("MaliciousPriceDiscovery"));
 
       // Deploy the real BosonPriceDiscovery wrapper
       const bpdFactory = await getContractFactory("BosonPriceDiscovery");
@@ -800,60 +748,18 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
       await bpd.waitForDeployment();
       await configHandler.connect(deployer).setPriceDiscoveryAddress(await bpd.getAddress());
 
-      // Seller
-      const seller = mockSeller(
-        await assistant.getAddress(),
-        await admin.getAddress(),
-        ZeroAddress,
-        await treasury.getAddress()
-      );
-      const voucherInitValues = mockVoucherInitValues();
-      const emptyAuthToken = mockAuthToken();
-      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+      await createStandardSeller();
+      const disputeResolver = await createStandardDisputeResolver();
 
-      // DR
-      const disputeResolver = mockDisputeResolver(
-        await assistantDR.getAddress(),
-        await adminDR.getAddress(),
-        ZeroAddress,
-        await treasuryDR.getAddress(),
-        true
-      );
-      const disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", "0")];
-      await accountHandler.connect(adminDR).createDisputeResolver(disputeResolver, disputeResolverFees, []);
-
-      // Discovery offer
-      const mo = await mockOffer();
-      const { offerDates, offerDurations, offerFees, drParams } = mo;
-      const offer = mo.offer;
-      offer.priceType = PriceType.Discovery;
-      offer.price = "0";
-      offer.sellerDeposit = "0";
-      offer.buyerCancelPenalty = "0";
-      offer.quantityAvailable = "10";
-      offer.exchangeToken = ZeroAddress;
-      offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], ["0"])];
-      offerFees.protocolFee = "0";
-      drParams.disputeResolverId = disputeResolver.id;
-      drParams.mutualizerAddress = ZeroAddress;
-
-      await configHandler.connect(deployer).setProtocolFeePercentage("0");
-
-      await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, drParams, 0, MaxUint256);
+      const offer = await createOfferWithDefaults({
+        price: "0",
+        priceType: PriceType.Discovery,
+        quantityAvailable: "10",
+        disputeResolverId: disputeResolver.id,
+      });
       const offerId = offer.id;
 
-      // Reserve range and pre-mint vouchers
-      await offerHandler
-        .connect(assistant)
-        .reserveRange(offer.id, offer.quantityAvailable, await assistant.getAddress());
-      const beaconProxyAddress = await calculateBosonProxyAddress(protocolDiamondAddress);
-      const expectedCloneAddress = calculateCloneAddress(
-        protocolDiamondAddress,
-        beaconProxyAddress,
-        await admin.getAddress()
-      );
-      const bosonVoucher = await getContractAt("BosonVoucher", expectedCloneAddress);
-      await bosonVoucher.connect(assistant).preMint(offer.id, offer.quantityAvailable);
+      const { bosonVoucher, expectedCloneAddress } = await reserveAndPreMint(offer);
 
       // Initial commit: use the real PriceDiscoveryMock to put a voucher
       // into the reseller's hands. The wrapper will hold the funds and
@@ -981,56 +887,20 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
       const signers = await getSigners();
       buyer = signers[17];
 
-      // Deploy malicious mutualizer
-      const MalFactory = await getContractFactory("ReentrantMutualizer");
-      maliciousMut = await MalFactory.deploy();
-      await maliciousMut.waitForDeployment();
-      maliciousMutAddr = await maliciousMut.getAddress();
+      ({ malicious: maliciousMut, maliciousAddr: maliciousMutAddr } =
+        await deployMaliciousAndGrantRoles("ReentrantMutualizer"));
 
-      // Roles so role-gated TOs reach the guard
-      await accessController.grantRole(Role.ADMIN, maliciousMutAddr);
-      await accessController.grantRole(Role.PAUSER, maliciousMutAddr);
-      await accessController.grantRole(Role.FEE_COLLECTOR, maliciousMutAddr);
+      await createStandardSeller();
+      // Non-zero native DR fee so the protocol actually invokes requestDRFee.
+      const disputeResolver = await createStandardDisputeResolver(drFee.toString());
 
-      // Seller
-      const seller = mockSeller(
-        await assistant.getAddress(),
-        await admin.getAddress(),
-        ZeroAddress,
-        await treasury.getAddress()
-      );
-      const voucherInitValues = mockVoucherInitValues();
-      const emptyAuthToken = mockAuthToken();
-      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
-
-      // DR with a non-zero native fee so the protocol invokes requestDRFee
-      const disputeResolver = mockDisputeResolver(
-        await assistantDR.getAddress(),
-        await adminDR.getAddress(),
-        ZeroAddress,
-        await treasuryDR.getAddress(),
-        true
-      );
-      const disputeResolverFees = [new DisputeResolverFee(ZeroAddress, "Native", drFee.toString())];
-      await accountHandler.connect(adminDR).createDisputeResolver(disputeResolver, disputeResolverFees, []);
-
-      // Static offer with the malicious mutualizer
-      const mo = await mockOffer();
-      const { offerDates, offerDurations, offerFees, drParams } = mo;
-      const offer = mo.offer;
-      offer.price = price.toString();
-      offer.sellerDeposit = "0";
-      offer.buyerCancelPenalty = "0";
-      offer.quantityAvailable = "10";
-      offer.exchangeToken = ZeroAddress;
-      offer.royaltyInfo = [new RoyaltyInfo([ZeroAddress], ["0"])];
-      offerFees.protocolFee = "0";
-      drParams.disputeResolverId = disputeResolver.id;
-      drParams.mutualizerAddress = maliciousMutAddr;
-
-      await configHandler.connect(deployer).setProtocolFeePercentage("0");
-
-      await offerHandler.connect(assistant).createOffer(offer, offerDates, offerDurations, drParams, 0, MaxUint256);
+      // Static offer wired to the malicious mutualizer.
+      const offer = await createOfferWithDefaults({
+        price,
+        quantityAvailable: "10",
+        disputeResolverId: disputeResolver.id,
+        mutualizerAddress: maliciousMutAddr,
+      });
       offerId = offer.id;
 
       snapshotF = await getSnapshot();
