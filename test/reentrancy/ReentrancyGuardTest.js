@@ -62,6 +62,7 @@ const {
 } = require("../util/reentrancy-targets.js");
 
 const REENTRANCY_GUARD_SELECTOR = keccak256(toUtf8Bytes("ReentrancyGuard()")).slice(0, 10);
+const TO_TARGETS = buildReentrancyTargets();
 
 describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
   let deployer, admin, assistant, treasury, rando, adminDR, treasuryDR;
@@ -73,7 +74,6 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
   let accessController;
   let bosonErrors;
   let weth;
-  let TO_TARGETS;
   let cleanSnapshot;
 
   before(async function () {
@@ -125,8 +125,6 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
     [deployer] = await getSigners();
 
     bosonErrors = await getContractAt("BosonErrors", protocolDiamondAddress);
-
-    TO_TARGETS = buildReentrancyTargets();
 
     // Sanity check — every target must have produced calldata.
     expect(
@@ -214,11 +212,8 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
       snapshotA = await getSnapshot();
     });
 
-    for (const to of buildReentrancyTargets()) {
+    for (const to of TO_TARGETS) {
       it(`blocks reentry into ${to.name}`, async function () {
-        // The available funds were reset by the snapshot revert; redeposit
-        await fundsHandler.connect(rando).depositFunds(sellerId, ZeroAddress, depositAmount, { value: depositAmount });
-
         // For attacker-address-dependent targets (orchestration wrappers that
         // run createSellerInternal before reaching the inner nonReentrant
         // delegate), rebuild calldata with the malicious contract's address
@@ -303,7 +298,7 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
       snapshotB = await getSnapshot();
     });
 
-    for (const to of buildReentrancyTargets()) {
+    for (const to of TO_TARGETS) {
       it(`blocks reentry into ${to.name}`, async function () {
         // Rebuild calldata for attacker-dependent orchestration wrappers; for
         // all other targets this returns the cached zero-arg calldata.
@@ -446,7 +441,7 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
     // function lives in the diamond and is callable via the combined interface.
     const orchestrationIface = buildCombinedInterface();
 
-    for (const to of buildReentrancyTargets()) {
+    for (const to of TO_TARGETS) {
       it(`blocks reentry into ${to.name}`, async function () {
         // Rebuild calldata for attacker-dependent orchestration wrappers.
         const callData = rebuildCalldataForAttacker(to, maliciousAddr);
@@ -573,7 +568,7 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
 
     const orchestrationIface = buildCombinedInterface();
 
-    for (const to of buildReentrancyTargets()) {
+    for (const to of TO_TARGETS) {
       it(`blocks reentry into ${to.name}`, async function () {
         // Rebuild calldata for attacker-dependent orchestration wrappers.
         const callData = rebuildCalldataForAttacker(to, maliciousAddr);
@@ -732,7 +727,7 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
       snapshotE = await getSnapshot();
     });
 
-    for (const to of buildReentrancyTargets()) {
+    for (const to of TO_TARGETS) {
       it(`blocks reentry into ${to.name}`, async function () {
         // Rebuild calldata for attacker-dependent orchestration wrappers.
         const callData = rebuildCalldataForAttacker(to, maliciousPdAddr);
@@ -930,7 +925,7 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
       snapshotEPrime = await getSnapshot();
     });
 
-    for (const to of buildReentrancyTargets()) {
+    for (const to of TO_TARGETS) {
       it(`blocks reentry into ${to.name}`, async function () {
         // Rebuild calldata for attacker-dependent orchestration wrappers.
         const callData = rebuildCalldataForAttacker(to, maliciousPdAddr);
@@ -986,10 +981,8 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
       const signers = await getSigners();
       buyer = signers[17];
 
-      // Deploy malicious mutualizer (use fully qualified name — the project
-      // already has a different mock named `MaliciousMutualizer` in
-      // contracts/mock/MockMutualizer.sol).
-      const MalFactory = await getContractFactory("contracts/mock/MaliciousReentrant.sol:MaliciousMutualizer");
+      // Deploy malicious mutualizer
+      const MalFactory = await getContractFactory("ReentrantMutualizer");
       maliciousMut = await MalFactory.deploy();
       await maliciousMut.waitForDeployment();
       maliciousMutAddr = await maliciousMut.getAddress();
@@ -1048,7 +1041,7 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
       snapshotF = await getSnapshot();
     });
 
-    for (const to of buildReentrancyTargets()) {
+    for (const to of TO_TARGETS) {
       it(`blocks reentry into ${to.name}`, async function () {
         // Rebuild calldata for attacker-dependent orchestration wrappers.
         const callData = rebuildCalldataForAttacker(to, maliciousMutAddr);

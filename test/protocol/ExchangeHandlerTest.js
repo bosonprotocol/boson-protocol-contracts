@@ -8368,9 +8368,7 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("reentrancy guard is raised when reentrancy via DepositFunds is attempted", async function () {
-        const DRFeeMutualizerFactory = await getContractFactory(
-          "contracts/mock/MockMutualizer.sol:MaliciousMutualizer"
-        );
+        const DRFeeMutualizerFactory = await getContractFactory("MaliciousMutualizer");
         drFeeMutualizer = await DRFeeMutualizerFactory.connect(rando).deploy(sellerId, protocolAddress);
         await drFeeMutualizer.waitForDeployment();
 

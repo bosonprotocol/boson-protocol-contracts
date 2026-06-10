@@ -17,7 +17,7 @@ import { IERC165 } from "../interfaces/IERC165.sol";
  * trusts at runtime:
  *   - MaliciousPriceDiscovery: gets invoked by BosonPriceDiscovery via
  *     `functionCallWithValue`. The base fallback already handles this.
- *   - MaliciousMutualizer: implements IDRFeeMutualizer so the seller can
+ *   - ReentrantMutualizer: implements IDRFeeMutualizer so the seller can
  *     register it as the offer's mutualizer.
  *
  * Verification:
@@ -96,18 +96,6 @@ contract MaliciousReentrant {
             }
         }
         return ret;
-    }
-
-    /**
-     * @notice Read the selector encoded in the currently armed calldata.
-     */
-    function targetSelector() external view returns (bytes4) {
-        if (attackCalldata.length < 4) return bytes4(0);
-        bytes memory cd = attackCalldata;
-        bytes4 sel;
-        // assembly-free copy of the first 4 bytes
-        sel = bytes4(cd[0]) | (bytes4(cd[1]) >> 8) | (bytes4(cd[2]) >> 16) | (bytes4(cd[3]) >> 24);
-        return sel;
     }
 
     /**
@@ -224,14 +212,14 @@ contract MaliciousReentrant {
 }
 
 /**
- * @title MaliciousMutualizer
+ * @title ReentrantMutualizer
  *
  * @notice Variant of MaliciousReentrant that satisfies IDRFeeMutualizer so it
  * can be registered as an offer's mutualizer. Every interface method routes
  * through `_attack` to trigger re-entry into the protocol while the protocol
  * is mid-flight in commit/finalize logic.
  */
-contract MaliciousMutualizer is MaliciousReentrant, IDRFeeMutualizer {
+contract ReentrantMutualizer is MaliciousReentrant, IDRFeeMutualizer {
     function isSellerCovered(uint256, uint256, address, uint256) external pure override returns (bool) {
         return true;
     }
