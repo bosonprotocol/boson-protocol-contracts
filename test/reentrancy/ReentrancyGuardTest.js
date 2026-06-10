@@ -126,12 +126,14 @@ describe("[REENTRANCY] Global nonReentrant guard matrix", function () {
 
     bosonErrors = await getContractAt("BosonErrors", protocolDiamondAddress);
 
-    // Sanity check — every target must have produced calldata.
+    // Per-target sanity check — every entry's calldata must have encoded
+    // cleanly. `buildReentrancyTargets()` itself throws at module load if it
+    // discovers zero targets (that's where the matrix's "0 passing" silent
+    // failure mode is closed), so we don't re-check `.length` here.
     expect(
       TO_TARGETS.find((t) => t.error),
       "every TO must produce calldata without error"
     ).to.be.undefined;
-    expect(TO_TARGETS.length, "TO targets must be discovered from facet ASTs").to.be.greaterThan(0);
     expect(REENTRANCY_GUARD_SELECTOR).to.equal("0x8beb9d16");
 
     // Snapshot a clean diamond so each FROM block starts from the same

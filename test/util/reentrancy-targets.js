@@ -207,6 +207,29 @@ function zeroValueFor(input) {
 }
 
 /**
+ * Recursively list every `*.sol/` directory under `root`. Hardhat lays out
+ * artifacts as `<source-file-path>/<contract>.json`, so the source file's
+ * full path is preserved as a nested directory tree. A facet moved into a
+ * subdirectory (e.g. `contracts/protocol/facets/orch/Foo.sol/Foo.json`)
+ * would be invisible to a one-level `readdirSync` walk — yet still routed
+ * onto the diamond and therefore in-scope for the matrix. Walking
+ * recursively closes that silent gap.
+ */
+function findFacetSolDirs(root) {
+  const out = [];
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const full = path.join(root, entry.name);
+    if (entry.name.endsWith(".sol")) {
+      out.push(full);
+    } else {
+      out.push(...findFacetSolDirs(full));
+    }
+  }
+  return out;
+}
+
+/**
  * Enumerate every reentrancy-matrix TO target across all facets in
  * `contracts/protocol/facets/`. Each entry:
  * `{ name, facet, calldata, selector, args, attackerDependent }`.
@@ -225,6 +248,20 @@ function zeroValueFor(input) {
  * `ATTACKER_DEPENDENT_OVERRIDES`) can have their seller-struct fields rewritten
  * at run time via `rebuildCalldataForAttacker`.
  *
+ * Discovery is defensive against silent-skip paths that would yield an empty
+ * matrix without raising any signal (see PR #1155 review):
+ *   - Walks `FACETS_ARTIFACT_DIR` recursively so facets moved into a
+ *     subdirectory are still found.
+ *   - Reads EVERY `*.json` (non-`.dbg.json`) artifact under each `.sol/`
+ *     directory rather than only the one whose name matches the directory.
+ *     This catches files that declare a contract whose name differs from the
+ *     file's name (e.g. `Foo.sol` declaring `contract Bar`).
+ *   - Skips interface-only artifacts (no deployed bytecode) since their
+ *     selectors are already covered by the implementing facet's artifact.
+ *   - Throws if the discovery yields zero matrix targets. A zero-target
+ *     return would otherwise produce a "0 passing" green report — exactly
+ *     the regression-guard hole the matrix is supposed to protect against.
+ *
  * @returns {Array<{ name: string, facet: string, calldata: string, selector: string, args: any[], attackerDependent: boolean, error?: string }>}
  */
 function buildReentrancyTargets() {
@@ -234,47 +271,67 @@ function buildReentrancyTargets() {
     );
   }
 
-  const facetDirs = fs
-    .readdirSync(FACETS_ARTIFACT_DIR)
-    .filter((d) => d.endsWith(".sol"))
-    .sort();
+  const facetDirs = findFacetSolDirs(FACETS_ARTIFACT_DIR).sort();
+  if (facetDirs.length === 0) {
+    throw new Error(
+      `No facet artifacts (no \`*.sol\` directories) found under ${FACETS_ARTIFACT_DIR}. ` +
+        `Run \`npx hardhat compile\`.`
+    );
+  }
 
   const out = [];
   const seenSelectors = new Set();
 
   for (const fdir of facetDirs) {
-    const facetName = fdir.replace(/\.sol$/, "");
-    const artifactPath = path.join(FACETS_ARTIFACT_DIR, fdir, `${facetName}.json`);
-    if (!fs.existsSync(artifactPath)) continue;
+    const jsonFiles = fs
+      .readdirSync(fdir)
+      .filter((f) => f.endsWith(".json") && !f.endsWith(".dbg.json"))
+      .sort();
 
-    const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
-    const iface = new Interface(artifact.abi);
+    for (const json of jsonFiles) {
+      const artifact = JSON.parse(fs.readFileSync(path.join(fdir, json), "utf8"));
+      // Skip interface-only artifacts: their selectors are also exposed by
+      // the implementing facet's artifact, so reading them would only add
+      // noise (and dedupe-suppressed entries).
+      if (!artifact.bytecode || artifact.bytecode === "0x") continue;
 
-    for (const abiItem of artifact.abi) {
-      if (!isMatrixTarget(abiItem)) continue;
-      const frag = iface.getFunction(abiItem.name);
-      if (!frag) continue;
-      if (seenSelectors.has(frag.selector)) continue;
-      seenSelectors.add(frag.selector);
+      const iface = new Interface(artifact.abi);
+      for (const abiItem of artifact.abi) {
+        if (!isMatrixTarget(abiItem)) continue;
+        const frag = iface.getFunction(abiItem.name);
+        if (!frag) continue;
+        if (seenSelectors.has(frag.selector)) continue;
+        seenSelectors.add(frag.selector);
 
-      const args = frag.inputs.map((input) => zeroValueFor(input));
-      let calldata = null;
-      let error = null;
-      try {
-        calldata = iface.encodeFunctionData(frag.name, args);
-      } catch (e) {
-        error = e.message;
+        const args = frag.inputs.map((input) => zeroValueFor(input));
+        let calldata = null;
+        let error = null;
+        try {
+          calldata = iface.encodeFunctionData(frag.name, args);
+        } catch (e) {
+          error = e.message;
+        }
+        out.push({
+          name: frag.name,
+          facet: artifact.contractName,
+          calldata,
+          selector: frag.selector,
+          error,
+          args,
+          attackerDependent: ATTACKER_DEPENDENT_OVERRIDES.has(frag.name),
+        });
       }
-      out.push({
-        name: frag.name,
-        facet: facetName,
-        calldata,
-        selector: frag.selector,
-        error,
-        args,
-        attackerDependent: ATTACKER_DEPENDENT_OVERRIDES.has(frag.name),
-      });
     }
+  }
+
+  if (out.length === 0) {
+    throw new Error(
+      `buildReentrancyTargets discovered no matrix targets under ${FACETS_ARTIFACT_DIR}. ` +
+        `The facets directory exists but no facet yielded a state-modifying entry point — ` +
+        `either the artifact layout changed (file/contract name mismatch, missing impl artifact) ` +
+        `or every function was added to the allow-list. The matrix would otherwise report ` +
+        `\`0 passing\` silently, so this is treated as fatal.`
+    );
   }
 
   return out;
@@ -359,21 +416,32 @@ function buildCombinedInterface() {
   }
   const merged = [];
   const seen = new Set();
-  const facetDirs = fs
-    .readdirSync(FACETS_ARTIFACT_DIR)
-    .filter((d) => d.endsWith(".sol"))
-    .sort();
+  // Walk recursively and enumerate every artifact JSON in each `.sol/` dir
+  // for the same reasons as `buildReentrancyTargets` (subdirectory moves,
+  // file/contract name mismatches). Skip interface-only artifacts so we
+  // don't merge dead duplicates.
+  const facetDirs = findFacetSolDirs(FACETS_ARTIFACT_DIR).sort();
+  if (facetDirs.length === 0) {
+    throw new Error(
+      `No facet artifacts (no \`*.sol\` directories) found under ${FACETS_ARTIFACT_DIR}. ` +
+        `Run \`npx hardhat compile\`.`
+    );
+  }
   for (const fdir of facetDirs) {
-    const facetName = fdir.replace(/\.sol$/, "");
-    const artifactPath = path.join(FACETS_ARTIFACT_DIR, fdir, `${facetName}.json`);
-    if (!fs.existsSync(artifactPath)) continue;
-    const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
-    for (const item of artifact.abi) {
-      if (item.type !== "function") continue;
-      const sig = `${item.name}(${(item.inputs || []).map((i) => i.type).join(",")})`;
-      if (seen.has(sig)) continue;
-      seen.add(sig);
-      merged.push(item);
+    const jsonFiles = fs
+      .readdirSync(fdir)
+      .filter((f) => f.endsWith(".json") && !f.endsWith(".dbg.json"))
+      .sort();
+    for (const json of jsonFiles) {
+      const artifact = JSON.parse(fs.readFileSync(path.join(fdir, json), "utf8"));
+      if (!artifact.bytecode || artifact.bytecode === "0x") continue;
+      for (const item of artifact.abi) {
+        if (item.type !== "function") continue;
+        const sig = `${item.name}(${(item.inputs || []).map((i) => i.type).join(",")})`;
+        if (seen.has(sig)) continue;
+        seen.add(sig);
+        merged.push(item);
+      }
     }
   }
   return new Interface(merged);
