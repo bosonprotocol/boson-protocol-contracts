@@ -101,6 +101,30 @@ jobs:
       - name: Integration tests
         run: npx hardhat test test/integration/*.js
 
+  reentrancy-test:
+    needs: setup
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.pull_request.draft }}
+    env:
+      GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
+    name: "test:reentrancy"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.12.x
+          cache: "npm"
+      - name: Install Dependencies
+        run: npm install
+      - name: Prepare Environment
+        shell: bash
+        run: |
+          cp .env.example .env
+      - name: Reentrancy tests
+        run: npx hardhat test test/reentrancy/*.js
+
   coverage:
     needs: setup
     if: ${{ !github.event.pull_request.draft }}
