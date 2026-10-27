@@ -216,7 +216,7 @@ jobs:
         run: npm run deploy-suite
       - name: Cancelling tests in case of failure
         if: failure()
-        uses: andymckay/cancel-action@0.4
+        uses: andymckay/cancel-action@271cfbfa11ca9222f7be99a47e8f929574549e0a # 0.4
 
   analyze:
     needs: setup
