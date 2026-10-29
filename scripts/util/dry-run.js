@@ -8,12 +8,10 @@ const environments = require("../../environments");
 
 async function setupDryRun(env) {
   let forkedChainId;
-  let forkedEnv = env;
+  const forkedEnv = env;
 
   console.warn("This is a dry run. No actual upgrade will be performed");
   ({ chainId: forkedChainId } = await ethers.provider.getNetwork());
-
-  forkedEnv = env;
 
   let deployerBalance = await getBalance();
   // const blockNumber = await ethers.provider.getBlockNumber();

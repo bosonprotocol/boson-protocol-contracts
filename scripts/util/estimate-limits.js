@@ -59,6 +59,7 @@ let protocolDiamond,
   groupHandler,
   offerHandler,
   twinHandler;
+// eslint-disable-next-line no-unassigned-vars
 let bosonVoucher;
 let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
 let handlers = {};
